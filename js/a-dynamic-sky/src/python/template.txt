@@ -1,0 +1,27 @@
+//This helps
+//--------------------------v
+//https://github.com/mrdoob/three.js/wiki/Uniforms-types
+AFRAME.registerShader('sky', {
+  schema: {
+    luminance: { type: 'number', default: 1, max: 0, min: 2, is: 'uniform' },
+    turbidity: { type: 'number', default: 2, max: 0, min: 20, is: 'uniform' },
+    reileigh: { type: 'number', default: 1, max: 0, min: 4, is: 'uniform' },
+    mieCoefficient: { type: 'number', default: 0.005, min: 0, max: 0.1, is: 'uniform' },
+    mieDirectionalG: { type: 'number', default: 0.8, min: 0, max: 1, is: 'uniform' },
+    sunPosition: { type: 'vec3', default: {x: 0.0,y: 0.0,z: 0.0}, is: 'uniform' },
+    moonAzAltAndParallacticAngle: {type: 'vec3', default: {x: 0.0,y: 0.0,z: 0.0}, is: 'uniform'},
+    illuminatedFractionOfMoon: {type: 'number', default: 0.0, max: 1.0, min: 0.0, is: 'uniform'},
+    brightLimbOfMoon: {type: 'number', default: 0.0, max: 6.283185307, min: 0.0, is: 'uniform'},
+    moonTexture: {type: 'map', src:'images/moon-dif-512.png', is: 'uniform'},
+    moonNormalMap: {type: 'map', src:'moon-nor-512.png', is: 'uniform'},
+    u_resolution: {type: 'vec2', default: {x: 1280, y: 720}, is: 'uniform'}
+  },
+
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+});
