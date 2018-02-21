@@ -15,16 +15,16 @@
 
     <script src="../js/components/vptree.js"></script>
     <script src="https://unpkg.com/aframe-physics-system@1.4.0/dist/aframe-physics-system.min.js"></script>
-    <script src="../js/a-dynamic-sky/src/js/star-data.js"></script>
-    <script src="../js/a-dynamic-sky/src/js/sky-shader.js"></script>
-    <script src="../js/a-dynamic-sky/src/js/a-dynamic-sky.js"></script>
+    <script src="../js/a-sky-forge/src/js/star-data.js"></script>
+    <script src="../js/a-sky-forge/src/js/sky-shader.js"></script>
+    <script src="../js/a-sky-forge/src/js/a-dynamic-sky.js"></script>
 
     <!--Scene Scripts-->
   </head>
   <body>
     <a-scene physics>
       <!-- Sky -->
-      <a-sky geo-coordinates="lat: 33.4484; long: -112.0740;" sky-time="year: 2017; dayOfTheYear: 100; timeOffset: 12000; utcOffset: -7; yearPeriod: 365;" material="shader: sky;"></a-sky>
+      <a-sky-forge geo-coordinates="lat: 33.4484; long: -112.0740;" sky-time="year: 2017; dayOfTheYear: 100; timeOffset: 12000; utcOffset: -7; yearPeriod: 365;" material="shader: sky;"></a-sky>
 
       <!-- Ocean -->
       <a-ocean width="50" depth="50" density="40"></a-ocean>

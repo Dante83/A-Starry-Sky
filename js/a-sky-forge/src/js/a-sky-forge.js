@@ -28,7 +28,7 @@ var dynamicSkyEntityMethods = {
 
 //Create primitive data associated with this, based off a-sky
 //https://github.com/aframevr/aframe/blob/master/src/extras/primitives/primitives/a-sky.js
-AFRAME.registerPrimitive('a-dynamic-sky', AFRAME.utils.extendDeep({}, meshMixin, {
+AFRAME.registerPrimitive('a-sky-forge', AFRAME.utils.extendDeep({}, meshMixin, {
     // Preset default components. These components and component properties will be attached to the entity out-of-the-box.
     defaultComponents: {
       geometry: {
@@ -192,9 +192,6 @@ var aDynamicSky = {
     //Create the start data VP-Tree
     VPTreeFactory.build(S, this.unitSphereHaversteinDistance);
     this.starVPTree = starVPTree;
-
-    //Create a quick lookup for all of our star data by right acension and declination
-
   }
 
   update: function(skyData){
@@ -551,6 +548,9 @@ var aDynamicSky = {
     //need to create the tree once... after that, we will be free to implement a rotation modelMatrix
     //to convert each of our stars into an appropriate latitude and longitude.
     //
+
+    //Get the faces of our sky sphere
+    el.getObject3D('mesh')
 
     //Go through all the faces on our sphere...
     for(){
