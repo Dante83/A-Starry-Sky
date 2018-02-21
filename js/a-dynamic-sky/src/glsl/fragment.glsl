@@ -10,9 +10,6 @@ precision mediump float;
 varying vec3 vWorldPosition;
 uniform vec2 u_resolution;
 
-//Positions of our astronomical bodies
-uniform mediump vec3 sunPosition; //Already passed into the vertex shader
-
 //Status of the sky
 uniform float luminance;
 uniform float turbidity;
@@ -23,23 +20,24 @@ uniform float mieDirectionalG;
 // mathematical constants
 const float e = 2.71828182845904523536028747135266249775724709369995957;
 const float pi = 3.141592653589793238462643383279502884197169;
+const float piTimes2 = 6.283185307179586476925286766559005768394338798750211641949;
+const float deg2Rad = 0.017453292519943295769236907684886127134428718885417254560;
 
-//Star Data
-//uniform vec2 starAzimuthsAndAltitudes[8912];
-//uniform float starMagnitudes[8912];
-//uniform vec3 starColors[8912];
+//Sun Data
+uniform mediump vec3 sunPosition;
+const float angularRadiusOfTheSun = 0.074; //The sun and the moon should be able the same size
 
-//
-//NOTE: IN PROGRESS
-//
+//Star Data (passed from our fragment shader)
+const starRadiusMagnitudeMultiplier = 0.01;
+varying int frag_starArrayLength;
+varying mediump float[] starAzs;
+varying mediump float[] starAlts;
+varying mediump float[] frag_starBrightness;
+varying mediump vec3[] frag_starColors;
 
 //Sky Surface data
 varying vec3 normal;
 varying vec2 binormal;
-
-//
-//NOTE: IN PROGRESS
-//
 
 //Moon Data
 uniform mediump vec3 moonAzAltAndParallacticAngle;
@@ -50,6 +48,10 @@ uniform sampler2D moonNormalMap;
 const float angularRadiusOfTheMoon = 0.075;
 varying vec3 tangentSpaceSunlight;
 const float earthshine = 0.02;
+
+//
+//UTIL FUNCTIONS
+//
 
 //This fellow is useful for the disks of the sun and the moon
 //and the glow of stars... It is fast and efficient at small angles
@@ -73,6 +75,29 @@ vec3 angularDistanceApproximation(float az_0, float alt_0, float az_1, float alt
 vec4 addImageWithAveragedEdge(vec4 imageColor, vec4 backgroundColor){
   return imageColor.a > 0.95 ? vec4(imageColor.rgb, 1.0) : vec4(mix(imageColor.xyz, backgroundColor.xyz, (1.0 - imageColor.w)), 1.0);
 }
+
+//
+//SUN
+//
+vec4 drawSunLayer(float azimuthOfPixel, float altitudeOfPixel){
+  vec3 positionData = angularDistanceApproximation(sunPosition.x, sunPosition.y, azimuthOfPixel, altitudeOfPixel);
+
+  vec4 returnColor = vec4(0.0);
+  if(positionData.z < angularRadiusOfTheSun){
+    //For now we will just return the color white -- in the future we will probably use a better model for the inner sunlight...
+    returnColor = vec4(1.0,1.0, 1.0, 1.0);
+  }
+
+  return returnColor;
+}
+
+vec4 drawSunGlow(float azimuthOfPixel, float altitudeOfPixel){
+  return vec4(0.0);
+}
+
+//
+//MOON
+//
 
 vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){
   //Let us use the small angle approximation of this for now, in the future, we might Implement
@@ -107,8 +132,36 @@ vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){
   return returnColor;
 }
 
+vec4 drawMoonGlow(float azimuthOfPixel, float altitudeOfPixel){
+  return vec4(0.0);
+}
+
 //
-//TODO: Draw the moon atmospheric effect layer
+//STARS
+//
+vec4 drawStar(float starAzimuth, float starAltitude, float starBrightness, vec3 starColor, float azimuthOfPixel, float altitudeOfPixel){
+  vec3 positionData = angularDistanceApproximation(starAzimuth, starAltitude, azimuthOfPixel, altitudeOfPixel);
+
+  //Linear interpolation probably does not work, but I am just going to try it to see if we can draw the stars
+  vec4 returnColor = vec4(0.0);
+  float starRadius = starRadiusMagnitudeMultiplier * starBrightness;
+  if(positionData.z < starRadius){
+    //For now we will just return the color white -- in the future we will probably use a better model for the inner sunlight...
+    returnColor = starColor;
+  }
+  else if( (positionData.z - starRadius) < 1.0 / max(u_resolution)){
+    returnColor = starColor * starBrightness;
+  }
+
+  return returnColor;
+}
+
+vec4 drawStarGlow(float azimuthOfPixel, float altitudeOfPixel){
+  return vec4(0.0);
+}
+
+//
+//SKY
 //
 
 void main()
@@ -119,9 +172,28 @@ void main()
   float altitude = azAndAlt.y;
   float azimuth = atan(azAndAlt.z, azAndAlt.x) + pi;
 
-  //This is just a test to see that we can get the appropriate coordinates from our pixel coordinates and Uniforms
-  //Once we know our results are accurate, we can jump into producing various astronomical bodies here.
-  vec4 color = addImageWithAveragedEdge(drawMoonLayer(azimuth, altitude), vec4(0.0,0.0,0.0,1.0));
+  //Starting color;
+  vec4 color = vec4(0.0,0.0,0.0,1.0);
+
+  //As the the most distant objects in our world, we must draw our stars first
+  for(int i = 0; i < frag_starArrayLength; i++){
+    color = addImageWithAveragedEdge(drawStar(starAzs[i], starAlts[i], frag_starBrightness[i], frag_starColors[i], azimuth, altitude), color);
+  }
+
+  //Then comes the sun
+  color = addImageWithAveragedEdge(drawSunLayer(azimuth, azimuth))
+
+  //And finally the moon...
+  color = addImageWithAveragedEdge(drawMoonLayer(azimuth, altitude), vec4(0.0,0.0,0.0,1.0));
+
+  //Once we have draw each of these, we will add their light to the light of the sky in the original sky model
+
+
+  //And then we will add the glow of the sun, moon and stars...
+
+
+  //This is where we would put clouds if the GPU does not turn to molten silicon
+
 
 	gl_FragColor = color;
 }

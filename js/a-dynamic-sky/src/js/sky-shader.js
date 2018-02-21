@@ -21,11 +21,30 @@ AFRAME.registerShader('sky', {
     'varying vec3 vWorldPosition;',
     'varying vec3 tangentSpaceSunlight;',
 
+    '//For calculating the stellar positions',
+    'uniform mediump float apparentSideRealTime;',
+    'uniform mediump float localLatitude;',
+    'attribute int starArrayLength;',
+    'attribute mediump float[] starRAS;',
+    'attribute mediump float[] starDECs;',
+    'attribute mediump float[] starBrightness;',
+    'attribute mediump vec3[] starColors;',
+
+    'varying int frag_starArrayLength;',
+    'varying mediump float[] starAzs;',
+    'varying mediump float[] starAlts;',
+    'varying mediump float[] frag_starBrightness;',
+    'varying mediump vec3[] frag_starColors;',
+
+    '//For calculating the solar and and lunar data',
     'uniform mediump vec3 sunPosition;',
     'uniform mediump vec3 moonAzAltAndParallacticAngle;',
 
+    '//Thanks Wolfram Alpha!',
     'const float e = 2.71828182845904523536028747135266249775724709369995957;',
     'const float pi = 3.141592653589793238462643383279502884197169;',
+    'const float piTimes2 = 6.283185307179586476925286766559005768394338798750211641949;',
+    'const float deg2Rad = 0.017453292519943295769236907684886127134428718885417254560;',
 
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4( position, 1.0 );',
@@ -35,11 +54,16 @@ AFRAME.registerShader('sky', {
       'float altitude = moonAzAltAndParallacticAngle.y;',
       'float azimuth = moonAzAltAndParallacticAngle.x;',
 
+      '//',
+      '//LUNAR SHADOWS',
+      '//',
+
+      '//TODO: Something is still off here, but we will come back to this in the future...',
+
       '//Calculate the normal and binormal from the surface of a sphere using a radius of 1.0 then invert it by multiplying everything by -1.0',
       'vec3 faceNormal = normalize(vec3(sin((pi / 2.0) - altitude) * cos(azimuth), sin((pi / 2.0) - altitude) * sin(azimuth), cos(azimuth)));',
       '//Because were centered at the origin, we can just get the cross product of the noraml vector and the z-axis.',
       '//Via: https://math.stackexchange.com/questions/1112719/get-tangent-vector-from-point-to-sphere-vector',
-      '//NOTE: Do I possibly have my tangent and bi-tangent reversed?',
       '//NOTE: We should probably rotate the tangent and bitangent by the parallactic angle to preserve shading under rotation',
 
       'vec3 faceTangent = normalize(vec3(sin(-altitude) * cos(azimuth), sin(- altitude) * sin(azimuth), cos(azimuth)));',
@@ -54,6 +78,43 @@ AFRAME.registerShader('sky', {
 
       '//All of this lighting happens very far away, so we dont have to worry about our camera position',
       'tangentSpaceSunlight = toTangentSpace * sunPosition;',
+
+      '//',
+      '//STAR DATA CONVERSION',
+      '//',
+
+      '//Go through each of our stars and convert them into an azimuth and altitude...',
+      '//And prepare our colors and brightness for the final visual',
+      'starAzs = float[starArrayLength];',
+      'starAlts = float[starArrayLength];',
+      'frag_starBrightness = float[starArrayLength];',
+      'frag_starColors = float[starArrayLength];',
+      'frag_starArrayLength = starArrayLength;',
+      'for(int i = 0; i < starArrayLength; i++){',
+        'float currentRA;',
+        'float currentDec;',
+        'float meeusLongitude = -1.0 longitude;',
+
+        '//Calculated from page 92 of Meeus',
+        'float hourAngle = apparentSideRealTime - meeusLongitude - rightAscension;',
+        'hourAngle = (hourAngle > 0.0) ? mod(hourAngle, 360.0) : 360.0 + mod(hourAngle, 360.0);',
+        'hourAngle = hourAngle * deg2Rad;',
+        'float latitudeInRads = latitude * deg2Rad;',
+        'float declinationInRads = declination * deg2Rad;',
+
+        'float alt = asin(sin(declinationInRads) * sin(latitudeInRads) + cos(declinationInRads) * cos(latitudeInRads) * cos(hourAngle));',
+        'float az = atan(sin(hourAngle), ((cos(hourAngle) * sin(latitudeInRads)) - (tan(declinationInRads) * cos(latitudeInRads))));',
+        'float az = (az >= 0.0) ? az : az + piTimes2;',
+
+        'alt = (alt > 0.0) ? mod(alt, piTimes2) : piTimes2 + mod(alt, piTimes2);',
+        'az = (az > 0.0) ? mod(az, piTimes2) : piTimes2 + mod(az, piTimes2);',
+
+        '//Now set all our variables for the fragment shader',
+        'starAzs[i] = az;',
+        'starAlts[i] = alt;',
+        'frag_starBrightness[i] = starBrightness[i];',
+        'frag_starColors[i] = starColors[i];',
+      '}',
 
       'gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );',
     '}',
@@ -72,9 +133,6 @@ AFRAME.registerShader('sky', {
     'varying vec3 vWorldPosition;',
     'uniform vec2 u_resolution;',
 
-    '//Positions of our astronomical bodies',
-    'uniform mediump vec3 sunPosition; //Already passed into the vertex shader',
-
     '//Status of the sky',
     'uniform float luminance;',
     'uniform float turbidity;',
@@ -85,23 +143,24 @@ AFRAME.registerShader('sky', {
     '// mathematical constants',
     'const float e = 2.71828182845904523536028747135266249775724709369995957;',
     'const float pi = 3.141592653589793238462643383279502884197169;',
+    'const float piTimes2 = 6.283185307179586476925286766559005768394338798750211641949;',
+    'const float deg2Rad = 0.017453292519943295769236907684886127134428718885417254560;',
 
-    '//Star Data',
-    '//uniform vec2 starAzimuthsAndAltitudes[8912];',
-    '//uniform float starMagnitudes[8912];',
-    '//uniform vec3 starColors[8912];',
+    '//Sun Data',
+    'uniform mediump vec3 sunPosition;',
+    'const float angularRadiusOfTheSun = 0.074; //The sun and the moon should be able the same size',
 
-    '//',
-    '//NOTE: IN PROGRESS',
-    '//',
+    '//Star Data (passed from our fragment shader)',
+    'const starRadiusMagnitudeMultiplier = 0.01;',
+    'varying int frag_starArrayLength;',
+    'varying mediump float[] starAzs;',
+    'varying mediump float[] starAlts;',
+    'varying mediump float[] frag_starBrightness;',
+    'varying mediump vec3[] frag_starColors;',
 
     '//Sky Surface data',
     'varying vec3 normal;',
     'varying vec2 binormal;',
-
-    '//',
-    '//NOTE: IN PROGRESS',
-    '//',
 
     '//Moon Data',
     'uniform mediump vec3 moonAzAltAndParallacticAngle;',
@@ -112,6 +171,10 @@ AFRAME.registerShader('sky', {
     'const float angularRadiusOfTheMoon = 0.075;',
     'varying vec3 tangentSpaceSunlight;',
     'const float earthshine = 0.02;',
+
+    '//',
+    '//UTIL FUNCTIONS',
+    '//',
 
     '//This fellow is useful for the disks of the sun and the moon',
     '//and the glow of stars... It is fast and efficient at small angles',
@@ -135,6 +198,29 @@ AFRAME.registerShader('sky', {
     'vec4 addImageWithAveragedEdge(vec4 imageColor, vec4 backgroundColor){',
       'return imageColor.a > 0.95 ? vec4(imageColor.rgb, 1.0) : vec4(mix(imageColor.xyz, backgroundColor.xyz, (1.0 - imageColor.w)), 1.0);',
     '}',
+
+    '//',
+    '//SUN',
+    '//',
+    'vec4 drawSunLayer(float azimuthOfPixel, float altitudeOfPixel){',
+      'vec3 positionData = angularDistanceApproximation(sunPosition.x, sunPosition.y, azimuthOfPixel, altitudeOfPixel);',
+
+      'vec4 returnColor = vec4(0.0);',
+      'if(positionData.z < angularRadiusOfTheSun){',
+        '//For now we will just return the color white -- in the future we will probably use a better model for the inner sunlight...',
+        'returnColor = vec4(1.0,1.0, 1.0, 1.0);',
+      '}',
+
+      'return returnColor;',
+    '}',
+
+    'vec4 drawSunGlow(float azimuthOfPixel, float altitudeOfPixel){',
+      'return vec4(0.0);',
+    '}',
+
+    '//',
+    '//MOON',
+    '//',
 
     'vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){',
       '//Let us use the small angle approximation of this for now, in the future, we might Implement',
@@ -169,8 +255,36 @@ AFRAME.registerShader('sky', {
       'return returnColor;',
     '}',
 
+    'vec4 drawMoonGlow(float azimuthOfPixel, float altitudeOfPixel){',
+      'return vec4(0.0);',
+    '}',
+
     '//',
-    '//TODO: Draw the moon atmospheric effect layer',
+    '//STARS',
+    '//',
+    'vec4 drawStar(float starAzimuth, float starAltitude, float starBrightness, vec3 starColor, float azimuthOfPixel, float altitudeOfPixel){',
+      'vec3 positionData = angularDistanceApproximation(starAzimuth, starAltitude, azimuthOfPixel, altitudeOfPixel);',
+
+      '//Linear interpolation probably does not work, but I am just going to try it to see if we can draw the stars',
+      'vec4 returnColor = vec4(0.0);',
+      'float starRadius = starRadiusMagnitudeMultiplier * starBrightness;',
+      'if(positionData.z < starRadius){',
+        '//For now we will just return the color white -- in the future we will probably use a better model for the inner sunlight...',
+        'returnColor = starColor;',
+      '}',
+      'else if( (positionData.z - starRadius) < 1.0 / max(u_resolution)){',
+        'returnColor = starColor * starBrightness;',
+      '}',
+
+      'return returnColor;',
+    '}',
+
+    'vec4 drawStarGlow(float azimuthOfPixel, float altitudeOfPixel){',
+      'return vec4(0.0);',
+    '}',
+
+    '//',
+    '//SKY',
     '//',
 
     'void main()',
@@ -181,9 +295,28 @@ AFRAME.registerShader('sky', {
       'float altitude = azAndAlt.y;',
       'float azimuth = atan(azAndAlt.z, azAndAlt.x) + pi;',
 
-      '//This is just a test to see that we can get the appropriate coordinates from our pixel coordinates and Uniforms',
-      '//Once we know our results are accurate, we can jump into producing various astronomical bodies here.',
-      'vec4 color = addImageWithAveragedEdge(drawMoonLayer(azimuth, altitude), vec4(0.0,0.0,0.0,1.0));',
+      '//Starting color;',
+      'vec4 color = vec4(0.0,0.0,0.0,1.0);',
+
+      '//As the the most distant objects in our world, we must draw our stars first',
+      'for(int i = 0; i < frag_starArrayLength; i++){',
+        'color = addImageWithAveragedEdge(drawStar(starAzs[i], starAlts[i], frag_starBrightness[i], frag_starColors[i], azimuth, altitude), color);',
+      '}',
+
+      '//Then comes the sun',
+      'color = addImageWithAveragedEdge(drawSunLayer(azimuth, azimuth))',
+
+      '//And finally the moon...',
+      'color = addImageWithAveragedEdge(drawMoonLayer(azimuth, altitude), vec4(0.0,0.0,0.0,1.0));',
+
+      '//Once we have draw each of these, we will add their light to the light of the sky in the original sky model',
+
+
+      '//And then we will add the glow of the sun, moon and stars...',
+
+
+      '//This is where we would put clouds if the GPU does not turn to molten silicon',
+
 
     '	gl_FragColor = color;',
     '}',

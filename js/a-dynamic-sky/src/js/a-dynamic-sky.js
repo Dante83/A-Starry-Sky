@@ -34,8 +34,8 @@ AFRAME.registerPrimitive('a-dynamic-sky', AFRAME.utils.extendDeep({}, meshMixin,
       geometry: {
         primitive: 'sphere',
         radius: 5000,
-        segmentsWidth: 64,
-        segmentsHeight: 32
+        segmentsWidth: 256,
+        segmentsHeight: 128
       },
       scale: '-1, 1, 1',
       "geo-coordinates": 'lat: 37.7749; long: -122.4194',
@@ -185,7 +185,17 @@ var aDynamicSky = {
   deg2Rad: Math.PI / 180.0,
   illuminatedFractionOfMoon: 0.0,
   brightLimbOfMoon: 0.0,
-  stars: starData,
+  stars: [],
+  starVPTree: null,
+
+  init: function(skyData){
+    //Create the start data VP-Tree
+    VPTreeFactory.build(S, this.unitSphereHaversteinDistance);
+    this.starVPTree = starVPTree;
+
+    //Create a quick lookup for all of our star data by right acension and declination
+
+  }
 
   update: function(skyData){
     this.radLatitude = this.latitude * this.deg2Rad;
@@ -208,8 +218,9 @@ var aDynamicSky = {
 
     //Get our actual positions
     this.sunPosition = this.getSunPosition();
-    //this.moonPosition = this.getMoonPosition();
-    this.moonPosition = {azimuth: (2.0 * 3.14159 * (skyData.timeOffset % 60.0) / 60.0), altitude: 0.0};
+    this.moonPosition = this.getMoonPosition();
+    //Note: We can always come back to this...
+    //this.moonPosition = {azimuth: (2.0 * 3.14159 * (skyData.timeOffset % 60.0) / 60.0), altitude: 0.0};
     this.getStarPositions();
   },
 
@@ -278,6 +289,24 @@ var aDynamicSky = {
     }
 
     return outRads;
+  },
+
+  unitSphereHaversteinDistance(coords1, coords2){
+    //From: https://stackoverflow.com/questions/14560999/using-the-haversine-formula-in-javascript
+    //Thank you Nathan! :D
+    var lon1 = coords1[0];
+    var lat1 = coords1[1];
+
+    var lon2 = coords2[0];
+    var lat2 = coords2[1];
+
+    //Presume our results are already in radians
+    var dLat = lat2 - lat1;
+    var dLon = lon2 - lon1;
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    var d = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return d;
   },
 
   calculateGreenwhichSiderealTime: function(){
@@ -516,6 +545,29 @@ var aDynamicSky = {
   },
 
   getStarPositions: function(){
+    //
+    //TODO: To reduce lookup times, this data should be organized according to a spherical KD-TREE
+    //However, because the relative positions of our stars will not change, we Only
+    //need to create the tree once... after that, we will be free to implement a rotation modelMatrix
+    //to convert each of our stars into an appropriate latitude and longitude.
+    //
+
+    //Go through all the faces on our sphere...
+    for(){
+      //Get the three vertices of this face, find the average
+      //and the their max distance to any given vertex.
+
+      //Convert the center of the sphere from it's azimuth and altitude
+      //Into right ascension and declination...
+
+      //Go twice as far as this and gather all stars in this haverstine distance
+      //From this right ascension and declination...
+      var vertexStars = this.starVPTree.search(element, Infinity, radius);
+
+      //Pass all of the star data from these stars into the vertex
+    }
+
+    var starDataFloatArray = new Float32Array(this.stars.length * 6);
     for(var i = 0; i < this.stars.length; i++){
       var star = this.stars[i];
       var rightAscension = star.rightAscension * this.deg2Rad;
@@ -524,7 +576,22 @@ var aDynamicSky = {
       var azAndAlt = this.getAzimuthAndAltitude(rightAscension, declination);
       this.stars[i].azimuth = azAndAlt.azimuth;
       this.stars[i].altitude = azAndAlt.altitude;
+
+      //Set these in the bufffer
+      var index = i * 6;
+      starDataFloatArray[index] = azAndAlt.azimuth;
+      starDataFloatArray[index + 1] = azAndAlt.altitude;
+      starDataFloatArray[index + 2] = star.magnitude;
+      starDataFloatArray[index + 3] = star.color.red;
+      starDataFloatArray[index + 4] = star.color.green;
+      starDataFloatArray[index + 5] = star.color.blue;
     }
+
+    //Bind our star data to a strided float array
+    var starDataBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, starDataBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, starDataFloatArray, gl.DYNAMIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
   },
 
   getDaysInYear: function(){
