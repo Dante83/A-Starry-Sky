@@ -55,7 +55,7 @@ AFRAME.registerComponent('geo-coordinates', {
 AFRAME.registerComponent('sky-time', {
   fractionalSeconds: 0,
 
-  dependencies: ['geo-coordinates'],
+  dependencies: ['geo-coordinates', 'a-sky-forge'],
 
   schema: {
     timeOffset: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getSecondOfDay())},
@@ -69,6 +69,21 @@ AFRAME.registerComponent('sky-time', {
   },
 
   init: function(){
+    console.log("New Test");
+    console.log(this.el.components.geometry.geometry);
+    console.log("New test 2");
+
+    this.parentGeometry = this.el.components['a-sky-forge'].getObject3D('mesh');
+
+    //
+    //TODO: Let's see what data is inside of this thing so that we can connect it
+    //TODO: All together and inject buffer attributes.
+    //
+
+    console.log("TEST");
+    console.log(this.parentGeometry);
+    console.log("END TEST");
+
     this.lastCameraDirection = {x: 0.0, y: 0.0, z: 0.0};
     this.dynamicSkyObj = aDynamicSky;
     this.dynamicSkyObj.latitude = this.el.components['geo-coordinates'].data.lat;
@@ -192,7 +207,7 @@ var aDynamicSky = {
     //Create the start data VP-Tree
     VPTreeFactory.build(S, this.unitSphereHaversteinDistance);
     this.starVPTree = starVPTree;
-  }
+  },
 
   update: function(skyData){
     this.radLatitude = this.latitude * this.deg2Rad;
@@ -542,56 +557,20 @@ var aDynamicSky = {
   },
 
   getStarPositions: function(){
-    //
-    //TODO: To reduce lookup times, this data should be organized according to a spherical KD-TREE
-    //However, because the relative positions of our stars will not change, we Only
-    //need to create the tree once... after that, we will be free to implement a rotation modelMatrix
-    //to convert each of our stars into an appropriate latitude and longitude.
-    //
+    //The first objective is to get all the faces of our our sphere.
 
-    //Get the faces of our sky sphere
-    el.getObject3D('mesh')
+    //Go those? Great! Now find the center azimuth and alitude for each of those.
 
-    //Go through all the faces on our sphere...
-    for(){
-      //Get the three vertices of this face, find the average
-      //and the their max distance to any given vertex.
+    //Our next step is where our time variation comes into play
+    //Convert each of our mesh azimuth and altitude coordinates into
+    //their respective longitude and latitude values...
 
-      //Convert the center of the sphere from it's azimuth and altitude
-      //Into right ascension and declination...
+    //Now figure out the center of the longitude and latidue, and the distances
+    //to each of the corners
 
-      //Go twice as far as this and gather all stars in this haverstine distance
-      //From this right ascension and declination...
-      var vertexStars = this.starVPTree.search(element, Infinity, radius);
+    //Use this information and send upper and lower latitudes and longitudes to our our vertex shader...
 
-      //Pass all of the star data from these stars into the vertex
-    }
-
-    var starDataFloatArray = new Float32Array(this.stars.length * 6);
-    for(var i = 0; i < this.stars.length; i++){
-      var star = this.stars[i];
-      var rightAscension = star.rightAscension * this.deg2Rad;
-      var declination = star.declination * this.deg2Rad;
-
-      var azAndAlt = this.getAzimuthAndAltitude(rightAscension, declination);
-      this.stars[i].azimuth = azAndAlt.azimuth;
-      this.stars[i].altitude = azAndAlt.altitude;
-
-      //Set these in the bufffer
-      var index = i * 6;
-      starDataFloatArray[index] = azAndAlt.azimuth;
-      starDataFloatArray[index + 1] = azAndAlt.altitude;
-      starDataFloatArray[index + 2] = star.magnitude;
-      starDataFloatArray[index + 3] = star.color.red;
-      starDataFloatArray[index + 4] = star.color.green;
-      starDataFloatArray[index + 5] = star.color.blue;
-    }
-
-    //Bind our star data to a strided float array
-    var starDataBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, starDataBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, starDataFloatArray, gl.DYNAMIC_DRAW);
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    //The shader will know what to do with these...
   },
 
   getDaysInYear: function(){

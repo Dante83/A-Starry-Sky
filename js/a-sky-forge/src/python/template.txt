@@ -14,6 +14,7 @@ AFRAME.registerShader('sky', {
     brightLimbOfMoon: {type: 'number', default: 0.0, max: 6.283185307, min: 0.0, is: 'uniform'},
     moonTexture: {type: 'map', src:'images/moon-dif-512.png', is: 'uniform'},
     moonNormalMap: {type: 'map', src:'moon-nor-512.png', is: 'uniform'},
+    starData: {type: 'map', src:'', is: 'uniform'},
     u_resolution: {type: 'vec2', default: {x: 1280, y: 720}, is: 'uniform'}
   },
 
