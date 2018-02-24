@@ -12,38 +12,57 @@ def approximatePosition(targetWidth, targetHeight, star_ra, star_dec):
     bestYPos = star_dec * targetHeight / pi
     return [bestXPos, bestYPos]
 
-def float2RGBA(floatNumber, maxNum, minNum):
-    #Perform a transformation into the space between 0.0 and 1.0
-    if(minNum >= 0.0):
-        normalizedFloatingNumber = (floatNumber - minNum) / (maxNum - minNum)
-    else:
-        normalizedFloatingNumber = (floatNumber + minNum) / (maxNum - minNum)
+def float2RGBA(floatNumber):
+    originalValue = floatNumber
 
-    #Check that all of our math is still right, we don't want anything going outside the bounds
-    if(normalizedFloatingNumber > 1.0):
-        print normalizedFloatingNumber
-        normalizedFloatingNumber = 1.0
-    elif(normalizedFloatingNumber < 0.0):
-        print normalizedFloatingNumber
-        normalizedFloatingNumber = 0.0
+    #Get the exponent and value portion of the number
+    sign = Math.sign(floatNumber)
+    floatNumber = Math.abs(floatNumber)
+    floatValue = floatNumber / pow(10, Math.floor(Math.log(floatNumber)))
+    exponent = Math.round(floatNumber / floatValue)
 
-    #Now do our conversion between this normalized float and RGBA
-    #With a little help from https://aras-p.info/blog/2009/07/30/encoding-floats-to-rgba-the-final/
-    encoding = np.array(1.0,255.0,65025.0,16581375.0) * normalizedFloatingNumber
-    encoding = np.modf(encoding)[0]
-    encoding -= np.array(encoding[1], encoding[2], encoding[3], encoding[3]) * np.array(1.0/255.0, 1.0/255.0, 1.0/255.0, 0.0)
+    #Convert the float into an integer less than or equal to 16777215
+    while((floatValue * 10) < 16777215):
+        floatValue *= 10
+        exponent -= 1
 
-    red = encoding[0];
-    green = encoding[1];
-    blue = encoding[2];
-    alpha = encoding[3];
+    if(exponent > 63):
+        print 'Our exponent is tooooooo big for our puny little program.'
+    elif(exponent < -63):
+        print 'Our exponent is toooooooo tiny for our massive program.'
 
-    #Test that this actually works
-    decoded = np.dot(encoding, np.array(1.0, 1.0/255.0, 1.0/65025.0, 1.0/16581375.0))
-    if(decoded == normalizedFloatingNumber):
-        print 'It worked!'
-    else:
-        print "The number %d does not equal the number %d" % (decoded, normalizedFloatingNumber)
+    #Now convert this appropriately into our R, G, B and Alpha value
+    #Alphas can represent exponents between -128 and 128
+
+    '''
+    This was our test program in js...
+    var a = 16777215;
+    var b = Math.floor(a / Math.pow(256, 2));
+    var rem = (a - (b * Math.pow(256, 2)));
+    var c = Math.floor( rem / 256);
+    var d = rem - (c * 256);
+
+    console.log(b,c,d)
+    console.log(b * Math.pow(256, 2), c * 256, d);
+    console.log(b * Math.pow(256, 2) + c * 256 + d);
+    '''
+
+    red = Math.floor(floatNumber / (256 * 256))
+    remainder = (floatNumber - (red * 256 * 256))
+    green = Math.floor(remainder / 256)
+    blue = remainder - (green * 256)
+
+    #1111111 1 Binary in int
+    #From https://stackoverflow.com/questions/699866/python-int-to-binary
+    alpha = int(bin(exponent) + (sign > 0 ? '1' : '0'), 2)
+
+    #Test that this technology works...
+    testExponentBinary = bin(alpha)
+    testSign = testExponentBinary[-1]
+    testExponenentRemainder = int(testExponentBinary[:-1])
+    testValue = (testSign * red * 256 * 256 + green * 256 + blue) * Math.pow(10, (testExponenentRemainder - 256))
+    if(testValue != originalValue):
+        print '%d does not equal %d, so something must be wrong with the creation of our rgb values...'
 
     return [red, green, blue, alpha]
 
@@ -86,14 +105,6 @@ def main():
                 'color': star_color}
 
                 star_data += [data_point]
-
-    #Get our maximum and minimum data values so that we convert everything into a range between 0.0 and 1.0
-    maxRa = 2.0 * pi
-    minRa = 0.0
-    maxDec = -pi / 2.0
-    minDec = pi / 2.0
-    maxMag = max([star.magnitude for star in star_data])
-    minMag = min([star.magnitude for star in star_data])
 
     #Also, print these out because we're probably going to want these values in our fragment shader
     print 'The maximum magnitude is %d and the minimum magnitude is %d' % (maxMag, minMag)
@@ -179,12 +190,15 @@ def main():
                 print "The star with id, " + star_array[x][y] + " was not found?! Blasphemy!"
             else:
                 star_array[x][y] = float2RGBA(desired_star.ra)
-                star_array[x + image_width][y] = float2RGBA(desired_star.ra, maxRa, minRa)
-                star_array[x + (2.0 * image_width)][y] = float2RGBA(desired_star.dec, maxDec, minDec)
-                star_array[x + (3.0 * image_width)][y] = float2RGBA(desired_star.mag, maxMag, minMag)
+                star_array[x + image_width][y] = float2RGBA(desired_star.ra)
+                star_array[x + (2.0 * image_width)][y] = float2RGBA(desired_star.dec)
+                star_array[x + (3.0 * image_width)][y] = float2RGBA(desired_star.mag)
                 star_array[x + (4.0 * image_width)][y] = [ceil(desired_star.r * 255.0), ceil(desired_star.r * 255.0),ceil(desired_star.r * 255.0)]
 
     #Convert this array into a png that we can later import and use to populate our stars at key points
     tuples = np.asarray(recursiveTuple(star_array))
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
     im.save('starry_data.png')
+
+#And now to run the entire application :D
+main()
