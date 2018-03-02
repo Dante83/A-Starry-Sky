@@ -83,8 +83,9 @@ def recursiveTuple(tupleThisList):
     return tuple(replacementList)
 
 def main():
-    image_width = 512
-    image_height = 256
+    padding = 5
+    image_width = 512 - padding
+    image_height = 256 - padding
 
     #Get all our stars again from that CSV File
     star_data = []
@@ -178,8 +179,10 @@ def main():
     #Now that we've populated the sky ids, create a 4*512 x 4*256 bit array converting
     #all of our floats into RGBA values to be decoded in the vertex shader
     star_out_array = [[[0,0,0,0] for i in xrange(image_width * 5)] for j in xrange(image_height)]
+    star_out_sub_images = [[[[0,0,0,0] for i in xrange(image_width)] for j in xrange(image_height)] for img in xrange(5)]
 
     #Fill the first three sections with the float data for azimuth, altitude and magnitude
+
     for x in xrange(image_width):
         for y in xrange(image_height):
             desired_star = False
@@ -198,10 +201,30 @@ def main():
                     star_out_array[y][x + (3 * image_width)] = float2RGBA(desired_star['mag'])
                     star_out_array[y][x + (4 * image_width)] = [math.floor(desired_star['r'] * 256.0), math.floor(desired_star['g'] * 256.0), math.floor(desired_star['b'] * 256.0), 255.0]
 
+                    #And our sub sub images
+                    star_out_sub_images[0][y][x] = star_out_array[y][x][:]
+                    star_out_sub_images[1][y][x] = star_out_array[y][x + image_width][:]
+                    star_out_sub_images[2][y][x] = star_out_array[y][x + (2 * image_width)][:]
+                    star_out_sub_images[3][y][x] = star_out_array[y][x + (3 * image_width)][:]
+                    star_out_sub_images[4][y][x] = star_out_array[y][x + (4 * image_width)][:]
+
+    #And while we're here, let's also create the padded version of the star data
+    #Python is perfect for this because of it's ability to use negative indices
+    padded_image = [[[0,0,0,0] for i in xrange((image_width + 2 * padding) * 5)] for j in xrange(image_height + 2 * padding)]
+    for index, sub_image in enumerate(star_out_sub_images):
+        for y in range(-padding, (image_height + padding)):
+            for x in range(-padding, (image_width + padding)):
+                padded_image[y + padding][x + padding + (index * (image_width + 2 * padding))] = sub_image[y if y <= 0 else (y % image_height)][x if x <= 0 else (x % image_width)]
+
     #Convert this array into a png that we can later import and use to populate our stars at key points
     imarray = np.asarray(star_out_array)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
     im.save('../../../../examples/images/starry-data.png')
+
+    #And the padded data
+    imarray = np.asarray(padded_image)
+    im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
+    im.save('../../../../examples/images/padded-starry-data.png')
 
 #And now to run the entire application :D
 main()

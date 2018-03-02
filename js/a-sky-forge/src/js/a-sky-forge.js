@@ -34,8 +34,8 @@ AFRAME.registerPrimitive('a-sky-forge', AFRAME.utils.extendDeep({}, meshMixin, {
       geometry: {
         primitive: 'sphere',
         radius: 5000,
-        segmentsWidth: 256,
-        segmentsHeight: 128
+        segmentsWidth: 64,
+        segmentsHeight: 32
       },
       scale: '-1, 1, 1',
       "geo-coordinates": 'lat: 37.7749; long: -122.4194',
@@ -69,19 +69,8 @@ AFRAME.registerComponent('sky-time', {
   },
 
   init: function(){
-    console.log("New Test");
-    console.log(this.el.components.geometry.geometry);
-    console.log("New test 2");
-
-    this.parentGeometry = this.el.components['a-sky-forge'].getObject3D('mesh');
-
-    //
-    //TODO: Let's see what data is inside of this thing so that we can connect it
-    //TODO: All together and inject buffer attributes.
-    //
-
     console.log("TEST");
-    console.log(this.parentGeometry);
+    console.log(this.otherAttributes);
     console.log("END TEST");
 
     this.lastCameraDirection = {x: 0.0, y: 0.0, z: 0.0};
@@ -91,12 +80,6 @@ AFRAME.registerComponent('sky-time', {
     this.dynamicSkyObj.update(this.data);
     var solarGPUCoordinates = this.dynamicSkyObj.convert2NormalizedGPUCoords(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
     this.el.components.material.material.uniforms.sunPosition.value.set(solarGPUCoordinates.x,solarGPUCoordinates.y,solarGPUCoordinates.z);
-
-    //Create a texture loader to do all our texture loading efforts
-    //
-    //TODO: Make use of the appropriate loading manager at this stage
-    //
-    //var textureloader = new THREE.TextureLoader();
 
     //Load our normal maps for the moon
     var moonTexture = THREE.ImageUtils.loadTexture(this.data.moonTexture);
