@@ -35,8 +35,8 @@ uniform mediump vec3 sunPosition;
 const float angularRadiusOfTheSun = 0.074; //The sun and the moon should be able the same size
 
 //
-//NOTE: These values are interpolated, so we're probably not getting the values
-//NOTE: we think we're getting. We'd have to uninterpolate them and that would really
+//NOTE: These values are interpolated, so we are probably not getting the values
+//NOTE: we think we are getting. We would have to uninterpolate them and that would really
 //NOTE: stink.
 //
 //Sky Surface data
@@ -59,8 +59,16 @@ uniform float hourAngle;
 uniform float localSiderealTime;
 
 //
+//NOTE: Subtract 67 from any errors to get the apropriate line number
+//
+
+//
 //UTIL FUNCTIONS
 //
+
+int modulo(float a, float b){
+  return int(a - (b * floor(a/b)));
+}
 
 //This converts our local sky coordinates from azimuth and altitude
 //into ra and dec, which is useful for picking out stars
@@ -74,9 +82,11 @@ vec2 getRaAndDec(float az, float alt){
 
 //This is useful for converting our values from rgb colors into floats
 float rgba2Float(vec4 colorIn){
-  int floatSign = mod(colorIn.a, 2) == 0 ? -1 : 1;
-  float floatExponential = float(((colorIn.a + ((floatSign + 1) / 2)) / 2) - 64);
-  float floatValue = float(floatSign) * (float(colorIn.r) * 256.0 * 256.0 + float(colorIn.g) * 256.0 + float(colorIn.b)) * pow(10.0, floatExponential);
+  vec4 colorIn255bits = floor(colorIn * 255.0);
+
+  int floatSign = (modulo(colorIn255bits.a, 2.0)) == 0 ? -1 : 1;
+  float floatExponential = float(((int(colorIn255bits.a) + ((floatSign + 1) / 2)) / 2) - 64);
+  float floatValue = float(floatSign) * (colorIn255bits.r * 256.0 * 256.0 + colorIn255bits.g * 256.0 + colorIn255bits.b) * pow(10.0, floatExponential);
 
   return floatValue;
 }
@@ -114,7 +124,7 @@ vec4 drawSunLayer(float azimuthOfPixel, float altitudeOfPixel){
   vec4 returnColor = vec4(0.0);
   if(positionData.z < angularRadiusOfTheSun){
     //For now we will just return the color white -- in the future we will probably use a better model for the inner sunlight...
-    returnColor = vec4(1.0,1.0, 1.0, 1.0);
+    returnColor = vec4(1.0);
   }
 
   return returnColor;
@@ -169,8 +179,8 @@ vec4 drawStars(float azimuthOfPixel, float altitudeOfPixel){
   vec2 raAndDecOfPixel = getRaAndDec(azimuthOfPixel, altitudeOfPixel);
   float rightAscensionOfPixel = raAndDecOfPixel.x;
   float declinationOfPixel = raAndDecOfPixel.y;
-  int raInImageSpace = int(clamp((starDataImgWidth - 2 * padding) * (rightAscensionOfPixel / piTimes2) + padding, padding, starDataImgWidth - padding));
-  int decInImageSpace = int(clamp((starDataImgHeight - 2 * padding) * ((declinationOfPixel + (pi / 2.0)) / pi) + padding, padding, starDataImgHeight - padding));
+  int raInImageSpace = int(clamp(float(starDataImgWidth - 2 * padding) * (rightAscensionOfPixel / piTimes2) + float(padding), float(padding), float(starDataImgWidth - padding)));
+  int decInImageSpace = int(clamp(float(starDataImgHeight - 2 * padding) * ((declinationOfPixel + (pi / 2.0)) / pi) + float(padding), float(padding), float(starDataImgHeight - padding)));
 
   //Now get the coordinates of our subimage we wish to iterate over
   int startX = raInImageSpace - padding;
@@ -179,14 +189,16 @@ vec4 drawStars(float azimuthOfPixel, float altitudeOfPixel){
   int endY = decInImageSpace + padding;
 
   //Carve out space for half our pixels to be filled - ignore the rest.
+  // int halfSpace = (paddingSquared + 1) / 2;
+  //Manual calculation of the above
   int halfSpace = (paddingSquared + 1) / 2;
-  float starRas[halfSpace];
-  float starDecs[halfSpace];
-  float starIntensities[halfSpace];
-  vec3 starColors[halfSpace]
+  float starRas[66];
+  float starDecs[66];
+  float starIntensities[66];
+  vec3 starColors[66];
 
   //Initialize all our stars to null stars - we will fill them in afterwards if they exist
-  for(int i = 0; i < halfSpace; ++i){
+  for(int i = 0; i < halfSpace; i++){
     starRas[i] = 0.0;
     starDecs[i] = 0.0;
     starIntensities[i] = 0.0;
@@ -197,15 +209,21 @@ vec4 drawStars(float azimuthOfPixel, float altitudeOfPixel){
   int star = 0;
   for(int i = startX; i <= endX; ++i){
     for(int j = startY; j <= endY; ++j){
-      vec4 isStar = texelFetch(starData, vec2(i, j));
+      vec4 isStar = texelFetch(starData, ivec2(i, j), 0);
 
-      if(isStar.r === 1.0){
+      if(isStar.r == 1.0){
         //If our value is red, we found a star. Get the values for this star
         //by converting our ras, decs, and intensities. The color should just be the color.
-        starRas[star] = rgba2Float(texelFetch(starData, vec2((i + starDataImgWidth), j)));
-        starDecs[star] = rgba2Float(texelFetch(starData, vec2((i + 2 * starDataImgWidth), j)));
-        starIntensities[star] = rgba2Float(texelFetch(starData, vec2((i + 3 * starDataImgWidth), j)));
-        starColors[star] = texelFetch(starData, vec2(i + 4 * starDataImgWidth, j)).rgb
+        vec4 starRAColor = texelFetch(starData, ivec2((i + starDataImgWidth), j), 0);
+        vec4 starDecColor = texelFetch(starData, ivec2((i + 2 * starDataImgWidth), j), 0);
+        vec4 starIntensityColor = texelFetch(starData, ivec2((i + 3 * starDataImgWidth), j), 0);
+        vec4 starColor = texelFetch(starData, ivec2(i + 4 * starDataImgWidth, j), 0);
+
+        //Convert colors into final forms we desire
+        starRas[star] = rgba2Float(starRAColor);
+        starDecs[star] = rgba2Float(starDecColor);
+        starIntensities[star] = rgba2Float(starIntensityColor);
+        starColors[star] = starColor.rgb
       }
 
       //because we added a star, iterate this variable.
@@ -215,7 +233,7 @@ vec4 drawStars(float azimuthOfPixel, float altitudeOfPixel){
 
   //For every star, determine the distance of this pixel from the star
   //NOTE: We are presuming that the light from each star is too little to worry about if they glow around the moon or sun.
-  returnColor = vec4(0.0);
+  vec4 returnColor = vec4(0.0);
   float radiusOfStar;
   float maxRadiusOfStar = (1.0/360.0) * piTimes2;
   for(int i = 0; i < halfSpace; ++i){
@@ -225,10 +243,10 @@ vec4 drawStars(float azimuthOfPixel, float altitudeOfPixel){
     //Implement star light and glow.
     //TODO: Implement star twinkle here.
     radiusOfStar = maxRadiusOfStar * ((starIntensities[i] + 1.5) / 8.0);
-    color = addImageWithAveragedEdge(color, clamp(smoothstep(radiusOfStar - distanceToStar, vec4(1.0), vec4(starColors[i], 0.0)), vec3(0.0), vec4(1.0)));
+    returnColor = addImageWithAveragedEdge(color, clamp(smoothstep(radiusOfStar - distanceToStar, vec4(1.0), vec4(starColors[i], 0.0)), vec3(0.0), vec4(1.0)));
   }
 
-  return color;
+  return returnColor;
 }
 
 //
