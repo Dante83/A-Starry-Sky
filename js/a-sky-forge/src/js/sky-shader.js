@@ -267,7 +267,13 @@ AFRAME.registerShader('sky', {
     'vec4 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 starColor){',
       'float maxRadiusOfStar = (2.0/360.0) * piTimes2;',
       'float normalizedMagnitude = (7.96 - (magnitudeOfStar + 1.46)) / 7.96;',
-      'float radiusOfStar = maxRadiusOfStar * normalizedMagnitude;',
+      'float radiusOfStar = clamp(maxRadiusOfStar * normalizedMagnitude, 0.0, 1.0);',
+
+      '//',
+      '//NOTE: We should probably avoid our movement twinkling and the color mix of the sky in colorOfSky shoud',
+      '//probably come from the background of the skies refractive angle and original sky color (at dusk and dawn)',
+      '//and not remain a constant.',
+      '//',
 
       'vec3 positionData = angularDistanceApproximation(raAndDec.x, raAndDec.y, raAndDecOfStar.x, raAndDecOfStar.y);',
       'vec4 returnColor = vec4(0.0);',
