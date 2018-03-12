@@ -2,13 +2,14 @@ varying vec3 vWorldPosition;
 varying vec3 tangentSpaceSunlight;
 
 //For calculating the solar and and lunar data
-uniform mediump vec3 sunPosition;
+uniform mediump vec2 sunPosition;
 uniform mediump vec3 moonAzAltAndParallacticAngle;
 
 //Thanks Wolfram Alpha!
 const float e = 2.71828182845904523536028747135266249775724709369995957;
 const float pi = 3.141592653589793238462643383279502884197169;
 const float piTimes2 = 6.283185307179586476925286766559005768394338798750211641949;
+const float piOver2 = 1.5707963267948966192313216916397514420985846996875529;
 const float deg2Rad = 0.017453292519943295769236907684886127134428718885417254560;
 
 void main() {
@@ -16,16 +17,12 @@ void main() {
   vWorldPosition = worldPosition.xyz;
 
   //
-  //STARS
+  //LUNAR SHADOWS
   //
 
   //Let us break this out into components
   float mAltitude = moonAzAltAndParallacticAngle.y;
   float mAzimuth = moonAzAltAndParallacticAngle.x;
-
-  //
-  //LUNAR SHADOWS
-  //
 
   //TODO: Something is still off here, but we will come back to this in the future...
 
@@ -36,7 +33,7 @@ void main() {
   //NOTE: We should probably rotate the tangent and bitangent by the parallactic angle to preserve shading under rotation
 
   //Note: We pass in a UV attribute, perhaps we should use these vectors to determine our tangent, bitangent and normal vectors?
-  vec3 faceTangent = normalize(vec3(sin(-mAltitude) * cos(mAzimuth), sin(- mAltitude) * sin(mAzimuth), cos(mAzimuth)));
+  vec3 faceTangent = normalize(vec3(sin(mAltitude) * cos(mAzimuth), sin(mAltitude) * sin(mAzimuth), cos(mAzimuth)));
   vec3 faceBitangent = normalize(cross(faceNormal, faceTangent));//And then we are going to cross the two to get our bi-vector
   //vec3 faceBinormal = normalize(cross(faceNormal, faceTangent));//And then we are going to cross the two to get our bi-vector
 
@@ -46,8 +43,17 @@ void main() {
       faceTangent.z, faceBitangent.z, faceNormal.z
   );
 
+  //Convert our solar position into x, y and z coordinates -- we are going to put this at 5000 meters just to align with our sphere.
+  float solarAzimuth = sunPosition.x;
+  float solarAltitude = sunPosition.y;
+  float solarTheta = (pi - (solarAltitude + piOver2)) - piOver2;
+  float solarXCoordinates = 1.0 * sin(solarTheta) * cos(solarAltitude);
+  float solarYCoordinates = 1.0 * sin(solarTheta) * sin(solarAltitude);
+  float solarZCoordinates = 1.0 * cos(solarTheta);
+  vec3 normalizedSolarCoordinates = normalize(vec3(solarXCoordinates, solarYCoordinates, solarZCoordinates));
+
   //All of this lighting happens very far away, so we dont have to worry about our camera position
-  tangentSpaceSunlight = toTangentSpace * sunPosition;
+  tangentSpaceSunlight = toTangentSpace * normalizedSolarCoordinates;
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 }

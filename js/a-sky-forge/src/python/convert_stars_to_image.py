@@ -84,8 +84,8 @@ def recursiveTuple(tupleThisList):
 
 def main():
     padding = 5
-    image_width = 512 - padding
-    image_height = 256 - padding
+    image_width = 512 - 2 * padding
+    image_height = 256 - 2 * padding
 
     #Get all our stars again from that CSV File
     star_data = []
@@ -118,8 +118,8 @@ def main():
     for id, star in enumerate(sorted_star_data):
         tagged_star = {\
             'id': id,\
-            'ra': star['rightAscension'] * ((2.0 * np.pi) / 24.0),\
-            'dec': star['declination'] * (np.pi / 180),\
+            'ra': star['rightAscension'] * (np.pi / 12.0),\
+            'dec': star['declination'] * (np.pi / 180.0),\
             'mag': star['magnitude'],\
             'r': star['color']['red'],\
             'g': star['color']['green'],\
@@ -154,9 +154,10 @@ def main():
             sorted_pixels_in_ring = sorted(pixels_in_ring, key=lambda position, target=pos: sortByDistanceFromOriginalPixel(position, target))
             while(radial_offset <= 2):
                 next_pixel = sorted_pixels_in_ring[pixel_of_ring]
+                #print next_pixel
                 normalized_pixel = [next_pixel[0] % image_width, next_pixel[1] % image_height]
-                if(star_array[next_pixel[1]][next_pixel[0]] == -1):
-                    star_array[next_pixel[1]][next_pixel[0]] = star['id']
+                if(star_array[normalized_pixel[1]][normalized_pixel[0]] == -1):
+                    star_array[normalized_pixel[1]][normalized_pixel[0]] = star['id']
                     break
                 pixel_of_ring += 1
                 if(pixel_of_ring == len(pixels_in_ring)):
@@ -212,19 +213,24 @@ def main():
     #Python is perfect for this because of it's ability to use negative indices
     padded_image = [[[0,0,0,0] for i in xrange((image_width + 2 * padding) * 5)] for j in xrange(image_height + 2 * padding)]
     for index, sub_image in enumerate(star_out_sub_images):
+        padded_sub_image = [[[0,0,0,0] for i in xrange(image_width + 2 * padding)] for j in xrange(image_height + 2 * padding)]
         for y in range(-padding, (image_height + padding)):
             for x in range(-padding, (image_width + padding)):
+                padded_sub_image[y + padding][x + padding] = sub_image[y if y <= 0 else (y % image_height)][x if x <= 0 else (x % image_width)]
                 padded_image[y + padding][x + padding + (index * (image_width + 2 * padding))] = sub_image[y if y <= 0 else (y % image_height)][x if x <= 0 else (x % image_width)]
+        imarray = np.asarray(padded_sub_image)
+        im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
+        im.save('../../../../images/padded-starry-sub-data-%d.png'%(index))
 
     #Convert this array into a png that we can later import and use to populate our stars at key points
     imarray = np.asarray(star_out_array)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-    im.save('../../../../examples/images/starry-data.png')
+    im.save('../../../../images/starry-data.png')
 
     #And the padded data
     imarray = np.asarray(padded_image)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-    im.save('../../../../examples/images/padded-starry-data.png')
+    im.save('../../../../images/padded-starry-data.png')
 
 #And now to run the entire application :D
 main()

@@ -65,48 +65,82 @@ AFRAME.registerComponent('sky-time', {
     yearPeriod: {type: 'number', default: 365.0},
     year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
     moonTexture: {type: 'map', default: '../images/moon-dif-512.png'},
-    moonNormalMap: {type: 'map', default: '../images/moon-nor-512.png'}
+    moonNormalMap: {type: 'map', default: '../images/moon-nor-512.png'},
+    starMask: {type: 'map', default:'../images/padded-starry-sub-data-0.png'},
+    starRas: {type: 'map', default:'../images/padded-starry-sub-data-1.png'},
+    starDecs: {type: 'map', default:'../images/padded-starry-sub-data-2.png'},
+    starMags: {type: 'map', default:'../images/padded-starry-sub-data-3.png'},
+    starColors: {type: 'map', default:'../images/padded-starry-sub-data-4.png'},
   },
 
   init: function(){
-    console.log("TEST");
-    console.log(this.otherAttributes);
-    console.log("END TEST");
-
     this.lastCameraDirection = {x: 0.0, y: 0.0, z: 0.0};
     this.dynamicSkyObj = aDynamicSky;
     this.dynamicSkyObj.latitude = this.el.components['geo-coordinates'].data.lat;
     this.dynamicSkyObj.longitude = this.el.components['geo-coordinates'].data.long;
     this.dynamicSkyObj.update(this.data);
-    var solarGPUCoordinates = this.dynamicSkyObj.convert2NormalizedGPUCoords(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
-    this.el.components.material.material.uniforms.sunPosition.value.set(solarGPUCoordinates.x,solarGPUCoordinates.y,solarGPUCoordinates.z);
+    this.el.components.material.material.uniforms.sunPosition.value.set(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
 
     //Load our normal maps for the moon
-    var moonTexture = THREE.ImageUtils.loadTexture(this.data.moonTexture);
-    var moonNormalMap = THREE.ImageUtils.loadTexture(this.data.moonNormalMap);
+    var textureLoader = new THREE.TextureLoader();
+    var moonTexture = textureLoader.load(this.data.moonTexture);
+    var moonNormalMap = textureLoader.load(this.data.moonNormalMap);
+
+    //
+    //Note: We might want to min map our moon texture and normal map so that
+    //Note: we can get better texture results in our view
+    //
+
+    //Populate this data into an array because we're about to do some awesome stuff
+    //to each texture with Three JS.
+    //Note that,
+    //We use a nearest mag and min filter to avoid fuzzy pixels, which kill good data
+    //We use repeat wrapping on wrap s, to horizontally flip to the other side of the image along RA
+    //And we use mirrored mapping on wrap w to just reflect back, although internally we will want to subtract 0.5 from this.
+    //we also use needs update to make all this work as per, https://codepen.io/SereznoKot/pen/vNjJWd
+    var starMask = textureLoader.load(this.data.starMask);
+    starMask.magFilter = THREE.NearestFilter;
+    starMask.minFilter = THREE.NearestFilter;
+    starMask.wrapS = THREE.RepeatWrapping;
+    starMask.wrapW = THREE.MirroredRepeatWrapping;
+    starMask.needsUpdate = true;
+    var starRas = textureLoader.load(this.data.starRas);
+    starRas.magFilter = THREE.NearestFilter;
+    starRas.minFilter = THREE.NearestFilter;
+    starRas.wrapS = THREE.RepeatWrapping;
+    starRas.wrapW = THREE.MirroredRepeatWrapping;
+    starRas.needsUpdate = true;
+    var starDecs = textureLoader.load(this.data.starDecs);
+    starDecs.magFilter = THREE.NearestFilter;
+    starDecs.minFilter = THREE.NearestFilter;
+    starDecs.wrapS = THREE.RepeatWrapping;
+    starDecs.wrapW = THREE.MirroredRepeatWrapping;
+    starDecs.needsUpdate = true;
+    var starMags = textureLoader.load(this.data.starMags);
+    starMags.magFilter = THREE.NearestFilter;
+    starMags.minFilter = THREE.NearestFilter;
+    starMags.wrapS = THREE.RepeatWrapping;
+    starMags.wrapW = THREE.MirroredRepeatWrapping;
+    starMags.needsUpdate = true;
+    var starColors = textureLoader.load(this.data.starColors);
+    starColors.magFilter = THREE.NearestFilter;
+    starColors.minFilter = THREE.NearestFilter;
+    starColors.wrapS = THREE.RepeatWrapping;
+    starColors.wrapW = THREE.MirroredRepeatWrapping;
+    starColors.needsUpdate = true;
 
     //We only load our textures once upon initialization
     this.el.components.material.material.uniforms.moonTexture.value = moonTexture;
     this.el.components.material.material.uniforms.moonNormalMap.value = moonNormalMap;
-
-    //We only load the magnitudes and colors of our stars concerns
-    var starMagnitudes = [];
-    var starColors = [];
-
-    //Via https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color
-    /*this.dynamicSkyObj.stars.forEach(function(star) {
-      var starMagnitude = star.magnitude;
-      starMagnitudes.push(starMagnitude);
-      var color = star.color;
-      starColors.push({x: color.red,y: color.green,z: color.blue});
-    });
-    this.el.components.material.material.uniforms.starMagnitudes.value.set(starMagnitudes);
-    this.el.components.material.material.uniforms.starColors.value.set(starColors);*/
+    this.el.components.material.material.uniforms.starMask.value = starMask;
+    this.el.components.material.material.uniforms.starRas.value = starRas;
+    this.el.components.material.material.uniforms.starDecs.value = starDecs;
+    this.el.components.material.material.uniforms.starMags.value = starMags;
+    this.el.components.material.material.uniforms.starColors.value = starColors;
   },
 
   update: function () {
     this.fractionalSeconds = 0;
-    var solarGPUCoordinates = this.dynamicSkyObj.convert2NormalizedGPUCoords(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
   },
 
   tick: function (time, timeDelta) {
@@ -136,9 +170,12 @@ AFRAME.registerComponent('sky-time', {
 
       //Update our data for the dynamic sky object
       this.dynamicSkyObj.update(this.data);
-      //this.el.components.material.material.uniforms.sunPosition.value.set(0, this.dynamicSkyObj.sunPosition.altitude,this.dynamicSkyObj.sunPosition.azimuth);
-      var solarGPUCoordinates = this.dynamicSkyObj.convert2NormalizedGPUCoords(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
-      this.el.components.material.material.uniforms.sunPosition.value.set(solarGPUCoordinates.x,solarGPUCoordinates.y,solarGPUCoordinates.z);
+      this.el.components.material.material.uniforms.sunPosition.value.set(3.14, 0.0);
+
+      //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
+      this.el.components.material.material.uniforms.localSiderealTime.value = this.dynamicSkyObj.localSiderealTime;
+
+      //this.el.components.material.material.uniforms.sunPosition.value.set(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
       this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(this.dynamicSkyObj.moonPosition.azimuth, this.dynamicSkyObj.moonPosition.altitude, this.dynamicSkyObj.moonsParallacticAngle);
       this.el.components.material.material.uniforms.illuminatedFractionOfMoon.value = this.dynamicSkyObj.illuminatedFractionOfMoon;
       this.el.components.material.material.uniforms.brightLimbOfMoon.value = this.dynamicSkyObj.brightLimbOfMoon;
@@ -190,6 +227,8 @@ var aDynamicSky = {
     //Create the start data VP-Tree
     VPTreeFactory.build(S, this.unitSphereHaversteinDistance);
     this.starVPTree = starVPTree;
+
+
   },
 
   update: function(skyData){
@@ -209,6 +248,7 @@ var aDynamicSky = {
     this.calculateSunAndMoonLongitudeElgonationAndAnomoly();
     this.calculateNutationAndObliquityInEclipticAndLongitude();
     this.siderealTime = this.calculateGreenwhichSiderealTime();
+    this.localSiderealTime = this.siderealTime - this.radLongitude;
     this.apparentSideRealTime = this.calculateApparentSiderealTime();
 
     //Get our actual positions
@@ -379,7 +419,6 @@ var aDynamicSky = {
     //Because we use these elsewhere...
     this.sunsRightAscension = rightAscension;
     this.sunsDeclination = declination;
-
     return this.getAzimuthAndAltitude(rightAscension, declination);
   },
 
