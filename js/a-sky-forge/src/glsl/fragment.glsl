@@ -18,12 +18,35 @@ uniform float reileigh;
 uniform float mieCoefficient;
 uniform float mieDirectionalG;
 
+const float n = 1.0003; // refractive index of air
+const float N = 2.545E25; // number of molecules per unit volume for air at
+// 288.15K and 1013mb (sea level -45 celsius)
+const float pn = 0.035;  // depolatization factor for standard air
+
+// mie stuff
+// K coefficient for the primaries
+const vec3 lambda = vec3(680E-9, 550E-9, 450E-9);
+const vec3 K = vec3(0.686, 0.678, 0.666);
+const float v = 4.0;
+
+// optical length at zenith for molecules
+const float rayleighZenithLength = 8.4E3;
+const float mieZenithLength = 1.25E3;
+const vec3 up = vec3(0.0, 1.0, 0.0);
+
+const float EE = 1000.0;
+
 // mathematical constants
 const float e = 2.71828182845904523536028747135266249775724709369995957;
 const float pi = 3.141592653589793238462643383279502884197169;
 const float piTimes2 = 6.283185307179586476925286766559005768394338798750211641949;
 const float piOver2 = 1.570796326794896619231321691639751442098584699687552910487;
 const float deg2Rad = 0.017453292519943295769236907684886127134428718885417254560;
+
+//More sky stuff that happens to need pi
+// earth shadow hack
+const float cutoffAngle = pi/1.95;
+const float steepness = 1.5;
 
 //Star Data (passed from our fragment shader)
 uniform sampler2D starMask;
@@ -268,6 +291,131 @@ vec4 drawStarLayer(float azimuthOfPixel, float altitudeOfPixel){
 //SKY
 //
 
+vec3 totalRayleigh(vec3 lambda)
+{
+  return (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn));
+}
+
+// see http://blenderartists.org/forum/showthread.php?321110-Shaders-and-Skybox-madness
+// A simplied version of the total Rayleigh scattering to works on browsers that use ANGLE
+vec3 simplifiedRayleigh()
+{
+  return 0.0005 / vec3(94, 40, 18);
+}
+
+float rayleighPhase(float cosTheta)
+{
+  return (3.0 / (16.0*pi)) * (1.0 + pow(cosTheta, 2.0));
+}
+
+vec3 totalMie(vec3 lambda, vec3 K, float T)
+{
+  float c = (0.2 * T ) * 10E-18;
+  return 0.434 * c * pi * pow((2.0 * pi) / lambda, vec3(v - 2.0)) * K;
+}
+
+float hgPhase(float cosTheta, float g)
+{
+  return (1.0 / (4.0*pi)) * ((1.0 - pow(g, 2.0)) / pow(1.0 - 2.0*g*cosTheta + pow(g, 2.0), 1.5));
+}
+
+float sunIntensity(float zenithAngleCos)
+{
+  return EE * max(0.0, 1.0 - exp(-((cutoffAngle - acos(zenithAngleCos))/steepness)));
+}
+
+// Filmic ToneMapping http://filmicgames.com/archives/75
+const float A = 0.15;
+const float B = 0.50;
+const float C = 0.10;
+const float D = 0.20;
+const float E = 0.02;
+const float F = 0.30;
+const float W = 1000.0;
+
+vec3 Uncharted2Tonemap(vec3 x)
+{
+  return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
+}
+
+vec4 drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
+  //Get the fading of the sun and the darkening of the sky
+  //TODO: Come back here and decide how to get sunPosition.y
+  float sunAz = sunPosition.x;
+  float sunAlt = sunPosition.y;
+  float zenithAngle = pi - sunAlt;
+  float sunX = cos(zenithAngle);
+  float sunY = sin(zenithAngle);
+  float sunZ = cos(sunAz);
+  float heightOfSunInSky = 5000.0 * sin(sunAlt); //5000.0 is presumed to be the radius of our sphere
+  float sunfade = 1.0-clamp(1.0-exp(heightOfSunInSky/5000.0),0.0,1.0);
+  float reileighCoefficient = reileigh - (1.0 * (1.0-sunfade));
+
+  //Get the sun intensity
+  //Using dot(a,b) = ||a|| ||b|| * cos(a, b);
+  //Here, the angle between up and the sun direction is always the zenith angle
+  //Note in the original code, we normalized the sun direction at this point so that
+  //the magnitude of that vector will always be one.
+  //while
+  vec3 floatSunPosition = normalize(vec3(sunX, sunY, sunZ));
+  float dotOfSunDirectionAndUp = dot(floatSunPosition, up);
+  float sunE = sunIntensity(dotOfSunDirectionAndUp);
+
+  //Acquire betaR and betaM
+  vec3 betaR = simplifiedRayleigh() * reileighCoefficient;
+  vec3 betaM = totalMie(lambda, K, turbidity) * mieCoefficient;
+
+  // Get the current optical length
+  // cutoff angle at 90 to avoid singularity in next formula.
+  //presuming here that the dot of the sun direction and up is also cos(zenith angle)
+  float sR = rayleighZenithLength / (dotOfSunDirectionAndUp + 0.15 * pow(93.885 - ((zenithAngle * 180.0) / pi), -1.253));
+  float sM = mieZenithLength / (dotOfSunDirectionAndUp + 0.15 * pow(93.885 - ((zenithAngle * 180.0) / pi), -1.253));
+
+  // combined extinction factor
+  vec3 Fex = exp(-(betaR * sR + betaM * sM));
+
+  // in scattering
+  //TODO: Come back here and decide how we shoud calculate cosTheta using angles, right now I am using vec3(0.0) as camera position
+  float cosTheta = dot(normalize(vWorldPosition - vec3(0.0)), floatSunPosition);
+
+  float rPhase = rayleighPhase(cosTheta*0.5+0.5);
+  vec3 betaRTheta = betaR * rPhase;
+
+  float mPhase = hgPhase(cosTheta, mieDirectionalG);
+  vec3 betaMTheta = betaM * mPhase;
+
+  vec3 Lin = pow(sunE * ((betaRTheta + betaMTheta) / (betaR + betaM)) * (1.0 - Fex),vec3(1.5));
+  Lin *= mix(vec3(1.0),pow(sunE * ((betaRTheta + betaMTheta) / (betaR + betaM)) * Fex,vec3(1.0/2.0)),clamp(pow(1.0-dotOfSunDirectionAndUp,5.0),0.0,1.0));
+
+  //nightsky
+  //TODO This would be a great place to figure out our phi and theta and stuff back into dots
+  vec2 uv = vec2(azimuthOfPixel, (piOver2 - altitudeOfPixel)) / vec2(2.0*pi, pi) + vec2(0.5, 0.0);
+  vec3 L0 = vec3(0.1) * Fex;
+
+  //Solar disk stuff, we really need to split this apart between here and the sun stuff above
+  float sunAngularDiameterCos = cos(angularRadiusOfTheSun);
+  float sundisk = smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002,cosTheta);
+  L0 += (sunE * 19000.0 * Fex)*sundisk;
+
+  vec3 texColor = (Lin+L0);
+  texColor *= 0.04 ;
+  texColor += vec3(0.0,0.001,0.0025)*0.3;
+
+  float g_fMaxLuminance = 1.0;
+  float fLumScaled = 0.1 / luminance;
+  float fLumCompressed = (fLumScaled * (1.0 + (fLumScaled / (g_fMaxLuminance * g_fMaxLuminance)))) / (1.0 + fLumScaled);
+
+  float ExposureBias = fLumCompressed;
+
+  vec3 whiteScale = 1.0/Uncharted2Tonemap(vec3(W));
+  vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*texColor);
+  vec3 color = curr*whiteScale;
+
+  vec3 retColor = pow(color,vec3(1.0/(1.2+(1.2*sunfade))));
+
+  return vec4(retColor, 1.0);
+}
+
 //
 //Draw main loop
 //
@@ -284,6 +432,8 @@ void main()
   color = addImageWithAveragedEdge(drawStarLayer(azimuth, altitude), color);
 
   //Then comes the sun
+  //TODO: We need to branch our our solar disk frome below to here so that we never accidently draw the moon behind the sun
+  //But the glowing stuff can go in front of our sky - but will probably go behind clouds if we add them.
   color = addImageWithAveragedEdge(drawSunLayer(azimuth, altitude), color);
 
   //And finally the moon...
@@ -294,7 +444,9 @@ void main()
   //
 
   //Once we have draw each of these, we will add their light to the light of the sky in the original sky model
-
+  //TODO: Implement having this tint the sky rather than paint over the top of it, so that all of our objects shine through it
+  //Rather than being covered by it
+  color = addImageWithAveragedEdge(drawSkyLayer(azimuth, altitude), color);
 
   //And then we will add the glow of the sun, moon and stars...
 

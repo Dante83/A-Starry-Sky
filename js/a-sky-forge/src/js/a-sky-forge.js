@@ -170,7 +170,7 @@ AFRAME.registerComponent('sky-time', {
 
       //Update our data for the dynamic sky object
       this.dynamicSkyObj.update(this.data);
-      this.el.components.material.material.uniforms.sunPosition.value.set(3.14, 0.0);
+      this.el.components.material.material.uniforms.sunPosition.value.set(3.14, 3.14 * (0.99));
 
       //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
       this.el.components.material.material.uniforms.localSiderealTime.value = this.dynamicSkyObj.localSiderealTime;
