@@ -169,17 +169,26 @@ AFRAME.registerComponent('sky-time', {
       this.el.components.material.material.uniforms.u_resolution.value.set(window.screen.width, window.screen.height);
 
       //Update our data for the dynamic sky object
+      //For method go to line 567
       this.dynamicSkyObj.update(this.data);
-      this.el.components.material.material.uniforms.sunPosition.value.set(0.0, 0.2 * (3.14159/2.0));
-      this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(0.0, 0.0, 0.0);
+      var solarAzimuth = 3.14159;
+      var solarAltitude = 3.14159/4.0;
+      this.el.components.material.material.uniforms.sunPosition.value.set(solarAzimuth, solarAltitude);
+      var lunarAzimuth = 0.0;
+      var lunarAltitude = 3.14159/8.0;
+      this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude);
+
+      var moonTangentSpaceSunLight = this.dynamicSkyObj.getMoonTangentSpaceSunlight(lunarAzimuth, lunarAltitude, solarAzimuth, solarAltitude);
+
+      this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(moonTangentSpaceSunLight.x, moonTangentSpaceSunLight.y, moonTangentSpaceSunLight.z);
 
       //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
       this.el.components.material.material.uniforms.localSiderealTime.value = this.dynamicSkyObj.localSiderealTime;
 
       //this.el.components.material.material.uniforms.sunPosition.value.set(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
       //this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(this.dynamicSkyObj.moonPosition.azimuth, this.dynamicSkyObj.moonPosition.altitude, this.dynamicSkyObj.moonsParallacticAngle);
-      this.el.components.material.material.uniforms.illuminatedFractionOfMoon.value = this.dynamicSkyObj.illuminatedFractionOfMoon;
-      this.el.components.material.material.uniforms.brightLimbOfMoon.value = this.dynamicSkyObj.brightLimbOfMoon;
+
+
       /*var starLocations = [];
       this.dynamicSkyObj.stars.forEach(function(star) {
         starLocations.push({x: star.azimuth, y: star.altitude});
@@ -221,16 +230,7 @@ var aDynamicSky = {
   deg2Rad: Math.PI / 180.0,
   illuminatedFractionOfMoon: 0.0,
   brightLimbOfMoon: 0.0,
-  stars: [],
   starVPTree: null,
-
-  init: function(skyData){
-    //Create the start data VP-Tree
-    VPTreeFactory.build(S, this.unitSphereHaversteinDistance);
-    this.starVPTree = starVPTree;
-
-
-  },
 
   update: function(skyData){
     this.radLatitude = this.latitude * this.deg2Rad;
@@ -255,9 +255,6 @@ var aDynamicSky = {
     //Get our actual positions
     this.sunPosition = this.getSunPosition();
     this.moonPosition = this.getMoonPosition();
-    //Note: We can always come back to this...
-    //this.moonPosition = {azimuth: (2.0 * 3.14159 * (skyData.timeOffset % 60.0) / 60.0), altitude: 0.0};
-    this.getStarPositions();
   },
 
   calculateJulianDay(){
@@ -561,39 +558,63 @@ var aDynamicSky = {
     this.moonsRightAscension = rightAscension;
     this.moonsDeclination = declination;
 
-
     this.moonsParallacticAngle = this.calculateParallacticAngle(this.hourAngle, declination);
-    var illuminatedFractionOfMoonAndBrightLimb = this.getIlluminatedFractionOfMoon();
 
     //Just return these values for now, we can vary the bright
     return this.getAzimuthAndAltitude(rightAscension, declination);
   },
 
-  getIlluminatedFractionOfMoon: function(){
-    var moonMinusSunsRightAscension = this.moonsRightAscension - this.sunsRightAscension;
-    var tanXTerm = Math.cos(this.moonsDeclination) * Math.cos(moonMinusSunsRightAscension);
-    var geocentricElongationOfMoon = Math.acos(Math.sin(this.sunsDeclination) * Math.sin(this.moonsDeclination) + Math.cos(this.sunsDeclination) * tanXTerm);
-    var phaseAngle = Math.atan2(this.distanceFromEarthToSun * Math.sin(moonMinusSunsRightAscension), this.distanceFromEarthToMoon - this.distanceFromEarthToSun * Math.cos(geocentricElongationOfMoon))
+  //For controls go to line 173
+  getMoonTangentSpaceSunlight(moonAzimuth, moonAltitude, solarAzimuth, solarAltitude){
+    //Calculate our normal, tangent and bitangent for the moon for normal mapping
+    //We don't need these for each face because our moon is effectively a billboard
+    var moonZenith = (Math.PI / 2.0) - moonAltitude;
 
-    this.illuminatedFractionOfMoon = (1 + Math.cos(phaseAngle)) / 2;
-    this.brightLimbOfMoon = Math.atan2(Math.cos(this.sunsDeclination) * Math.sin(), Math.sin(this.moonsDeclination) * Math.cos(this.sunsDeclination) * tanXTerm)
-  },
+    //First acquire our normal vector for the moon.
+    sinOfMZenith = Math.sin(moonZenith);
+    cosOfMZenith = Math.cos(moonZenith);
+    sinOfMAzimuth = Math.sin(moonAzimuth);
+    cosOfMAzimuth = Math.cos(moonAzimuth);
+    var moonNormal = new THREE.Vector3(sinOfMZenith * cosOfMAzimuth, sinOfMZenith * sinOfMAzimuth, cosOfMZenith);
+    moonNormal.normalize().negate();
 
-  getStarPositions: function(){
-    //The first objective is to get all the faces of our our sphere.
+    var moonNormXRotMat = new THREE.Matrix3();
+    moonNormXRotMat.set(cosOfMAzimuth, -sinOfMAzimuth, 0.0, sinOfMAzimuth, cosOfMAzimuth, 0.0, 0.0, 0.0, 1.0);
 
-    //Go those? Great! Now find the center azimuth and alitude for each of those.
+    var moonNormYRotMat = new THREE.Matrix3();
+    moonNormYRotMat.set(1.0, 0.0, 0.0, 0.0, cosOfMZenith, -sinOfMZenith, 0.0, sinOfMZenith, cosOfMZenith);
 
-    //Our next step is where our time variation comes into play
-    //Convert each of our mesh azimuth and altitude coordinates into
-    //their respective longitude and latitude values...
+    var finalLunarRotationMat = moonNormXRotMat.clone().multiplyMatrices(moonNormXRotMat, moonNormYRotMat);
 
-    //Now figure out the center of the longitude and latidue, and the distances
-    //to each of the corners
+    var moonTangent = new THREE.Vector3(0.0, 1.0, 0.0);
+    moonTangent.applyMatrix3(finalLunarRotationMat);
+    moonTangent.cross(moonNormal);
 
-    //Use this information and send upper and lower latitudes and longitudes to our our vertex shader...
+    var moonBitangent = moonNormal.clone();
+    moonBitangent.cross(moonTangent);
 
-    //The shader will know what to do with these...
+    var toTangentMoonSpace = new THREE.Matrix3();
+    toTangentMoonSpace.set(
+      moonTangent.x, moonBitangent.x, moonNormal.x,
+      moonTangent.y, moonBitangent.y, moonNormal.y,
+      moonTangent.z, moonBitangent.z, moonNormal.z);
+    toTangentMoonSpace.transpose();
+
+    var solarZenith = (Math.PI / 2.0) - solarAltitude;
+    sinOfSZenith = Math.sin(solarZenith);
+    cosOfSZenith = Math.cos(solarZenith);
+    sinOfSAzimuth = Math.sin(solarAzimuth);
+    cosOfSAzimuth = Math.cos(solarAzimuth);
+    var solarXCoordinates = sinOfSZenith * cosOfSAzimuth;
+    var solarYCoordinates = sinOfSZenith * sinOfSAzimuth;
+    var solarZCoordinates = cosOfSZenith;
+    var solarCoordinates = new THREE.Vector3(solarXCoordinates, solarYCoordinates, solarZCoordinates);
+    solarCoordinates.normalize();
+
+    var moonTangentSpaceSunlight = solarCoordinates.clone();
+    moonTangentSpaceSunlight.applyMatrix3(toTangentMoonSpace);
+
+    return moonTangentSpaceSunlight;
   },
 
   getDaysInYear: function(){

@@ -14,6 +14,7 @@ AFRAME.registerShader('sky', {
     brightLimbOfMoon: {type: 'number', default: 0.0, max: 6.283185307, min: 0.0, is: 'uniform'},
     moonTexture: {type: 'map', src:'../images/moon-dif-512.png', is: 'uniform'},
     moonNormalMap: {type: 'map', src:'../images/moon-nor-512.png', is: 'uniform'},
+    moonTangentSpaceSunlight: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     starMask: {type: 'map', src:'../images/padded-starry-sub-data-0.png', is: 'uniform'},
     starRas: {type: 'map', src:'../images/padded-starry-sub-data-1.png', is: 'uniform'},
     starDecs: {type: 'map', src:'../images/padded-starry-sub-data-2.png', is: 'uniform'},
@@ -27,61 +28,10 @@ AFRAME.registerShader('sky', {
 
   vertexShader: [
     'varying vec3 vWorldPosition;',
-    'varying vec3 tangentSpaceSunlight;',
-
-    '//For calculating the solar and and lunar data',
-    'uniform mediump vec2 sunPosition;',
-    'uniform mediump vec3 moonAzAltAndParallacticAngle;',
-
-    '//Thanks Wolfram Alpha!',
-    'const float e = 2.71828182845904523536028747135266249775724709369995957;',
-    'const float pi = 3.141592653589793238462643383279502884197169;',
-    'const float piTimes2 = 6.283185307179586476925286766559005768394338798750211641949;',
-    'const float piOver2 = 1.5707963267948966192313216916397514420985846996875529;',
-    'const float deg2Rad = 0.017453292519943295769236907684886127134428718885417254560;',
 
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4( position, 1.0 );',
       'vWorldPosition = worldPosition.xyz;',
-
-      '//',
-      '//LUNAR SHADOWS',
-      '//',
-
-      '//Let us break this out into components',
-      'float mAltitude = moonAzAltAndParallacticAngle.y;',
-      'float mAzimuth = moonAzAltAndParallacticAngle.x;',
-
-      '//TODO: Something is still off here, but we will come back to this in the future...',
-
-      '//Calculate the normal and binormal from the surface of a sphere using a radius of 1.0 then invert it by multiplying everything by -1.0',
-      'vec3 faceNormal = normalize(vec3(sin((pi / 2.0) - mAltitude) * cos(mAzimuth), sin((pi / 2.0) - mAltitude) * sin(mAzimuth), cos(mAzimuth)));',
-      '//Because were centered at the origin, we can just get the cross product of the noraml vector and the z-axis.',
-      '//Via: https://math.stackexchange.com/questions/1112719/get-tangent-vector-from-point-to-sphere-vector',
-      '//NOTE: We should probably rotate the tangent and bitangent by the parallactic angle to preserve shading under rotation',
-
-      '//Note: We pass in a UV attribute, perhaps we should use these vectors to determine our tangent, bitangent and normal vectors?',
-      'vec3 faceTangent = normalize(vec3(sin(mAltitude) * cos(mAzimuth), sin(mAltitude) * sin(mAzimuth), cos(mAzimuth)));',
-      'vec3 faceBitangent = normalize(cross(faceNormal, faceTangent));//And then we are going to cross the two to get our bi-vector',
-      '//vec3 faceBinormal = normalize(cross(faceNormal, faceTangent));//And then we are going to cross the two to get our bi-vector',
-
-      'mat3 toTangentSpace = mat3(',
-          'faceTangent.x, faceBitangent.x, faceNormal.x,',
-          'faceTangent.y, faceBitangent.y, faceNormal.y,',
-          'faceTangent.z, faceBitangent.z, faceNormal.z',
-      ');',
-
-      '//Convert our solar position into x, y and z coordinates -- we are going to put this at 5000 meters just to align with our sphere.',
-      'float solarAzimuth = sunPosition.x;',
-      'float solarAltitude = sunPosition.y;',
-      'float solarTheta = (pi - (solarAltitude + piOver2)) - piOver2;',
-      'float solarXCoordinates = 1.0 * sin(solarTheta) * cos(solarAltitude);',
-      'float solarYCoordinates = 1.0 * sin(solarTheta) * sin(solarAltitude);',
-      'float solarZCoordinates = 1.0 * cos(solarTheta);',
-      'vec3 normalizedSolarCoordinates = normalize(vec3(solarXCoordinates, solarYCoordinates, solarZCoordinates));',
-
-      '//All of this lighting happens very far away, so we dont have to worry about our camera position',
-      'tangentSpaceSunlight = toTangentSpace * normalizedSolarCoordinates;',
 
       'gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );',
     '}',
@@ -151,7 +101,7 @@ AFRAME.registerShader('sky', {
 
     '//Sun Data',
     'uniform mediump vec2 sunPosition;',
-    '//const float angularRadiusOfTheSun = 0.00930842268; //Real Values',
+    '//const float angularRadiusOfTheSun = 0.0185; //Real Values',
     'const float angularRadiusOfTheSun = 0.074; //FakeyValues',
 
 
@@ -170,9 +120,9 @@ AFRAME.registerShader('sky', {
     'uniform float illuminatedFractionOfMoon;',
     'uniform sampler2D moonTexture;',
     'uniform sampler2D moonNormalMap;',
-    '//const float angularRadiusOfTheMoon = 0.0092; //Real Values',
+    'uniform vec3 moonTangentSpaceSunlight;',
+    '//const float angularRadiusOfTheMoon = 0.018; //Real Values',
     'const float angularRadiusOfTheMoon = 0.075; //Fakey Values',
-    'varying vec3 tangentSpaceSunlight;',
     'const float earthshine = 0.02;',
 
     '//Earth data',
@@ -288,8 +238,6 @@ AFRAME.registerShader('sky', {
       'if(positionData.z < angularRadiusOfTheMoon){',
         '//Hey! We are in the moon! convert our distance into a linear interpolation',
         '//of half pixel radius on our sampler',
-        '//float altAzimuthOfPixel = 2.0 * pi - abs(azimuthOfPixel);',
-        '//azimuthOfPixel = azimuthOfPixel <= altAzimuthOfPixel ? azimuthOfPixel : -1.0 * altAzimuthOfPixel;',
         'vec2 position = (positionData.xy + vec2(angularRadiusOfTheMoon)) / (2.0 * angularRadiusOfTheMoon);',
         '//TODO: If we want to utilize rotations, we should multiply this by an appropriate rotation matrix first!',
 
@@ -298,11 +246,13 @@ AFRAME.registerShader('sky', {
 
         '//Get the moon shadow using the normal map (if it exists) - otherwise use the bright limb stuff',
         '//Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!',
-        'vec3 moonSurfaceNormal = 2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0;',
+        'vec3 moonSurfaceNormal = normalize(2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0);',
+
+        '//We should probably convert these over to magnitudes before performing our dot product and then convert it back again.',
 
         '//The moon is presumed to be a lambert shaded object, as per:',
         '//https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection',
-        'moonColor = vec4(moonColor.rgb * max(earthshine, dot(moonSurfaceNormal, tangentSpaceSunlight)), moonColor.a);',
+        'moonColor = vec4(moonColor.rgb * max(earthshine, dot(moonSurfaceNormal, moonTangentSpaceSunlight)), moonColor.a);',
 
         'returnColor = moonColor;',
       '}',
@@ -459,8 +409,8 @@ AFRAME.registerShader('sky', {
       'float sunAz = sunPosition.x;',
       'float sunAlt = sunPosition.y; //This program cannot handle a sun that goes below the horizon...',
       'float zenithAngle = piOver2 - sunAlt; //This is not a zenith angle, this is altitude',
-      'float sunX = sin(zenithAngle) * cos(sunAz);',
-      'float sunZ = sin(zenithAngle) * sin(sunAz);',
+      'float sunX = sin(zenithAngle) * cos(sunAz + pi);',
+      'float sunZ = sin(zenithAngle) * sin(sunAz + pi);',
       'float sunY = cos(zenithAngle);',
       'float heightOfSunInSky = 5000.0 * sunZ; //5000.0 is presumed to be the radius of our sphere',
       'float sunfade = 1.0-clamp(1.0-exp(heightOfSunInSky/5000.0),0.0,1.0);',
@@ -529,6 +479,7 @@ AFRAME.registerShader('sky', {
     '//Sun',
     '//',
     'vec4 drawSunLayer(float azimuthOfPixel, float altitudeOfPixel, skyparams skyParams){',
+      '//It seems we need to rotate our sky by pi radians.',
       'vec4 returnColor = vec4(0.0);',
       'if(sunPosition.y >= 0.0 && sunPosition.y < pi ){',
         'float sunAngularDiameterCos = cos(angularRadiusOfTheSun);',

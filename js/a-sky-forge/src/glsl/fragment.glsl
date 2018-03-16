@@ -61,7 +61,7 @@ const int starOffsetBorder = 5;
 
 //Sun Data
 uniform mediump vec2 sunPosition;
-//const float angularRadiusOfTheSun = 0.00930842268; //Real Values
+//const float angularRadiusOfTheSun = 0.0185; //Real Values
 const float angularRadiusOfTheSun = 0.074; //FakeyValues
 
 
@@ -80,9 +80,9 @@ uniform float brightLimbOfMoon;
 uniform float illuminatedFractionOfMoon;
 uniform sampler2D moonTexture;
 uniform sampler2D moonNormalMap;
-//const float angularRadiusOfTheMoon = 0.0092; //Real Values
+uniform vec3 moonTangentSpaceSunlight;
+//const float angularRadiusOfTheMoon = 0.018; //Real Values
 const float angularRadiusOfTheMoon = 0.075; //Fakey Values
-varying vec3 tangentSpaceSunlight;
 const float earthshine = 0.02;
 
 //Earth data
@@ -198,8 +198,6 @@ vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){
   if(positionData.z < angularRadiusOfTheMoon){
     //Hey! We are in the moon! convert our distance into a linear interpolation
     //of half pixel radius on our sampler
-    //float altAzimuthOfPixel = 2.0 * pi - abs(azimuthOfPixel);
-    //azimuthOfPixel = azimuthOfPixel <= altAzimuthOfPixel ? azimuthOfPixel : -1.0 * altAzimuthOfPixel;
     vec2 position = (positionData.xy + vec2(angularRadiusOfTheMoon)) / (2.0 * angularRadiusOfTheMoon);
     //TODO: If we want to utilize rotations, we should multiply this by an appropriate rotation matrix first!
 
@@ -208,11 +206,13 @@ vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){
 
     //Get the moon shadow using the normal map (if it exists) - otherwise use the bright limb stuff
     //Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!
-    vec3 moonSurfaceNormal = 2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0;
+    vec3 moonSurfaceNormal = normalize(2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0);
+
+    //We should probably convert these over to magnitudes before performing our dot product and then convert it back again.
 
     //The moon is presumed to be a lambert shaded object, as per:
     //https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection
-    moonColor = vec4(moonColor.rgb * max(earthshine, dot(moonSurfaceNormal, tangentSpaceSunlight)), moonColor.a);
+    moonColor = vec4(moonColor.rgb * max(earthshine, dot(moonSurfaceNormal, moonTangentSpaceSunlight)), moonColor.a);
 
     returnColor = moonColor;
   }
@@ -369,8 +369,8 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
   float sunAz = sunPosition.x;
   float sunAlt = sunPosition.y; //This program cannot handle a sun that goes below the horizon...
   float zenithAngle = piOver2 - sunAlt; //This is not a zenith angle, this is altitude
-  float sunX = sin(zenithAngle) * cos(sunAz);
-  float sunZ = sin(zenithAngle) * sin(sunAz);
+  float sunX = sin(zenithAngle) * cos(sunAz + pi);
+  float sunZ = sin(zenithAngle) * sin(sunAz + pi);
   float sunY = cos(zenithAngle);
   float heightOfSunInSky = 5000.0 * sunZ; //5000.0 is presumed to be the radius of our sphere
   float sunfade = 1.0-clamp(1.0-exp(heightOfSunInSky/5000.0),0.0,1.0);
@@ -439,6 +439,7 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
 //Sun
 //
 vec4 drawSunLayer(float azimuthOfPixel, float altitudeOfPixel, skyparams skyParams){
+  //It seems we need to rotate our sky by pi radians.
   vec4 returnColor = vec4(0.0);
   if(sunPosition.y >= 0.0 && sunPosition.y < pi ){
     float sunAngularDiameterCos = cos(angularRadiusOfTheSun);
