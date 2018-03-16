@@ -170,13 +170,14 @@ AFRAME.registerComponent('sky-time', {
 
       //Update our data for the dynamic sky object
       this.dynamicSkyObj.update(this.data);
-      this.el.components.material.material.uniforms.sunPosition.value.set(3.14, 3.14 * (0.99));
+      this.el.components.material.material.uniforms.sunPosition.value.set(0.0, 0.2 * (3.14159/2.0));
+      this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(0.0, 0.0, 0.0);
 
       //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
       this.el.components.material.material.uniforms.localSiderealTime.value = this.dynamicSkyObj.localSiderealTime;
 
       //this.el.components.material.material.uniforms.sunPosition.value.set(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
-      this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(this.dynamicSkyObj.moonPosition.azimuth, this.dynamicSkyObj.moonPosition.altitude, this.dynamicSkyObj.moonsParallacticAngle);
+      //this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(this.dynamicSkyObj.moonPosition.azimuth, this.dynamicSkyObj.moonPosition.altitude, this.dynamicSkyObj.moonsParallacticAngle);
       this.el.components.material.material.uniforms.illuminatedFractionOfMoon.value = this.dynamicSkyObj.illuminatedFractionOfMoon;
       this.el.components.material.material.uniforms.brightLimbOfMoon.value = this.dynamicSkyObj.brightLimbOfMoon;
       /*var starLocations = [];

@@ -32,8 +32,8 @@ def ShaderFileWatcher():
 
     #Endless while loop - exit via ctrl-pause/break... It's just above that numpad block on your keyboard. You're welcome ^_^.
     while 1:
-        #Do this every 5 seconds
-        time.sleep(5)
+        #Do this every 1 seconds
+        time.sleep(1)
         vertexFileLastChangedAt = os.path.getmtime(vertex_file)
         fragmentFileLastChangedAt = os.path.getmtime(fragment_file)
         templateFileLastChangedAt = os.path.getmtime(template_name)

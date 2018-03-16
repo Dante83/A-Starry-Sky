@@ -151,7 +151,9 @@ AFRAME.registerShader('sky', {
 
     '//Sun Data',
     'uniform mediump vec2 sunPosition;',
-    'const float angularRadiusOfTheSun = 0.074; //The sun and the moon should be able the same size',
+    '//const float angularRadiusOfTheSun = 0.00930842268; //Real Values',
+    'const float angularRadiusOfTheSun = 0.074; //FakeyValues',
+
 
     '//',
     '//NOTE: These values are interpolated, so we are probably not getting the values',
@@ -168,7 +170,8 @@ AFRAME.registerShader('sky', {
     'uniform float illuminatedFractionOfMoon;',
     'uniform sampler2D moonTexture;',
     'uniform sampler2D moonNormalMap;',
-    'const float angularRadiusOfTheMoon = 0.075;',
+    '//const float angularRadiusOfTheMoon = 0.0092; //Real Values',
+    'const float angularRadiusOfTheMoon = 0.075; //Fakey Values',
     'varying vec3 tangentSpaceSunlight;',
     'const float earthshine = 0.02;',
 
@@ -231,23 +234,44 @@ AFRAME.registerShader('sky', {
     '}',
 
     '//This function combines our colors so that different layers can exist at the right locations',
-    'vec4 addImageWithAveragedEdge(vec4 imageColor, vec4 backgroundColor){',
+    'vec4 clipImageWithAveragedEdge(vec4 imageColor, vec4 backgroundColor){',
       'return imageColor.a > 0.95 ? vec4(imageColor.rgb, 1.0) : vec4(mix(imageColor.xyz, backgroundColor.xyz, (1.0 - imageColor.w)), 1.0);',
     '}',
 
-    '//',
-    '//SUN',
-    '//',
-    'vec4 drawSunLayer(float azimuthOfPixel, float altitudeOfPixel){',
-      'vec3 positionData = angularDistanceApproximation(sunPosition.x, sunPosition.y, azimuthOfPixel, altitudeOfPixel);',
-
-      'vec4 returnColor = vec4(0.0);',
-      'if(positionData.z < angularRadiusOfTheSun){',
-        '//For now we will just return the color white -- in the future we will probably use a better model for the inner sunlight...',
-        'returnColor = vec4(1.0, 0.85, 0.0, 1.0);',
+    'vec4 mixSunLayer(vec4 sun, vec4 stars){',
+      'if(sqrt(clamp(dot(sun.xyz, sun.xyz)/3.0, 0.0, 1.0)) > 0.10){',
+        'return sun.a > 0.95 ? vec4(sun.rgb, 1.0) : vec4(mix(sun.xyz, stars.xyz, (1.0 - sun.w)), 1.0);',
       '}',
+      'return stars;',
+    '}',
 
-      'return returnColor;',
+    'struct skyWithAndWithoutStars{',
+      'vec4 starLayer;',
+      'vec4 starlessLayer;',
+    '};',
+
+    'skyWithAndWithoutStars starLayerBlending(vec4 starColor, vec4 skyColor){',
+      'vec4 starColorRGB = vec4(starColor.rgb, 1.0);',
+      'vec4 starColorMag = starColorRGB * starColorRGB;',
+      'vec4 skyColorRGB = vec4(skyColor.rgb, 1.0);',
+      'vec4 skyColorMag = skyColorRGB * skyColorRGB;',
+      'float linearMultp = 17.0;',
+      'float quadMultp = 60.0;',
+      'vec4 skyColorMap = vec4(linearMultp) * skyColorMag + vec4(quadMultp) * skyColorMag * skyColorMag;',
+      'vec4 starlessLight = sqrt( (0.0 + skyColorMap * skyColorMag) / (vec4(1.0) + skyColorMap) );',
+      'vec4 combinedLight = sqrt( (starColorMag + skyColorMap * skyColorMag) / (vec4(1.0) + skyColorMap) );',
+
+      'return skyWithAndWithoutStars(combinedLight, starlessLight);',
+    '}',
+
+    'vec4 moonLayerBlending(vec4 moonColor, vec4 skyColor, vec4 inColor){',
+      'vec4 moonColorRGB = vec4(moonColor.rgb, 1.0);',
+      'vec4 moonColorMag = moonColorRGB * moonColorRGB;',
+      'vec4 skyColorRGB = vec4(skyColor.rgb, 1.0);',
+      'vec4 skyColorMag = skyColorRGB * skyColorRGB;',
+      'vec4 combinedLight = sqrt(moonColorMag + skyColorMag);',
+
+      'return moonColor.a > 0.95 ? vec4(combinedLight.rgb, 1.0) : vec4(mix(combinedLight.xyz, inColor.xyz, (1.0 - moonColor.a)), 1.0);',
     '}',
 
     '//',
@@ -313,7 +337,7 @@ AFRAME.registerShader('sky', {
     '//',
     '//STARS',
     '//',
-    'vec4 drawStarLayer(float azimuthOfPixel, float altitudeOfPixel){',
+    'vec4 drawStarLayer(float azimuthOfPixel, float altitudeOfPixel, vec4 skyColor){',
       'int padding = 5; //Should be the same as the value used to create our image in convert_stars_to_image.py',
       'int scanWidth = 2 * padding + 1;',
       'int paddingSquared = scanWidth * scanWidth;',
@@ -341,7 +365,7 @@ AFRAME.registerShader('sky', {
       '//return vec4(vec3(normalizedDec), 1.0);',
 
       '//Main draw loop',
-      'vec4 returnColor = vec4(0.0);',
+      'vec4 returnColor = vec4(skyColor);',
       'for(highp int i = 0; i <= 10; ++i){',
         'for(highp int j = 0; j <= 10; ++j){',
           'highp float xLoc = startingPointX + float(i);',
@@ -369,7 +393,7 @@ AFRAME.registerShader('sky', {
             'float magnitude = rgba2Float(starMagColor);',
 
             '//Go on and use this to create our color here.',
-            'returnColor = addImageWithAveragedEdge(drawStar(vec2(pixelRa, pixelDec), vec2(starRa, starDec), magnitude, starColor), returnColor);',
+            'returnColor = clipImageWithAveragedEdge(drawStar(vec2(pixelRa, pixelDec), vec2(starRa, starDec), magnitude, starColor), returnColor);',
           '}',
         '}',
       '}',
@@ -381,36 +405,30 @@ AFRAME.registerShader('sky', {
     '//SKY',
     '//',
 
-    'vec3 totalRayleigh(vec3 lambda)',
-    '{',
+    'vec3 totalRayleigh(vec3 lambda){',
       'return (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn));',
     '}',
 
     '// see http://blenderartists.org/forum/showthread.php?321110-Shaders-and-Skybox-madness',
     '// A simplied version of the total Rayleigh scattering to works on browsers that use ANGLE',
-    'vec3 simplifiedRayleigh()',
-    '{',
+    'vec3 simplifiedRayleigh(){',
       'return 0.0005 / vec3(94, 40, 18);',
     '}',
 
-    'float rayleighPhase(float cosTheta)',
-    '{',
+    'float rayleighPhase(float cosTheta){',
       'return (3.0 / (16.0*pi)) * (1.0 + pow(cosTheta, 2.0));',
     '}',
 
-    'vec3 totalMie(vec3 lambda, vec3 K, float T)',
-    '{',
+    'vec3 totalMie(vec3 lambda, vec3 K, float T){',
       'float c = (0.2 * T ) * 10E-18;',
       'return 0.434 * c * pi * pow((2.0 * pi) / lambda, vec3(v - 2.0)) * K;',
     '}',
 
-    'float hgPhase(float cosTheta, float g)',
-    '{',
+    'float hgPhase(float cosTheta, float g){',
       'return (1.0 / (4.0*pi)) * ((1.0 - pow(g, 2.0)) / pow(1.0 - 2.0*g*cosTheta + pow(g, 2.0), 1.5));',
     '}',
 
-    'float sunIntensity(float zenithAngleCos)',
-    '{',
+    'float sunIntensity(float zenithAngleCos){',
       'return EE * max(0.0, 1.0 - exp(-((cutoffAngle - acos(zenithAngleCos))/steepness)));',
     '}',
 
@@ -423,21 +441,28 @@ AFRAME.registerShader('sky', {
     'const float F = 0.30;',
     'const float W = 1000.0;',
 
-    'vec3 Uncharted2Tonemap(vec3 x)',
-    '{',
+    'vec3 Uncharted2Tonemap(vec3 x){',
       'return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;',
     '}',
 
-    'vec4 drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){',
+    'struct skyparams{',
+      'float cosTheta;',
+      'vec3 Fex;',
+      'float sunE;',
+      'vec3 Lin;',
+      'float sunfade;',
+      'vec4 skyColor;',
+    '};',
+
+    'skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){',
       '//Get the fading of the sun and the darkening of the sky',
-      '//TODO: Come back here and decide how to get sunPosition.y',
       'float sunAz = sunPosition.x;',
-      'float sunAlt = sunPosition.y;',
-      'float zenithAngle = pi - sunAlt;',
-      'float sunX = cos(zenithAngle);',
-      'float sunY = sin(zenithAngle);',
-      'float sunZ = cos(sunAz);',
-      'float heightOfSunInSky = 5000.0 * sin(sunAlt); //5000.0 is presumed to be the radius of our sphere',
+      'float sunAlt = sunPosition.y; //This program cannot handle a sun that goes below the horizon...',
+      'float zenithAngle = piOver2 - sunAlt; //This is not a zenith angle, this is altitude',
+      'float sunX = sin(zenithAngle) * cos(sunAz);',
+      'float sunZ = sin(zenithAngle) * sin(sunAz);',
+      'float sunY = cos(zenithAngle);',
+      'float heightOfSunInSky = 5000.0 * sunZ; //5000.0 is presumed to be the radius of our sphere',
       'float sunfade = 1.0-clamp(1.0-exp(heightOfSunInSky/5000.0),0.0,1.0);',
       'float reileighCoefficient = reileigh - (1.0 * (1.0-sunfade));',
 
@@ -465,7 +490,6 @@ AFRAME.registerShader('sky', {
       'vec3 Fex = exp(-(betaR * sR + betaM * sM));',
 
       '// in scattering',
-      '//TODO: Come back here and decide how we shoud calculate cosTheta using angles, right now I am using vec3(0.0) as camera position',
       'float cosTheta = dot(normalize(vWorldPosition - vec3(0.0)), floatSunPosition);',
 
       'float rPhase = rayleighPhase(cosTheta*0.5+0.5);',
@@ -478,15 +502,10 @@ AFRAME.registerShader('sky', {
       'Lin *= mix(vec3(1.0),pow(sunE * ((betaRTheta + betaMTheta) / (betaR + betaM)) * Fex,vec3(1.0/2.0)),clamp(pow(1.0-dotOfSunDirectionAndUp,5.0),0.0,1.0));',
 
       '//nightsky',
-      '//TODO This would be a great place to figure out our phi and theta and stuff back into dots',
       'vec2 uv = vec2(azimuthOfPixel, (piOver2 - altitudeOfPixel)) / vec2(2.0*pi, pi) + vec2(0.5, 0.0);',
       'vec3 L0 = vec3(0.1) * Fex;',
 
-      '//Solar disk stuff, we really need to split this apart between here and the sun stuff above',
-      'float sunAngularDiameterCos = cos(angularRadiusOfTheSun);',
-      'float sundisk = smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002,cosTheta);',
-      'L0 += (sunE * 19000.0 * Fex)*sundisk;',
-
+      '//Final lighting, duplicated above for coloring of sun',
       'vec3 texColor = (Lin+L0);',
       'texColor *= 0.04 ;',
       'texColor += vec3(0.0,0.001,0.0025)*0.3;',
@@ -501,50 +520,63 @@ AFRAME.registerShader('sky', {
       'vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*texColor);',
       'vec3 color = curr*whiteScale;',
 
-      'vec3 retColor = pow(color,vec3(1.0/(1.2+(1.2*sunfade))));',
+      'vec3 retColor = pow(abs(color),vec3(1.0/(1.2+(1.2*sunfade))));',
 
-      'return vec4(retColor, 1.0);',
+      'return skyparams(cosTheta, Fex, sunE, Lin, sunfade, vec4(retColor, 1.0));',
+    '}',
+
+    '//',
+    '//Sun',
+    '//',
+    'vec4 drawSunLayer(float azimuthOfPixel, float altitudeOfPixel, skyparams skyParams){',
+      'vec4 returnColor = vec4(0.0);',
+      'if(sunPosition.y >= 0.0 && sunPosition.y < pi ){',
+        'float sunAngularDiameterCos = cos(angularRadiusOfTheSun);',
+        'float sundisk = smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002, skyParams.cosTheta);',
+
+        'vec3 L0 = (skyParams.sunE * 19000.0 * skyParams.Fex) * sundisk;',
+        'L0 *= 0.04 ;',
+        'L0 += vec3(0.0,0.001,0.0025)*0.3;',
+
+        'float g_fMaxLuminance = 1.0;',
+        'float fLumScaled = 0.1 / luminance;',
+        'float fLumCompressed = (fLumScaled * (1.0 + (fLumScaled / (g_fMaxLuminance * g_fMaxLuminance)))) / (1.0 + fLumScaled);',
+
+        'float ExposureBias = fLumCompressed;',
+
+        'vec3 whiteScale = 1.0/Uncharted2Tonemap(vec3(W));',
+        'vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*L0);',
+
+        'vec3 color = curr*whiteScale;',
+        'color = pow(color,vec3(1.0/(1.2+(1.2* skyParams.sunfade))));',
+        'returnColor = vec4(color, sqrt(dot(color, color)) );',
+      '}',
+
+      'return returnColor;',
     '}',
 
     '//',
     '//Draw main loop',
     '//',
-    'void main()',
-    '{',
+    'void main(){',
       'vec3 pointCoord = normalize(vWorldPosition.xyz);',
       'float altitude = piOver2 - acos(pointCoord.y);',
       'float azimuth = atan(pointCoord.z, pointCoord.x) + pi;',
 
-      '//Starting color is black, the color of space!',
-      'vec4 color = vec4(0.0,0.0,0.0,1.0);',
+      'vec4 baseColor = vec4(0.0);',
 
-      '//As the the most distant objects in our world, we must draw our stars first',
-      'color = addImageWithAveragedEdge(drawStarLayer(azimuth, altitude), color);',
+      '//Even though everything else is behind the sky, we need this to decide the brightness of the colors returned below.',
+      'skyparams skyParams = drawSkyLayer(azimuth, altitude);',
+      'vec4 skyColor = skyParams.skyColor;',
 
-      '//Then comes the sun',
-      '//TODO: We need to branch our our solar disk frome below to here so that we never accidently draw the moon behind the sun',
-      '//But the glowing stuff can go in front of our sky - but will probably go behind clouds if we add them.',
-      'color = addImageWithAveragedEdge(drawSunLayer(azimuth, altitude), color);',
+      'skyWithAndWithoutStars starLayerData = starLayerBlending(drawStarLayer(azimuth, altitude, baseColor), skyColor);',
+      'vec4 outColor = starLayerData.starLayer;',
 
-      '//And finally the moon...',
-      'color = addImageWithAveragedEdge(drawMoonLayer(azimuth, altitude), color);',
+      'outColor = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);',
 
-      '//',
-      '//The astronomical stuff is now done, so we should be able to proceed with stuff like the glow of the sky.',
-      '//',
+      'outColor = moonLayerBlending(drawMoonLayer(azimuth, altitude), starLayerData.starlessLayer, outColor);',
 
-      '//Once we have draw each of these, we will add their light to the light of the sky in the original sky model',
-      '//TODO: Implement having this tint the sky rather than paint over the top of it, so that all of our objects shine through it',
-      '//Rather than being covered by it',
-      'color = addImageWithAveragedEdge(drawSkyLayer(azimuth, altitude), color);',
-
-      '//And then we will add the glow of the sun, moon and stars...',
-
-
-      '//This is where we would put clouds if the GPU does not turn to molten silicon',
-
-
-    '	gl_FragColor = color;',
+    '	gl_FragColor = outColor;',
     '}',
   ].join('\n')
 });
