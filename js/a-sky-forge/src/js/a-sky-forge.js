@@ -172,9 +172,9 @@ AFRAME.registerComponent('sky-time', {
       //For method go to line 567
       this.dynamicSkyObj.update(this.data);
       var solarAzimuth = 3.14159;
-      var solarAltitude = 3.14159/4.0;
+      var solarAltitude = 4.0;
       this.el.components.material.material.uniforms.sunPosition.value.set(solarAzimuth, solarAltitude);
-      var lunarAzimuth = 0.0;
+      var lunarAzimuth = 3.14159/2.0;
       var lunarAltitude = 3.14159/8.0;
       this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude);
 

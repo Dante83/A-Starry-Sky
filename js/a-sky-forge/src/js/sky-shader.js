@@ -101,8 +101,8 @@ AFRAME.registerShader('sky', {
 
     '//Sun Data',
     'uniform mediump vec2 sunPosition;',
-    '//const float angularRadiusOfTheSun = 0.0185; //Real Values',
-    'const float angularRadiusOfTheSun = 0.074; //FakeyValues',
+    'const float angularRadiusOfTheSun = 0.0245; //Real Values',
+    '//const float angularRadiusOfTheSun = 0.074; //FakeyValues',
 
 
     '//',
@@ -121,8 +121,8 @@ AFRAME.registerShader('sky', {
     'uniform sampler2D moonTexture;',
     'uniform sampler2D moonNormalMap;',
     'uniform vec3 moonTangentSpaceSunlight;',
-    '//const float angularRadiusOfTheMoon = 0.018; //Real Values',
-    'const float angularRadiusOfTheMoon = 0.075; //Fakey Values',
+    'const float angularRadiusOfTheMoon = 0.024;',
+    '//const float angularRadiusOfTheMoon = 0.075; //Fakey Values',
     'const float earthshine = 0.02;',
 
     '//Earth data',
@@ -148,7 +148,7 @@ AFRAME.registerShader('sky', {
     'vec2 getRaAndDec(float az, float alt){',
       'float declination = asin(sin(latLong.x) * sin(alt) - cos(latLong.x) * cos(alt) * cos(az));',
       'float hourAngle = atan(sin(az), (cos(az) * sin(latLong.x) + tan(alt) * cos(latLong.x)));',
-      'float rightAscension = localSiderealTime - hourAngle;',
+      'float rightAscension = fModulo(localSiderealTime - hourAngle, piTimes2);',
 
       'return vec2(rightAscension, declination);',
     '}',
@@ -297,12 +297,6 @@ AFRAME.registerShader('sky', {
       'float pixelRa = raAndDecOfPixel.x;',
       'float pixelDec = raAndDecOfPixel.y;',
 
-      'pixelRa = azimuthOfPixel;',
-      'pixelDec = altitudeOfPixel;',
-
-      '//float normalizedpixelRa = pixelRa / piTimes2;',
-      '//float normalizedpixelDec = (pixelDec + piOver2) / pi;',
-
       'highp float activeImageWidth = float(starDataImgWidth - 2 * padding); //Should be 502',
       'highp float activeImageHeight = float(starDataImgHeight - 2 * padding); //Should be 246',
       'highp float normalizedRa = pixelRa / piTimes2;',
@@ -311,8 +305,6 @@ AFRAME.registerShader('sky', {
       '//We will include all texture components over a certain range so we might as well start at 0',
       'highp float startingPointX = activeImageWidth * normalizedRa;',
       'highp float startingPointY = activeImageHeight * normalizedDec;',
-
-      '//return vec4(vec3(normalizedDec), 1.0);',
 
       '//Main draw loop',
       'vec4 returnColor = vec4(skyColor);',
