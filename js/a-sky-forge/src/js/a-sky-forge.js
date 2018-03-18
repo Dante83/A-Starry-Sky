@@ -171,21 +171,23 @@ AFRAME.registerComponent('sky-time', {
       //Update our data for the dynamic sky object
       //For method go to line 567
       this.dynamicSkyObj.update(this.data);
-      var solarAzimuth = 3.14159;
-      var solarAltitude = 0.0;
+      var solarAzimuth = 0.0;
+      var solarAltitude = 3.14159/4.0;
       this.el.components.material.material.uniforms.sunPosition.value.set(solarAzimuth, solarAltitude);
-      var lunarAzimuth = 3.14159/2.0;
-      var lunarAltitude = -3.14159/2.0;
+      var lunarAzimuth = 1.5 * 3.14159;
+      var lunarAltitude = 1.0 * 3.14159/4.0;
       this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude);
 
       var moonMappingData = this.dynamicSkyObj.getMoonTangentSpaceSunlight(lunarAzimuth, lunarAltitude, solarAzimuth, solarAltitude);
       var moonTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
+      var moonPosition = moonMappingData.moonPosition;
       var moonTangent = moonMappingData.moonTangent;
       var moonBitangent = moonMappingData.moonBitangent;
 
       this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(moonTangentSpaceSunlight.x, moonTangentSpaceSunlight.y, moonTangentSpaceSunlight.z);
-      this.el.components.material.material.uniforms.moonMappingTangent.value.set(moonTangent.x, moonTangent.y, moonTangent.z);
-      this.el.components.material.material.uniforms.moonMappingBitangent.value.set(moonBitangent.x, moonBitangent.y, moonBitangent.z);
+      this.el.components.material.material.uniforms.moonPosition.value.set(moonPosition.x, moonPosition.y, moonPosition.z);
+      this.el.components.material.material.uniforms.moonTangent.value.set(moonTangent.x, moonTangent.y, moonTangent.z);
+      this.el.components.material.material.uniforms.moonBitangent.value.set(moonBitangent.x, moonBitangent.y, moonBitangent.z);
 
       //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
       this.el.components.material.material.uniforms.localSiderealTime.value = this.dynamicSkyObj.localSiderealTime;
@@ -576,25 +578,33 @@ var aDynamicSky = {
     var moonZenith = (Math.PI / 2.0) - moonAltitude;
 
     //First acquire our normal vector for the moon.
-    sinOfMZenith = Math.sin(moonZenith);
-    cosOfMZenith = Math.cos(moonZenith);
-    sinOfMAzimuth = Math.sin(moonAzimuth);
-    cosOfMAzimuth = Math.cos(moonAzimuth);
-    var moonNormal = new THREE.Vector3(sinOfMZenith * cosOfMAzimuth, sinOfMZenith * sinOfMAzimuth, cosOfMZenith);
-    moonNormal.normalize().negate();
+    var sinMZ = Math.sin(moonZenith);
+    var cosMZ = Math.cos(moonZenith);
+    var sinMA = Math.sin(moonAzimuth);
+    var cosMA = Math.cos(moonAzimuth);
+    var moonXCoordinates = sinMZ * cosMA;
+    var moonYCoordinates = sinMZ * sinMA;
+    var moonZCoordinates = cosMZ;
+    var moonCoordinates = new THREE.Vector3(moonXCoordinates, moonYCoordinates, moonZCoordinates);
 
-    var moonNormXRotMat = new THREE.Matrix3();
-    moonNormXRotMat.set(cosOfMAzimuth, -sinOfMAzimuth, 0.0, sinOfMAzimuth, cosOfMAzimuth, 0.0, 0.0, 0.0, 1.0);
+    //Get the unit vectors, x, y and z for our moon.
+    //https://math.stackexchange.com/questions/70493/how-do-i-convert-a-vector-field-in-cartesian-coordinates-to-spherical-coordinate
+    var sphericalUnitVectors = new THREE.Matrix3();
+    sphericalUnitVectors.set(
+      sinMZ*cosMA, sinMZ*sinMA, cosMZ,
+      cosMZ*cosMA, cosMZ*sinMA, -sinMZ,
+      -sinMA, cosMA, 0.0
+    );
+    var inverseOfSphericalUnitVectors = new THREE.Matrix3();
+    inverseOfSphericalUnitVectors.getInverse(sphericalUnitVectors);
 
-    var moonNormYRotMat = new THREE.Matrix3();
-    moonNormYRotMat.set(1.0, 0.0, 0.0, 0.0, cosOfMZenith, -sinOfMZenith, 0.0, sinOfMZenith, cosOfMZenith);
+    var unitRVect = new THREE.Vector3(1.0, 0.0, 0.0);
+    var unitAzVect = new THREE.Vector3(0.0, 0.0, 1.0);
+    var moonNormal = unitRVect.applyMatrix3(inverseOfSphericalUnitVectors).normalize().negate().clone();
+    var moonTangent = unitAzVect.applyMatrix3(inverseOfSphericalUnitVectors).normalize().clone();
 
-    var finalLunarRotationMat = moonNormXRotMat.clone().multiplyMatrices(moonNormXRotMat, moonNormYRotMat);
-
-    var moonTangent = new THREE.Vector3(0.0, 1.0, 0.0);
-    moonTangent.applyMatrix3(finalLunarRotationMat);
-    moonTangent.cross(moonNormal);
-
+    //Instead of just using the unit alt vector, I take the cross betweent the normal and the
+    //azimuth vectors to preserve direction when crossing altitude = 0
     var moonBitangent = moonNormal.clone();
     moonBitangent.cross(moonTangent);
 
@@ -619,7 +629,7 @@ var aDynamicSky = {
     var moonTangentSpaceSunlight = solarCoordinates.clone();
     moonTangentSpaceSunlight.applyMatrix3(toTangentMoonSpace);
 
-    return {moonTangentSpaceSunlight: moonTangentSpaceSunlight, moonTangent: moonTangent, moonBitangent: moonBitangent};
+    return {moonTangentSpaceSunlight: moonTangentSpaceSunlight, moonTangent: moonTangent, moonBitangent: moonBitangent, moonPosition: moonCoordinates};
   },
 
   getDaysInYear: function(){

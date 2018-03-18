@@ -81,8 +81,9 @@ uniform float illuminatedFractionOfMoon;
 uniform sampler2D moonTexture;
 uniform sampler2D moonNormalMap;
 uniform vec3 moonTangentSpaceSunlight;
-uniform vec3 moonMappingTangent;
-uniform vec3 moonMappingBitangent;
+uniform vec3 moonPosition;
+uniform vec3 moonTangent;
+uniform vec3 moonBitangent;
 //const float angularRadiusOfTheMoon = 0.024;
 const float angularRadiusOfTheMoon = 0.075; //Fakey Values
 const float earthshine = 0.02;
@@ -195,25 +196,23 @@ vec4 moonLayerBlending(vec4 moonColor, vec4 skyColor, vec4 inColor){
 //
 
 vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){
-  //PositionOfMoon.
-  float moonAz = moonAzAltAndParallacticAngle.x;
-  float moonAlt = moonAzAltAndParallacticAngle.y;
-  float zenithAngle = piOver2 - moonAlt; //This is not a zenith angle, this is altitude
-  float moonX = sin(zenithAngle) * cos(moonAz + pi);
-  float moonY = sin(zenithAngle) * sin(moonAz + pi);
-  float moonZ = cos(zenithAngle);
-  vec3 moonPos = vec3(moonX, moonY, moonZ);
-
+  //calculate the location of this pixels on the unit sphere
   float zenithOfPixel = piOver2 - altitudeOfPixel;
-  float pixelX = sin(zenithOfPixel) * cos(azimuthOfPixel + pi);
-  float pixelY = sin(zenithOfPixel) * sin(azimuthOfPixel + pi);
+  float pixelX = sin(zenithOfPixel) * cos(azimuthOfPixel);
+  float pixelY = sin(zenithOfPixel) * sin(azimuthOfPixel);
   float pixelZ = cos(zenithOfPixel);
   vec3 pixelPos = vec3(pixelX, pixelY, pixelZ);
 
-  vec3 vectorBetweenPixelAndMoon = pixelPos - moonPos;
-  float xOffset = dot(vectorBetweenPixelAndMoon, moonMappingTangent);
-  float yOffset = dot(vectorBetweenPixelAndMoon, moonMappingBitangent);
-  float angleOfPixel = atan(-xOffset, yOffset);
+  //Get the vector between the moons center and this pixels
+  vec3 vectorBetweenPixelAndMoon = pixelPos - moonPosition;
+
+  //Now dot this with the tangent and bitangent vectors to get our location.
+  float deltaX = dot(vectorBetweenPixelAndMoon, moonTangent);
+  float deltaY = dot(vectorBetweenPixelAndMoon, moonBitangent);
+  float angleOfPixel = atan(deltaX, deltaY);
+
+  //And finally, get the magnitude of the vector so that we can calculate the x and y positio
+  //below...
   float radiusOfDistanceBetweenPixelAndMoon = length(vectorBetweenPixelAndMoon);
 
   vec4 returnColor = vec4(0.0);
