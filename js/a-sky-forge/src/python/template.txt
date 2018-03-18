@@ -3,6 +3,7 @@
 //https://github.com/mrdoob/three.js/wiki/Uniforms-types
 AFRAME.registerShader('sky', {
   schema: {
+    uTime: {type: 'number', default: 0.005, min: 0, max: 0.1, is: 'uniform' },
     luminance: { type: 'number', default: 1, max: 0, min: 2, is: 'uniform' },
     turbidity: { type: 'number', default: 2, max: 0, min: 20, is: 'uniform' },
     reileigh: { type: 'number', default: 1, max: 0, min: 4, is: 'uniform' },

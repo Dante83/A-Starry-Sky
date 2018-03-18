@@ -147,6 +147,9 @@ AFRAME.registerComponent('sky-time', {
     // Do something on every scene tick or frame.
     this.fractionalSeconds += timeDelta;
 
+    //Animate our world, passing the time
+    this.el.components.material.material.uniforms.uTime.value = time;
+
     //Only update the sky every five seconds
     if(this.fractionalSeconds > 1000){
       //March time forward by another second
@@ -172,10 +175,10 @@ AFRAME.registerComponent('sky-time', {
       //For method go to line 567
       this.dynamicSkyObj.update(this.data);
       var solarAzimuth = 0.0;
-      var solarAltitude = 3.14159/4.0;
+      var solarAltitude = 6.0;
       this.el.components.material.material.uniforms.sunPosition.value.set(solarAzimuth, solarAltitude);
       var lunarAzimuth = 1.5 * 3.14159;
-      var lunarAltitude = 1.0 * 3.14159/4.0;
+      var lunarAltitude = 0.0 * 3.14159/4.0;
       this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude);
 
       var moonMappingData = this.dynamicSkyObj.getMoonTangentSpaceSunlight(lunarAzimuth, lunarAltitude, solarAzimuth, solarAltitude);

@@ -3,6 +3,7 @@
 //https://github.com/mrdoob/three.js/wiki/Uniforms-types
 AFRAME.registerShader('sky', {
   schema: {
+    uTime: {type: 'number', default: 0.005, min: 0, max: 0.1, is: 'uniform' },
     luminance: { type: 'number', default: 1, max: 0, min: 2, is: 'uniform' },
     turbidity: { type: 'number', default: 2, max: 0, min: 20, is: 'uniform' },
     reileigh: { type: 'number', default: 1, max: 0, min: 4, is: 'uniform' },
@@ -49,6 +50,9 @@ AFRAME.registerShader('sky', {
     'precision mediump float;',
     'precision mediump int;',
     '#endif',
+
+    '//Time',
+    'uniform float uTime;',
 
     '//Camera data',
     'varying vec3 vWorldPosition;',
@@ -105,8 +109,7 @@ AFRAME.registerShader('sky', {
     '//Sun Data',
     'uniform mediump vec2 sunPosition;',
     'const float angularRadiusOfTheSun = 0.0245; //Real Values',
-    '//const float angularRadiusOfTheSun = 0.074; //FakeyValues',
-
+    '//const float angularRadiusOfTheSun = 0.054; //FakeyValues',
 
     '//',
     '//NOTE: These values are interpolated, so we are probably not getting the values',
@@ -127,8 +130,8 @@ AFRAME.registerShader('sky', {
     'uniform vec3 moonPosition;',
     'uniform vec3 moonTangent;',
     'uniform vec3 moonBitangent;',
-    '//const float angularRadiusOfTheMoon = 0.024;',
-    'const float angularRadiusOfTheMoon = 0.075; //Fakey Values',
+    'const float angularRadiusOfTheMoon = 0.024;',
+    '//const float angularRadiusOfTheMoon = 0.055; //Fakey Values',
     'const float earthshine = 0.02;',
 
     '//Earth data',
@@ -139,12 +142,27 @@ AFRAME.registerShader('sky', {
     '//UTIL FUNCTIONS',
     '//',
 
+    '//Thanks to, https://github.com/msfeldstein/glsl-map/blob/master/index.glsl',
+    'float map(float value, float inMin, float inMax, float outMin, float outMax) {',
+      'return outMin + (outMax - outMin) * (value - inMin) / (inMax - inMin);',
+    '}',
+
     'int modulo(float a, float b){',
       'return int(a - (b * floor(a/b)));',
     '}',
 
     'float fModulo(float a, float b){',
       'return (a - (b * floor(a / b)));',
+    '}',
+
+    '//From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/',
+    'float rand(float x){',
+        'float a = 12.9898;',
+        'float b = 78.233;',
+        'float c = 43758.5453;',
+        'float dt= dot(vec2(x, x) ,vec2(a,b));',
+        'float sn= mod(dt,3.14);',
+        'return fract(sin(sn) * c);',
     '}',
 
     '//This converts our local sky coordinates from azimuth and altitude',
@@ -288,15 +306,27 @@ AFRAME.registerShader('sky', {
     '}',
 
     'vec4 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 starColor){',
-      'float maxRadiusOfStar = (2.0/360.0) * piTimes2;',
+      'float maxRadiusOfStar = 1.5 * (2.0/360.0) * piTimes2;',
       'float normalizedMagnitude = (7.96 - (magnitudeOfStar + 1.46)) / 7.96;',
-      'float radiusOfStar = clamp(maxRadiusOfStar * normalizedMagnitude, 0.0, 1.0);',
+      'float radiusOfStar = clamp(maxRadiusOfStar * normalizedMagnitude, 0.0, maxRadiusOfStar);',
 
       '//',
       '//NOTE: We should probably avoid our movement twinkling and the color mix of the sky in colorOfSky shoud',
       '//probably come from the background of the skies refractive angle and original sky color (at dusk and dawn)',
       '//and not remain a constant.',
       '//',
+      '//We need deterministic randomness for this star, as per https://thebookofshaders.com/11/',
+      '//The righascension and declination of the star can be used as a unique identifier, modifying our randomnness.',
+      'float twinkleDust = 0.002;',
+      'float randSeed = uTime * twinkleDust * (1.0 + rand(rand(raAndDecOfStar.x) + rand(raAndDecOfStar.y)));',
+      'float rand_seed_floor = floor(randSeed);  // integer',
+      'float rand_seed_fraction = fract(randSeed);  // fraction',
+      'float minBrightness = 0.4;',
+      'float maxBrightness = 1.0;',
+      'float rand_comp_a  = map(rand(rand_seed_floor), 0.0, 1.0, minBrightness, maxBrightness);',
+      'float rand_comp_b  = map(rand(rand(rand_seed_floor + 1.0)), 0.0, 1.0, minBrightness, maxBrightness);',
+      'float randomNess = mix(rand_comp_a, rand_comp_b, smoothstep(0.,1.,rand_seed_fraction));',
+      'radiusOfStar = radiusOfStar * randomNess;',
 
       'vec3 positionData = haversineDistance(raAndDec.x, raAndDec.y, raAndDecOfStar.x, raAndDecOfStar.y);',
       'vec4 returnColor = vec4(0.0);',
