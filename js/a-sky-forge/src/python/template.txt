@@ -15,6 +15,8 @@ AFRAME.registerShader('sky', {
     moonTexture: {type: 'map', src:'../images/moon-dif-512.png', is: 'uniform'},
     moonNormalMap: {type: 'map', src:'../images/moon-nor-512.png', is: 'uniform'},
     moonTangentSpaceSunlight: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
+    moonMappingTangent: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
+    moonMappingBitangent: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     starMask: {type: 'map', src:'../images/padded-starry-sub-data-0.png', is: 'uniform'},
     starRas: {type: 'map', src:'../images/padded-starry-sub-data-1.png', is: 'uniform'},
     starDecs: {type: 'map', src:'../images/padded-starry-sub-data-2.png', is: 'uniform'},

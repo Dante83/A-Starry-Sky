@@ -172,15 +172,20 @@ AFRAME.registerComponent('sky-time', {
       //For method go to line 567
       this.dynamicSkyObj.update(this.data);
       var solarAzimuth = 3.14159;
-      var solarAltitude = 4.0;
+      var solarAltitude = 0.0;
       this.el.components.material.material.uniforms.sunPosition.value.set(solarAzimuth, solarAltitude);
       var lunarAzimuth = 3.14159/2.0;
-      var lunarAltitude = 3.14159/8.0;
+      var lunarAltitude = -3.14159/2.0;
       this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude);
 
-      var moonTangentSpaceSunLight = this.dynamicSkyObj.getMoonTangentSpaceSunlight(lunarAzimuth, lunarAltitude, solarAzimuth, solarAltitude);
+      var moonMappingData = this.dynamicSkyObj.getMoonTangentSpaceSunlight(lunarAzimuth, lunarAltitude, solarAzimuth, solarAltitude);
+      var moonTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
+      var moonTangent = moonMappingData.moonTangent;
+      var moonBitangent = moonMappingData.moonBitangent;
 
-      this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(moonTangentSpaceSunLight.x, moonTangentSpaceSunLight.y, moonTangentSpaceSunLight.z);
+      this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(moonTangentSpaceSunlight.x, moonTangentSpaceSunlight.y, moonTangentSpaceSunlight.z);
+      this.el.components.material.material.uniforms.moonMappingTangent.value.set(moonTangent.x, moonTangent.y, moonTangent.z);
+      this.el.components.material.material.uniforms.moonMappingBitangent.value.set(moonBitangent.x, moonBitangent.y, moonBitangent.z);
 
       //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
       this.el.components.material.material.uniforms.localSiderealTime.value = this.dynamicSkyObj.localSiderealTime;
@@ -614,7 +619,7 @@ var aDynamicSky = {
     var moonTangentSpaceSunlight = solarCoordinates.clone();
     moonTangentSpaceSunlight.applyMatrix3(toTangentMoonSpace);
 
-    return moonTangentSpaceSunlight;
+    return {moonTangentSpaceSunlight: moonTangentSpaceSunlight, moonTangent: moonTangent, moonBitangent: moonBitangent};
   },
 
   getDaysInYear: function(){

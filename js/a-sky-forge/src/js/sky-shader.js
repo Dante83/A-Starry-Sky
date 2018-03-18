@@ -15,6 +15,8 @@ AFRAME.registerShader('sky', {
     moonTexture: {type: 'map', src:'../images/moon-dif-512.png', is: 'uniform'},
     moonNormalMap: {type: 'map', src:'../images/moon-nor-512.png', is: 'uniform'},
     moonTangentSpaceSunlight: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
+    moonMappingTangent: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
+    moonMappingBitangent: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     starMask: {type: 'map', src:'../images/padded-starry-sub-data-0.png', is: 'uniform'},
     starRas: {type: 'map', src:'../images/padded-starry-sub-data-1.png', is: 'uniform'},
     starDecs: {type: 'map', src:'../images/padded-starry-sub-data-2.png', is: 'uniform'},
@@ -121,8 +123,10 @@ AFRAME.registerShader('sky', {
     'uniform sampler2D moonTexture;',
     'uniform sampler2D moonNormalMap;',
     'uniform vec3 moonTangentSpaceSunlight;',
-    'const float angularRadiusOfTheMoon = 0.024;',
-    '//const float angularRadiusOfTheMoon = 0.075; //Fakey Values',
+    'uniform vec3 moonMappingTangent;',
+    'uniform vec3 moonMappingBitangent;',
+    '//const float angularRadiusOfTheMoon = 0.024;',
+    'const float angularRadiusOfTheMoon = 0.075; //Fakey Values',
     'const float earthshine = 0.02;',
 
     '//Earth data',
@@ -166,7 +170,7 @@ AFRAME.registerShader('sky', {
 
     '//This fellow is useful for the disks of the sun and the moon',
     '//and the glow of stars... It is fast and efficient at small angles',
-    'vec3 angularDistanceApproximation(float az_0, float alt_0, float az_1, float alt_1){',
+    'vec3 haversineDistance(float az_0, float alt_0, float az_1, float alt_1){',
       '//There is a chance that our compliment (say moon at az_0 at 0 degree and az_2 at 364.99)',
       '//Results in an inaccurately large angle, thus we must check the compliment in addition to',
       '//our regular diff.',
@@ -175,12 +179,16 @@ AFRAME.registerShader('sky', {
       'deltaAZ = abs(deltaAZ) < abs(compliment) ? deltaAZ : compliment;',
 
       '//Luckily we don not need to worry about this compliment stuff here because alt only goes between -pi and pi',
-      'float diff2 = alt_1 - alt_0;',
+      'float deltaAlt = alt_1 - alt_0;',
+
+      'float sinOfDeltaAzOver2 = sin(deltaAZ / 2.0);',
+      'float sinOfDeltaAltOver2 = sin(deltaAlt / 2.0);',
+
+      'float haversineDistance = 2.0 * asin(sqrt(sinOfDeltaAltOver2 * sinOfDeltaAltOver2 + cos(alt_0) * cos(alt_1) * sinOfDeltaAzOver2 * sinOfDeltaAzOver2));',
 
       '//Presuming that most of our angular objects are small, we will simply use',
       '//this simple approximation... http://jonisalonen.com/2014/computing-distance-between-coordinates-can-be-simple-and-fast/',
-      'float deltaAlt = diff2;',
-      'return vec3(deltaAZ, deltaAlt, sqrt(deltaAZ * deltaAZ + deltaAlt * deltaAlt));',
+      'return vec3(deltaAZ, deltaAlt, haversineDistance);',
     '}',
 
     '//This function combines our colors so that different layers can exist at the right locations',
@@ -229,17 +237,35 @@ AFRAME.registerShader('sky', {
     '//',
 
     'vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){',
-      '//Let us use the small angle approximation of this for now, in the future, we might Implement',
-      'vec3 positionData = angularDistanceApproximation(moonAzAltAndParallacticAngle.x, moonAzAltAndParallacticAngle.y, azimuthOfPixel, altitudeOfPixel);',
+      '//PositionOfMoon.',
+      'float moonAz = moonAzAltAndParallacticAngle.x;',
+      'float moonAlt = moonAzAltAndParallacticAngle.y;',
+      'float zenithAngle = piOver2 - moonAlt; //This is not a zenith angle, this is altitude',
+      'float moonX = sin(zenithAngle) * cos(moonAz + pi);',
+      'float moonY = sin(zenithAngle) * sin(moonAz + pi);',
+      'float moonZ = cos(zenithAngle);',
+      'vec3 moonPos = vec3(moonX, moonY, moonZ);',
 
-      '//Well, really 2x the angular radius of the moon because we wanna see it for now...',
+      'float zenithOfPixel = piOver2 - altitudeOfPixel;',
+      'float pixelX = sin(zenithOfPixel) * cos(azimuthOfPixel + pi);',
+      'float pixelY = sin(zenithOfPixel) * sin(azimuthOfPixel + pi);',
+      'float pixelZ = cos(zenithOfPixel);',
+      'vec3 pixelPos = vec3(pixelX, pixelY, pixelZ);',
+
+      'vec3 vectorBetweenPixelAndMoon = pixelPos - moonPos;',
+      'float xOffset = dot(vectorBetweenPixelAndMoon, moonMappingTangent);',
+      'float yOffset = dot(vectorBetweenPixelAndMoon, moonMappingBitangent);',
+      'float angleOfPixel = atan(-xOffset, yOffset);',
+      'float radiusOfDistanceBetweenPixelAndMoon = length(vectorBetweenPixelAndMoon);',
+
       'vec4 returnColor = vec4(0.0);',
-
-      'if(positionData.z < angularRadiusOfTheMoon){',
+      'if(radiusOfDistanceBetweenPixelAndMoon < angularRadiusOfTheMoon){',
         '//Hey! We are in the moon! convert our distance into a linear interpolation',
         '//of half pixel radius on our sampler',
-        'vec2 position = (positionData.xy + vec2(angularRadiusOfTheMoon)) / (2.0 * angularRadiusOfTheMoon);',
-        '//TODO: If we want to utilize rotations, we should multiply this by an appropriate rotation matrix first!',
+        'float xPosition = (1.0 + (radiusOfDistanceBetweenPixelAndMoon / angularRadiusOfTheMoon) * sin(angleOfPixel)) / 2.0;',
+        'float yPosition = (1.0 + (radiusOfDistanceBetweenPixelAndMoon  / angularRadiusOfTheMoon) * cos(angleOfPixel)) / 2.0;',
+
+        'vec2 position = vec2(xPosition, yPosition);',
 
         '//Now to grab that color!',
         'vec4 moonColor = texture2D(moonTexture, position.xy);',
@@ -272,7 +298,7 @@ AFRAME.registerShader('sky', {
       '//and not remain a constant.',
       '//',
 
-      'vec3 positionData = angularDistanceApproximation(raAndDec.x, raAndDec.y, raAndDecOfStar.x, raAndDecOfStar.y);',
+      'vec3 positionData = haversineDistance(raAndDec.x, raAndDec.y, raAndDecOfStar.x, raAndDecOfStar.y);',
       'vec4 returnColor = vec4(0.0);',
       'if(positionData.z < radiusOfStar){',
         'float lightness = exp(1.5 * 7.96 * ((radiusOfStar - positionData.z)/radiusOfStar)) / exp(1.5 * 7.96);',
