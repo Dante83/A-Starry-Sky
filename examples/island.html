@@ -18,13 +18,14 @@
     <script src="../js/a-sky-forge/src/js/star-data.js"></script>
     <script src="../js/a-sky-forge/src/js/sky-shader.js"></script>
     <script src="../js/a-sky-forge/src/js/a-sky-forge.js"></script>
+    <script src="../js/a-sky-forge/src/js/a-frame-components.js"></script>
 
     <!--Scene Scripts-->
   </head>
   <body>
     <a-scene physics>
       <!-- Sky -->
-      <a-sky-forge geo-coordinates="lat: 33.4484; long: -112.0740;" sky-time="year: 2017; dayOfTheYear: 100; timeOffset: 12000; utcOffset: -7; yearPeriod: 365;" material="shader: sky;"></a-sky>
+      <a-sky-forge geo-coordinates="lat: 33.4484; long: -112.0740;" sky-time="dayPeriod: 100;" material="shader: sky;"></a-sky>
 
       <!-- Ocean -->
       <a-ocean width="50" depth="50" density="40"></a-ocean>

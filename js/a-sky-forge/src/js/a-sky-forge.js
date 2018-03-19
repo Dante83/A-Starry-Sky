@@ -1,224 +1,3 @@
-// The mesh mixin provides common material properties for creating mesh-based primitives.
-// This makes the material component a default component and maps all the base material properties.
-var meshMixin = AFRAME.primitives.getMeshMixin();
-
-var dynamicSkyEntityMethods = {
-  currentDate: new Date(),
-  getDayOfTheYear: function(){
-    var month = this.currentDate.getMonth();
-    var dayOfThisMonth = this.currentDate.getDate();
-    var year = this.currentDate.getYear();
-    var daysInEachMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    var currentDayOfYear = 0;
-    for(var m = 0; m < month; m++){
-      currentDayOfYear += daysInEachMonth[m];
-    }
-    currentDayOfYear += dayOfThisMonth;
-    return currentDayOfYear.toString();
-  },
-
-  getSecondOfDay: function(){
-    return (this.currentDate.getHours() * 3600 + this.currentDate.getMinutes() * 60 + this.currentDate.getSeconds()).toString();
-  },
-
-  getYear: function(){
-    return this.currentDate.getFullYear().toString();
-  },
-}
-
-//Create primitive data associated with this, based off a-sky
-//https://github.com/aframevr/aframe/blob/master/src/extras/primitives/primitives/a-sky.js
-AFRAME.registerPrimitive('a-sky-forge', AFRAME.utils.extendDeep({}, meshMixin, {
-    // Preset default components. These components and component properties will be attached to the entity out-of-the-box.
-    defaultComponents: {
-      geometry: {
-        primitive: 'sphere',
-        radius: 5000,
-        segmentsWidth: 64,
-        segmentsHeight: 32
-      },
-      scale: '-1, 1, 1',
-      "geo-coordinates": 'lat: 37.7749; long: -122.4194',
-      "sky-time": `timeOffset: ${Math.round(dynamicSkyEntityMethods.getSecondOfDay())}; utcOffset: 0; dayPeriod: 86400; dayOfTheYear: ${Math.round(dynamicSkyEntityMethods.getDayOfTheYear())}; yearPeriod: 365; year: ${Math.round(dynamicSkyEntityMethods.getYear())}`,
-    }
-  }
-));
-
-//Register associated components
-AFRAME.registerComponent('geo-coordinates', {
-  schema: {
-    lat: {type: 'number', default: 37.7749},
-    long: {type: 'number', default: -122.4194}
-  }
-});
-
-AFRAME.registerComponent('sky-time', {
-  fractionalSeconds: 0,
-
-  dependencies: ['geo-coordinates', 'a-sky-forge'],
-
-  schema: {
-    timeOffset: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getSecondOfDay())},
-    utcOffset: {type: 'int', default: 0},
-    dayPeriod: {type: 'number', default: 86400.0},
-    dayOfTheYear: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getDayOfTheYear())},
-    yearPeriod: {type: 'number', default: 365.0},
-    year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
-    moonTexture: {type: 'map', default: '../images/moon-dif-512.png'},
-    moonNormalMap: {type: 'map', default: '../images/moon-nor-512.png'},
-    starMask: {type: 'map', default:'../images/padded-starry-sub-data-0.png'},
-    starRas: {type: 'map', default:'../images/padded-starry-sub-data-1.png'},
-    starDecs: {type: 'map', default:'../images/padded-starry-sub-data-2.png'},
-    starMags: {type: 'map', default:'../images/padded-starry-sub-data-3.png'},
-    starColors: {type: 'map', default:'../images/padded-starry-sub-data-4.png'},
-  },
-
-  init: function(){
-    this.lastCameraDirection = {x: 0.0, y: 0.0, z: 0.0};
-    this.dynamicSkyObj = aDynamicSky;
-    this.dynamicSkyObj.latitude = this.el.components['geo-coordinates'].data.lat;
-    this.dynamicSkyObj.longitude = this.el.components['geo-coordinates'].data.long;
-    this.dynamicSkyObj.update(this.data);
-    this.el.components.material.material.uniforms.sunPosition.value.set(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
-
-    //Load our normal maps for the moon
-    var textureLoader = new THREE.TextureLoader();
-    var moonTexture = textureLoader.load(this.data.moonTexture);
-    var moonNormalMap = textureLoader.load(this.data.moonNormalMap);
-
-    //
-    //Note: We might want to min map our moon texture and normal map so that
-    //Note: we can get better texture results in our view
-    //
-
-    //Populate this data into an array because we're about to do some awesome stuff
-    //to each texture with Three JS.
-    //Note that,
-    //We use a nearest mag and min filter to avoid fuzzy pixels, which kill good data
-    //We use repeat wrapping on wrap s, to horizontally flip to the other side of the image along RA
-    //And we use mirrored mapping on wrap w to just reflect back, although internally we will want to subtract 0.5 from this.
-    //we also use needs update to make all this work as per, https://codepen.io/SereznoKot/pen/vNjJWd
-    var starMask = textureLoader.load(this.data.starMask);
-    starMask.magFilter = THREE.NearestFilter;
-    starMask.minFilter = THREE.NearestFilter;
-    starMask.wrapS = THREE.RepeatWrapping;
-    starMask.wrapW = THREE.MirroredRepeatWrapping;
-    starMask.needsUpdate = true;
-    var starRas = textureLoader.load(this.data.starRas);
-    starRas.magFilter = THREE.NearestFilter;
-    starRas.minFilter = THREE.NearestFilter;
-    starRas.wrapS = THREE.RepeatWrapping;
-    starRas.wrapW = THREE.MirroredRepeatWrapping;
-    starRas.needsUpdate = true;
-    var starDecs = textureLoader.load(this.data.starDecs);
-    starDecs.magFilter = THREE.NearestFilter;
-    starDecs.minFilter = THREE.NearestFilter;
-    starDecs.wrapS = THREE.RepeatWrapping;
-    starDecs.wrapW = THREE.MirroredRepeatWrapping;
-    starDecs.needsUpdate = true;
-    var starMags = textureLoader.load(this.data.starMags);
-    starMags.magFilter = THREE.NearestFilter;
-    starMags.minFilter = THREE.NearestFilter;
-    starMags.wrapS = THREE.RepeatWrapping;
-    starMags.wrapW = THREE.MirroredRepeatWrapping;
-    starMags.needsUpdate = true;
-    var starColors = textureLoader.load(this.data.starColors);
-    starColors.magFilter = THREE.NearestFilter;
-    starColors.minFilter = THREE.NearestFilter;
-    starColors.wrapS = THREE.RepeatWrapping;
-    starColors.wrapW = THREE.MirroredRepeatWrapping;
-    starColors.needsUpdate = true;
-
-    //We only load our textures once upon initialization
-    this.el.components.material.material.uniforms.moonTexture.value = moonTexture;
-    this.el.components.material.material.uniforms.moonNormalMap.value = moonNormalMap;
-    this.el.components.material.material.uniforms.starMask.value = starMask;
-    this.el.components.material.material.uniforms.starRas.value = starRas;
-    this.el.components.material.material.uniforms.starDecs.value = starDecs;
-    this.el.components.material.material.uniforms.starMags.value = starMags;
-    this.el.components.material.material.uniforms.starColors.value = starColors;
-  },
-
-  update: function () {
-    this.fractionalSeconds = 0;
-  },
-
-  tick: function (time, timeDelta) {
-    // Do something on every scene tick or frame.
-    this.fractionalSeconds += timeDelta;
-
-    //Animate our world, passing the time
-    this.el.components.material.material.uniforms.uTime.value = time;
-
-    //Only update the sky every five seconds
-    if(this.fractionalSeconds > 1000){
-      //March time forward by another second
-      this.data.timeOffset += Math.floor(this.fractionalSeconds / 1000);
-      this.fractionalSeconds = this.fractionalSeconds % 1000;
-
-      //Update our camera specs - we should get the active cameras fov and
-      //transform this into a horizontal and vertical fov and get the sky
-      //angle from the currently pointed direction.
-      //Note that current our camera has a vertical FOV of 80, while Occulus is supposed to
-      //have a vertical FOV of 90 and a vertical FOV of about 80.
-      //var verticalFOV = camera.fov * (2.0 * Math.PI / 360.0);
-      //var horizontalFOV = 2.0 * Math.atan(camera.aspect * Math.tan(verticalFOV / 2.0));
-      var selectedCanvas = document.getElementsByClassName('a-canvas')[0]; //We presume there should only be one canvas in A-Frame.
-
-      //
-      //NOTE: For some reason, these are giving really screwed up widths and heights for our resolution
-      //This might have to do with VR - we should check this out later.
-      //
-      this.el.components.material.material.uniforms.u_resolution.value.set(window.screen.width, window.screen.height);
-
-      //Update our data for the dynamic sky object
-      //For method go to line 567
-      this.dynamicSkyObj.update(this.data);
-      var solarAzimuth = 0.0;
-      var solarAltitude = 6.0;
-      this.el.components.material.material.uniforms.sunPosition.value.set(solarAzimuth, solarAltitude);
-      var lunarAzimuth = 1.5 * 3.14159;
-      var lunarAltitude = 0.0 * 3.14159/4.0;
-      this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude);
-
-      var moonMappingData = this.dynamicSkyObj.getMoonTangentSpaceSunlight(lunarAzimuth, lunarAltitude, solarAzimuth, solarAltitude);
-      var moonTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
-      var moonPosition = moonMappingData.moonPosition;
-      var moonTangent = moonMappingData.moonTangent;
-      var moonBitangent = moonMappingData.moonBitangent;
-
-      this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(moonTangentSpaceSunlight.x, moonTangentSpaceSunlight.y, moonTangentSpaceSunlight.z);
-      this.el.components.material.material.uniforms.moonPosition.value.set(moonPosition.x, moonPosition.y, moonPosition.z);
-      this.el.components.material.material.uniforms.moonTangent.value.set(moonTangent.x, moonTangent.y, moonTangent.z);
-      this.el.components.material.material.uniforms.moonBitangent.value.set(moonBitangent.x, moonBitangent.y, moonBitangent.z);
-
-      //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
-      this.el.components.material.material.uniforms.localSiderealTime.value = this.dynamicSkyObj.localSiderealTime;
-
-      //this.el.components.material.material.uniforms.sunPosition.value.set(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
-      //this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(this.dynamicSkyObj.moonPosition.azimuth, this.dynamicSkyObj.moonPosition.altitude, this.dynamicSkyObj.moonsParallacticAngle);
-
-
-      /*var starLocations = [];
-      this.dynamicSkyObj.stars.forEach(function(star) {
-        starLocations.push({x: star.azimuth, y: star.altitude});
-      });
-      //this.el.components.material.material.uniforms.brightLimbOfMoon.value.set(starLocations);*/
-
-      if(this.schema.timeOffset > this.schema.dayPeriod){
-        //It's a new day!
-        this.schema.dayOfTheYear += 1;
-        this.schema.timeOffset = this.schema.timeOffset % this.schema.dayPeriod;
-        if(this.schema.dayOfTheYear > this.schema.yearPeriod){
-          //Reset everything!
-          this.schema.dayOfTheYear = 0;
-          this.schema.year += 1;
-        }
-      }
-    }
-  }
-});
-
 //
 //TODO: Simplify equations, implement Hoerners Method and maybe save some variables
 //TODO: Seperate out our various astronomical bodies into their own Javascript objects and files
@@ -253,12 +32,12 @@ var aDynamicSky = {
     this.timeInDay =  skyData.timeOffset * 86400 / this.dayPeriod; //Implementation of time dialation
     this.utcOffset = skyData.utcOffset ? skyData.utcOffset * 3600 : (240 * this.longitude);
     this.julianDay = this.calculateJulianDay();
-    this.julianCenturies = (this.julianDay - 2451545.0) / 36525.0;
+    this.julianCenturies =this.calculateJulianCenturies();
 
     //Useful constants
     this.calculateSunAndMoonLongitudeElgonationAndAnomoly();
     this.calculateNutationAndObliquityInEclipticAndLongitude();
-    this.siderealTime = this.calculateGreenwhichSiderealTime();
+    this.siderealTime = this.calculateGreenwhichSiderealTime(); //This is the apparent Greenwhich sidreal time
     this.localSiderealTime = this.siderealTime - this.radLongitude;
     this.apparentSideRealTime = this.calculateApparentSiderealTime();
 
@@ -276,6 +55,7 @@ var aDynamicSky = {
       this.year += 1;
       this.daysInYear = this.getDaysInYear();
     }
+
     daysRemaining =this.dayOfYear;
     var month;
     var day;
@@ -293,7 +73,7 @@ var aDynamicSky = {
         break;
       }
     }
-    day += fractionalTime;
+    day = day + fractionalTime;
     var year = this.year;
 
     if(month <= 2){
@@ -301,55 +81,61 @@ var aDynamicSky = {
       month = month + 12;
     }
 
+    //Note: Meeus defines INT to be the greatest integer less than or equal x
+    //Page 60, so I think floor does the best job of showing this, not trunc.
+
     //From Meeus, pg 61
-    var A = Math.round(year / 100);
-    var B = 2 - A + Math.round(A / 4);
-    var julianDay = Math.trunc(365.25 * (year + 4716)) + Math.trunc(30.6 * (month + 1)) + day + B - 1524.5;
+    var A = Math.floor(year / 100);
+    var B = 2 - A + Math.floor(A / 4);
+    var julianDay = Math.floor(365.25 * (year + 4716)) + Math.floor(30.6001 * (month + 1)) + day + B - 1524.5;
 
     return julianDay;
   },
 
   check4GreaterThan360: function(inDegrees){
-    var outDegrees;
-    if(inDegrees > 0){
-      outDegrees = inDegrees % 360;
+    var outDegrees = inDegrees % 360;
+    if(outDegrees < 0.0){
+      return (360 + outDegrees);
     }
-    else{
-      outDegrees = 360 + (inDegrees % 360);
+    else if(outDegrees == 360.0){
+      return 0.0;
     }
-
     return outDegrees;
   },
 
+  checkBetweenMinus90And90: function(inDegs){
+    var outDegs = this.check4GreaterThan360(inDegs + 90);
+    return (outDegs - 90);
+  },
+
+  checkBetweenMinus180And180: function(inDegs){
+    var outDegs = this.check4GreaterThan360(inDegs + 180);
+    return (outDegs - 180);
+  },
+
   check4GreaterThan2Pi: function(inRads){
-    var outRads;
-
-    if(inRads > 0){
-      outRads = inRads % (2 * Math.PI);
+    var outRads = inRads % (2 * Math.PI);
+    if(outRads < 0.0){
+      return (Math.PI * 2.0 + outRads);
     }
-    else{
-      outRads = (2 * Math.PI) + (inRads % (2 * Math.PI));
+    else if(outRads == (Math.PI * 2.0)){
+      return 0.0;
     }
-
     return outRads;
   },
 
-  unitSphereHaversteinDistance(coords1, coords2){
-    //From: https://stackoverflow.com/questions/14560999/using-the-haversine-formula-in-javascript
-    //Thank you Nathan! :D
-    var lon1 = coords1[0];
-    var lat1 = coords1[1];
+  checkBetweenMinusPiOver2AndPiOver2: function(inRads){
+    var outRads = this.check4GreaterThan2Pi(inRads + Math.PI/2.0);
+    return (outRads - (Math.PI / 2.0));
+  },
 
-    var lon2 = coords2[0];
-    var lat2 = coords2[1];
+  checkBetweenMinusPiAndPi: function(inRads){
+    var outRads = this.check4GreaterThan2Pi(inRads + Math.PI);
+    return (outRads - Math.PI);
+  },
 
-    //Presume our results are already in radians
-    var dLat = lat2 - lat1;
-    var dLon = lon2 - lon1;
-    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    var d = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return d;
+  calculateJulianCenturies(){
+    return (this.julianDay - 2451545.0) / 36525.0;
   },
 
   calculateGreenwhichSiderealTime: function(){
@@ -388,7 +174,7 @@ var aDynamicSky = {
     var az = Math.atan2(Math.sin(hourAngle), ((Math.cos(hourAngle) * Math.sin(latitudeInRads)) - (Math.tan(declinationInRads) * Math.cos(latitudeInRads))));
     az = az >= 0.0 ? az : az + (2 * Math.PI);
 
-    alt = this.check4GreaterThan2Pi(alt);
+    alt = this.checkBetweenMinusPiOver2AndPiOver2(alt);
     az = this.check4GreaterThan2Pi(az);
 
     return {azimuth: az, altitude: alt};
@@ -416,17 +202,17 @@ var aDynamicSky = {
     var sunsMeanLongitude = this.sunsMeanLongitude;
     var eccentricityOfEarth = 0.016708634 - 0.000042037 * T - 0.0000001267 * T * T;
     var sunsEquationOfCenter = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(sunsMeanAnomoly) + (0.019993 - 0.000101 * T) * Math.sin(2 * sunsMeanAnomoly) + 0.000289 * Math.sin(3 * sunsMeanAnomoly);
-    var sunsTrueLongitude = this.check4GreaterThan360(sunsMeanLongitude + sunsEquationOfCenter) * this.deg2Rad;
-    var trueObliquityOfEcliptic = this.trueObliquityOfEcliptic * this.deg2Rad;
-    var rightAscension = this.check4GreaterThan2Pi(Math.atan2(Math.cos(trueObliquityOfEcliptic) * Math.sin(sunsTrueLongitude), Math.cos(sunsTrueLongitude)));
-    var declination = this.check4GreaterThan2Pi(Math.asin(Math.sin(trueObliquityOfEcliptic) * Math.sin(sunsTrueLongitude)));
+    var sunsTrueLongitude = (sunsMeanLongitude + sunsEquationOfCenter) * this.deg2Rad;
+    var meanObliquityOfTheEclipitic = this.meanObliquityOfTheEclipitic * this.deg2Rad;
+    var rightAscension = this.check4GreaterThan2Pi(Math.atan2(Math.cos(meanObliquityOfTheEclipitic) * Math.sin(sunsTrueLongitude), Math.cos(sunsTrueLongitude)));
+    var declination = this.checkBetweenMinusPiOver2AndPiOver2(Math.asin(Math.sin(meanObliquityOfTheEclipitic) * Math.sin(sunsTrueLongitude)));
 
     //While we're here, let's calculate the distance from the earth to the sun, useful for figuring out the illumination of the moon
     this.distanceFromEarthToSun = (1.000001018 * (1 - (eccentricityOfEarth * eccentricityOfEarth))) / (1 + eccentricityOfEarth * Math.cos(sunsEquationOfCenter * this.deg2Rad)) * 149597871;
 
     //Because we use these elsewhere...
-    this.sunsRightAscension = rightAscension;
-    this.sunsDeclination = declination;
+    this.sunsRightAscension = rightAscension / this.deg2Rad;
+    this.sunsDeclination = declination / this.deg2Rad;
     return this.getAzimuthAndAltitude(rightAscension, declination);
   },
 
@@ -436,23 +222,23 @@ var aDynamicSky = {
 
   calculateSunAndMoonLongitudeElgonationAndAnomoly: function(){
     var T = this.julianCenturies;
-    this.moonMeanLongitude = this.check4GreaterThan360(218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + (T * T * T) / 65194000);
+    this.moonMeanLongitude = this.checkBetweenMinus180And180(218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + (T * T * T) / 65194000);
     this.moonMeanElongation = this.check4GreaterThan360(297.8501921 + 445267.1114034 * T - 0.0018819 * T * T + (T * T * T) / 113065000);
     this.moonsMeanAnomaly = this.check4GreaterThan360(134.9633964 + 477198.8675055 * T + 0.0087414 * T * T + (T * T * T) / 69699 - (T * T * T * T) / 14712000);
-    this.moonsArgumentOfLatitude = this.check4GreaterThan360(93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - (T * T * T) / 3526000 + (T * T * T * T) / 863310000);
-    this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit = this.check4GreaterThan360(125.04452 - 1934.136261 * T + 0.0020708 * T * T + ((T * T *T) /450000));
-    this.sunsMeanAnomoly = this.check4GreaterThan360(357.5291092 + 35999.0502909 * T - 0.0001536 * T * T + (T * T * T) / 24490000);
-    this.sunsMeanLongitude = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;
+    this.moonsArgumentOfLatitude = this.checkBetweenMinus90And90(93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - (T * T * T) / 3526000 + (T * T * T * T) / 863310000);
+    this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit = this.checkBetweenMinus180And180(125.04452 - 1934.136261 * T + 0.0020708 * T * T + ((T * T *T) /450000));
+    this.sunsMeanAnomoly = this.check4GreaterThan360(357.52772 + 35999.0500340 * T - 0.0001603 * T * T + (T * T * T) / 300000);
+    this.sunsMeanLongitude = this.checkBetweenMinus180And180(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
   },
 
   //With help from Meeus Chapter 47...
   getMoonPosition: function(){
     var T = this.julianCenturies;
-    var moonMeanLongitude = this.moonMeanLongitude;
+    var moonMeanLongitude = this.check4GreaterThan360(this.moonMeanLongitude);
     var moonMeanElongation = this.moonMeanElongation;
     var sunsMeanAnomoly = this.sunsMeanAnomoly;
     var moonsMeanAnomaly = this.moonsMeanAnomaly;
-    var moonsArgumentOfLatitude = this.moonsArgumentOfLatitude;
+    var moonsArgumentOfLatitude = this.check4GreaterThan360(this.moonsArgumentOfLatitude);
     var a_1 = this.check4GreaterThan360(119.75 + 131.849 * T);
     var a_2 = this.check4GreaterThan360(53.09 + 479264.290 * T);
     var a_3 = this.check4GreaterThan360(313.45 + 481266.484 * T);
@@ -553,12 +339,12 @@ var aDynamicSky = {
     var moonMeanLongitude = this.check4GreaterThan360(moonMeanLongitude);
     var moonsArgumentOfLatitude = this.check4GreaterThan360(moonsArgumentOfLatitude);
     var moonsMeanAnomaly = this.check4GreaterThan360(moonsMeanAnomaly);
-    sum_l = sum_l + 3958 * Math.sin(a_1 * this.deg2Rad) + 1962 * Math.sin(this.check4GreaterThan360(moonMeanLongitude - moonsArgumentOfLatitude) * this.deg2Rad) + 318 * Math.sin(a_2 * this.deg2Rad);
-    sum_b = sum_b - 2235 * Math.sin(moonMeanLongitude * this.deg2Rad) + 382 * Math.sin(a_3 * this.deg2Rad) + 175 * Math.sin(this.check4GreaterThan360(a_1 - moonsArgumentOfLatitude) * this.deg2Rad) + 175 * Math.sin(this.check4GreaterThan360(a_1 + moonsArgumentOfLatitude) * this.deg2Rad);
-    sum_b = sum_b + 127 * Math.sin(this.check4GreaterThan360(moonMeanLongitude - moonsMeanAnomaly) * this.deg2Rad) - 115 * Math.sin(this.check4GreaterThan360(moonMeanLongitude + moonsMeanAnomaly) * this.deg2Rad);
+    sum_l = sum_l + 3958 * Math.sin(a_1 * this.deg2Rad) + 1962 * Math.sin((moonMeanLongitude - moonsArgumentOfLatitude) * this.deg2Rad) + 318 * Math.sin(a_2 * this.deg2Rad);
+    sum_b = sum_b - 2235 * Math.sin(moonMeanLongitude * this.deg2Rad) + 382 * Math.sin(a_3 * this.deg2Rad) + 175 * Math.sin((a_1 - moonsArgumentOfLatitude) * this.deg2Rad) + 175 * Math.sin((a_1 + moonsArgumentOfLatitude) * this.deg2Rad);
+    sum_b = sum_b + 127 * Math.sin((moonMeanLongitude - moonsMeanAnomaly) * this.deg2Rad) - 115 * Math.sin((moonMeanLongitude + moonsMeanAnomaly) * this.deg2Rad);
 
-    var lambda = this.check4GreaterThan360((moonMeanLongitude + (sum_l / 1000000)));
-    var beta = this.check4GreaterThan360((sum_b / 1000000));
+    var lambda = (moonMeanLongitude + (sum_l / 1000000));
+    var beta = (sum_b / 1000000);
     this.distanceFromEarthToMoon = 385000.56 + (sum_r / 1000); //In kilometers
     var raAndDec = this.lambdaBetaDegToRaDec(lambda, beta);
     var rightAscension = raAndDec.rightAscension;
@@ -656,7 +442,7 @@ var aDynamicSky = {
 
     //Use these to acquire the equatorial solarGPUCoordinates
     var rightAscension = this.check4GreaterThan2Pi(Math.atan2(Math.sin(radLambda) * Math.cos(epsilon) - Math.tan(radBeta) * Math.sin(epsilon), Math.cos(radLambda)));
-    var declination = this.check4GreaterThan2Pi(Math.asin(Math.sin(radBeta) * Math.cos(epsilon) + Math.cos(radBeta) * Math.sin(epsilon) * Math.sin(radLambda)));
+    var declination = this.checkBetweenMinusPiOver2AndPiOver2(Math.asin(Math.sin(radBeta) * Math.cos(epsilon) + Math.cos(radBeta) * Math.sin(epsilon) * Math.sin(radLambda)));
 
     //Convert these back to degrees because we don't actually convert them over to radians until our final conversion to azimuth and altitude
     rightAscension = rightAscension / this.deg2Rad;
@@ -737,4 +523,9 @@ var aDynamicSky = {
   astroHoursMinuteSeconds2Degs: function(hours, minutes, seconds){
     return ((hours + minutes / 60 + seconds / 3600) / 24) * 360;
   }
+}
+
+//For Mocha testing
+if(typeof exports !== 'undefined') {
+  exports.aDynamicSky = aDynamicSky;
 }
