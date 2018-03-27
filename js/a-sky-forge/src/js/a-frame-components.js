@@ -2,30 +2,6 @@
 // This makes the material component a default component and maps all the base material properties.
 var meshMixin = AFRAME.primitives.getMeshMixin();
 
-var dynamicSkyEntityMethods = {
-  currentDate: new Date(),
-  getDayOfTheYear: function(){
-    var month = this.currentDate.getMonth();
-    var dayOfThisMonth = this.currentDate.getDate();
-    var year = this.currentDate.getYear();
-    var daysInEachMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    var currentDayOfYear = 0;
-    for(var m = 0; m < month; m++){
-      currentDayOfYear += daysInEachMonth[m];
-    }
-    currentDayOfYear += dayOfThisMonth;
-    return currentDayOfYear.toString();
-  },
-
-  getSecondOfDay: function(){
-    return (this.currentDate.getHours() * 3600 + this.currentDate.getMinutes() * 60 + this.currentDate.getSeconds()).toString();
-  },
-
-  getYear: function(){
-    return this.currentDate.getFullYear().toString();
-  },
-}
-
 //Create primitive data associated with this, based off a-sky
 //https://github.com/aframevr/aframe/blob/master/src/extras/primitives/primitives/a-sky.js
 AFRAME.registerPrimitive('a-sky-forge', AFRAME.utils.extendDeep({}, meshMixin, {
@@ -62,7 +38,9 @@ AFRAME.registerComponent('sky-time', {
     utcOffset: {type: 'int', default: 0},
     dayPeriod: {type: 'number', default: 86400.0},
     dayOfTheYear: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getDayOfTheYear())},
-    yearPeriod: {type: 'number', default: 365.0},
+    month: {type: 'int', default: -1},
+    day: {type: 'int', default: -1},
+    yearPeriod: {type: 'number', default: (dynamicSkyEntityMethods.getIsLeapYear() ? 366 : 365)},
     year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
     moonTexture: {type: 'map', default: '../images/moon-dif-512.png'},
     moonNormalMap: {type: 'map', default: '../images/moon-nor-512.png'},
@@ -74,6 +52,10 @@ AFRAME.registerComponent('sky-time', {
   },
 
   init: function(){
+    if(this.data.month != -1 && this.data.day != -1){
+      this.data.dayOfTheYear = dynamicSkyEntityMethods.getDayOfTheYearFromYMD(this.data.year, this.data.month, this.data.day);
+    }
+
     this.lastCameraDirection = {x: 0.0, y: 0.0, z: 0.0};
     this.dynamicSkyObj = aDynamicSky;
     this.dynamicSkyObj.latitude = this.el.components['geo-coordinates'].data.lat;
@@ -164,20 +146,13 @@ AFRAME.registerComponent('sky-time', {
       //var verticalFOV = camera.fov * (2.0 * Math.PI / 360.0);
       //var horizontalFOV = 2.0 * Math.atan(camera.aspect * Math.tan(verticalFOV / 2.0));
       var selectedCanvas = document.getElementsByClassName('a-canvas')[0]; //We presume there should only be one canvas in A-Frame.
-
-      //
-      //NOTE: For some reason, these are giving really screwed up widths and heights for our resolution
-      //This might have to do with VR - we should check this out later.
-      //
       this.el.components.material.material.uniforms.u_resolution.value.set(window.screen.width, window.screen.height);
 
       //Update our data for the dynamic sky object
       //For method go to line 567
       this.dynamicSkyObj.update(this.data);
 
-      //TODO: This is giving the opposite phase of the moon than I should have
       //TODO: It also still goes completely black at sunrise and sunset.
-
       var lunarAzimuth = this.dynamicSkyObj.moonPosition.azimuth;
       var lunarAltitude = this.dynamicSkyObj.moonPosition.altitude;
       //lunarAltitude = lunarAltitude < 0.0 ? lunarAltitude + Math.PI * 2.0 : solarAltitude;
@@ -189,7 +164,7 @@ AFRAME.registerComponent('sky-time', {
       this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude, 0.0);
 
       //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
-      this.el.components.material.material.uniforms.localSiderealTime.value = this.dynamicSkyObj.localSiderealTime;
+      this.el.components.material.material.uniforms.localSiderealTime.value = (this.dynamicSkyObj.localApparentSiderealTime) * this.dynamicSkyObj.deg2Rad;
 
       var moonMappingData = this.dynamicSkyObj.getMoonTangentSpaceSunlight(lunarAzimuth, lunarAltitude, solarAzimuth, solarAltitude);
       var moonTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
@@ -201,12 +176,6 @@ AFRAME.registerComponent('sky-time', {
       this.el.components.material.material.uniforms.moonPosition.value.set(moonPosition.x, moonPosition.y, moonPosition.z);
       this.el.components.material.material.uniforms.moonTangent.value.set(moonTangent.x, moonTangent.y, moonTangent.z);
       this.el.components.material.material.uniforms.moonBitangent.value.set(moonBitangent.x, moonBitangent.y, moonBitangent.z);
-
-      /*var starLocations = [];
-      this.dynamicSkyObj.stars.forEach(function(star) {
-        starLocations.push({x: star.azimuth, y: star.altitude});
-      });
-      //this.el.components.material.material.uniforms.brightLimbOfMoon.value.set(starLocations);*/
 
       if(this.schema.timeOffset > this.schema.dayPeriod){
         //It's a new day!

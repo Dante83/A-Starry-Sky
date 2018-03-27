@@ -1,3 +1,9 @@
+if(typeof exports !== 'undefined') {
+  const dynamicSkyEntityMethodsExports = require('./a-dynamic-sky-entity-methods.js');
+  //Give this global scope by leaving off the var
+  dynamicSkyEntityMethods = dynamicSkyEntityMethodsExports.dynamicSkyEntityMethods;
+}
+
 //
 //TODO: Simplify equations, implement Hoerners Method and maybe save some variables
 //TODO: Seperate out our various astronomical bodies into their own Javascript objects and files
@@ -10,7 +16,6 @@ var aDynamicSky = {
   radLatitude : 0.0,
   radLongitude : 0.0,
   year : 0.0,
-  yearPeriod : 0.0,
   dayOfYear : 0.0,
   dayPeriod : 0.0,
   hourInDay : 0.0,
@@ -26,37 +31,57 @@ var aDynamicSky = {
     this.radLongitude = this.longitude * this.deg2Rad;
     this.year = skyData.year;
     this.daysInYear = this.getDaysInYear();
-    this.yearPeriod = skyData.yearPeriod;
-    this.dayOfYear = skyData.dayOfTheYear * (this.daysInYear / this.yearPeriod);
+    this.dayOfYear = skyData.dayOfTheYear;
     this.dayPeriod = skyData.dayPeriod;
-    this.timeInDay =  skyData.timeOffset * 86400 / this.dayPeriod; //Implementation of time dialation
-    this.utcOffset = skyData.utcOffset ? skyData.utcOffset * 3600 : (240 * this.longitude);
+    //var utcOffset = skyData.utcOffset ? skyData.utcOffset : 0.0;
+    //this.timeInDay =  ((skyData.timeOffset - utcOffset * 3600.0) * 86400.0) / this.dayPeriod; //Implementation of time dialation
+
+    //Get the time at Greenwhich
+    //NOTE: ALl of these time thingies should be tested at turn-overs and crud
+    //As they might only work mid-year and screw up at years end.
+    var utcOffsetInSeconds = skyData.utcOffset != null ? skyData.utcOffset * 3600 : (240 * this.longitude);
+    var utcDate = new Date(this.year, 0);
+    utcDate.setSeconds( (this.dayOfYear - 1.0) * 86400 + skyData.timeOffset + utcOffsetInSeconds);
+
+    //Update our time constants to UTC time
+    this.year = utcDate.getFullYear();
+    this.dayOfYear = dynamicSkyEntityMethods.getDayOfTheYearFromYMD(utcDate.getFullYear(), utcDate.getMonth() + 1, utcDate.getDate());
+    this.timeInDay = utcDate.getHours() * 3600 + utcDate.getMinutes() * 60 + utcDate.getSeconds();
+
+    console.log("Test");
+    console.log(skyData.timeOffset);
+    console.log(skyData.utcOffset);
+    console.log(utcOffsetInSeconds);
+    console.log(this.timeInDay);
+    console.log(`${utcDate.getFullYear()}-${(utcDate.getMonth() + 1)}-${utcDate.getDate()} ${utcDate.getHours()}:${utcDate.getMinutes()}:${utcDate.getSeconds()}`);
+
     this.julianDay = this.calculateJulianDay();
-    this.julianCenturies =this.calculateJulianCenturies();
+    this.julianCentury =this.calculateJulianCentury();
 
     //Useful constants
     this.calculateSunAndMoonLongitudeElgonationAndAnomoly();
     this.calculateNutationAndObliquityInEclipticAndLongitude();
-    this.siderealTime = this.calculateGreenwhichSiderealTime(); //This is the apparent Greenwhich sidreal time
-    this.localSiderealTime = this.siderealTime - this.radLongitude;
-    this.apparentSideRealTime = this.calculateApparentSiderealTime();
+    this.greenwhichMeanSiderealTime = this.calculateGreenwhichSiderealTime();
+    this.greenwhichApparentSiderealTime = this.calculateApparentSiderealTime();
+
+    console.log("What is that longitude?!");
+    console.log(this.longitude);
+
+    this.localApparentSiderealTime = this.check4GreaterThan360(this.greenwhichApparentSiderealTime + this.longitude);
+    //NOTE: Our error probbaly occurs in the calculations of various sidereal times.
+
 
     //Get our actual positions
+    //
+    //NOTE: I've narrowed it down to here, somehow we're not getting the right azimuth and altitude for our sun and moon
+    //
     this.sunPosition = this.getSunPosition();
     this.moonPosition = this.getMoonPosition();
   },
 
-  calculateJulianDay(){
+  calculateJulianDay: function(){
     var fractionalTime = this.timeInDay / 86400;
-    //What happens when we change over the years
-    if(this.dayOfYear >= this.daysInYear){
-      year = this.year + ((day >= daysInThisYear) ? 1 : 0);
-      this.dayOfYear = 1;
-      this.year += 1;
-      this.daysInYear = this.getDaysInYear();
-    }
 
-    daysRemaining =this.dayOfYear;
     var month;
     var day;
     var daysInEachMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -65,11 +90,14 @@ var aDynamicSky = {
       daysInEachMonth[1] = 29;
     }
 
+    var daysPast = 0;
+    var previousMonthsDays = 0;
     for(var m = 0; m < 12; m++){
-      day = daysRemaining;
-      daysRemaining -= daysInEachMonth[m];
-      if(daysRemaining < 0){
+      previousMonthsDays = daysPast;
+      daysPast += daysInEachMonth[m];
+      if(daysPast >= this.dayOfYear){
         month = m + 1;
+        day = this.dayOfYear - previousMonthsDays;
         break;
       }
     }
@@ -84,9 +112,18 @@ var aDynamicSky = {
     //Note: Meeus defines INT to be the greatest integer less than or equal x
     //Page 60, so I think floor does the best job of showing this, not trunc.
 
-    //From Meeus, pg 61
-    var A = Math.floor(year / 100);
-    var B = 2 - A + Math.floor(A / 4);
+    //Roughly check that we are in the julian or gregorian calender.
+    //Thank you https://github.com/janrg/MeeusSunMoon/blob/master/src/MeeusSunMoon.js
+    var gregorianCutoff = new Date("1582-10-15 12:00:00");
+    var hour = Math.floor(this.timeInDay / 3600);
+    var minute = Math.floor((this.timeInDay % 3600) /60);
+    var second = Math.floor(this.timeInDay % 60);
+    var todayAsADate = new Date(year, month, day, hour, minute, second);
+    var B = 0;
+    if (todayAsADate > gregorianCutoff) {
+      var A = Math.floor(year / 100);
+      var B = 2 - A + Math.floor(A / 4);
+    }
     var julianDay = Math.floor(365.25 * (year + 4716)) + Math.floor(30.6001 * (month + 1)) + day + B - 1524.5;
 
     return julianDay;
@@ -134,41 +171,47 @@ var aDynamicSky = {
     return (outRads - Math.PI);
   },
 
-  calculateJulianCenturies(){
+  calculateJulianCentury(){
+
     return (this.julianDay - 2451545.0) / 36525.0;
   },
 
   calculateGreenwhichSiderealTime: function(){
     //Meeus 87
-    var T = this.julianCenturies;
-    var greenwhichSideRealTime= 280.46061837 + 360.98564736629 * (this.julianDay - 2451545.0) + T * T * (0.0003879933 - (T / 38710000.0));
-    greenwhichSideRealTime = this.check4GreaterThan360(greenwhichSideRealTime) * this.deg2Rad;
+    var T = this.julianCentury;
+    // var julianDayAt0hUTC = Math.trunc(this.julianDay) + 0.5;
+    // var T = (julianDayAt0hUTC - 2451545.0) / 36525.0;
+    // var greenwhichSideRealTimeAt0hUTC = (100.46061837 + 36000.770053608 * T + 0.000387933 * T * T - ((T * T * T) / 38710000.0));
+    // var greenwhichSideRealTime = greenwhichSideRealTimeAt0hUTC + (this.timeInDay / 86400.0) * 1.00273790935;
 
-    return greenwhichSideRealTime;
+    var gmsrt = this.check4GreaterThan360(280.46061837 + 360.98564736629 * (this.julianDay - 2451545.0) + T * T * 0.000387933 - ((T * T * T) / 38710000.0));
+    return gmsrt;
   },
 
   calculateApparentSiderealTime: function(){
-    var sideRealTimeInHoursMinutesSeconds = this.radToHoursMinutesSeconds(this.siderealTime);
-    sideRealTimeInHoursMinutesSeconds.addSeconds(-3.868 * (Math.cos(this.trueObliquityOfEcliptic * this.deg2Rad) / 15) );
+    var nutationInRightAscensionInSeconds = (this.nutationInLongitude * 3600 * Math.cos(this.trueObliquityOfEcliptic * this.deg2Rad) )/ 15.0;
+    var nutationInRightAscensionInDegs = nutationInRightAscensionInSeconds * (360) / 86400;
+    var gasrt = this.greenwhichMeanSiderealTime + nutationInRightAscensionInDegs;
 
-    //Now convert this back to degrees
-    return this.astroHoursMinuteSeconds2Degs(sideRealTimeInHoursMinutesSeconds.hours, sideRealTimeInHoursMinutesSeconds.minutes, sideRealTimeInHoursMinutesSeconds.seconds);
+    return gasrt;
   },
 
   //With a little help from: http://www.convertalot.com/celestial_horizon_co-ordinates_calculator.html
   //and: http://www.geoastro.de/elevaz/basics/meeus.htm
   getAzimuthAndAltitude: function(rightAscension, declination){
-    var apparentSideRealTime = this.apparentSideRealTime;
     var latitude = this.latitude;
     //We use a negative one here so that we can convert between the standard longitude and the longitude in Meeus
     //The astronomical union decided that west longitudes are negative and east longitudes are positive, while meeus
     //uses the convention that west is positive and east is negative ^_^. It's an astronomical revolution!
-    var longitude =-1 * this.longitude;
+    var longitude = -this.longitude;
 
     //Calculated from page 92 of Meeus
-    var hourAngle = this.check4GreaterThan360(apparentSideRealTime - longitude - rightAscension) * this.deg2Rad;
-    latitudeInRads = latitude * this.deg2Rad;
-    declinationInRads = declination * this.deg2Rad;
+
+    //NOTE: Check that both of these are appropriately in degrees or freaking radians
+    //WARNING: THESE NEED TO BE IN DEGREES!
+    var hourAngle = this.check4GreaterThan360(this.greenwhichApparentSiderealTime - longitude - rightAscension) * this.deg2Rad;
+    var latitudeInRads = latitude * this.deg2Rad;
+    var declinationInRads = declination * this.deg2Rad;
 
     var alt = Math.asin(Math.sin(declinationInRads) * Math.sin(latitudeInRads) + Math.cos(declinationInRads) * Math.cos(latitudeInRads) * Math.cos(hourAngle));
     var az = Math.atan2(Math.sin(hourAngle), ((Math.cos(hourAngle) * Math.sin(latitudeInRads)) - (Math.tan(declinationInRads) * Math.cos(latitudeInRads))));
@@ -184,12 +227,12 @@ var aDynamicSky = {
   //But anyways, using the shorter version from 144 - this limits the accuracy of
   //everything else to about 2 or 3 decimal places, but we will survive but perfection isn't our goal here
   calculateNutationAndObliquityInEclipticAndLongitude: function(){
-    var T = this.julianCenturies;
+    var T = this.julianCentury;
     var omega = this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit * this.deg2Rad;
-    var sunsMeanLongitude = this.sunsMeanLongitude;
-    var moonsMeanLongitude = this.moonMeanLongitude;
+    var sunsMeanLongitude = this.sunsMeanLongitude * this.deg2Rad;
+    var moonsMeanLongitude = this.moonMeanLongitude * this.deg2Rad;
 
-    this.nutationInLongitude = (-17.2 * Math.sin(omega) - 1.32 * Math.sin(2 * sunsMeanLongitude) - 0.23 * Math.sin(2 * moonsMeanLongitude) + 0.21 * Math.sin(omega)) / 3600;
+    this.nutationInLongitude = (-17.2 * Math.sin(omega) - 1.32 * Math.sin(2 * sunsMeanLongitude) - 0.23 * Math.sin(2 * moonsMeanLongitude) + 0.21 * Math.sin(omega)) / 3600.0;
     this.deltaObliquityOfEcliptic = (9.2 * Math.cos(omega) + 0.57 * Math.cos(2 * sunsMeanLongitude) + 0.1 * Math.cos(2 * moonsMeanLongitude) - 0.09 * Math.cos(2 * omega)) / 3600;
     this.meanObliquityOfTheEclipitic = this.astroDegrees2NormalDegs(23, 26, 21.448) - ((T * 46.8150) / 3600)  - ((0.00059 * T * T) / 3600) + ((0.001813 * T * T * T) / 3600);
     this.trueObliquityOfEcliptic = this.meanObliquityOfTheEclipitic + this.deltaObliquityOfEcliptic;
@@ -197,7 +240,7 @@ var aDynamicSky = {
 
   //With a little help from: http://aa.usno.navy.mil/faq/docs/SunApprox.php and of course, Meeus
   getSunPosition: function(){
-    var T = this.julianCenturies;
+    var T = this.julianCentury;
     var sunsMeanAnomoly = this.sunsMeanAnomoly * this.deg2Rad;
     var sunsMeanLongitude = this.sunsMeanLongitude;
     var eccentricityOfEarth = 0.016708634 - 0.000042037 * T - 0.0000001267 * T * T;
@@ -213,27 +256,23 @@ var aDynamicSky = {
     //Because we use these elsewhere...
     this.sunsRightAscension = rightAscension / this.deg2Rad;
     this.sunsDeclination = declination / this.deg2Rad;
-    return this.getAzimuthAndAltitude(rightAscension, declination);
-  },
-
-  calculateParallacticAngle: function(hourAngle, declination){
-    return Math.atan2(Math.sin(hourAngle), (Math.tan(this.radLongitude) * Math.cos(declination) - Math.sin(declination) * Math.cos(hourAngle)));
+    return this.getAzimuthAndAltitude(this.sunsRightAscension, this.sunsDeclination);
   },
 
   calculateSunAndMoonLongitudeElgonationAndAnomoly: function(){
-    var T = this.julianCenturies;
-    this.moonMeanLongitude = this.checkBetweenMinus180And180(218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + (T * T * T) / 65194000);
+    var T = this.julianCentury;
+    this.moonMeanLongitude = this.check4GreaterThan360(218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + (T * T * T) / 65194000);
     this.moonMeanElongation = this.check4GreaterThan360(297.8501921 + 445267.1114034 * T - 0.0018819 * T * T + (T * T * T) / 113065000);
     this.moonsMeanAnomaly = this.check4GreaterThan360(134.9633964 + 477198.8675055 * T + 0.0087414 * T * T + (T * T * T) / 69699 - (T * T * T * T) / 14712000);
-    this.moonsArgumentOfLatitude = this.checkBetweenMinus90And90(93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - (T * T * T) / 3526000 + (T * T * T * T) / 863310000);
-    this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit = this.checkBetweenMinus180And180(125.04452 - 1934.136261 * T + 0.0020708 * T * T + ((T * T *T) /450000));
+    this.moonsArgumentOfLatitude = this.check4GreaterThan360(93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - (T * T * T) / 3526000 + (T * T * T * T) / 863310000);
+    this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit = this.check4GreaterThan360(125.04452 - 1934.136261 * T + 0.0020708 * T * T + ((T * T *T) /450000));
     this.sunsMeanAnomoly = this.check4GreaterThan360(357.52772 + 35999.0500340 * T - 0.0001603 * T * T + (T * T * T) / 300000);
-    this.sunsMeanLongitude = this.checkBetweenMinus180And180(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
+    this.sunsMeanLongitude = this.check4GreaterThan360(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
   },
 
   //With help from Meeus Chapter 47...
   getMoonPosition: function(){
-    var T = this.julianCenturies;
+    var T = this.julianCentury;
     var moonMeanLongitude = this.check4GreaterThan360(this.moonMeanLongitude);
     var moonMeanElongation = this.moonMeanElongation;
     var sunsMeanAnomoly = this.sunsMeanAnomoly;
@@ -354,13 +393,10 @@ var aDynamicSky = {
     this.moonsRightAscension = rightAscension;
     this.moonsDeclination = declination;
 
-    this.moonsParallacticAngle = this.calculateParallacticAngle(this.hourAngle, declination);
-
     //Just return these values for now, we can vary the bright
     return this.getAzimuthAndAltitude(rightAscension, declination);
   },
 
-  //For controls go to line 173
   getMoonTangentSpaceSunlight(moonAzimuth, moonAltitude, solarAzimuth, solarAltitude){
     //Calculate our normal, tangent and bitangent for the moon for normal mapping
     //We don't need these for each face because our moon is effectively a billboard
@@ -422,7 +458,7 @@ var aDynamicSky = {
   },
 
   getDaysInYear: function(){
-    var daysInThisYear = ((this.year % 4 == 0) && (((this.year % 100 == 0) && (this.year % 400 == 0)) || (this.year % 100 != 0))) ? 366 : 365;
+    var daysInThisYear = dynamicSkyEntityMethods.getIsLeapYear(this.year) ? 366 : 365;
 
     return daysInThisYear;
   },
@@ -471,20 +507,19 @@ var aDynamicSky = {
   },
 
   astroDegrees2Rads: function(degrees, arcminutes, arcseconds){
-    var fractDegrees = this.check4GreaterThan360(degrees) + (arcminutes / 60) + (arcseconds / 3600);
     return this.deg2Rad * this.astroDegrees2NormalDegs(degrees, arcminutes, arcseconds);
   },
 
   astroDegrees2NormalDegs: function(degrees, arcminutes, arcseconds){
     var fractDegrees = 0;
     if(degrees !== 0){
-      fractDegrees = this.check4GreaterThan360(Math.sign(degrees) * (Math.abs(degrees) + arcminutes / 60 + arcseconds / 3600));
+      fractDegrees = this.check4GreaterThan360(Math.sign(degrees) * (Math.abs(degrees) + (arcminutes / 60.0) + (arcseconds / 3600.0) ));
     }
     else if(arcminutes !== 0){
-      fractDegrees = this.check4GreaterThan360(Math.sign(arcminutes) * (Math.abs(arcminutes) / 60 + arcseconds / 3600));
+      fractDegrees = this.check4GreaterThan360(Math.sign(arcminutes) * ( (Math.abs(arcminutes) / 60.0) + (arcseconds / 3600.0) ));
     }
     else if(arcseconds !== 0){
-      fractDegrees = this.check4GreaterThan360(arcseconds / 3600);
+      fractDegrees = this.check4GreaterThan360(arcseconds / 3600.0);
     }
 
     return fractDegrees;
@@ -521,7 +556,7 @@ var aDynamicSky = {
   },
 
   astroHoursMinuteSeconds2Degs: function(hours, minutes, seconds){
-    return ((hours + minutes / 60 + seconds / 3600) / 24) * 360;
+    return (360.0 * (hours * 3600.0 + minutes * 60.0 + seconds) / 86400.0);
   }
 }
 

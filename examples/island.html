@@ -9,15 +9,14 @@
     <!--Meta-->
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no,user-scalable=no,maximum-scale=1">
 
-    <!--A Frame Components>
-    <script src="https://aframe.io/releases/0.7.0/aframe.min.js"></script-->
-    <script src="../js/components/aframe-master.min.js"></script>
+    <script src="https://aframe.io/releases/0.7.0/aframe.min.js"></script>
 
     <script src="../js/components/vptree.js"></script>
     <script src="https://unpkg.com/aframe-physics-system@1.4.0/dist/aframe-physics-system.min.js"></script>
     <script src="../js/a-sky-forge/src/js/star-data.js"></script>
     <script src="../js/a-sky-forge/src/js/sky-shader.js"></script>
     <script src="../js/a-sky-forge/src/js/a-sky-forge.js"></script>
+    <script src="../js/a-sky-forge/src/js/a-dynamic-sky-entity-methods.js"></script>
     <script src="../js/a-sky-forge/src/js/a-frame-components.js"></script>
 
     <!--Scene Scripts-->
@@ -25,16 +24,7 @@
   <body>
     <a-scene physics>
       <!-- Sky -->
-      <a-sky-forge geo-coordinates="lat: 33.4484; long: -112.0740;" sky-time="dayPeriod: 100;" material="shader: sky;"></a-sky>
-
-      <!-- Ocean -->
-      <a-ocean width="50" depth="50" density="40"></a-ocean>
-
-      <!-- Pedestals -->
-      <a-cylinder radius="1" height="50" color="#39BB82" position="0 -24.5 0" static-body></a-cylinder>
-      <a-cylinder radius="1" height="50" color="#39BB82" position="5 -24.5 0" static-body></a-cylinder>
-      <a-cylinder radius="1" height="50" color="#39BB82" position="-5 -24.5 0" static-body></a-cylinder>
-
+      <a-sky-forge geo-coordinates="lat: 33.4484; long: -112.0740;" material="shader: sky;"></a-sky>
     </a-scene>
   </body>
 </html>
