@@ -47,14 +47,6 @@ var aDynamicSky = {
     this.year = utcDate.getFullYear();
     this.dayOfYear = dynamicSkyEntityMethods.getDayOfTheYearFromYMD(utcDate.getFullYear(), utcDate.getMonth() + 1, utcDate.getDate());
     this.timeInDay = utcDate.getHours() * 3600 + utcDate.getMinutes() * 60 + utcDate.getSeconds();
-
-    console.log("Test");
-    console.log(skyData.timeOffset);
-    console.log(skyData.utcOffset);
-    console.log(utcOffsetInSeconds);
-    console.log(this.timeInDay);
-    console.log(`${utcDate.getFullYear()}-${(utcDate.getMonth() + 1)}-${utcDate.getDate()} ${utcDate.getHours()}:${utcDate.getMinutes()}:${utcDate.getSeconds()}`);
-
     this.julianDay = this.calculateJulianDay();
     this.julianCentury =this.calculateJulianCentury();
 
@@ -63,13 +55,7 @@ var aDynamicSky = {
     this.calculateNutationAndObliquityInEclipticAndLongitude();
     this.greenwhichMeanSiderealTime = this.calculateGreenwhichSiderealTime();
     this.greenwhichApparentSiderealTime = this.calculateApparentSiderealTime();
-
-    console.log("What is that longitude?!");
-    console.log(this.longitude);
-
     this.localApparentSiderealTime = this.check4GreaterThan360(this.greenwhichApparentSiderealTime + this.longitude);
-    //NOTE: Our error probbaly occurs in the calculations of various sidereal times.
-
 
     //Get our actual positions
     //
@@ -172,15 +158,14 @@ var aDynamicSky = {
   },
 
   calculateJulianCentury(){
-
     return (this.julianDay - 2451545.0) / 36525.0;
   },
 
   calculateGreenwhichSiderealTime: function(){
     //Meeus 87
-    var T = this.julianCentury;
-    // var julianDayAt0hUTC = Math.trunc(this.julianDay) + 0.5;
-    // var T = (julianDayAt0hUTC - 2451545.0) / 36525.0;
+    //var T = this.julianCentury;
+    var julianDayAt0hUTC = Math.trunc(this.julianDay) + 0.5;
+    var T = (julianDayAt0hUTC - 2451545.0) / 36525.0;
     // var greenwhichSideRealTimeAt0hUTC = (100.46061837 + 36000.770053608 * T + 0.000387933 * T * T - ((T * T * T) / 38710000.0));
     // var greenwhichSideRealTime = greenwhichSideRealTimeAt0hUTC + (this.timeInDay / 86400.0) * 1.00273790935;
 
@@ -200,25 +185,18 @@ var aDynamicSky = {
   //and: http://www.geoastro.de/elevaz/basics/meeus.htm
   getAzimuthAndAltitude: function(rightAscension, declination){
     var latitude = this.latitude;
-    //We use a negative one here so that we can convert between the standard longitude and the longitude in Meeus
-    //The astronomical union decided that west longitudes are negative and east longitudes are positive, while meeus
-    //uses the convention that west is positive and east is negative ^_^. It's an astronomical revolution!
-    var longitude = -this.longitude;
 
     //Calculated from page 92 of Meeus
-
-    //NOTE: Check that both of these are appropriately in degrees or freaking radians
-    //WARNING: THESE NEED TO BE IN DEGREES!
-    var hourAngle = this.check4GreaterThan360(this.greenwhichApparentSiderealTime - longitude - rightAscension) * this.deg2Rad;
-    var latitudeInRads = latitude * this.deg2Rad;
+    var hourAngle = this.check4GreaterThan360(this.localApparentSiderealTime - rightAscension);
+    var hourAngleInRads = hourAngle * this.deg2Rad;
+    var latitudeInRads =  latitude * this.deg2Rad;
     var declinationInRads = declination * this.deg2Rad;
 
-    var alt = Math.asin(Math.sin(declinationInRads) * Math.sin(latitudeInRads) + Math.cos(declinationInRads) * Math.cos(latitudeInRads) * Math.cos(hourAngle));
-    var az = Math.atan2(Math.sin(hourAngle), ((Math.cos(hourAngle) * Math.sin(latitudeInRads)) - (Math.tan(declinationInRads) * Math.cos(latitudeInRads))));
-    az = az >= 0.0 ? az : az + (2 * Math.PI);
+    var az = Math.atan2(Math.sin(hourAngleInRads), ((Math.cos(hourAngleInRads) * Math.sin(latitudeInRads)) - (Math.tan(declinationInRads) * Math.cos(latitudeInRads))));
+    var alt = Math.asin(Math.sin(latitudeInRads) * Math.sin(declinationInRads) + Math.cos(latitudeInRads) * Math.cos(declinationInRads) * Math.cos(hourAngleInRads));
 
+    az = this.check4GreaterThan2Pi(az + Math.PI);
     alt = this.checkBetweenMinusPiOver2AndPiOver2(alt);
-    az = this.check4GreaterThan2Pi(az);
 
     return {azimuth: az, altitude: alt};
   },
