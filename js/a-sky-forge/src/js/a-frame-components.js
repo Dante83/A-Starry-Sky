@@ -155,10 +155,12 @@ AFRAME.registerComponent('sky-time', {
       //TODO: It also still goes completely black at sunrise and sunset.
       var lunarAzimuth = this.dynamicSkyObj.moonPosition.azimuth;
       var lunarAltitude = this.dynamicSkyObj.moonPosition.altitude;
-      //lunarAltitude = lunarAltitude < 0.0 ? lunarAltitude + Math.PI * 2.0 : solarAltitude;
       var solarAzimuth = this.dynamicSkyObj.sunPosition.azimuth;
       var solarAltitude = this.dynamicSkyObj.sunPosition.altitude;
-      solarAltitude = solarAltitude <= 0.0 ? solarAltitude + Math.PI * 2.0 : solarAltitude;
+
+      //Convert these azimuths and alitudes into values understood by our shader
+      lunarAltitude = lunarAltitude + Math.PI;
+      solarAltitude = solarAltitude + Math.PI;
 
       this.el.components.material.material.uniforms.sunPosition.value.set(solarAzimuth, solarAltitude);
       this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude, 0.0);
