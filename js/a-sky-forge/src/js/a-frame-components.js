@@ -43,7 +43,7 @@ AFRAME.registerComponent('sky-time', {
     yearPeriod: {type: 'number', default: (dynamicSkyEntityMethods.getIsLeapYear() ? 366 : 365)},
     year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
     moonTexture: {type: 'map', default: '../images/moon-dif-512.png'},
-    moonNormalMap: {type: 'map', default: '../images/moon-nor-512.png'},
+    moonNormalMap: {type: 'map', default: '../images/moon-nor-512-padded.gif'},
     starMask: {type: 'map', default:'../images/padded-starry-sub-data-0.png'},
     starRas: {type: 'map', default:'../images/padded-starry-sub-data-1.png'},
     starDecs: {type: 'map', default:'../images/padded-starry-sub-data-2.png'},
