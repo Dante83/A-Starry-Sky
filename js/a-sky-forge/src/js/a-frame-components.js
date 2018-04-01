@@ -15,7 +15,7 @@ AFRAME.registerPrimitive('a-sky-forge', AFRAME.utils.extendDeep({}, meshMixin, {
       },
       scale: '-1, 1, 1',
       "geo-coordinates": 'lat: 37.7749; long: -122.4194',
-      "sky-time": `timeOffset: ${Math.round(dynamicSkyEntityMethods.getSecondOfDay())}; utcOffset: 0; dayPeriod: 86400; dayOfTheYear: ${Math.round(dynamicSkyEntityMethods.getDayOfTheYear())}; yearPeriod: 365; year: ${Math.round(dynamicSkyEntityMethods.getYear())}`,
+      "sky-time": `timeOffset: ${Math.round(dynamicSkyEntityMethods.getSecondOfDay())}; utcOffset: 0; timeMultiplier: 1.0; dayOfTheYear: ${Math.round(dynamicSkyEntityMethods.getDayOfTheYear())}; year: ${Math.round(dynamicSkyEntityMethods.getYear())}`,
     }
   }
 ));
@@ -35,12 +35,11 @@ AFRAME.registerComponent('sky-time', {
 
   schema: {
     timeOffset: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getSecondOfDay())},
+    timeMultiplier: {type: 'number', default: 1.0},
     utcOffset: {type: 'int', default: 0},
-    dayPeriod: {type: 'number', default: 86400.0},
     dayOfTheYear: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getDayOfTheYear())},
     month: {type: 'int', default: -1},
     day: {type: 'int', default: -1},
-    yearPeriod: {type: 'number', default: (dynamicSkyEntityMethods.getIsLeapYear() ? 366 : 365)},
     year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
     moonTexture: {type: 'map', default: '../images/moon-dif-512.png'},
     moonNormalMap: {type: 'map', default: '../images/moon-nor-512-padded.gif'},
@@ -134,17 +133,17 @@ AFRAME.registerComponent('sky-time', {
 
     //Only update the sky every five seconds
     if(this.fractionalSeconds > 1000){
+      var transformedFractionalSeconds = this.fractionalSeconds * 1.0;
+
       //March time forward by another second
-      this.data.timeOffset += Math.floor(this.fractionalSeconds / 1000);
-      this.fractionalSeconds = this.fractionalSeconds % 1000;
+      this.data.timeOffset += Math.floor(transformedFractionalSeconds / 1000);
+      this.fractionalSeconds = transformedFractionalSeconds % 1000;
 
       //Update our camera specs - we should get the active cameras fov and
       //transform this into a horizontal and vertical fov and get the sky
       //angle from the currently pointed direction.
       //Note that current our camera has a vertical FOV of 80, while Occulus is supposed to
       //have a vertical FOV of 90 and a vertical FOV of about 80.
-      //var verticalFOV = camera.fov * (2.0 * Math.PI / 360.0);
-      //var horizontalFOV = 2.0 * Math.atan(camera.aspect * Math.tan(verticalFOV / 2.0));
       var selectedCanvas = document.getElementsByClassName('a-canvas')[0]; //We presume there should only be one canvas in A-Frame.
       this.el.components.material.material.uniforms.u_resolution.value.set(window.screen.width, window.screen.height);
 
@@ -152,21 +151,29 @@ AFRAME.registerComponent('sky-time', {
       //For method go to line 567
       this.dynamicSkyObj.update(this.data);
 
-      //TODO: It also still goes completely black at sunrise and sunset.
       var lunarAzimuth = this.dynamicSkyObj.moonPosition.azimuth;
       var lunarAltitude = this.dynamicSkyObj.moonPosition.altitude;
       var solarAzimuth = this.dynamicSkyObj.sunPosition.azimuth;
       var solarAltitude = this.dynamicSkyObj.sunPosition.altitude;
 
       //Convert these azimuths and alitudes into values understood by our shader
-      lunarAltitude = lunarAltitude + Math.PI;
-      solarAltitude = solarAltitude + Math.PI;
+      //Which merely requires that all of our angles be greater than 0.0
+      lunarAltitude = lunarAltitude;
+      solarAltitude = solarAltitude;
+
+      // //TODO: Remove, this is just for testing.
+      // lunarAzimuth = 0.0;
+      // lunarAlzitutde = 0.1;
+      //
+      // //Altitude goes between 0.0 and 2pi
+      // var solarAzimuth = 0.0;
+      // var solarAltitude = 0.1;
 
       this.el.components.material.material.uniforms.sunPosition.value.set(solarAzimuth, solarAltitude);
       this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(lunarAzimuth, lunarAltitude, 0.0);
 
       //Set the sidereal time for our calculation of right ascension and declination of each point in the sky
-      this.el.components.material.material.uniforms.localSiderealTime.value = (this.dynamicSkyObj.localApparentSiderealTime) * this.dynamicSkyObj.deg2Rad;
+      this.el.components.material.material.uniforms.localSiderealTime.value = -1.0 * (this.dynamicSkyObj.localApparentSiderealTime) * this.dynamicSkyObj.deg2Rad;
 
       var moonMappingData = this.dynamicSkyObj.getMoonTangentSpaceSunlight(lunarAzimuth, lunarAltitude, solarAzimuth, solarAltitude);
       var moonTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
@@ -179,13 +186,14 @@ AFRAME.registerComponent('sky-time', {
       this.el.components.material.material.uniforms.moonTangent.value.set(moonTangent.x, moonTangent.y, moonTangent.z);
       this.el.components.material.material.uniforms.moonBitangent.value.set(moonBitangent.x, moonBitangent.y, moonBitangent.z);
 
-      if(this.schema.timeOffset > this.schema.dayPeriod){
+      if(this.schema.timeOffset > 86400.0){
+        echo("BING!")
         //It's a new day!
         this.schema.dayOfTheYear += 1;
-        this.schema.timeOffset = this.schema.timeOffset % this.schema.dayPeriod;
+        this.schema.timeOffset = this.schema.timeOffset % 86400.00;
         if(this.schema.dayOfTheYear > this.schema.yearPeriod){
           //Reset everything!
-          this.schema.dayOfTheYear = 0;
+          this.schema.dayOfTheYear = 1;
           this.schema.year += 1;
         }
       }

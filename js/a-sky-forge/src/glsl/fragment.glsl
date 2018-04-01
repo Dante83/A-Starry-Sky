@@ -192,7 +192,7 @@ skyWithAndWithoutStars starLayerBlending(vec4 starColor, vec4 skyColor){
   float linearMultp = 17.0;
   float quadMultp = 60.0;
   vec4 skyColorMap = vec4(linearMultp) * skyColorMag + vec4(quadMultp) * skyColorMag * skyColorMag;
-  vec4 starlessLight = sqrt( (0.0 + skyColorMap * skyColorMag) / (vec4(1.0) + skyColorMap) );
+  vec4 starlessLight = sqrt( (skyColorMap * skyColorMag) / (vec4(1.0) + skyColorMap) );
   vec4 combinedLight = sqrt( (starColorMag + skyColorMap * skyColorMag) / (vec4(1.0) + skyColorMap) );
 
   return skyWithAndWithoutStars(combinedLight, starlessLight);
@@ -203,9 +203,9 @@ vec4 moonLayerBlending(vec4 moonColor, vec4 skyColor, vec4 inColor){
   vec4 moonColorMag = moonColorRGB * moonColorRGB;
   vec4 skyColorRGB = vec4(skyColor.rgb, 1.0);
   vec4 skyColorMag = skyColorRGB * skyColorRGB;
-  vec4 combinedLight = sqrt(moonColorMag + skyColorMag);
+  vec4 combinedLight = clamp(sqrt(moonColorMag + skyColorMag), 0.0, 1.0);
 
-  return moonColor.a > 0.95 ? vec4(combinedLight.rgb, 1.0) : vec4(mix(combinedLight.xyz, inColor.xyz, (1.0 - moonColor.a)), 1.0);
+  return moonColor.a > 0.95 ? vec4(combinedLight.rgb, 1.0) : vec4(mix(combinedLight.rgb, inColor.xyz, (1.0 - moonColor.a)), 1.0);
 }
 
 //
@@ -485,27 +485,25 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
 vec4 drawSunLayer(float azimuthOfPixel, float altitudeOfPixel, skyparams skyParams){
   //It seems we need to rotate our sky by pi radians.
   vec4 returnColor = vec4(0.0);
-  if(sunPosition.y >= 0.0 && sunPosition.y < pi ){
-    float sunAngularDiameterCos = cos(angularRadiusOfTheSun);
-    float sundisk = smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002, skyParams.cosTheta);
+  float sunAngularDiameterCos = cos(angularRadiusOfTheSun);
+  float sundisk = smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002, skyParams.cosTheta);
 
-    vec3 L0 = (skyParams.sunE * 19000.0 * skyParams.Fex) * sundisk;
-    L0 *= 0.04 ;
-    L0 += vec3(0.0,0.001,0.0025)*0.3;
+  vec3 L0 = (skyParams.sunE * 19000.0 * skyParams.Fex) * sundisk;
+  L0 *= 0.04 ;
+  L0 += vec3(0.0,0.001,0.0025)*0.3;
 
-    float g_fMaxLuminance = 1.0;
-    float fLumScaled = 0.1 / luminance;
-    float fLumCompressed = (fLumScaled * (1.0 + (fLumScaled / (g_fMaxLuminance * g_fMaxLuminance)))) / (1.0 + fLumScaled);
+  float g_fMaxLuminance = 1.0;
+  float fLumScaled = 0.1 / luminance;
+  float fLumCompressed = (fLumScaled * (1.0 + (fLumScaled / (g_fMaxLuminance * g_fMaxLuminance)))) / (1.0 + fLumScaled);
 
-    float ExposureBias = fLumCompressed;
+  float ExposureBias = fLumCompressed;
 
-    vec3 whiteScale = 1.0/Uncharted2Tonemap(vec3(W));
-    vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*L0);
+  vec3 whiteScale = 1.0/Uncharted2Tonemap(vec3(W));
+  vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*L0);
 
-    vec3 color = curr*whiteScale;
-    color = pow(color,vec3(1.0/(1.2+(1.2* skyParams.sunfade))));
-    returnColor = vec4(color, sqrt(dot(color, color)) );
-  }
+  vec3 color = curr*whiteScale;
+  color = pow(color,abs(vec3(1.0/(1.2+(1.2* skyParams.sunfade)))) );
+  returnColor = vec4(color, sqrt(dot(color, color)) );
 
   return returnColor;
 }
@@ -521,13 +519,16 @@ void main(){
   vec4 baseColor = vec4(0.0);
 
   //Even though everything else is behind the sky, we need this to decide the brightness of the colors returned below.
+  //Also, whenever the sun falls below the horizon, everything explodes in the original code.
+  //Thus, I have taken the liberty of killing the sky when that happens to avoid explody code.
   skyparams skyParams = drawSkyLayer(azimuth, altitude);
-  vec4 skyColor = skyParams.skyColor;
+  vec4 skyColor = sunPosition.y > 0.0 ? skyParams.skyColor : vec4(vec3(0.0), 1.0);
 
   skyWithAndWithoutStars starLayerData = starLayerBlending(drawStarLayer(azimuth, altitude, baseColor), skyColor);
   vec4 outColor = starLayerData.starLayer;
 
-  outColor = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);
+  vec4 sunLayer = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);
+  outColor = sunPosition.y > 0.0 ? sunLayer : outColor;
 
   outColor = moonLayerBlending(drawMoonLayer(azimuth, altitude), starLayerData.starlessLayer, outColor);
 

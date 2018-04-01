@@ -17,7 +17,7 @@ var aDynamicSky = {
   radLongitude : 0.0,
   year : 0.0,
   dayOfYear : 0.0,
-  dayPeriod : 0.0,
+  timeMultiplier: 1.0,
   hourInDay : 0.0,
   julianDay : 0.0,
   sunPosition : null,
@@ -32,9 +32,6 @@ var aDynamicSky = {
     this.year = skyData.year;
     this.daysInYear = this.getDaysInYear();
     this.dayOfYear = skyData.dayOfTheYear;
-    this.dayPeriod = skyData.dayPeriod;
-    //var utcOffset = skyData.utcOffset ? skyData.utcOffset : 0.0;
-    //this.timeInDay =  ((skyData.timeOffset - utcOffset * 3600.0) * 86400.0) / this.dayPeriod; //Implementation of time dialation
 
     //Get the time at Greenwhich
     //NOTE: ALl of these time thingies should be tested at turn-overs and crud
@@ -47,6 +44,7 @@ var aDynamicSky = {
     this.year = utcDate.getFullYear();
     this.dayOfYear = dynamicSkyEntityMethods.getDayOfTheYearFromYMD(utcDate.getFullYear(), utcDate.getMonth() + 1, utcDate.getDate());
     this.timeInDay = utcDate.getHours() * 3600 + utcDate.getMinutes() * 60 + utcDate.getSeconds();
+
     this.julianDay = this.calculateJulianDay();
     this.julianCentury =this.calculateJulianCentury();
 
@@ -163,11 +161,8 @@ var aDynamicSky = {
 
   calculateGreenwhichSiderealTime: function(){
     //Meeus 87
-    //var T = this.julianCentury;
     var julianDayAt0hUTC = Math.trunc(this.julianDay) + 0.5;
     var T = (julianDayAt0hUTC - 2451545.0) / 36525.0;
-    // var greenwhichSideRealTimeAt0hUTC = (100.46061837 + 36000.770053608 * T + 0.000387933 * T * T - ((T * T * T) / 38710000.0));
-    // var greenwhichSideRealTime = greenwhichSideRealTimeAt0hUTC + (this.timeInDay / 86400.0) * 1.00273790935;
 
     var gmsrt = this.check4GreaterThan360(280.46061837 + 360.98564736629 * (this.julianDay - 2451545.0) + T * T * 0.000387933 - ((T * T * T) / 38710000.0));
     return gmsrt;
