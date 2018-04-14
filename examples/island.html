@@ -11,9 +11,7 @@
 
     <script src="https://aframe.io/releases/0.7.0/aframe.min.js"></script>
 
-    <script src="../js/components/vptree.js"></script>
     <script src="https://unpkg.com/aframe-physics-system@1.4.0/dist/aframe-physics-system.min.js"></script>
-    <script src="../js/a-sky-forge/src/js/star-data.js"></script>
     <script src="../js/a-sky-forge/src/js/sky-shader.js"></script>
     <script src="../js/a-sky-forge/src/js/a-sky-forge.js"></script>
     <script src="../js/a-sky-forge/src/js/a-dynamic-sky-entity-methods.js"></script>
@@ -24,7 +22,7 @@
   <body>
     <a-scene physics>
       <!-- Sky -->
-      <a-sky-forge geo-coordinates="lat: 33.4484; long: -112.0740;" sky-time:"timeMultiplier: 1.0;" material="shader: sky;"></a-sky>
+      <a-sky-forge sky-time:'timeMultiplier: 1000.0; utcOffset:-7;' geo-coordinates="lat: 37; long: 112.0;" material="shader: sky;"></a-sky-forge>
     </a-scene>
   </body>
 </html>

@@ -15,7 +15,7 @@ AFRAME.registerPrimitive('a-sky-forge', AFRAME.utils.extendDeep({}, meshMixin, {
       },
       scale: '-1, 1, 1',
       "geo-coordinates": 'lat: 37.7749; long: -122.4194',
-      "sky-time": `timeOffset: ${Math.round(dynamicSkyEntityMethods.getSecondOfDay())}; utcOffset: 0; timeMultiplier: 1.0; dayOfTheYear: ${Math.round(dynamicSkyEntityMethods.getDayOfTheYear())}; year: ${Math.round(dynamicSkyEntityMethods.getYear())}`,
+      "sky-time": `timeOffset: ${Math.round(dynamicSkyEntityMethods.getSecondOfDay())}; utcOffset: 0; timeMultiplier: 2.0; dayOfTheYear: ${Math.round(dynamicSkyEntityMethods.getDayOfTheYear())}; year: ${Math.round(dynamicSkyEntityMethods.getYear())}`
     }
   }
 ));
@@ -30,9 +30,7 @@ AFRAME.registerComponent('geo-coordinates', {
 
 AFRAME.registerComponent('sky-time', {
   fractionalSeconds: 0,
-
   dependencies: ['geo-coordinates', 'a-sky-forge'],
-
   schema: {
     timeOffset: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getSecondOfDay())},
     timeMultiplier: {type: 'number', default: 1.0},
@@ -133,7 +131,8 @@ AFRAME.registerComponent('sky-time', {
 
     //Only update the sky every five seconds
     if(this.fractionalSeconds > 1000){
-      var transformedFractionalSeconds = this.fractionalSeconds * 1.0;
+      console.log(this.data.timeMultiplier);
+      var transformedFractionalSeconds = this.fractionalSeconds * this.data.timeMultiplier;
 
       //March time forward by another second
       this.data.timeOffset += Math.floor(transformedFractionalSeconds / 1000);
@@ -186,15 +185,14 @@ AFRAME.registerComponent('sky-time', {
       this.el.components.material.material.uniforms.moonTangent.value.set(moonTangent.x, moonTangent.y, moonTangent.z);
       this.el.components.material.material.uniforms.moonBitangent.value.set(moonBitangent.x, moonBitangent.y, moonBitangent.z);
 
-      if(this.schema.timeOffset > 86400.0){
-        echo("BING!")
+      if(this.data.timeOffset > 86400.0){
         //It's a new day!
-        this.schema.dayOfTheYear += 1;
-        this.schema.timeOffset = this.schema.timeOffset % 86400.00;
-        if(this.schema.dayOfTheYear > this.schema.yearPeriod){
+        this.data.dayOfTheYear += 1;
+        this.data.timeOffset = this.data.timeOffset % 86400.00;
+        if(this.data.dayOfTheYear > this.data.yearPeriod){
           //Reset everything!
-          this.schema.dayOfTheYear = 1;
-          this.schema.year += 1;
+          this.data.dayOfTheYear = 1;
+          this.data.year += 1;
         }
       }
     }

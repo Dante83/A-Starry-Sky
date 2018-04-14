@@ -78,8 +78,6 @@ varying vec2 binormal;
 
 //Moon Data
 uniform mediump vec3 moonAzAltAndParallacticAngle;
-uniform float brightLimbOfMoon;
-uniform float illuminatedFractionOfMoon;
 uniform sampler2D moonTexture;
 uniform sampler2D moonNormalMap;
 uniform vec3 moonTangentSpaceSunlight;
@@ -244,7 +242,7 @@ vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){
     //Now to grab that color!
     vec4 moonColor = texture2D(moonTexture, position.xy);
 
-    //Get the moon shadow using the normal map (if it exists) - otherwise use the bright limb stuff
+    //Get the moon shadow using the normal map
     //Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!
     vec3 moonSurfaceNormal = normalize(2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0);
 
@@ -411,7 +409,7 @@ struct skyparams{
 skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
   //Get the fading of the sun and the darkening of the sky
   float sunAz = sunPosition.x;
-  float sunAlt = sunPosition.y; //This program cannot handle a sun that goes below the horizon...
+  float sunAlt = sunPosition.y;
   float zenithAngle = piOver2 - sunAlt; //This is not a zenith angle, this is altitude
   float sunX = sin(zenithAngle) * cos(sunAz + pi);
   float sunZ = sin(zenithAngle) * sin(sunAz + pi);

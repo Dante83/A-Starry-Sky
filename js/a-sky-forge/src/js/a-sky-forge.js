@@ -17,14 +17,10 @@ var aDynamicSky = {
   radLongitude : 0.0,
   year : 0.0,
   dayOfYear : 0.0,
-  timeMultiplier: 1.0,
   hourInDay : 0.0,
   julianDay : 0.0,
   sunPosition : null,
   deg2Rad: Math.PI / 180.0,
-  illuminatedFractionOfMoon: 0.0,
-  brightLimbOfMoon: 0.0,
-  starVPTree: null,
 
   update: function(skyData){
     this.radLatitude = this.latitude * this.deg2Rad;

@@ -11,8 +11,6 @@ AFRAME.registerShader('sky', {
     mieDirectionalG: { type: 'number', default: 0.8, min: 0, max: 1, is: 'uniform' },
     sunPosition: { type: 'vec2', default: {x: 0.0,y: 0.0}, is: 'uniform' },
     moonAzAltAndParallacticAngle: {type: 'vec3', default: {x: 0.0,y: 0.0,z: 0.0}, is: 'uniform'},
-    illuminatedFractionOfMoon: {type: 'number', default: 0.0, max: 1.0, min: 0.0, is: 'uniform'},
-    brightLimbOfMoon: {type: 'number', default: 0.0, max: 6.283185307, min: 0.0, is: 'uniform'},
     moonTexture: {type: 'map', src:'../images/moon-dif-512.png', is: 'uniform'},
     moonNormalMap: {type: 'map', src:'../images/moon-nor-512.png', is: 'uniform'},
     moonTangentSpaceSunlight: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
@@ -122,8 +120,6 @@ AFRAME.registerShader('sky', {
 
     '//Moon Data',
     'uniform mediump vec3 moonAzAltAndParallacticAngle;',
-    'uniform float brightLimbOfMoon;',
-    'uniform float illuminatedFractionOfMoon;',
     'uniform sampler2D moonTexture;',
     'uniform sampler2D moonNormalMap;',
     'uniform vec3 moonTangentSpaceSunlight;',
@@ -288,7 +284,7 @@ AFRAME.registerShader('sky', {
         '//Now to grab that color!',
         'vec4 moonColor = texture2D(moonTexture, position.xy);',
 
-        '//Get the moon shadow using the normal map (if it exists) - otherwise use the bright limb stuff',
+        '//Get the moon shadow using the normal map',
         '//Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!',
         'vec3 moonSurfaceNormal = normalize(2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0);',
 
@@ -455,7 +451,7 @@ AFRAME.registerShader('sky', {
     'skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){',
       '//Get the fading of the sun and the darkening of the sky',
       'float sunAz = sunPosition.x;',
-      'float sunAlt = sunPosition.y; //This program cannot handle a sun that goes below the horizon...',
+      'float sunAlt = sunPosition.y;',
       'float zenithAngle = piOver2 - sunAlt; //This is not a zenith angle, this is altitude',
       'float sunX = sin(zenithAngle) * cos(sunAz + pi);',
       'float sunZ = sin(zenithAngle) * sin(sunAz + pi);',
