@@ -8,6 +8,14 @@ var dynamicSkyEntityMethods = {
     return this.getDayOfTheYearFromYMD(year, month, dayOfThisMonth);
   },
 
+  getNowFromData: function(data){
+    var outDate = new Date(data.year, 0);
+    outDate.setDate(day.dayOfYear);
+    outDate.setSeconds(data.timeOffset);
+
+    return new Date(outDate);
+  },
+
   getDayOfTheYearFromYMD: function(year, month, day){
     var daysInEachMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     if(year == 0.0 || (year % 4 == 0.0) ){

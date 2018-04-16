@@ -50,13 +50,17 @@ var aDynamicSky = {
     this.greenwhichMeanSiderealTime = this.calculateGreenwhichSiderealTime();
     this.greenwhichApparentSiderealTime = this.calculateApparentSiderealTime();
     this.localApparentSiderealTime = this.check4GreaterThan360(this.greenwhichApparentSiderealTime + this.longitude);
+    this.localApparentSiderealTimeForUniform = -1.0 * (this.localApparentSiderealTime) * this.deg2Rad;
 
     //Get our actual positions
-    //
-    //NOTE: I've narrowed it down to here, somehow we're not getting the right azimuth and altitude for our sun and moon
-    //
     this.sunPosition = this.getSunPosition();
     this.moonPosition = this.getMoonPosition();
+
+    var moonMappingData = this.getMoonTangentSpaceSunlight(this.moonPosition.azimuth, this.moonPosition.altitude, this.sunPosition.azimuth, this.sunPosition.altitude);
+    this.moonMappingTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
+    this.moonMappingPosition = moonMappingData.moonPosition;
+    this.moonMappingTangent = moonMappingData.moonTangent;
+    this.moonMappingBitangent = moonMappingData.moonBitangent;
   },
 
   calculateJulianDay: function(){
