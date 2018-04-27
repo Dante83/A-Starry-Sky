@@ -259,7 +259,7 @@ vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){
 }
 
 vec4 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 starColor){
-  float maxRadiusOfStar = 1.5 * (2.0/360.0) * piTimes2;
+  float maxRadiusOfStar = 1.7 * (2.0/360.0) * piTimes2;
   float normalizedMagnitude = (7.96 - (magnitudeOfStar + 1.46)) / 7.96;
   float radiusOfStar = clamp(maxRadiusOfStar * normalizedMagnitude, 0.0, maxRadiusOfStar);
 
@@ -519,13 +519,13 @@ void main(){
   //Also, whenever the sun falls below the horizon, everything explodes in the original code.
   //Thus, I have taken the liberty of killing the sky when that happens to avoid explody code.
   skyparams skyParams = drawSkyLayer(azimuth, altitude);
-  vec4 skyColor = sunPosition.y > 0.0 ? skyParams.skyColor : vec4(vec3(0.0), 1.0);
+  vec4 skyColor = sunPosition.y > -0.06 ? skyParams.skyColor : vec4(vec3(0.0), 1.0);
 
   skyWithAndWithoutStars starLayerData = starLayerBlending(drawStarLayer(azimuth, altitude, baseColor), skyColor);
   vec4 outColor = starLayerData.starLayer;
 
   vec4 sunLayer = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);
-  outColor = sunPosition.y > 0.0 ? sunLayer : outColor;
+  outColor = sunPosition.y > -0.06 ? sunLayer : outColor;
 
   outColor = moonLayerBlending(drawMoonLayer(azimuth, altitude), starLayerData.starlessLayer, outColor);
 
