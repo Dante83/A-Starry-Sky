@@ -13,18 +13,18 @@
 
     <script src="https://unpkg.com/aframe-physics-system@1.4.0/dist/aframe-physics-system.min.js"></script>
     <script src="../js/a-sky-forge/src/js/cloner.js"></script>
-    <script src="../js/a-sky-forge/src/js/a-sky-interpolator.js"></script>
     <script src="../js/a-sky-forge/src/js/sky-shader.js"></script>
     <script src="../js/a-sky-forge/src/js/a-sky-forge.js"></script>
     <script src="../js/a-sky-forge/src/js/a-dynamic-sky-entity-methods.js"></script>
     <script src="../js/a-sky-forge/src/js/a-frame-components.js"></script>
+    <script src="../js/a-sky-forge/src/js/a-sky-interpolator.js"></script>
 
   <!--Scene Scripts-->
   </head>
   <body>
     <a-scene physics>
       <!-- Sky -->
-      <a-sky-forge sky-time="timeMultiplier: 1000.0; utcOffset:-7;" geo-coordinates="lat: 37; long: 112.0;" material="shader: sky;"></a-sky-forge>
+      <a-sky-forge sky-time="timeMultiplier: 3600.0; utcOffset:-7;" geo-coordinates="lat: 37; long: 112.0;" material="shader: sky;"></a-sky-forge>
     </a-scene>
   </body>
 </html>

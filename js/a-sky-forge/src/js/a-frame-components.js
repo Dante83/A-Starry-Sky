@@ -32,7 +32,7 @@ AFRAME.registerComponent('sky-time', {
   fractionalSeconds: 0,
   dependencies: ['geo-coordinates', 'a-sky-forge'],
   schema: {
-    timeOffset: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getSecondOfDay())},
+    timeOffset: {type: 'number', default: dynamicSkyEntityMethods.getSecondOfDay()},
     timeMultiplier: {type: 'number', default: 1.0},
     utcOffset: {type: 'int', default: 0},
     dayOfTheYear: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getDayOfTheYear())},
@@ -122,22 +122,31 @@ AFRAME.registerComponent('sky-time', {
 
     //Hook up our interpolator and set the various uniforms we wish to track and
     //interpolate during each frame.
-    this.currentTime = getNowFromData(data);
+    this.currentTime = dynamicSkyEntityMethods.getNowFromData(this.data);
+    this.initializationTime = new Date(this.currentTime.getTime());
     //Update at most, once a second (if more than five minutes normal time pass in that second)
-    var interpolationLengthInSeconds = max(300, this.data.timeMultiplier);
-    this.interpolator = new aSkyInterpolator(this.currentTime, interpolationLengthInSeconds, this.dynamicSkyObj, this.data);
+    if(this.data.timeMultiplier != 0.0){
+      this.hasLinearInterpolation = true;
+      var interpolationLengthInSeconds = 300.0 > this.data.timeMultiplier ? 300.0 / this.data.timeMultiplier : 1.0;
 
-    //All of our interpolation hookups occur here
-    this.interpolator.setLinearInterpolationForScalar('moonAzimuth', ['moonPosition', 'azimuth'], false);
-    this.interpolator.setLinearInterpolationForScalar('moonAltitude', ['moonPosition', 'altitude'], false);
-    this.interpolator.setLinearInterpolationForScalar('sunAzimuth', ['sunPosition', 'azimuth'], false);
-    this.interpolator.setLinearInterpolationForScalar('sunAlitidue', ['sunPosition', 'altitude'], false);
-    this.interpolator.setLinearInterpolationForScalar('localSiderealTime', ['localApparentSiderealTimeForUniform'], false);
+      this.interpolator = new aSkyInterpolator(this.initializationTime, this.data.timeMultiplier, interpolationLengthInSeconds, this.dynamicSkyObj, this.data);
 
-    this.interpolator.setLinearInterpolationForVect('moonMappingTangentSpaceSunlight', ['moonTangentSpaceSunlight'], false);
-    this.interpolator.setLinearInterpolationForVect('moonMappingPosition', ['moonPosition'], false);
-    this.interpolator.setLinearInterpolationForVect('moonMappingTangent', ['moonTangent'], false);
-    this.interpolator.setLinearInterpolationForVect('moonMappingBitangent', ['moonBitangent'], false);
+      //All of our interpolation hookups occur here
+      this.interpolator.setLinearInterpolationForScalar('sunAzimuth', ['sunPosition', 'azimuth'], false,);
+      this.interpolator.setLinearInterpolationForScalar('sunAltitude', ['sunPosition', 'altitude'], false);
+      this.interpolator.setAngularLinearInterpolationForScalar('localSiderealTime', ['localApparentSiderealTimeForUniform'], false);
+
+      this.interpolator.setSLERPFor3Vect('moonMappingTangentSpaceSunlight', ['moonMappingTangentSpaceSunlight'], false);
+      this.interpolator.setSLERPFor3Vect('moonMappingPosition', ['moonMappingPosition'], false);
+      this.interpolator.setSLERPFor3Vect('moonMappingTangent', ['moonMappingTangent'], false);
+      this.interpolator.setSLERPFor3Vect('moonMappingBitangent', ['moonMappingBitangent'], false);
+
+      //Once all of these are set up - prime the buffer the first time.
+      this.interpolator.primeBuffer();
+    }
+    else{
+      this.hasLinearInterpolation = false;
+    }
   },
 
   update: function () {
@@ -145,26 +154,27 @@ AFRAME.registerComponent('sky-time', {
   },
 
   tick: function (time, timeDelta) {
-    this.currentTime.setSeconds(timeObject.getSeconds() + timeDelta);
-
-    //Animate our world, passing the time
+    //Standard Sky Animations
     this.el.components.material.material.uniforms.uTime.value = time;
 
-    //Get our latest changes from the interpolator
-    var interpolatedValues = this.interpolator.getValues(this.currentTime);
+    //Interpolated Sky Position Values
+    if(this.hasLinearInterpolation){
+      this.currentTime.setTime(this.initializationTime.getTime() + time * this.data.timeMultiplier);
 
-    //Implement these values inside of each of our uniforms
-    this.el.components.material.material.uniforms.sunPosition.value.set(interpolatedValues.sunAzimuth, interpolatedValues.sunAltitude);
-    this.el.components.material.material.uniforms.moonAzAltAndParallacticAngle.value.set(interpolatedValues.moonAzimuth, interpolatedValues.moonAlititude, 0.0);
-    this.el.components.material.material.uniforms.localSiderealTime.value = interpolatedValues.localSiderealTime;
+      var interpolatedValues = this.interpolator.getValues(this.currentTime);
 
-    var mtss = interpolatedValues.moonMappingTangentSpaceSunlight;
-    var mp = interpolatedValues.moonMappingPosition;
-    var mmt = interpolatedValues.moonMappingTangent;
-    var mmb = interpolatedValues.moonMappingBitangent;
-    this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(mtss.x, mtss.y, mtss.z);
-    this.el.components.material.material.uniforms.moonPosition.value.set(mp.x, mp.y, mp.z);
-    this.el.components.material.material.uniforms.moonTangent.value.set(mmt.x, mmt.y, mmt.z);
-    this.el.components.material.material.uniforms.moonBitangent.value.set(mmb.x, mmb.y, mmb.z);
+      this.el.components.material.material.uniforms.sunPosition.value.set(interpolatedValues.sunAzimuth, interpolatedValues.sunAltitude);
+      this.el.components.material.material.uniforms.localSiderealTime.value = interpolatedValues.localSiderealTime;
+
+      var mtss = interpolatedValues.moonMappingTangentSpaceSunlight;
+      var mp = interpolatedValues.moonMappingPosition;
+      var mmt = interpolatedValues.moonMappingTangent;
+      var mmb = interpolatedValues.moonMappingBitangent;
+
+      this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(mtss.x, mtss.y, mtss.z);
+      this.el.components.material.material.uniforms.moonPosition.value.set(mp.x, mp.y, mp.z);
+      this.el.components.material.material.uniforms.moonTangent.value.set(mmt.x, mmt.y, mmt.z);
+      this.el.components.material.material.uniforms.moonBitangent.value.set(mmb.x, mmb.y, mmb.z);
+    }
   }
 });

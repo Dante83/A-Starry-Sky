@@ -10,7 +10,6 @@ AFRAME.registerShader('sky', {
     mieCoefficient: { type: 'number', default: 0.005, min: 0, max: 0.1, is: 'uniform' },
     mieDirectionalG: { type: 'number', default: 0.8, min: 0, max: 1, is: 'uniform' },
     sunPosition: { type: 'vec2', default: {x: 0.0,y: 0.0}, is: 'uniform' },
-    moonAzAltAndParallacticAngle: {type: 'vec3', default: {x: 0.0,y: 0.0,z: 0.0}, is: 'uniform'},
     moonTexture: {type: 'map', src:'../images/moon-dif-512.png', is: 'uniform'},
     moonNormalMap: {type: 'map', src:'../images/moon-nor-512.png', is: 'uniform'},
     moonTangentSpaceSunlight: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
@@ -119,7 +118,6 @@ AFRAME.registerShader('sky', {
     'varying vec2 binormal;',
 
     '//Moon Data',
-    'uniform mediump vec3 moonAzAltAndParallacticAngle;',
     'uniform sampler2D moonTexture;',
     'uniform sampler2D moonNormalMap;',
     'uniform vec3 moonTangentSpaceSunlight;',

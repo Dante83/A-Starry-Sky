@@ -9,8 +9,9 @@ var dynamicSkyEntityMethods = {
   },
 
   getNowFromData: function(data){
+    //Initialize our day
     var outDate = new Date(data.year, 0);
-    outDate.setDate(day.dayOfYear);
+    outDate.setDate(data.dayOfTheYear);
     outDate.setSeconds(data.timeOffset);
 
     return new Date(outDate);
@@ -39,11 +40,12 @@ var dynamicSkyEntityMethods = {
   },
 
   getSecondOfDay: function(){
-    return (this.currentDate.getHours() * 3600 + this.currentDate.getMinutes() * 60 + this.currentDate.getSeconds()).toString();
+    var midnightOfPreviousDay = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth(), this.currentDate.getDate(), 0,0,0);
+    return (this.currentDate - midnightOfPreviousDay) / 1000.0;
   },
 
   getYear: function(){
-    return this.currentDate.getFullYear().toString();
+    return Math.trunc(this.currentDate.getFullYear().toString());
   },
 }
 

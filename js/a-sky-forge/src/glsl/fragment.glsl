@@ -77,7 +77,6 @@ varying vec3 normal;
 varying vec2 binormal;
 
 //Moon Data
-uniform mediump vec3 moonAzAltAndParallacticAngle;
 uniform sampler2D moonTexture;
 uniform sampler2D moonNormalMap;
 uniform vec3 moonTangentSpaceSunlight;
