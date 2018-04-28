@@ -402,16 +402,16 @@ AFRAME.registerShader('sky', {
       'vec4 starlessLayer;',
     '};',
 
-    'skyWithAndWithoutStars starLayerBlending(vec4 starColor, vec4 skyColor){',
+    'skyWithAndWithoutStars starLayerBlending(vec4 starColor, vec4 skyColor, float sunE){',
       'vec4 starColorRGB = vec4(starColor.rgb, 1.0);',
       'vec4 starColorMag = starColorRGB * starColorRGB;',
       'vec4 skyColorRGB = vec4(skyColor.rgb, 1.0);',
       'vec4 skyColorMag = skyColorRGB * skyColorRGB;',
-      'float linearMultp = 17.0;',
-      'float quadMultp = 60.0;',
-      'vec4 skyColorMap = vec4(linearMultp) * skyColorMag + vec4(quadMultp) * skyColorMag * skyColorMag;',
-      'vec4 starlessLight = sqrt( (skyColorMap * skyColorMag) / (vec4(1.0) + skyColorMap) );',
-      'vec4 combinedLight = sqrt( (starColorMag + skyColorMap * skyColorMag) / (vec4(1.0) + skyColorMap) );',
+
+      '//The magnitude of the stars is dimmed according to the current brightness',
+      '//but we now wish to keep the sky color the same',
+      'vec4 starlessLight = skyColor;',
+      'vec4 combinedLight = sqrt(starColorMag * (1.0 - clamp(sunE / 150.0, 0.0, 1.0)) + skyColorMag);',
 
       'return skyWithAndWithoutStars(combinedLight, starlessLight);',
     '}',
@@ -480,7 +480,7 @@ AFRAME.registerShader('sky', {
     '}',
 
     'vec4 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 starColor){',
-      'float maxRadiusOfStar = 1.7 * (2.0/360.0) * piTimes2;',
+      'float maxRadiusOfStar = 1.4 * (2.0/360.0) * piTimes2;',
       'float normalizedMagnitude = (7.96 - (magnitudeOfStar + 1.46)) / 7.96;',
       'float radiusOfStar = clamp(maxRadiusOfStar * normalizedMagnitude, 0.0, maxRadiusOfStar);',
 
@@ -742,7 +742,7 @@ AFRAME.registerShader('sky', {
       'skyparams skyParams = drawSkyLayer(azimuth, altitude);',
       'vec4 skyColor = sunPosition.y > -0.06 ? skyParams.skyColor : vec4(vec3(0.0), 1.0);',
 
-      'skyWithAndWithoutStars starLayerData = starLayerBlending(drawStarLayer(azimuth, altitude, baseColor), skyColor);',
+      'skyWithAndWithoutStars starLayerData = starLayerBlending(drawStarLayer(azimuth, altitude, baseColor), skyColor, skyParams.sunE);',
       'vec4 outColor = starLayerData.starLayer;',
 
       'vec4 sunLayer = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);',
@@ -751,7 +751,7 @@ AFRAME.registerShader('sky', {
       'outColor = moonLayerBlending(drawMoonLayer(azimuth, altitude), starLayerData.starlessLayer, outColor);',
 
     '	gl_FragColor = outColor;',
-    '}'
+    '}',
   ].join('\n')
 });
 
