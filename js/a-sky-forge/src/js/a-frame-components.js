@@ -49,13 +49,14 @@ AFRAME.registerComponent('sky-time', {
     month: {type: 'int', default: -1},
     day: {type: 'int', default: -1},
     year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
-    moonTexture: {type: 'map', default: '../images/moon-dif-512.png'},
-    moonNormalMap: {type: 'map', default: '../images/moon-nor-512-padded.gif'},
-    starMask: {type: 'map', default:'../images/padded-starry-sub-data-0.png'},
-    starRas: {type: 'map', default:'../images/padded-starry-sub-data-1.png'},
-    starDecs: {type: 'map', default:'../images/padded-starry-sub-data-2.png'},
-    starMags: {type: 'map', default:'../images/padded-starry-sub-data-3.png'},
-    starColors: {type: 'map', default:'../images/padded-starry-sub-data-4.png'},
+    imgDir: {type: 'string', default: '../images/'},
+    moonTexture: {type: 'map', default: 'moon-dif-512.png'},
+    moonNormalMap: {type: 'map', default: 'moon-nor-512-padded.gif'},
+    starMask: {type: 'map', default:'padded-starry-sub-data-0.png'},
+    starRas: {type: 'map', default:'padded-starry-sub-data-1.png'},
+    starDecs: {type: 'map', default:'padded-starry-sub-data-2.png'},
+    starMags: {type: 'map', default:'padded-starry-sub-data-3.png'},
+    starColors: {type: 'map', default:'padded-starry-sub-data-4.png'},
   },
 
   init: function(){
@@ -72,8 +73,8 @@ AFRAME.registerComponent('sky-time', {
 
     //Load our normal maps for the moon
     var textureLoader = new THREE.TextureLoader();
-    var moonTexture = textureLoader.load(this.data.moonTexture);
-    var moonNormalMap = textureLoader.load(this.data.moonNormalMap);
+    var moonTexture = textureLoader.load(this.data.imgDir + this.data.moonTexture);
+    var moonNormalMap = textureLoader.load(this.data.imgDir + this.data.moonNormalMap);
 
     //
     //Note: We might want to min map our moon texture and normal map so that
@@ -87,7 +88,7 @@ AFRAME.registerComponent('sky-time', {
     //We use repeat wrapping on wrap s, to horizontally flip to the other side of the image along RA
     //And we use mirrored mapping on wrap w to just reflect back, although internally we will want to subtract 0.5 from this.
     //we also use needs update to make all this work as per, https://codepen.io/SereznoKot/pen/vNjJWd
-    var starMask = textureLoader.load(this.data.starMask, function(starMask){
+    var starMask = textureLoader.load(this.data.imgDir + this.data.starMask, function(starMask){
       starMask.magFilter = THREE.NearestFilter;
       starMask.minFilter = THREE.NearestFilter;
       starMask.wrapS = THREE.RepeatWrapping;
@@ -95,7 +96,7 @@ AFRAME.registerComponent('sky-time', {
       starMask.needsUpdate = true;
     });
 
-    var starRas = textureLoader.load(this.data.starRas, function(starRas){
+    var starRas = textureLoader.load(this.data.imgDir + this.data.starRas, function(starRas){
       starRas.magFilter = THREE.NearestFilter;
       starRas.minFilter = THREE.NearestFilter;
       starRas.wrapS = THREE.RepeatWrapping;
@@ -103,7 +104,7 @@ AFRAME.registerComponent('sky-time', {
       starRas.needsUpdate = true;
     });
 
-    var starDecs = textureLoader.load(this.data.starDecs, function(starDecs){
+    var starDecs = textureLoader.load(this.data.imgDir + this.data.starDecs, function(starDecs){
       starDecs.magFilter = THREE.NearestFilter;
       starDecs.minFilter = THREE.NearestFilter;
       starDecs.wrapS = THREE.RepeatWrapping;
@@ -111,7 +112,7 @@ AFRAME.registerComponent('sky-time', {
       starDecs.needsUpdate = true;
     });
 
-    var starMags = textureLoader.load(this.data.starMags, function(starMags){
+    var starMags = textureLoader.load(this.data.imgDir + this.data.starMags, function(starMags){
       starMags.magFilter = THREE.NearestFilter;
       starMags.minFilter = THREE.NearestFilter;
       starMags.wrapS = THREE.RepeatWrapping;
@@ -119,7 +120,7 @@ AFRAME.registerComponent('sky-time', {
       starMags.needsUpdate = true;
     });
 
-    var starColors = textureLoader.load(this.data.starColors, function(){
+    var starColors = textureLoader.load(this.data.imgDir + this.data.starColors, function(){
       starColors.magFilter = THREE.NearestFilter;
       starColors.minFilter = THREE.NearestFilter;
       starColors.wrapS = THREE.RepeatWrapping;

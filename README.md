@@ -41,67 +41,59 @@ For **version 0.8.0** [See issue here](https://github.com/aframevr/aframe/issues
 
 This barebones code will provide you with a sky that moves in real time at the latitude and longitude of San Francisco, California.
 
-A-Sky-Forge also presumes that your images will be located in the directory, ../images. Chances are, this the last place your application put these images. To inform the program where the image data is located, please replace the appropriate directories below and add them in under the sky-time attribute.
+A-Sky-Forge also presumes that your images will be located in the directory, ../images. Chances are, this the last place your application put these images. However, you can easily define a custom directory with imgDir property of the sky-time attribute, like so,
 
-```
-moonTexture: '../images/moon-dif-512.png';
-moonNormalMap: '../images/moon-nor-512-padded.gif';
-starMask: '../images/padded-starry-sub-data-0.png';
-starRas: '../images/padded-starry-sub-data-1.png';
-starDecs: '../images/padded-starry-sub-data-2.png';
-starMags: '../images/padded-starry-sub-data-3.png';
-starColors: '../images/padded-starry-sub-data-4.png';
-```
-
-Your resulting code will probably be a bit more verbose - at least until I can provide a custom directory attribute.
-
+Suppose we copied our images into the `../resources/assets/images/` directory, the result code would look as follows:
 ```html
 <a-scene>
-  <a-sky-forge sky-time="moonTexture: '../custom_dir/stuff/moon-dif-512.png'; moonNormalMap: '../custom_dir/stuff/moon-nor-512-padded.gif'; starMask: '../custom_dir/stuff/padded-starry-sub-data-0.png'; starRas: '../custom_dir/stuff/padded-starry-sub-data-1.png'; starDecs: '../custom_dir/stuff/padded-starry-sub-data-2.png'; starMags: '../custom_dir/stuff/padded-starry-sub-data-3.png'; starColors: '../custom_dir/stuff/padded-starry-sub-data-4.png';" material="shader: sky;"></a-sky-forge>
+  <a-sky-forge sky-time="imgDir:../resources/assets/images/;" material="shader: sky;"></a-sky-forge>
 </a-scene>
 ```
 
-In addition to adding in all these custom directories (which isn't very fun), you can also change aspects of the time and location. The default location is San Francisco California, but you can change the location using the geo-coordinates attributes lat and long, like so...
+**!Important:** Notice that we include the trailing / in our string, but more importantly, we do not surround our string with "s or 's which appears to mess with A-Frames attribute system.
 
-**Let's go to tokyo!**
+Now let's get to something a little more fun, changing our location, which is performed using the `lat` and `long` properties in the `geo-coordinates` attribute:
+
+**Let's go to Tokyo!**
 ```html
 <a-scene>
-  <a-sky-forge geo-coordinate="lat: 35.68, long:139.69" material="shader: sky;"></a-sky-forge>
+  <a-sky-forge geo-coordinates="lat: 35.68, long:139.69" material="shader: sky;"></a-sky-forge>
 </a-scene>
 ```
 
 If you do change the location, make sure to also change the time-offset from UTC time in the sky-time attributes, measured in hours.
 
+**Tokyo is 9 hours ahead of UTC**
 ```html
 <a-scene>
-  <a-sky-forge a-sky-time="utcOffset: 9;" geo-coordinate="lat: 35.68, long:139.69" material="shader: sky;"></a-sky-forge>
+  <a-sky-forge sky-time="utcOffset: 9;" geo-coordinates="lat: 35.68, long:139.69" material="shader: sky;"></a-sky-forge>
 </a-scene>
 ```
 
 Besides changing your location, you can also change the date and time...
-One important caveat is that the time during the day is set in seconds via the *timeOffset* parameter.
-There are 86400 seconds in a day, which should help you get to a specific time during any given day.
+One important caveat is that the time during the day is set in seconds via the `timeOffset` property in the `sky-time` attribute.
+**There are 86400 seconds in a day**, which should help you get to a specific time during any given day.
 
 **Party like it's 1999! @_@**
 ```html
 <a-scene>
-  <a-sky-forge a-sky-time="month: 12, day: 31, year: 1999; timeOffset: 86390" material="shader: sky;"></a-sky-forge>
+  <a-sky-forge sky-time="month: 12, day: 31, year: 1999; timeOffset: 86390" material="shader: sky;"></a-sky-forge>
 </a-scene>
 ```
 
-Or more importantly, speed time up (for faster in-game days).
+Another cool feature that may prove useful, is that we can speed up time in our universe using the `timeMultiplier` property in the sky-time `attribute`. Note that even though we are *speeding* up time, the effects like star twinkling will be unchanged by this attribute. It only impacts the positions of heavenly bodies, namely the sun, the moon and the stars.
 
 **Time goes 8 times as fast!**
 ```html
 <a-scene>
-  <a-sky-forge a-sky-time="timeMultiplier: 8;" material="shader: sky;"></a-sky-forge>
+  <a-sky-forge sky-time="timeMultiplier: 8;" material="shader: sky;"></a-sky-forge>
 </a-scene>
 ```
 
-**Or stop time (stars will still twinkle and stuff, but the sky elements won't move.)**
+**Time is stopped (stars will still twinkle and stuff, but the sky elements won't move.)**
 ```html
 <a-scene>
-  <a-sky-forge a-sky-time="timeMultiplier: 0;" material="shader: sky;"></a-sky-forge>
+  <a-sky-forge sky-time="timeMultiplier: 0;" material="shader: sky;"></a-sky-forge>
 </a-scene>
 ```
 
