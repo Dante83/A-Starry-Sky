@@ -9,9 +9,7 @@ A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It bu
 
 This is built for the [A-Frame Web Framework](https://aframe.io/).
 
-It is important, for now, to use version 0.7.0 of A-Frame, as the current build of A-Sky-Forge is refusing to work with the version of THREE JS contained in later versions.
-
-`https://aframe.io/releases/0.7.0/aframe.min.js`
+`https://aframe.io/releases/0.8.0/aframe.min.js`
 
 ##Installing
 
@@ -25,11 +23,19 @@ On your webpage make sure that the script link to ask forge goes below aframe, l
 <script src="../js/a-sky-forge/dist/askyforge.v0.1.0.min.js"></script>
 ```
 
-Once these references are set up, add the a-sky-forge component into your a-scene-tag, as follows
+Once these references are set up, add the a-sky-forge component into your a-scene-tag.
+For **version 0.7.0** and below:
 
 ```html
 <a-scene>
   <a-sky-forge material="shader: sky;"></a-sky-forge>
+</a-scene>
+```
+
+For **version 0.8.0** [See issue here](https://github.com/aframevr/aframe/issues/3428):
+```html
+<a-scene>
+  <a-sky-forge material="shader: sky; side:back;"></a-sky-forge>
 </a-scene>
 ```
 
