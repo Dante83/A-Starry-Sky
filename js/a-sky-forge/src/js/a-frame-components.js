@@ -1,3 +1,13 @@
+if(typeof exports !== 'undefined') {
+  const dynamicSkyEntityMethodsExports = require('./a-dynamic-sky-entity-methods.js');
+  const aSkyInterpolationMethodExports = require('./a-sky-interpolation-methods.js');
+  const aSkyForgeMethodExports = require('./a-sky-forge.js')
+  //Give this global scope by leaving off the var
+  dynamicSkyEntityMethods = dynamicSkyEntityMethodsExports.dynamicSkyEntityMethods;
+  aSkyInterpolator = aSkyInterpolationMethodExports.aSkyInterpolator;
+  aDynamicSky = aSkyForgeMethodExports.aDynamicSky;
+}
+
 // The mesh mixin provides common material properties for creating mesh-based primitives.
 // This makes the material component a default component and maps all the base material properties.
 var meshMixin = AFRAME.primitives.getMeshMixin();

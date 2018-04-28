@@ -1,3 +1,10 @@
+if(typeof exports !== 'undefined') {
+  const dynamicSkyEntityMethodsExports = require('./a-dynamic-sky-entity-methods.js');
+  const clonerMethodsExports = require('./cloner.js');
+  //Give this global scope by leaving off the var
+  cloner = clonerMethodsExports.dynamicSkyEntityMethods;
+}
+
 var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolationLengthInSeconds, dynamicSkyObject, originalSkyData){
   var self = this;
 
@@ -25,7 +32,7 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
     }
 
     return skyDataClone;
-  }
+  };
 
   //A way of diving deep into a variable to hunt for nested values
   this.searchForVariable = function(objectPathRef, nestedArray){
@@ -41,7 +48,7 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
     }
 
     return returnValue;
-  }
+  };
 
   //
   //Methods that set our interpolations
@@ -105,7 +112,7 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
         return returnVect;
       }
     };
-  }
+  };
 
   //Presumes that values are over a full circle, possibly offset below like with -180
   this.setAngularLinearInterpolationForScalar = function(name, objectPath, isBuffered, callback = false, offset = 0){
@@ -156,7 +163,7 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
         return returnVal;
       }
     };
-  }
+  };
 
   this.setLinearInterpolationForScalar = function(name, objectPath, isBuffered, callback = false){
     //
@@ -194,7 +201,7 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
         return (this.slope * time + this.intercept);
       }
     };
-  }
+  };
 
   this.setLinearInterpolationForVect = function(name, objectPath, isBuffered, callback = false){
     var currentInterpolation
@@ -268,7 +275,7 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
         return returnVect;
       }
     };
-  }
+  };
 
   //
   //This is the big one, the method that we call repeatedly to give us the values we want
@@ -311,7 +318,7 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
 
     //Return this object the values acquired
     return interpolatedValues;
-  }
+  };
 
   this.primeBuffer = async function(){
     //Change the adynamic sky function to five minutes after the final time
@@ -333,7 +340,7 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
     }
 
     self.bufferHasRunForTesting = true;
-  }
+  };
 
   //Prepare our function before we initialize everything.
   this.timeMultiplier = timeMultiplier;

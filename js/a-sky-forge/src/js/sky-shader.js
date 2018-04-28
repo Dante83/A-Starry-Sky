@@ -571,6 +571,6 @@ AFRAME.registerShader('sky', {
       'outColor = moonLayerBlending(drawMoonLayer(azimuth, altitude), starLayerData.starlessLayer, outColor);',
 
     '	gl_FragColor = outColor;',
-    '}',
+    '}'
   ].join('\n')
 });
