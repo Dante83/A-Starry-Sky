@@ -5,13 +5,13 @@
 
 A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It builds upon on the work of [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to provide a vibrant living sky for your metaverse.
 
-##Prerequisites
+## Prerequisites
 
 This is built for the [A-Frame Web Framework](https://aframe.io/).
 
 `https://aframe.io/releases/0.8.0/aframe.min.js`
 
-##Installing
+## Installing
 
 When installing A-Sky-Forge, you'll want the code located in js/a-sky-forge/dist.
 Copy the minified file, askyforge.v0.1.0.js into your javascripts directory and the images in copy_me_to_image_dir into your image directory.
