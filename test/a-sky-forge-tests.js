@@ -10,7 +10,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
       //As we are testing our data sets on natural time frames, a few things will
       //stay consistant between tests.
       aDynamicSky.timeInDay = null; //Natural number of seconds in a day
-      aDynamicSky.dayOfYear = null;
+      aDynamicSky.dayOfTheYear = null;
       aDynamicSky.year = null;
       aDynamicSky.daysInYear = null;
       done();
@@ -20,7 +20,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   //NOTE: Our Julian days only work for the Gregorian Calender.
   //
   it('julian day function should be 2436116.31 on October 4.81 in the yeear 1957.',function(){
-    aDynamicSky.dayOfYear =  277;
+    aDynamicSky.dayOfTheYear =  277;
     aDynamicSky.timeInDay = 0.81 * 86400;
     aDynamicSky.year = 1957;
     aDynamicSky.daysInYear = 365;
@@ -28,7 +28,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   });
 
   it('julian day function should be 2451545.0 on January 1.5 in the yeear 2000.',function(){
-    aDynamicSky.dayOfYear =  1;
+    aDynamicSky.dayOfTheYear =  1;
     aDynamicSky.timeInDay = 0.5 * 86400;
     aDynamicSky.year = 2000;
     aDynamicSky.daysInYear = 366;//It's a leap year
@@ -36,7 +36,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   });
 
   it('julian day function should be 2447187.5 on January 27.0 in the yeear 1988.',function(){
-    aDynamicSky.dayOfYear =  27;
+    aDynamicSky.dayOfTheYear =  27;
     aDynamicSky.timeInDay = 0.0;
     aDynamicSky.year = 1988;
     aDynamicSky.daysInYear = 366;
@@ -44,7 +44,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   });
 
   it('julian day function should be 2447332.0 on Jun 19.5 in the yeear 1988.',function(){
-    aDynamicSky.dayOfYear =  171;
+    aDynamicSky.dayOfTheYear =  171;
     aDynamicSky.timeInDay = 0.5 * 86400;
     aDynamicSky.year = 1988;
     aDynamicSky.daysInYear = 366;
@@ -52,7 +52,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   });
 
   it('julian day function should be 2446966.0 on Jun 12.5 in the yeear 1987.',function(){
-    aDynamicSky.dayOfYear =  170;
+    aDynamicSky.dayOfTheYear =  170;
     aDynamicSky.timeInDay = 0.5 * 86400;
     aDynamicSky.year = 1987;
     aDynamicSky.daysInYear = 365;
@@ -60,7 +60,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   });
 
   it('julian day function should be 2446822.5 on Jan 27.0 in the yeear 1987.',function(){
-    aDynamicSky.dayOfYear =  27;
+    aDynamicSky.dayOfTheYear =  27;
     aDynamicSky.timeInDay = 0.0 * 86400;
     aDynamicSky.year = 1987;
     aDynamicSky.daysInYear = 365;
@@ -88,7 +88,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   });
 
   it('should calculate the appropriate nutation and true obliquity of the ecliptic corresponding to April 10.0 1987.', function(){
-    aDynamicSky.dayOfYear =  100;
+    aDynamicSky.dayOfTheYear =  100;
     aDynamicSky.timeInDay = 0.0;
     aDynamicSky.year = 1987;
     aDynamicSky.daysInYear = 365;
@@ -120,7 +120,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   });
 
   it('should calculate the correct Mean and Apparent Greenwhich Sidereal Time on April 10.0 1987.', function(){
-    aDynamicSky.dayOfYear =  100;
+    aDynamicSky.dayOfTheYear =  100;
     aDynamicSky.timeInDay = 0.0;
     aDynamicSky.year = 1987;
     aDynamicSky.daysInYear = 365;
@@ -144,7 +144,7 @@ describe('A-Frame Sky-Forge astral coordinate transformations', function() {
   });
 
   it('should calculate the correct Mean and Apparent Greenwhich Sidereal Time on April 10.0 1987 at 19:21:00.', function(){
-    aDynamicSky.dayOfYear =  100;
+    aDynamicSky.dayOfTheYear =  100;
     aDynamicSky.timeInDay = 69660;
     aDynamicSky.year = 1987;
     aDynamicSky.daysInYear = 365;

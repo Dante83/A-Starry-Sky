@@ -1,8 +1,5 @@
 # A Sky Forge
 
-**Hey you! Read This!**
-**Thanks for checking out my repository - but unfortunately it's not quite done yet. So if you want to try using this, it's totally cutting edge and might not be fully ready for your amazing creations yet. Just wanted to warn you before you before you dive in. - Dante83**
-
 A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It builds upon on the work of [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to provide a vibrant living sky for your metaverse.
 
 ## Prerequisites
@@ -99,6 +96,12 @@ Another cool feature that may prove useful, is that we can speed up time in our 
 
 ## Authors
 * **David Evans / Dante83** - *Initial work*
+
+## References & Special Thanks
+* **Jean Meeus / [Astronomical Algorithms](http://www.willbell.com/math/mc1.htm)** - *Abso-frigging-lutely esential for positioning astronomical bodies*
+* **[ngoKevin](https://www.npmjs.com/~ngokevin) / [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky)** - *Created the initial base shader for my sky shader.*
+* **[Andrea Giammarchi](https://github.com/WebReflection) / [Deep Cloner](https://github.com/WebReflection/cloner)** - *Used for cloning JS objects, which isn't entirely trivial.*
+* *And plenty of other websites and individuals. Thank you for giving us the opportunity to stand on your giant-like shoulders.*
 
 ## License
 

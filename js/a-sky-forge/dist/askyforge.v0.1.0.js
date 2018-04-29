@@ -769,7 +769,7 @@ var aDynamicSky = {
   radLatitude : 0.0,
   radLongitude : 0.0,
   year : 0.0,
-  dayOfYear : 0.0,
+  dayOfTheYear : 0.0,
   hourInDay : 0.0,
   julianDay : 0.0,
   sunPosition : null,
@@ -780,18 +780,16 @@ var aDynamicSky = {
     this.radLongitude = this.longitude * this.deg2Rad;
     this.year = skyData.year;
     this.daysInYear = this.getDaysInYear();
-    this.dayOfYear = skyData.dayOfTheYear;
+    this.dayOfTheYear = skyData.dayOfTheYear;
 
     //Get the time at Greenwhich
-    //NOTE: ALl of these time thingies should be tested at turn-overs and crud
-    //As they might only work mid-year and screw up at years end.
     var utcOffsetInSeconds = skyData.utcOffset != null ? skyData.utcOffset * 3600 : (240 * this.longitude);
     var utcDate = new Date(this.year, 0);
-    utcDate.setSeconds( (this.dayOfYear - 1.0) * 86400 + skyData.timeOffset + utcOffsetInSeconds);
+    utcDate.setSeconds( (this.dayOfTheYear - 1.0) * 86400 + skyData.timeOffset + utcOffsetInSeconds);
 
     //Update our time constants to UTC time
     this.year = utcDate.getFullYear();
-    this.dayOfYear = dynamicSkyEntityMethods.getDayOfTheYearFromYMD(utcDate.getFullYear(), utcDate.getMonth() + 1, utcDate.getDate());
+    this.dayOfTheYear = dynamicSkyEntityMethods.getDayOfTheYearFromYMD(utcDate.getFullYear(), utcDate.getMonth() + 1, utcDate.getDate());
     this.timeInDay = utcDate.getHours() * 3600 + utcDate.getMinutes() * 60 + utcDate.getSeconds();
 
     this.julianDay = this.calculateJulianDay();
@@ -832,9 +830,9 @@ var aDynamicSky = {
     for(var m = 0; m < 12; m++){
       previousMonthsDays = daysPast;
       daysPast += daysInEachMonth[m];
-      if(daysPast >= this.dayOfYear){
+      if(daysPast >= this.dayOfTheYear){
         month = m + 1;
-        day = this.dayOfYear - previousMonthsDays;
+        day = this.dayOfTheYear - previousMonthsDays;
         break;
       }
     }
@@ -987,12 +985,12 @@ var aDynamicSky = {
 
   calculateSunAndMoonLongitudeElgonationAndAnomoly: function(){
     var T = this.julianCentury;
-    this.moonMeanLongitude = this.check4GreaterThan360(218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + (T * T * T) / 65194000);
-    this.moonMeanElongation = this.check4GreaterThan360(297.8501921 + 445267.1114034 * T - 0.0018819 * T * T + (T * T * T) / 113065000);
+    this.moonMeanLongitude = this.check4GreaterThan360(218.3164477 + 481267.88123421 * T - 0.0015786 * T * T + (T * T * T) / 538841.0 - (T * T * T * T) / 65194000.0 );
+    this.moonMeanElongation = this.check4GreaterThan360(297.8501921 + 445267.1114034 * T - 0.0018819 * T * T + (T * T * T) / 545868.0  - (T * T * T * T) / 113065000.0 );
     this.moonsMeanAnomaly = this.check4GreaterThan360(134.9633964 + 477198.8675055 * T + 0.0087414 * T * T + (T * T * T) / 69699 - (T * T * T * T) / 14712000);
-    this.moonsArgumentOfLatitude = this.check4GreaterThan360(93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - (T * T * T) / 3526000 + (T * T * T * T) / 863310000);
+    this.moonsArgumentOfLatitude = this.check4GreaterThan360(93.2720950 + 483202.0175233 * T - 0.0036539 * T * T - (T * T * T) / 3526000.0 + (T * T * T * T) / 863310000.0);
     this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit = this.check4GreaterThan360(125.04452 - 1934.136261 * T + 0.0020708 * T * T + ((T * T *T) /450000));
-    this.sunsMeanAnomoly = this.check4GreaterThan360(357.52772 + 35999.0500340 * T - 0.0001603 * T * T + (T * T * T) / 300000);
+    this.sunsMeanAnomoly = this.check4GreaterThan360(357.5291092 + 35999.0502909 * T - 0.0001536 * T * T + (T * T * T) / 24490000.0);
     this.sunsMeanLongitude = this.check4GreaterThan360(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
   },
 
@@ -1012,8 +1010,8 @@ var aDynamicSky = {
     //For the love of cheese why?!
     //TODO: kill off some of these terms. If we're limiting ourselves to 0.01
     //degrees of accuracy, we don't require this many terms by far!
-    var D_coeficients = [0,2,2,0,0,0,2,2,2,2,0,1,0,2,0,0,4,0,4,2,2,1,1,2,2,4,2,0,2,2,1,2,
-    0,0,2,2,2,4,0,3,2,4,0,2,2,2,4,0,4,1,2,0,1,3,4,2,0,1,2,2];
+    var D_coeficients = [0,2,2,0, 0,0,2,2, 2,2,0,1, 0,2,0,0, 4,0,4,2, 2,1,1,2, 2,4,2,0, 2,2,1,2,
+    0,0,2,2, 2,4,0,3, 2,4,0,2 ,2,2,4,0, 4,1,2,0, 1,3,4,2, 0,1,2,2];
     var M_coeficients = [0,0,0,0,1,0,0,-1,0,-1,1,0,1,0,0,0,0,0,0,1,1,0,1,-1,0,0,0,1,0,-1,0,-2,
     1,2,-2,0,0,-1,0,0,1,-1,2,2,1,-1,0,0,-1,0,1,0,1,0,0,-1,2,1,0,0];
     var M_prime_coeficients = [1,-1,0,2,0,0,-2,-1,1,0,-1,0,1,0,1,1,-1,3,-2,-1,0,-1,0,1,2,0,-3,-2,-1,-2,1,0,
@@ -1062,18 +1060,19 @@ var aDynamicSky = {
     //For B while we're at it :D
     //TODO: kill off some of these terms. If we're limiting ourselves to 0.01
     //degrees of accuracy, we don't require this many terms by far!
-    D_coeficients = [0,0,0,2,2,2,2,0,2,0,2,2,2,2,2,2,2, 0, 4, 0,0,0,1,0,0,0,1,0,4,4,
-    0,4,2,2,2,2,0,2,2,2,2,4,2,2,0,2,1,1,0,2,1,2,0,4,4,1,4,1,4,2];
-    M_coeficients = [0, 0,0,0,0,0,0,0,0,0,0-1,0,0,1,-1,-1,-1,1,0,1,0,1,0,1,1,1,0,0,0,0,
-    0,0,0,0,-1,0,0,0,0,1,1,0,-1,-2,0,1,1,1,1,1,0,-1,1,0,-1,0,0,0,-1,-2];
-    M_prime_coeficients = [0,1,1,0,-1,-1,0,2,1,2,0,-2,1,0,-1,0,-1,-1,-1,0,0,-1,0,1,1,0,0,3,0,-1,
-    1,-2,0,2,1,-2,3,2,-3,-1,0,0,1,0,1,1,0,0,-2,-1,1,-2,2,-2,-1,1,1,-1,0,0];
-    F_coeficients = [1,1,-1,-1,1,-1,1,1,-1,-1,-1,-1,1,-1,1,1,-1,-1,-1,1,3,1,1,1,-1,-1,-1,1,-1,1,
-    -3,1,-3,-1,-1,1,-1,1,-1,1,1,1,1,-1,3,-1,-1,1,-1,-1,1,-1,1,-1,-1,-1,-1,-1,-1,1];
-    var b_sum_coeficients = [5128122,280602,277693,173237,55413,46271, 32573, 17198,9266,8822,8216,4324,
-      4200,-3359,2463,2211,2065,-1870,1828,-1794,-1749,-1565,-1491,-1475,-1410,-1344,-1335,1107,1021,833,
-    777,671,607,596,491,-451,439,422,421,-366,-351,331,315,302,-283,-229,223,223,-220,-220,-185,
-    181,-177,176,166,-164,132,-119,115,107];
+    D_coeficients = [0,0,0,2, 2,2,2,0,2,0,2,2,2,2,2,2,2,0,4,0,0,0,1,0,
+      0,0,1,0,4,4,0,4,2,2,2,2,0,2,2,2,2,4,2,2,0,2,1,1,0,2,1,2,0,4,4,1,4,1,4,2];
+    M_coeficients = [0,0,0,0,0,0,0,0,0,0,-1,0,0,1,-1,-1,-1,1,0,1,0,1,0,1,
+      1,1,0,0,0,0,0,0,0,0,-1,0,0,0,0,1,1,0,-1,-2,0,1,1,1,1,1,0,-1,1,0,-1,0,0,0,-1,-2];
+    M_prime_coeficients = [0,1,1,0,-1,-1,0,2,1,2,0,-2,1,0,-1,0,-1,-1,-1,0,0,-1,0,1,
+      1,0,0,3,0,-1,1,-2,0,2,1,-2,3,2,-3,-1,0,0,1,0,1,1,0,0,-2,-1,1,-2,2,-2,-1,1,1,-1,0,0];
+    F_coeficients = [1,1,-1,-1,1,-1,1,1,-1,-1,-1,-1,1,-1,1,1,-1,-1,-1,1,3,1,1,1,
+      -1,-1,-1,1,-1,1,-3,1,-3,-1,-1,1,-1,1,-1,1,1,1,1,-1,3,-1,-1,1,-1,-1,1,-1,1,-1,-1,-1,-1,-1,-1,1];
+    var b_sum_coeficients = [5128122,280602,277693,173237,55413,46271, 32573, 17198,
+      9266,8822,8216,4324,4200,-3359,2463,2211,2065,-1870,1828,-1794,
+      -1749,-1565,-1491,-1475,-1410,-1344,-1335,1107,1021,833,
+      777,671,607,596,491,-451,439,422,421,-366,-351,331,315,302,-283,-229,
+      223,223,-220,-220,-185, 181,-177,176,166,-164,132,-119,115,107];
 
     var sum_b = 0.0;
     for(var i = 0; i < D_coeficients.length; i++){
@@ -1093,7 +1092,7 @@ var aDynamicSky = {
       if(Math.abs(M_coeficient) === 1){
         e_coeficient = e_parameter;
       }
-      else if(Math.abs(M_coeficient) === 1){
+      else if(Math.abs(M_coeficient) === 2){
         e_coeficient = e_parameter * e_parameter;
       }
 
@@ -1104,9 +1103,9 @@ var aDynamicSky = {
     var moonMeanLongitude = this.check4GreaterThan360(moonMeanLongitude);
     var moonsArgumentOfLatitude = this.check4GreaterThan360(moonsArgumentOfLatitude);
     var moonsMeanAnomaly = this.check4GreaterThan360(moonsMeanAnomaly);
-    sum_l = sum_l + 3958 * Math.sin(a_1 * this.deg2Rad) + 1962 * Math.sin((moonMeanLongitude - moonsArgumentOfLatitude) * this.deg2Rad) + 318 * Math.sin(a_2 * this.deg2Rad);
-    sum_b = sum_b - 2235 * Math.sin(moonMeanLongitude * this.deg2Rad) + 382 * Math.sin(a_3 * this.deg2Rad) + 175 * Math.sin((a_1 - moonsArgumentOfLatitude) * this.deg2Rad) + 175 * Math.sin((a_1 + moonsArgumentOfLatitude) * this.deg2Rad);
-    sum_b = sum_b + 127 * Math.sin((moonMeanLongitude - moonsMeanAnomaly) * this.deg2Rad) - 115 * Math.sin((moonMeanLongitude + moonsMeanAnomaly) * this.deg2Rad);
+    sum_l = sum_l + 3958.0 * Math.sin(a_1 * this.deg2Rad) + 1962.0 * Math.sin((moonMeanLongitude - moonsArgumentOfLatitude) * this.deg2Rad) + 318.0 * Math.sin(a_2 * this.deg2Rad);
+    sum_b = sum_b - 2235.0 * Math.sin(moonMeanLongitude * this.deg2Rad) + 382.0 * Math.sin(a_3 * this.deg2Rad) + 175.0 * Math.sin((a_1 - moonsArgumentOfLatitude) * this.deg2Rad) + 175 * Math.sin((a_1 + moonsArgumentOfLatitude) * this.deg2Rad);
+    sum_b = sum_b + 127.0 * Math.sin((moonMeanLongitude - moonsMeanAnomaly) * this.deg2Rad) - 115.0 * Math.sin((moonMeanLongitude + moonsMeanAnomaly) * this.deg2Rad);
 
     var lambda = (moonMeanLongitude + (sum_l / 1000000));
     var beta = (sum_b / 1000000);
@@ -1313,14 +1312,14 @@ var dynamicSkyEntityMethods = {
     if(year == 0.0 || (year % 4 == 0.0) ){
       daysInEachMonth[1] = 29;
     }
-    var currentDayOfYear = 0;
+    var currentdayOfTheYear = 0;
 
     for(var m = 0; m < (month - 1); m++){
-      currentDayOfYear += daysInEachMonth[m];
+      currentdayOfTheYear += daysInEachMonth[m];
     }
-    currentDayOfYear += day;
+    currentdayOfTheYear += day;
 
-    return currentDayOfYear.toString();
+    return currentdayOfTheYear.toString();
   },
 
   getIsLeapYear: function(year){
@@ -1540,30 +1539,40 @@ AFRAME.registerComponent('sky-time', {
 
 var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolationLengthInSeconds, dynamicSkyObject, originalSkyData){
   var self = this;
+  this.skyDataObjects = [];
+  this.skyDataTimes = [];
 
   //This is a means of updating our sky time so that we can set our dynamic sky objects
   //to the correct positions in the sky...
-  this.skyDataFromTime = function(time){
+  this.skyDataFromTime = function(time, timerID){
     //Clone our sky data
-    var cloneOfSkyDataObjectString = self.skyDataObjectString;
-    var skyDataClone = JSON.parse(cloneOfSkyDataObjectString);
+    if(self.skyDataObjects[timerID] === undefined){
+      self.skyDataObjects[timerID] = JSON.parse(self.skyDataObjectString);
+    }
+    if(self.skyDataTimes[timerID] === undefined){
+      self.skyDataTimes[timerID] = self.initializationTime.getTime();
+    }
+    var skyDataClone = self.skyDataObjects[timerID];
 
     //Get the difference between the time provided and the initial time for our function
     //We divide by 1000 because this returns the difference in milliseconds
-    var timeDiffInSeconds = (time.getTime() - self.initializationTime.getTime()) / 1000.0;
+    var timeDiffInSeconds = (time.getTime() - self.skyDataTimes[timerID]) / 1000.0;
+    self.skyDataTimes[timerID] = time.getTime();
     skyDataClone.timeOffset += timeDiffInSeconds;
 
     if(skyDataClone.timeOffset > 86400.0){
       //It's a new day!
-      skyDataClone.dayOfYear += 1;
+      skyDataClone.dayOfTheYear += 1;
       skyDataClone.timeOffset = skyDataClone.timeOffset % 86400.00;
-      if(skyDataClone.dayOfYear > skyDataClone.yearPeriod){
-        //Reset everything!
+      if(skyDataClone.dayOfTheYear > skyDataClone.yearPeriod){
+        //Reset everything! But presume we're on the same day
+        //TODO: I doubt this will run for longer than a single year, but we might need to reset the year period...
         skyDataClone.dayOfTheYear = 1;
         skyDataClone.year += 1;
       }
     }
 
+    //Update the string in use
     return skyDataClone;
   };
 
@@ -1803,8 +1812,6 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
           returnVect = new THREE.Vector4(returnArray[0], returnArray[1],  returnArray[2], returnArray[3]);
         }
 
-        //console.log(returnVect);
-
         return returnVect;
       }
     };
@@ -1855,8 +1862,8 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
 
   this.primeBuffer = async function(){
     //Change the adynamic sky function to five minutes after the final time
-    var skytime_0 = self.skyDataFromTime(self.finalTime);
-    var skytime_f = self.skyDataFromTime(self.bufferedTime);
+    var skytime_0 = self.skyDataFromTime(self.finalTime, 2);
+    var skytime_f = self.skyDataFromTime(self.bufferedTime, 3);
     self.dynamicSkyObjectAt_t_0.update(skytime_0);
     self.dynamicSkyObjectAt_t_f.update(skytime_f);
 
@@ -1891,9 +1898,9 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
   this.skyDataObjectString = JSON.stringify(originalSkyData);
 
   this.dynamicSkyObjectAt_t_0 = cloner.deep.copy(dynamicSkyObject);
-  this.dynamicSkyObjectAt_t_0.update(this.skyDataFromTime(this.initialTime));
+  this.dynamicSkyObjectAt_t_0.update(this.skyDataFromTime(this.initialTime, 0));
   this.dynamicSkyObjectAt_t_f = cloner.deep.copy(dynamicSkyObject);
-  this.dynamicSkyObjectAt_t_f.update(this.skyDataFromTime(this.finalTime));
+  this.dynamicSkyObjectAt_t_f.update(this.skyDataFromTime(this.finalTime, 1));
 
   this.currentInterpolations = {};
   this.bufferedInterpolations = {};

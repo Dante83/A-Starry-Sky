@@ -22,14 +22,14 @@ var dynamicSkyEntityMethods = {
     if(year == 0.0 || (year % 4 == 0.0) ){
       daysInEachMonth[1] = 29;
     }
-    var currentDayOfYear = 0;
+    var currentdayOfTheYear = 0;
 
     for(var m = 0; m < (month - 1); m++){
-      currentDayOfYear += daysInEachMonth[m];
+      currentdayOfTheYear += daysInEachMonth[m];
     }
-    currentDayOfYear += day;
+    currentdayOfTheYear += day;
 
-    return currentDayOfYear.toString();
+    return currentdayOfTheYear.toString();
   },
 
   getIsLeapYear: function(year){

@@ -7,30 +7,40 @@ if(typeof exports !== 'undefined') {
 
 var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolationLengthInSeconds, dynamicSkyObject, originalSkyData){
   var self = this;
+  this.skyDataObjects = [];
+  this.skyDataTimes = [];
 
   //This is a means of updating our sky time so that we can set our dynamic sky objects
   //to the correct positions in the sky...
-  this.skyDataFromTime = function(time){
+  this.skyDataFromTime = function(time, timerID){
     //Clone our sky data
-    var cloneOfSkyDataObjectString = self.skyDataObjectString;
-    var skyDataClone = JSON.parse(cloneOfSkyDataObjectString);
+    if(self.skyDataObjects[timerID] === undefined){
+      self.skyDataObjects[timerID] = JSON.parse(self.skyDataObjectString);
+    }
+    if(self.skyDataTimes[timerID] === undefined){
+      self.skyDataTimes[timerID] = self.initializationTime.getTime();
+    }
+    var skyDataClone = self.skyDataObjects[timerID];
 
     //Get the difference between the time provided and the initial time for our function
     //We divide by 1000 because this returns the difference in milliseconds
-    var timeDiffInSeconds = (time.getTime() - self.initializationTime.getTime()) / 1000.0;
+    var timeDiffInSeconds = (time.getTime() - self.skyDataTimes[timerID]) / 1000.0;
+    self.skyDataTimes[timerID] = time.getTime();
     skyDataClone.timeOffset += timeDiffInSeconds;
 
     if(skyDataClone.timeOffset > 86400.0){
       //It's a new day!
-      skyDataClone.dayOfYear += 1;
+      skyDataClone.dayOfTheYear += 1;
       skyDataClone.timeOffset = skyDataClone.timeOffset % 86400.00;
-      if(skyDataClone.dayOfYear > skyDataClone.yearPeriod){
-        //Reset everything!
+      if(skyDataClone.dayOfTheYear > skyDataClone.yearPeriod){
+        //Reset everything! But presume we're on the same day
+        //TODO: I doubt this will run for longer than a single year, but we might need to reset the year period...
         skyDataClone.dayOfTheYear = 1;
         skyDataClone.year += 1;
       }
     }
 
+    //Update the string in use
     return skyDataClone;
   };
 
@@ -270,8 +280,6 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
           returnVect = new THREE.Vector4(returnArray[0], returnArray[1],  returnArray[2], returnArray[3]);
         }
 
-        //console.log(returnVect);
-
         return returnVect;
       }
     };
@@ -322,8 +330,8 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
 
   this.primeBuffer = async function(){
     //Change the adynamic sky function to five minutes after the final time
-    var skytime_0 = self.skyDataFromTime(self.finalTime);
-    var skytime_f = self.skyDataFromTime(self.bufferedTime);
+    var skytime_0 = self.skyDataFromTime(self.finalTime, 2);
+    var skytime_f = self.skyDataFromTime(self.bufferedTime, 3);
     self.dynamicSkyObjectAt_t_0.update(skytime_0);
     self.dynamicSkyObjectAt_t_f.update(skytime_f);
 
@@ -358,9 +366,9 @@ var aSkyInterpolator = function(initializationTime, timeMultiplier, interpolatio
   this.skyDataObjectString = JSON.stringify(originalSkyData);
 
   this.dynamicSkyObjectAt_t_0 = cloner.deep.copy(dynamicSkyObject);
-  this.dynamicSkyObjectAt_t_0.update(this.skyDataFromTime(this.initialTime));
+  this.dynamicSkyObjectAt_t_0.update(this.skyDataFromTime(this.initialTime, 0));
   this.dynamicSkyObjectAt_t_f = cloner.deep.copy(dynamicSkyObject);
-  this.dynamicSkyObjectAt_t_f.update(this.skyDataFromTime(this.finalTime));
+  this.dynamicSkyObjectAt_t_f.update(this.skyDataFromTime(this.finalTime, 1));
 
   this.currentInterpolations = {};
   this.bufferedInterpolations = {};
