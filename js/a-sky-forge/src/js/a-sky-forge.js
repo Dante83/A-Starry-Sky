@@ -217,6 +217,7 @@ var aDynamicSky = {
     var eccentricityOfEarth = 0.016708634 - 0.000042037 * T - 0.0000001267 * T * T;
     var sunsEquationOfCenter = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(sunsMeanAnomoly) + (0.019993 - 0.000101 * T) * Math.sin(2 * sunsMeanAnomoly) + 0.000289 * Math.sin(3 * sunsMeanAnomoly);
     var sunsTrueLongitude = (sunsMeanLongitude + sunsEquationOfCenter) * this.deg2Rad;
+    this.longitudeOfTheSun = sunsTrueLongitude;
     var meanObliquityOfTheEclipitic = this.meanObliquityOfTheEclipitic * this.deg2Rad;
     var rightAscension = this.check4GreaterThan2Pi(Math.atan2(Math.cos(meanObliquityOfTheEclipitic) * Math.sin(sunsTrueLongitude), Math.cos(sunsTrueLongitude)));
     var declination = this.checkBetweenMinusPiOver2AndPiOver2(Math.asin(Math.sin(meanObliquityOfTheEclipitic) * Math.sin(sunsTrueLongitude)));
@@ -239,6 +240,20 @@ var aDynamicSky = {
     this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit = this.check4GreaterThan360(125.04452 - 1934.136261 * T + 0.0020708 * T * T + ((T * T *T) /450000));
     this.sunsMeanAnomoly = this.check4GreaterThan360(357.5291092 + 35999.0502909 * T - 0.0001536 * T * T + (T * T * T) / 24490000.0);
     this.sunsMeanLongitude = this.check4GreaterThan360(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
+  },
+
+  getMoonEE(D, M, MP){
+    //From approximation 48.4 in Meeus, page 346
+    var lunarPhaseAngleI = 180 - D - 6.289 * Math.sin(this.deg2Rad * MP) + 2.1 * Math.sin(this.deg2Rad * M) - 1.274 * Math.sin(this.deg2Rad * (2.0 * D - MP)) - 0.658 * Math.sin(this.deg2Rad * (2.0 * D));
+    lunarPhaseAngleI += -0.214 * Math.sin(this.deg2Rad * (2 * MP)) - 0.110 * Math.sin(this.deg2Rad * D);
+    var fullLunarIllumination = 29;
+
+    //Using HN Russell's data as a guide and guestimating a rough equation for the intensity of moonlight from the phase angle...
+    var fractionalIntensity = 1.032391 * Math.exp(-0.0257614 * Math.abs(lunarPhaseAngleI));
+
+    //Using the square of the illuminated fraction of the moon for a faster falloff
+    var partialLunarIllumination = fullLunarIllumination * fractionalIntensity;
+    this.moonEE = partialLunarIllumination;
   },
 
   //With help from Meeus Chapter 47...
@@ -360,6 +375,9 @@ var aDynamicSky = {
     var raAndDec = this.lambdaBetaDegToRaDec(lambda, beta);
     var rightAscension = raAndDec.rightAscension;
     var declination = raAndDec.declination;
+
+    var geocentricElongationOfTheMoon = Math.acos(Math.cos(beta) * Math.cos(this.longitudeOfTheSun - lambda))
+    this.getMoonEE(moonMeanElongation, sunsMeanAnomoly, moonsMeanAnomaly);
 
     //Because we use these elsewhere...
     this.moonsRightAscension = rightAscension;

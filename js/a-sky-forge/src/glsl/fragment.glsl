@@ -38,8 +38,8 @@ const float mieZenithLength = 1.25E3;
 const vec3 up = vec3(0.0, 1.0, 0.0);
 
 const float sunEE = 1000.0;
-//TODO: Play with this
-const float moonEE = 100.0;
+//This varies with the phase of the moon
+//const float moonEE
 
 // mathematical constants
 const float e = 2.71828182845904523536028747135266249775724709369995957;
@@ -74,6 +74,7 @@ varying vec3 normal;
 varying vec2 binormal;
 
 //Moon Data
+uniform float moonEE;
 uniform sampler2D moonTexture;
 uniform sampler2D moonNormalMap;
 uniform vec2 moonAzimuthAndAltitude;

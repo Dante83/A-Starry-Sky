@@ -17,6 +17,7 @@ AFRAME.registerShader('sky', {
     moonTangent: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     moonBitangent: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     moonAzimuthAndAltitude: {type: 'vec2', default: {x: 0.0, y: 0.0}, is: 'uniform'},
+    moonEE: {type: 'number', default: 100.0, is: 'uniform'},
     starMask: {type: 'map', src:'../images/padded-starry-sub-data-0.png', is: 'uniform'},
     starRas: {type: 'map', src:'../images/padded-starry-sub-data-1.png', is: 'uniform'},
     starDecs: {type: 'map', src:'../images/padded-starry-sub-data-2.png', is: 'uniform'},
@@ -80,8 +81,8 @@ AFRAME.registerShader('sky', {
     'const vec3 up = vec3(0.0, 1.0, 0.0);',
 
     'const float sunEE = 1000.0;',
-    '//TODO: Play with this',
-    'const float moonEE = 100.0;',
+    '//This varies with the phase of the moon',
+    '//const float moonEE',
 
     '// mathematical constants',
     'const float e = 2.71828182845904523536028747135266249775724709369995957;',
@@ -116,6 +117,7 @@ AFRAME.registerShader('sky', {
     'varying vec2 binormal;',
 
     '//Moon Data',
+    'uniform float moonEE;',
     'uniform sampler2D moonTexture;',
     'uniform sampler2D moonNormalMap;',
     'uniform vec2 moonAzimuthAndAltitude;',
