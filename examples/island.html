@@ -17,6 +17,7 @@
     <script src="../js/a-sky-forge/src/js/a-dynamic-sky-entity-methods.js"></script>
     <script src="../js/a-sky-forge/src/js/a-frame-components.js"></script>
     <script src="../js/a-sky-forge/src/js/a-sky-interpolator.js"></script>
+    <script src="js-libraries/a-mountain.js"></script>
     <!-- <script src="../js/a-sky-forge/dist/askyforge.v0.1.0.min.js"></script> -->
 
   <!--Scene Scripts-->
@@ -24,7 +25,8 @@
   <body>
     <a-scene physics>
       <!-- Sky -->
-      <a-sky-forge sky-time="timeMultiplier: 800.0; utcOffset:-7; dayOfTheYear: 180;" geo-coordinates="lat: 37; long: 112.0;" material="shader: sky; side:back;"></a-sky-forge>
+      <a-sky-forge sky-time="timeMultiplier: 800.0; utcOffset:-7;" geo-coordinates="lat: 37; long: 112.0;" material="shader: sky; side:back;"></a-sky-forge>
+      <a-mountain></a-mountain>
     </a-scene>
   </body>
 </html>

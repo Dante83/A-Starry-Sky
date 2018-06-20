@@ -80,7 +80,7 @@ AFRAME.registerShader('sky', {
     'const float mieZenithLength = 1.25E3;',
     'const vec3 up = vec3(0.0, 1.0, 0.0);',
 
-    'const float sunEE = 1000.0;',
+    'const float sunEE = 1360.0;',
     '//This varies with the phase of the moon',
     '//const float moonEE',
 
@@ -125,8 +125,8 @@ AFRAME.registerShader('sky', {
     'uniform vec3 moonPosition;',
     'uniform vec3 moonTangent;',
     'uniform vec3 moonBitangent;',
-    '//const float angularRadiusOfTheMoon = 0.024;',
-    'const float angularRadiusOfTheMoon = 0.055; //Fakey Values',
+    'const float angularRadiusOfTheMoon = 0.024;',
+    '//const float angularRadiusOfTheMoon = 0.055; //Fakey Values',
     'const float earthshine = 0.02;',
 
     '//Earth data',
@@ -220,8 +220,9 @@ AFRAME.registerShader('sky', {
     '}',
 
     'vec4 mixSunLayer(vec4 sun, vec4 stars){',
-      'if(sqrt(clamp(dot(sun.xyz, sun.xyz)/3.0, 0.0, 1.0)) > 0.10){',
-        'return sun.a > 0.95 ? vec4(sun.rgb, 1.0) : vec4(mix(sun.xyz, stars.xyz, (1.0 - sun.w)), 1.0);',
+      'if(sqrt(clamp(dot(sun.xyz, sun.xyz)/3.0, 0.0, 1.0)) > 0.9){',
+        '//Note to self, replace sun by giant glowing orb',
+        'return vec4(sun.rgb, 1.0);',
       '}',
       'return stars;',
     '}',
@@ -246,57 +247,19 @@ AFRAME.registerShader('sky', {
       'return vec4(mix(combinedLight.rgb, inColor.xyz, (1.0 - moonColor.a)), 1.0);',
     '}',
 
-    '//',
-    '//MOON',
-    '//',
-    'vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel){',
-      '//calculate the location of this pixels on the unit sphere',
-      'float zenithOfPixel = piOver2 - altitudeOfPixel;',
-      'float pixelX = sin(zenithOfPixel) * cos(azimuthOfPixel);',
-      'float pixelY = sin(zenithOfPixel) * sin(azimuthOfPixel);',
-      'float pixelZ = cos(zenithOfPixel);',
-      'vec3 pixelPos = vec3(pixelX, pixelY, pixelZ);',
-
-      '//Get the vector between the moons center and this pixels',
-      'vec3 vectorBetweenPixelAndMoon = pixelPos - moonPosition;',
-
-      '//Now dot this with the tangent and bitangent vectors to get our location.',
-      'float deltaX = dot(vectorBetweenPixelAndMoon, moonTangent);',
-      'float deltaY = dot(vectorBetweenPixelAndMoon, moonBitangent);',
-      'float angleOfPixel = atan(deltaX, deltaY);',
-
-      '//And finally, get the magnitude of the vector so that we can calculate the x and y positio',
-      '//below...',
-      'float radiusOfDistanceBetweenPixelAndMoon = length(vectorBetweenPixelAndMoon);',
-
-      'vec4 returnColor = vec4(0.0);',
-      'if(radiusOfDistanceBetweenPixelAndMoon < angularRadiusOfTheMoon){',
-        '//Hey! We are in the moon! convert our distance into a linear interpolation',
-        '//of half pixel radius on our sampler',
-        'float xPosition = (1.0 + (radiusOfDistanceBetweenPixelAndMoon / angularRadiusOfTheMoon) * sin(angleOfPixel)) / 2.0;',
-        'float yPosition = (1.0 + (radiusOfDistanceBetweenPixelAndMoon  / angularRadiusOfTheMoon) * cos(angleOfPixel)) / 2.0;',
-
-        'vec2 position = vec2(xPosition, yPosition);',
-
-        '//Now to grab that color!',
-        'vec4 moonColor = texture2D(moonTexture, position.xy);',
-
-        '//Get the moon shadow using the normal map',
-        '//Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!',
-        'vec3 moonSurfaceNormal = normalize(2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0);',
-
-        '//We should probably convert these over to magnitudes before performing our dot product and then convert it back again.',
-
-        '//The moon is presumed to be a lambert shaded object, as per:',
-        '//https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection',
-        'moonColor = vec4(moonColor.rgb * max(earthshine, dot(moonSurfaceNormal, moonTangentSpaceSunlight)), moonColor.a);',
-
-        'returnColor = moonColor;',
-      '}',
-
-      '//Otherwise, we shall return nothing for now. In the future, perhaps we will implement the',
-      'return returnColor;',
-    '}',
+    'struct skyparams{',
+      'float cosTheta;',
+      'float cosThetaMoon;',
+      'vec3 Fex;',
+      'vec3 FexMoon;',
+      'float sunE;',
+      'float moonE;',
+      'vec3 Lin;',
+      'vec3 LinMoon;',
+      'float sunfade;',
+      'float moonfade;',
+      'vec4 skyColor;',
+    '};',
 
     'vec4 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 starColor){',
       '//float maxRadiusOfStar = 1.4 * (2.0/360.0) * piTimes2;',
@@ -442,15 +405,82 @@ AFRAME.registerShader('sky', {
       'return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;',
     '}',
 
-    'struct skyparams{',
-      'float cosTheta;',
-      'vec3 Fex;',
-      'float sunE;',
-      'vec3 Lin;',
-      'float sunfade;',
-      'float moonfade;',
-      'vec4 skyColor;',
-    '};',
+    '//',
+    '//MOON',
+    '//',
+    'vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel, skyparams skyParams){',
+      '//calculate the location of this pixels on the unit sphere',
+      'float zenithOfPixel = piOver2 - altitudeOfPixel;',
+      'float pixelX = sin(zenithOfPixel) * cos(azimuthOfPixel);',
+      'float pixelY = sin(zenithOfPixel) * sin(azimuthOfPixel);',
+      'float pixelZ = cos(zenithOfPixel);',
+      'vec3 pixelPos = vec3(pixelX, pixelY, pixelZ);',
+
+      '//Get the vector between the moons center and this pixels',
+      'vec3 vectorBetweenPixelAndMoon = pixelPos - moonPosition;',
+
+      '//Now dot this with the tangent and bitangent vectors to get our location.',
+      'float deltaX = dot(vectorBetweenPixelAndMoon, moonTangent);',
+      'float deltaY = dot(vectorBetweenPixelAndMoon, moonBitangent);',
+      'float angleOfPixel = atan(deltaX, deltaY);',
+
+      '//And finally, get the magnitude of the vector so that we can calculate the x and y positio',
+      '//below...',
+      'float radiusOfDistanceBetweenPixelAndMoon = length(vectorBetweenPixelAndMoon);',
+
+      'vec4 returnColor = vec4(0.0);',
+      'if(radiusOfDistanceBetweenPixelAndMoon < angularRadiusOfTheMoon){',
+        '//Hey! We are in the moon! convert our distance into a linear interpolation',
+        '//of half pixel radius on our sampler',
+        'float xPosition = (1.0 + (radiusOfDistanceBetweenPixelAndMoon / angularRadiusOfTheMoon) * sin(angleOfPixel)) / 2.0;',
+        'float yPosition = (1.0 + (radiusOfDistanceBetweenPixelAndMoon  / angularRadiusOfTheMoon) * cos(angleOfPixel)) / 2.0;',
+
+        'vec2 position = vec2(xPosition, yPosition);',
+
+        '//Now to grab that color!',
+        'vec4 moonColor = texture2D(moonTexture, position.xy);',
+
+        '//Get the moon shadow using the normal map',
+        '//Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!',
+        'vec3 moonSurfaceNormal = normalize(2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0);',
+
+        '//We should probably convert these over to magnitudes before performing our dot product and then convert it back again.',
+
+        '//The moon is presumed to be a lambert shaded object, as per:',
+        '//https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection',
+        'moonColor = vec4(moonColor.rgb * max(earthshine, dot(moonSurfaceNormal, moonTangentSpaceSunlight)), moonColor.a);',
+
+        '//Now that we have the moon color, implement atmospheric effects, just like with the sun',
+        'float moonAngularDiameterCos = cos(angularRadiusOfTheMoon);',
+        'float moondisk = smoothstep(moonAngularDiameterCos,moonAngularDiameterCos+0.00002, skyParams.cosThetaMoon);',
+
+        'vec3 L0 = (skyParams.moonE * 19000.0 * skyParams.FexMoon) * moondisk;',
+        'L0 *= 0.04;',
+        'L0 += vec3(0.0,0.001,0.0025)*0.3;',
+
+        'float g_fMaxLuminance = 1.0;',
+        'float fLumScaled = 0.1 / luminance;',
+        'float fLumCompressed = (fLumScaled * (1.0 + (fLumScaled / (g_fMaxLuminance * g_fMaxLuminance)))) / (1.0 + fLumScaled);',
+
+        'float ExposureBias = fLumCompressed;',
+
+        'vec3 whiteScale = 1.0/Uncharted2Tonemap(vec3(W));',
+        'vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*L0);',
+
+        'vec3 color = curr*whiteScale;',
+        'color = pow(color,abs(vec3(1.0/(1.2+(1.2* (skyParams.moonfade)))) ));',
+
+        'vec3 colorIntensity = pow(color, vec3(2.2));',
+        'vec3 moonIntensity = pow(moonColor.xyz, vec3(2.2));',
+        'vec3 combinedIntensity = 0.5 * colorIntensity * moonIntensity + 0.5 * moonIntensity;',
+
+        '//TODO: We have both colors together, now we just have to appropriately mix them',
+        'returnColor = vec4(pow(combinedIntensity, vec3(1.0/2.2)), moonColor.a);',
+      '}',
+
+      '//Otherwise, we shall return nothing for now. In the future, perhaps we will implement the',
+      'return returnColor;',
+    '}',
 
     'skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){',
       '//Get the fading of the sun and the darkening of the sky',
@@ -495,10 +525,10 @@ AFRAME.registerShader('sky', {
       '// Get the current optical length',
       '// cutoff angle at 90 to avoid singularity in next formula.',
       '//presuming here that the dot of the sun direction and up is also cos(zenith angle)',
-      'float sunR = rayleighZenithLength / (dotOfSunDirectionAndUp + 0.15 * pow(clamp(93.885 - ((zenithAngle * 180.0) / pi), 0.0001, 360.0), -1.253));',
-      'float moonR = rayleighZenithLength / (dotOfMoonDirectionAndUp + 0.15 * pow(clamp(93.885 - ((moonZenithAngle * 180.0) / pi), 0.001, 360.0), -1.253));',
-      'float sunM = mieZenithLength / (dotOfSunDirectionAndUp + 0.15 * pow(clamp(93.885 - ((zenithAngle * 180.0) / pi), 0.0001, 360.0), -1.253));',
-      'float moonM = mieZenithLength / (dotOfMoonDirectionAndUp + 0.15 * pow(clamp(93.885 - ((moonZenithAngle * 180.0) / pi), 0.0001, 360.0), -1.253));',
+      'float sunR = rayleighZenithLength / (dotOfSunDirectionAndUp + 0.15 * pow(clamp(93.885 - (zenithAngle / deg2Rad), 0.0, 360.0), -1.253));',
+      'float moonR = rayleighZenithLength / (dotOfMoonDirectionAndUp + 0.15 * pow(clamp(93.885 - (moonZenithAngle / deg2Rad), 0.0, 360.0), -1.253));',
+      'float sunM = mieZenithLength / (dotOfSunDirectionAndUp + 0.15 * pow(clamp(93.885 - (zenithAngle / deg2Rad), 0.0, 360.0), -1.253));',
+      'float moonM = mieZenithLength / (dotOfMoonDirectionAndUp + 0.15 * pow(clamp(93.885 - (moonZenithAngle / deg2Rad), 0.0, 360.0), -1.253));',
 
       '// combined extinction factor',
       'vec3 Fex = exp(-(betaRSun * sunR + betaM * sunM));',
@@ -525,7 +555,7 @@ AFRAME.registerShader('sky', {
 
       '//nightsky',
       'vec2 uv = vec2(azimuthOfPixel, (piOver2 - altitudeOfPixel)) / vec2(2.0*pi, pi) + vec2(0.5, 0.0);',
-      'vec3 L0 = vec3(0.1) * (Fex + FexMoon);',
+      'vec3 L0 = vec3(0.1) * (Fex);',
 
       '//Final lighting, duplicated above for coloring of sun',
       'vec3 texColor = (Lin + LinOfMoon + L0);',
@@ -544,7 +574,7 @@ AFRAME.registerShader('sky', {
 
       'vec3 retColor = pow(abs(color),vec3(1.0/(1.2+(1.2* (sunfade + moonfade)))));',
 
-      'return skyparams(cosTheta, Fex, sunE, Lin, sunfade, moonfade, vec4(retColor, 1.0));',
+      'return skyparams(cosTheta, cosThetaMoon, Fex, FexMoon, sunE, moonE, Lin, LinOfMoon, sunfade, moonfade, vec4(retColor, 1.0));',
     '}',
 
     '//',
@@ -597,7 +627,7 @@ AFRAME.registerShader('sky', {
 
       'outColor = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);',
 
-      'outColor = moonLayerBlending(drawMoonLayer(azimuth, altitude), starLayerData.starlessLayer, outColor);',
+      'outColor = moonLayerBlending(drawMoonLayer(azimuth, altitude, skyParams), starLayerData.starlessLayer, outColor);',
 
     '	gl_FragColor = outColor;',
     '}',
