@@ -508,8 +508,8 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
   float heightOfSunInSky = 5000.0 * sunZ; //5000.0 is presumed to be the radius of our sphere
   float heightOfMoonInSky = 5000.0 * moonZ;
 
-  float sunfade = 1.0-(1.0-exp(heightOfSunInSky/5000.0));
-  float moonfade = 1.0-(1.0-exp(heightOfMoonInSky/5000.0));
+  float sunfade = 1.0-clamp(1.0-exp((heightOfSunInSky/5000.0)),0.0,1.0);
+  float moonfade = 1.0-clamp(1.0-exp((heightOfMoonInSky/5000.0)),0.0,1.0);
   float reileighCoefficientOfSun = reileigh - (1.0-sunfade);
   float reileighCoefficientOfMoon = reileigh - (1.0-moonfade);
 

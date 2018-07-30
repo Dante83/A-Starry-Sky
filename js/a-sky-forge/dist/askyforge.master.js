@@ -184,11 +184,11 @@ var cloner = (function (O) {'use strict';
 AFRAME.registerShader('sky', {
   schema: {
     uTime: {type: 'number', default: 0.005, min: 0, max: 0.1, is: 'uniform' },
-    luminance: { type: 'number', default: 1, max: 0, min: 2, is: 'uniform' },
-    turbidity: { type: 'number', default: 2, max: 0, min: 20, is: 'uniform' },
-    reileigh: { type: 'number', default: 1, max: 0, min: 4, is: 'uniform' },
-    mieCoefficient: { type: 'number', default: 0.005, min: 0, max: 0.1, is: 'uniform' },
-    mieDirectionalG: { type: 'number', default: 0.8, min: 0, max: 1, is: 'uniform' },
+    luminance: { type: 'number', default: 1.0, max: 2.0, min: 0.0, is: 'uniform' },
+    turbidity: { type: 'number', default: 2.0, max: 20.0, min: 0.0, is: 'uniform' },
+    reileigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
+    mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
+    mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' },
     sunXYZPosition: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     sunPosition: { type: 'vec2', default: {x: 0.0,y: 0.0}, is: 'uniform' },
     moonTexture: {type: 'map', src:'../images/moon-dif-512.png', is: 'uniform'},
@@ -733,8 +733,8 @@ AFRAME.registerShader('sky', {
       'float heightOfSunInSky = 5000.0 * sunZ; //5000.0 is presumed to be the radius of our sphere',
       'float heightOfMoonInSky = 5000.0 * moonZ;',
 
-      'float sunfade = 1.0-(1.0-exp(heightOfSunInSky/5000.0));',
-      'float moonfade = 1.0-(1.0-exp(heightOfMoonInSky/5000.0));',
+      'float sunfade = 1.0-clamp(1.0-exp((heightOfSunInSky/5000.0)),0.0,1.0);',
+      'float moonfade = 1.0-clamp(1.0-exp((heightOfMoonInSky/5000.0)),0.0,1.0);',
       'float reileighCoefficientOfSun = reileigh - (1.0-sunfade);',
       'float reileighCoefficientOfMoon = reileigh - (1.0-moonfade);',
 
@@ -1516,6 +1516,25 @@ AFRAME.registerComponent('geo-coordinates', {
     long: {type: 'number', default: -122.4194}
   }
 });
+
+AFRAME.registerComponent('sky-params', {
+  dependencies: ['a-sky-forge'],
+  schema:{
+    luminance: { type: 'number', default: 1.0, max: 2.0, min: 0.0, is: 'uniform' },
+    turbidity: { type: 'number', default: 2.0, max: 20.0, min: 0.0, is: 'uniform' },
+    reileigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
+    mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
+    mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' }
+  },
+
+  init: function(){
+    this.el.components.material.material.uniforms.luminance.value = this.data.luminance;
+    this.el.components.material.material.uniforms.turbidity.value = this.data.turbidity;
+    this.el.components.material.material.uniforms.reileigh.value = this.data.reileigh;
+    this.el.components.material.material.uniforms.mieCoefficient.value = this.data.mieCoefficient;
+    this.el.components.material.material.uniforms.mieDirectionalG.value = this.data.mieDirectionalG;
+  }
+})
 
 AFRAME.registerComponent('sky-time', {
   fractionalSeconds: 0,

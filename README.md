@@ -78,7 +78,7 @@ One important caveat is that the time during the day is set in seconds via the `
 </a-scene>
 ```
 
-Another cool feature that may prove useful, is that we can speed up time in our universe using the `timeMultiplier` property in the sky-time `attribute`. Note that even though we are *speeding* up time, the effects like star twinkling will be unchanged by this attribute. It only impacts the positions of heavenly bodies, namely the sun, the moon and the stars.
+Another cool feature that may prove useful, is that we can speed up time in our universe using the `timeMultiplier` property in the `sky-time` attribute. Note that even though we are *speeding* up time, the effects like star twinkling will be unchanged by this attribute. It only impacts the positions of heavenly bodies, namely the sun, the moon and the stars.
 
 **Time goes 8 times as fast!**
 ```html
@@ -94,13 +94,35 @@ Another cool feature that may prove useful, is that we can speed up time in our 
 </a-scene>
 ```
 
-## Authors
-* **David Evans / Dante83** - *Initial work*
+**Let's Change Our Sky Params**
+
+In addition to changing date time parameters, you can also change the attributes of the atmosphere itself, using the `sky-params` attribute, using the properties `luminance`, `turbidity`, `reileigh`, `mieCoefficient` and `mieDirectionalG`.
+
+```html
+<a-scene>
+  <a-sky-forge sky-params="turbidity: 0.1" material="shader: sky;"></a-sky-forge>
+</a-scene>
+```
+
+Each of the attributes above changes a different property of the atmosphere for redder sunsets or more dust in the sky.
+
+## Sky Param Attributes
+* **luminance** is a value between 0.0 and 2.0.
+* **turbidity** is a value between 0.0 and 20.0. Changes the air dustier, resulting in more glow around the sun and moon from scattered light.
+* **reileigh** is a value between 0.0 and 4.0, Changes large particulate scattering with higher numbers tending towards redder sunsets but also wider rings.
+* **mieCoefficient** is a value between 0.0 and 0.1 , Changes the scattering the sky, resulting in a bright glow around the sun and moon.
+* **mieDirectionalG** is a value between 0.0 and 1.0.
+
+## Dependent Work
+* **[ngoKevin](https://www.npmjs.com/~ngokevin) / [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky)** - *Created the initial base shader for my sky shader.*
+* **[Andrea Giammarchi](https://github.com/WebReflection) / [Deep Cloner](https://github.com/WebReflection/cloner)** - *Used for cloning JS objects, which isn't entirely trivial.*
+
+## Author
+* **David Evans / Dante83** - *Main Developer*
 
 ## References & Special Thanks
 * **Jean Meeus / [Astronomical Algorithms](http://www.willbell.com/math/mc1.htm)** - *Abso-frigging-lutely esential for positioning astronomical bodies*
-* **[ngoKevin](https://www.npmjs.com/~ngokevin) / [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky)** - *Created the initial base shader for my sky shader.*
-* **[Andrea Giammarchi](https://github.com/WebReflection) / [Deep Cloner](https://github.com/WebReflection/cloner)** - *Used for cloning JS objects, which isn't entirely trivial.*
+
 * *And plenty of other websites and individuals. Thank you for giving us the opportunity to stand on your giant-like shoulders.*
 
 ## License

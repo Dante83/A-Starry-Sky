@@ -38,6 +38,25 @@ AFRAME.registerComponent('geo-coordinates', {
   }
 });
 
+AFRAME.registerComponent('sky-params', {
+  dependencies: ['a-sky-forge'],
+  schema:{
+    luminance: { type: 'number', default: 1.0, max: 2.0, min: 0.0, is: 'uniform' },
+    turbidity: { type: 'number', default: 2.0, max: 20.0, min: 0.0, is: 'uniform' },
+    reileigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
+    mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
+    mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' }
+  },
+
+  init: function(){
+    this.el.components.material.material.uniforms.luminance.value = this.data.luminance;
+    this.el.components.material.material.uniforms.turbidity.value = this.data.turbidity;
+    this.el.components.material.material.uniforms.reileigh.value = this.data.reileigh;
+    this.el.components.material.material.uniforms.mieCoefficient.value = this.data.mieCoefficient;
+    this.el.components.material.material.uniforms.mieDirectionalG.value = this.data.mieDirectionalG;
+  }
+})
+
 AFRAME.registerComponent('sky-time', {
   fractionalSeconds: 0,
   dependencies: ['geo-coordinates', 'a-sky-forge'],
