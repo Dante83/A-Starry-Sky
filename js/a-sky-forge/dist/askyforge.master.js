@@ -189,10 +189,12 @@ AFRAME.registerShader('sky', {
     reileigh: { type: 'number', default: 1, max: 0, min: 4, is: 'uniform' },
     mieCoefficient: { type: 'number', default: 0.005, min: 0, max: 0.1, is: 'uniform' },
     mieDirectionalG: { type: 'number', default: 0.8, min: 0, max: 1, is: 'uniform' },
+    sunXYZPosition: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     sunPosition: { type: 'vec2', default: {x: 0.0,y: 0.0}, is: 'uniform' },
     moonTexture: {type: 'map', src:'../images/moon-dif-512.png', is: 'uniform'},
     moonNormalMap: {type: 'map', src:'../images/moon-nor-512.png', is: 'uniform'},
     moonTangentSpaceSunlight: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
+    moonXYZPosition: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     moonPosition: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     moonTangent: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
     moonBitangent: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
@@ -288,6 +290,7 @@ AFRAME.registerShader('sky', {
     'const int starOffsetBorder = 5;',
 
     '//Sun Data',
+    'uniform mediump vec3 sunXYZPosition;',
     'uniform mediump vec2 sunPosition;',
     'const float angularRadiusOfTheSun = 0.0245; //Real Values',
     '//const float angularRadiusOfTheSun = 0.054; //FakeyValues',
@@ -297,6 +300,7 @@ AFRAME.registerShader('sky', {
     'varying vec2 binormal;',
 
     '//Moon Data',
+    'uniform mediump vec3 moonXYZPosition;',
     'uniform float moonEE;',
     'uniform sampler2D moonTexture;',
     'uniform sampler2D moonNormalMap;',
@@ -716,20 +720,21 @@ AFRAME.registerShader('sky', {
       'float sunAz = sunPosition.x;',
       'float sunAlt = sunPosition.y;',
       'float zenithAngle = piOver2 - sunAlt; //This is not a zenith angle, this is altitude',
-      'float sunX = sin(zenithAngle) * cos(sunAz + pi);',
-      'float sunZ = sin(zenithAngle) * sin(sunAz + pi);',
-      'float sunY = cos(zenithAngle);',
+      'float sunX = sunXYZPosition.x;',
+      'float sunZ = sunXYZPosition.z;',
+      'float sunY = sunXYZPosition.y;',
       'float moonAz = moonAzimuthAndAltitude.x;',
       'float moonAlt = moonAzimuthAndAltitude.y;',
       'float moonZenithAngle = piOver2 - moonAlt;',
-      'float moonX = sin(moonZenithAngle) * cos(moonAz + pi);',
-      'float moonZ = sin(moonZenithAngle) * sin(moonAz + pi);',
-      'float moonY = cos(moonZenithAngle);',
+      'float moonX = moonXYZPosition.x;',
+      'float moonZ = moonXYZPosition.z;',
+      'float moonY = moonXYZPosition.y;',
 
       'float heightOfSunInSky = 5000.0 * sunZ; //5000.0 is presumed to be the radius of our sphere',
       'float heightOfMoonInSky = 5000.0 * moonZ;',
-      'float sunfade = 1.0-clamp(1.0-exp(heightOfSunInSky/5000.0),0.0,1.0);',
-      'float moonfade = 1.0-clamp(1.0-exp(heightOfMoonInSky/5000.0),0.0,1.0);',
+
+      'float sunfade = 1.0-(1.0-exp(heightOfSunInSky/5000.0));',
+      'float moonfade = 1.0-(1.0-exp(heightOfMoonInSky/5000.0));',
       'float reileighCoefficientOfSun = reileigh - (1.0-sunfade);',
       'float reileighCoefficientOfMoon = reileigh - (1.0-moonfade);',
 
@@ -784,7 +789,7 @@ AFRAME.registerShader('sky', {
 
       '//nightsky',
       'vec2 uv = vec2(azimuthOfPixel, (piOver2 - altitudeOfPixel)) / vec2(2.0*pi, pi) + vec2(0.5, 0.0);',
-      'vec3 L0 = vec3(0.1) * (Fex);',
+      'vec3 L0 = vec3(0.1) * (Fex + FexMoon);',
 
       '//Final lighting, duplicated above for coloring of sun',
       'vec3 texColor = (Lin + LinOfMoon + L0);',
@@ -914,6 +919,10 @@ var aDynamicSky = {
     //Get our actual positions
     this.sunPosition = this.getSunPosition();
     this.moonPosition = this.getMoonPosition();
+
+    //Convert these values to x, y and z, coordinates on the sky dome
+    this.sunXYZPosition = this.azAndAlt2XYZOnUnitSphereSkydome(this.sunPosition.azimuth, this.sunPosition.altitude);
+    this.moonXYZPosition = this.azAndAlt2XYZOnUnitSphereSkydome(this.moonPosition.azimuth, this.moonPosition.altitude);
 
     var moonMappingData = this.getMoonTangentSpaceSunlight(this.moonPosition.azimuth, this.moonPosition.altitude, this.sunPosition.azimuth, this.sunPosition.altitude);
     this.moonMappingTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
@@ -1408,6 +1417,14 @@ var aDynamicSky = {
 
   astroHoursMinuteSeconds2Degs: function(hours, minutes, seconds){
     return (360.0 * (hours * 3600.0 + minutes * 60.0 + seconds) / 86400.0);
+  },
+
+  azAndAlt2XYZOnUnitSphereSkydome: function(azimuth, altitude){
+    var zenithAngle = (Math.PI/ 2.0) - altitude;
+    var x = Math.sin(zenithAngle) * Math.cos(azimuth + Math.PI);
+    var z = Math.sin(zenithAngle) * Math.sin(azimuth + Math.PI);
+    var y = Math.cos(zenithAngle);
+    return new THREE.Vector3(x, y, z);
   }
 }
 
@@ -1621,6 +1638,9 @@ AFRAME.registerComponent('sky-time', {
       this.interpolator.setLinearInterpolationForScalar('moonAzimuth', ['moonPosition', 'azimuth'], false,);
       this.interpolator.setLinearInterpolationForScalar('moonAltitude', ['moonPosition', 'altitude'], false);
       this.interpolator.setLinearInterpolationForScalar('moonEE', ['moonEE'], false);
+
+      this.interpolator.setSLERPFor3Vect('sunXYZPosition', ['sunXYZPosition'], false);
+      this.interpolator.setSLERPFor3Vect('moonXYZPosition', ['moonXYZPosition'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingTangentSpaceSunlight', ['moonMappingTangentSpaceSunlight'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingPosition', ['moonMappingPosition'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingTangent', ['moonMappingTangent'], false);
@@ -1650,6 +1670,12 @@ AFRAME.registerComponent('sky-time', {
 
       this.el.components.material.material.uniforms.sunPosition.value.set(interpolatedValues.sunAzimuth, interpolatedValues.sunAltitude);
       this.el.components.material.material.uniforms.localSiderealTime.value = interpolatedValues.localSiderealTime;
+
+      //Hopefully SLERP is my answer for avoiding moon novas in the middle of the night
+      var sXYZ = interpolatedValues.sunXYZPosition;
+      var mXYZ = interpolatedValues.moonXYZPosition;
+      this.el.components.material.material.uniforms.sunXYZPosition.value.set(sXYZ.x, sXYZ.y, sXYZ.z);
+      this.el.components.material.material.uniforms.moonXYZPosition.value.set(mXYZ.x, mXYZ.y, mXYZ.z);
 
       var mtss = interpolatedValues.moonMappingTangentSpaceSunlight;
       var mp = interpolatedValues.moonMappingPosition;

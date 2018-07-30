@@ -54,6 +54,10 @@ var aDynamicSky = {
     this.sunPosition = this.getSunPosition();
     this.moonPosition = this.getMoonPosition();
 
+    //Convert these values to x, y and z, coordinates on the sky dome
+    this.sunXYZPosition = this.azAndAlt2XYZOnUnitSphereSkydome(this.sunPosition.azimuth, this.sunPosition.altitude);
+    this.moonXYZPosition = this.azAndAlt2XYZOnUnitSphereSkydome(this.moonPosition.azimuth, this.moonPosition.altitude);
+
     var moonMappingData = this.getMoonTangentSpaceSunlight(this.moonPosition.azimuth, this.moonPosition.altitude, this.sunPosition.azimuth, this.sunPosition.altitude);
     this.moonMappingTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
     this.moonMappingPosition = moonMappingData.moonPosition;
@@ -547,6 +551,14 @@ var aDynamicSky = {
 
   astroHoursMinuteSeconds2Degs: function(hours, minutes, seconds){
     return (360.0 * (hours * 3600.0 + minutes * 60.0 + seconds) / 86400.0);
+  },
+
+  azAndAlt2XYZOnUnitSphereSkydome: function(azimuth, altitude){
+    var zenithAngle = (Math.PI/ 2.0) - altitude;
+    var x = Math.sin(zenithAngle) * Math.cos(azimuth + Math.PI);
+    var z = Math.sin(zenithAngle) * Math.sin(azimuth + Math.PI);
+    var y = Math.cos(zenithAngle);
+    return new THREE.Vector3(x, y, z);
   }
 }
 

@@ -65,6 +65,7 @@ const float starRadiusMagnitudeMultiplier = 0.01;
 const int starOffsetBorder = 5;
 
 //Sun Data
+uniform mediump vec3 sunXYZPosition;
 uniform mediump vec2 sunPosition;
 const float angularRadiusOfTheSun = 0.0245; //Real Values
 //const float angularRadiusOfTheSun = 0.054; //FakeyValues
@@ -74,6 +75,7 @@ varying vec3 normal;
 varying vec2 binormal;
 
 //Moon Data
+uniform mediump vec3 moonXYZPosition;
 uniform float moonEE;
 uniform sampler2D moonTexture;
 uniform sampler2D moonNormalMap;
@@ -493,20 +495,21 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
   float sunAz = sunPosition.x;
   float sunAlt = sunPosition.y;
   float zenithAngle = piOver2 - sunAlt; //This is not a zenith angle, this is altitude
-  float sunX = sin(zenithAngle) * cos(sunAz + pi);
-  float sunZ = sin(zenithAngle) * sin(sunAz + pi);
-  float sunY = cos(zenithAngle);
+  float sunX = sunXYZPosition.x;
+  float sunZ = sunXYZPosition.z;
+  float sunY = sunXYZPosition.y;
   float moonAz = moonAzimuthAndAltitude.x;
   float moonAlt = moonAzimuthAndAltitude.y;
   float moonZenithAngle = piOver2 - moonAlt;
-  float moonX = sin(moonZenithAngle) * cos(moonAz + pi);
-  float moonZ = sin(moonZenithAngle) * sin(moonAz + pi);
-  float moonY = cos(moonZenithAngle);
+  float moonX = moonXYZPosition.x;
+  float moonZ = moonXYZPosition.z;
+  float moonY = moonXYZPosition.y;
 
   float heightOfSunInSky = 5000.0 * sunZ; //5000.0 is presumed to be the radius of our sphere
   float heightOfMoonInSky = 5000.0 * moonZ;
-  float sunfade = 1.0-clamp(1.0-exp(heightOfSunInSky/5000.0),0.0,1.0);
-  float moonfade = 1.0-clamp(1.0-exp(heightOfMoonInSky/5000.0),0.0,1.0);
+
+  float sunfade = 1.0-(1.0-exp(heightOfSunInSky/5000.0));
+  float moonfade = 1.0-(1.0-exp(heightOfMoonInSky/5000.0));
   float reileighCoefficientOfSun = reileigh - (1.0-sunfade);
   float reileighCoefficientOfMoon = reileigh - (1.0-moonfade);
 
@@ -561,7 +564,7 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
 
   //nightsky
   vec2 uv = vec2(azimuthOfPixel, (piOver2 - altitudeOfPixel)) / vec2(2.0*pi, pi) + vec2(0.5, 0.0);
-  vec3 L0 = vec3(0.1) * (Fex);
+  vec3 L0 = vec3(0.1) * (Fex + FexMoon);
 
   //Final lighting, duplicated above for coloring of sun
   vec3 texColor = (Lin + LinOfMoon + L0);

@@ -159,6 +159,9 @@ AFRAME.registerComponent('sky-time', {
       this.interpolator.setLinearInterpolationForScalar('moonAzimuth', ['moonPosition', 'azimuth'], false,);
       this.interpolator.setLinearInterpolationForScalar('moonAltitude', ['moonPosition', 'altitude'], false);
       this.interpolator.setLinearInterpolationForScalar('moonEE', ['moonEE'], false);
+
+      this.interpolator.setSLERPFor3Vect('sunXYZPosition', ['sunXYZPosition'], false);
+      this.interpolator.setSLERPFor3Vect('moonXYZPosition', ['moonXYZPosition'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingTangentSpaceSunlight', ['moonMappingTangentSpaceSunlight'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingPosition', ['moonMappingPosition'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingTangent', ['moonMappingTangent'], false);
@@ -188,6 +191,12 @@ AFRAME.registerComponent('sky-time', {
 
       this.el.components.material.material.uniforms.sunPosition.value.set(interpolatedValues.sunAzimuth, interpolatedValues.sunAltitude);
       this.el.components.material.material.uniforms.localSiderealTime.value = interpolatedValues.localSiderealTime;
+
+      //Hopefully SLERP is my answer for avoiding moon novas in the middle of the night
+      var sXYZ = interpolatedValues.sunXYZPosition;
+      var mXYZ = interpolatedValues.moonXYZPosition;
+      this.el.components.material.material.uniforms.sunXYZPosition.value.set(sXYZ.x, sXYZ.y, sXYZ.z);
+      this.el.components.material.material.uniforms.moonXYZPosition.value.set(mXYZ.x, mXYZ.y, mXYZ.z);
 
       var mtss = interpolatedValues.moonMappingTangentSpaceSunlight;
       var mp = interpolatedValues.moonMappingPosition;
