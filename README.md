@@ -107,10 +107,10 @@ In addition to changing date time parameters, you can also change the attributes
 Each of the attributes above changes a different property of the atmosphere for redder sunsets or more dust in the sky.
 
 ## Sky Param Attributes
-* **luminance** is a value between 0.0 and 2.0.
-* **turbidity** is a value between 0.0 and 20.0. Changes the air dustier, resulting in more glow around the sun and moon from scattered light.
-* **reileigh** is a value between 0.0 and 4.0, Changes large particulate scattering with higher numbers tending towards redder sunsets but also wider rings.
-* **mieCoefficient** is a value between 0.0 and 0.1 , Changes the scattering the sky, resulting in a bright glow around the sun and moon.
+* **luminance** is a value between 0.0 and 2.0. The default glow of the sky. Lower is higher, and this is best kept about 1.0.
+* **turbidity** is a value between 0.0 and 20.0. Changes the amount of particles in the air, which can adjust the intensity of light scattered.
+* **reileigh** is a value between 0.0 and 4.0. Changes the wavelength scattering of particles, resulting in bluer skies and redder sunsets.
+* **mieCoefficient** is a value between 0.0 and 0.1. Adjusts the Mie Scattering coefficient so that all light reaches you or is scattered appropriately.
 * **mieDirectionalG** is a value between 0.0 and 1.0.
 
 ## Dependent Work

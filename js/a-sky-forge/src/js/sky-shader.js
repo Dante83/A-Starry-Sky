@@ -82,7 +82,7 @@ AFRAME.registerShader('sky', {
     'const float mieZenithLength = 1.25E3;',
     'const vec3 up = vec3(0.0, 1.0, 0.0);',
 
-    'const float sunEE = 1360.0;',
+    'const float sunEE = 1000.0;',
     '//This varies with the phase of the moon',
     '//const float moonEE',
 
@@ -345,8 +345,14 @@ AFRAME.registerShader('sky', {
         'vec3 starColorVariation = hsv2rgb(vec3(hue, clamp(pow((1.0 - starAlt / piOver2), 3.0) / 2.0, 0.0, 0.2), 1.0));',
         '//vec3 colorOfPixel = mix(mix(starColorVariation, colorOfSky, (radiusOfStar - positionData.z)/(1.2 * radiusOfStar)), vec3(1.0), lightness);',
         'vec3 colorOfPixel = mix(mix(starColor, colorOfSky, (radiusOfStar - positionData.z)/(1.2 * radiusOfStar)), starColorVariation, lightness);',
-        'returnColor = vec4(colorOfPixel, lightness);',
+
+        '//Implement star fade so that stars dissapear below the horizon',
+        'float starHeight = 5000.0 * sin(starAlt);',
+        'float starFade = 1.0-clamp(1.0-exp(starHeight),0.0,1.0);',
+
+        'returnColor = vec4(colorOfPixel, lightness) * vec4(starFade);',
       '}',
+
 
       'return returnColor;',
     '}',
@@ -525,7 +531,7 @@ AFRAME.registerShader('sky', {
 
         'vec3 colorIntensity = pow(color, vec3(2.2));',
         'vec3 moonIntensity = pow(moonColor.xyz, vec3(2.2));',
-        'vec3 combinedIntensity = 0.5 * colorIntensity * moonIntensity + 0.5 * moonIntensity;',
+        'vec3 combinedIntensity = colorIntensity * moonIntensity;',
 
         '//TODO: We have both colors together, now we just have to appropriately mix them',
         'returnColor = vec4(pow(combinedIntensity, vec3(1.0/2.2)), moonColor.a);',
@@ -550,11 +556,8 @@ AFRAME.registerShader('sky', {
       'float moonZ = moonXYZPosition.z;',
       'float moonY = moonXYZPosition.y;',
 
-      'float heightOfSunInSky = 5000.0 * sunZ; //5000.0 is presumed to be the radius of our sphere',
-      'float heightOfMoonInSky = 5000.0 * moonZ;',
-
-      'float sunfade = 1.0-clamp(1.0-exp((heightOfSunInSky/5000.0)),0.0,1.0);',
-      'float moonfade = 1.0-clamp(1.0-exp((heightOfMoonInSky/5000.0)),0.0,1.0);',
+      'float sunfade = 1.0-clamp(1.0-exp(sunZ),0.0,1.0);',
+      'float moonfade = 1.0-clamp(1.0-exp(moonZ),0.0,1.0);',
       'float reileighCoefficientOfSun = reileigh - (1.0-sunfade);',
       'float reileighCoefficientOfMoon = reileigh - (1.0-moonfade);',
 
@@ -572,21 +575,21 @@ AFRAME.registerShader('sky', {
       'float moonE = lightIntensity(dotOfMoonDirectionAndUp, moonEE);',
 
       '//Acquire betaR and betaM',
-      'vec3 betaRSun = simplifiedRayleigh() * reileighCoefficientOfSun;',
-      'vec3 betaRMoon = simplifiedRayleigh() * reileighCoefficientOfMoon;',
+      'vec3 simplifiedRayleighVal = simplifiedRayleigh();',
+      'vec3 betaRSun = simplifiedRayleighVal * reileighCoefficientOfSun;',
+      'vec3 betaRMoon = simplifiedRayleighVal * reileighCoefficientOfMoon;',
       'vec3 betaM = totalMie(lambda, K, turbidity) * mieCoefficient;',
 
       '// Get the current optical length',
       '// cutoff angle at 90 to avoid singularity in next formula.',
       '//presuming here that the dot of the sun direction and up is also cos(zenith angle)',
-      'float sunR = rayleighZenithLength / (dotOfSunDirectionAndUp + 0.15 * pow(clamp(93.885 - (zenithAngle / deg2Rad), 0.0, 360.0), -1.253));',
-      'float moonR = rayleighZenithLength / (dotOfMoonDirectionAndUp + 0.15 * pow(clamp(93.885 - (moonZenithAngle / deg2Rad), 0.0, 360.0), -1.253));',
-      'float sunM = mieZenithLength / (dotOfSunDirectionAndUp + 0.15 * pow(clamp(93.885 - (zenithAngle / deg2Rad), 0.0, 360.0), -1.253));',
-      'float moonM = mieZenithLength / (dotOfMoonDirectionAndUp + 0.15 * pow(clamp(93.885 - (moonZenithAngle / deg2Rad), 0.0, 360.0), -1.253));',
+      'float zenithAngleOfCamera = acos(max(0.0, dot(up, normalize(vWorldPosition))));',
+      'float sR = rayleighZenithLength / (cos(zenithAngleOfCamera) + 0.15 * pow(93.885 - ((zenithAngleOfCamera * 180.0) / pi), -1.253));',
+      'float sM = mieZenithLength / (cos(zenithAngleOfCamera) + 0.15 * pow(93.885 - ((zenithAngleOfCamera * 180.0) / pi), -1.253));',
 
       '// combined extinction factor',
-      'vec3 Fex = exp(-(betaRSun * sunR + betaM * sunM));',
-      'vec3 FexMoon = exp(-(betaRMoon * moonR + betaM * moonM));',
+      'vec3 Fex = exp(-(betaRSun * sR + betaM * sM));',
+      'vec3 FexMoon = exp(-(betaRMoon * sR + betaM * sM));',
 
       '// in scattering',
       'float cosTheta = dot(normalize(vWorldPosition - vec3(0.0)), floatSunPosition);',
