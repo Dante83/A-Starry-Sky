@@ -347,8 +347,8 @@ AFRAME.registerShader('sky', {
         'vec3 colorOfPixel = mix(mix(starColor, colorOfSky, (radiusOfStar - positionData.z)/(1.2 * radiusOfStar)), starColorVariation, lightness);',
 
         '//Implement star fade so that stars dissapear below the horizon',
-        'float starHeight = 5000.0 * sin(starAlt);',
-        'float starFade = 1.0-clamp(1.0-exp(starHeight),0.0,1.0);',
+        'float starHeight = sin(starAlt);',
+        'float starFade = 1.0-clamp(1.0-exp(starHeight*15.0),0.0,1.0);',
 
         'returnColor = vec4(colorOfPixel, lightness) * vec4(starFade);',
       '}',
@@ -476,7 +476,7 @@ AFRAME.registerShader('sky', {
       'vec3 pixelPos = vec3(pixelX, pixelY, pixelZ);',
 
       '//Get the vector between the moons center and this pixels',
-      'vec3 vectorBetweenPixelAndMoon = pixelPos - moonPosition;',
+      'vec3 vectorBetweenPixelAndMoon = moonPosition - pixelPos;',
 
       '//Now dot this with the tangent and bitangent vectors to get our location.',
       'float deltaX = dot(vectorBetweenPixelAndMoon, moonTangent);',
@@ -501,9 +501,9 @@ AFRAME.registerShader('sky', {
 
         '//Get the moon shadow using the normal map',
         '//Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!',
-        'vec3 moonSurfaceNormal = normalize(2.0 * texture2D(moonNormalMap, position.xy).rgb - 1.0);',
-
-        '//We should probably convert these over to magnitudes before performing our dot product and then convert it back again.',
+        'vec3 moonNormalMapRGB = texture2D(moonNormalMap, position.xy).rgb;',
+        'vec3 moonNormalMapInverted = vec3(1.0 - moonNormalMapRGB.r, 1.0 - moonNormalMapRGB.g, moonNormalMapRGB.b);',
+        'vec3 moonSurfaceNormal = normalize(2.0 * moonNormalMapInverted.rgb - 1.0);',
 
         '//The moon is presumed to be a lambert shaded object, as per:',
         '//https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection',
