@@ -1,6 +1,6 @@
 # A Sky Forge
 
-A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It builds upon on the work of [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to provide a vibrant living sky for your metaverse. Click [here](http://code-panda.com/pages/projects/a_sky_forge_example) to see this project in action (**Warning: requires a powerful GPU do not open on a mobile phone**).
+A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It builds upon on the work of [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to provide a vibrant living sky for your metaverse. Click [here](http://code-panda.com/pages/projects/v0_2_0/a_sky_forge_example) to see this project in action (**Warning: requires a powerful GPU - do not open on a mobile phone**).
 
 ## Prerequisites
 
@@ -11,13 +11,13 @@ This is built for the [A-Frame Web Framework](https://aframe.io/).
 ## Installing
 
 When installing A-Sky-Forge, you'll want the code located in js/a-sky-forge/dist.
-Copy the minified file, askyforge.v0.1.0.js into your javascripts directory and the images in copy_me_to_image_dir into your image directory.
+Copy the minified file, askyforge.v0.2.0.js into your javascripts directory and the images in copy_me_to_image_dir into your image directory.
 
 On your webpage make sure that the script link to ask forge goes below aframe, like so
 
 ```html
 <script src="https://aframe.io/releases/0.7.0/aframe.min.js"></script>
-<script src="../js/a-sky-forge/dist/askyforge.v0.1.0.min.js"></script>
+<script src="../js/a-sky-forge/dist/askyforge.v0.2.0.min.js"></script>
 ```
 
 Once these references are set up, add the a-sky-forge component into your a-scene-tag.
