@@ -1,6 +1,6 @@
 # A Sky Forge
 
-A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It builds upon on the work of [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to provide a vibrant living sky for your metaverse. Click [here](http://code-panda.com/pages/projects/a_sky_forge_example) to see this project in action (**Warning: requires a powerful GPU do not open on a mobile phone**).
+A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It builds upon on the work of [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to provide a vibrant living sky for your metaverse. Click [here](http://code-panda.com/pages/projects/v0_2_0/a_sky_forge_example) to see this project in action (**Warning: requires a powerful GPU do not open on a mobile phone**).
 
 ## Prerequisites
 
