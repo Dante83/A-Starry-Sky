@@ -11,13 +11,13 @@ This is built for the [A-Frame Web Framework](https://aframe.io/).
 ## Installing
 
 When installing A-Sky-Forge, you'll want the code located in js/a-sky-forge/dist.
-Copy the minified file, askyforge.v0.2.0.js into your javascripts directory and the images in copy_me_to_image_dir into your image directory.
+Copy the minified file, askyforge.v0.2.1.js into your javascripts directory and the images in copy_me_to_image_dir into your image directory.
 
 On your webpage make sure that the script link to ask forge goes below aframe, like so
 
 ```html
 <script src="https://aframe.io/releases/0.7.0/aframe.min.js"></script>
-<script src="../js/a-sky-forge/dist/askyforge.v0.2.0.min.js"></script>
+<script src="../js/a-sky-forge/dist/askyforge.v0.2.1.min.js"></script>
 ```
 
 Once these references are set up, add the a-sky-forge component into your a-scene-tag.

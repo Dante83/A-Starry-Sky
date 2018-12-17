@@ -19,7 +19,7 @@ AFRAME.registerPrimitive('a-sky-forge', AFRAME.utils.extendDeep({}, meshMixin, {
     defaultComponents: {
       geometry: {
         primitive: 'sphere',
-        radius: 9000,
+        radius: 5000,
         segmentsWidth: 64,
         segmentsHeight: 32
       },
