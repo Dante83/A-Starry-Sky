@@ -220,17 +220,17 @@ def main():
                 padded_image[y + padding][x + padding + (index * (image_width + 2 * padding))] = sub_image[y if y <= 0 else (y % image_height)][x if x <= 0 else (x % image_width)]
         imarray = np.asarray(padded_sub_image)
         im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-        im.save('../../../../images/padded-starry-sub-data-%d.png'%(index))
+        im.save('../../images/padded-starry-sub-data-%d.png'%(index))
 
     #Convert this array into a png that we can later import and use to populate our stars at key points
     imarray = np.asarray(star_out_array)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-    im.save('../../../../images/starry-data.png')
+    im.save('../../images/starry-data.png')
 
     #And the padded data
     imarray = np.asarray(padded_image)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-    im.save('../../../../images/padded-starry-data.png')
+    im.save('../../images/padded-starry-data.png')
 
 #And now to run the entire application :D
 main()

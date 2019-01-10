@@ -1,0 +1,8 @@
+/**
+* Constructor
+*/
+AstromicalBody::AstronomicalBody(){
+
+}
+
+AstronomicalBody
