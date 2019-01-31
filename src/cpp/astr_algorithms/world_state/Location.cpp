@@ -4,19 +4,19 @@
 //
 //Getters
 //
-float * Location::GetLatitude(){
+float& Location::GetLatitude(){
   return lat;
 }
 
-float * Location::GetLongitude(){
+float& Location::GetLongitude(){
   return long;
 }
 
-double * Location::GetLatitudeInRads(){
+double& Location::GetLatitudeInRads(){
   return long;
 }
 
-double * Location::GetLongitudeInRads(){
+double& Location::GetLongitudeInRads(){
   return long;
 }
 
@@ -26,6 +26,6 @@ double * Location::GetLongitudeInRads(){
 void Location::SetLatitudeAndLongitude(double latitude, double longitude){
   lat = latitude;
   lon = longitude;
-  latInRads = static_cast<double>(latitude) * DEG2RAD;
-  lonInRads = static_cast<double>(longitude) * DEG2RAD;
+  latInRads = ((double) latitude) * DEG2RAD;
+  lonInRads = ((double) longitude) * DEG2RAD;
 }

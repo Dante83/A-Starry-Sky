@@ -8,55 +8,6 @@ if(typeof exports !== 'undefined') {
   aDynamicSky = aSkyForgeMethodExports.aDynamicSky;
 }
 
-// The mesh mixin provides common material properties for creating mesh-based primitives.
-// This makes the material component a default component and maps all the base material properties.
-var meshMixin = AFRAME.primitives.getMeshMixin();
-
-//Create primitive data associated with this, based off a-sky
-//https://github.com/aframevr/aframe/blob/master/src/extras/primitives/primitives/a-sky.js
-AFRAME.registerPrimitive('a-sky-forge', AFRAME.utils.extendDeep({}, meshMixin, {
-    // Preset default components. These components and component properties will be attached to the entity out-of-the-box.
-    defaultComponents: {
-      geometry: {
-        primitive: 'sphere',
-        radius: 5000,
-        segmentsWidth: 64,
-        segmentsHeight: 32
-      },
-      scale: '-1, 1, 1',
-      "geo-coordinates": 'lat: 37.7749; long: -122.4194',
-      "sky-time": `timeOffset: ${Math.round(dynamicSkyEntityMethods.getSecondOfDay())}; utcOffset: 0; timeMultiplier: 1.0; dayOfTheYear: ${Math.round(dynamicSkyEntityMethods.getDayOfTheYear())}; year: ${Math.round(dynamicSkyEntityMethods.getYear())}`
-    }
-  }
-));
-
-//Register associated components
-AFRAME.registerComponent('geo-coordinates', {
-  schema: {
-    lat: {type: 'number', default: 37.7749},
-    long: {type: 'number', default: -122.4194}
-  }
-});
-
-AFRAME.registerComponent('sky-params', {
-  dependencies: ['a-sky-forge'],
-  schema:{
-    luminance: { type: 'number', default: 1.0, max: 2.0, min: 0.0, is: 'uniform' },
-    turbidity: { type: 'number', default: 2.0, max: 20.0, min: 0.0, is: 'uniform' },
-    reileigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
-    mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
-    mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' }
-  },
-
-  init: function(){
-    this.el.components.material.material.uniforms.luminance.value = this.data.luminance;
-    this.el.components.material.material.uniforms.turbidity.value = this.data.turbidity;
-    this.el.components.material.material.uniforms.reileigh.value = this.data.reileigh;
-    this.el.components.material.material.uniforms.mieCoefficient.value = this.data.mieCoefficient;
-    this.el.components.material.material.uniforms.mieDirectionalG.value = this.data.mieDirectionalG;
-  }
-})
-
 AFRAME.registerComponent('sky-time', {
   fractionalSeconds: 0,
   dependencies: ['geo-coordinates', 'a-sky-forge'],

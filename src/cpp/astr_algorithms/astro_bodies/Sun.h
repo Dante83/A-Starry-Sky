@@ -1,8 +1,11 @@
 #include AstronomicalBody.cpp;
 
 class Sun:AstronomicalBody{
-  private:
-    AstronomicalBody positionData;
-  public:
-    Sun::Sun(WorldState worldState);
+private:
+  double distance2Earth;
+  double longitude;
+  double manAnomoly;
+  double meanLongitude;
+public:
+  update();
 }

@@ -13,9 +13,9 @@ public:
     this.SetLatitudeAndLongitude(latitude, longitude);
   }
 
-  float * GetLatitude();
-  float * GetLongitude();
-  float * GetLatitudeInRads();
-  float * GetLongitudeInRads();
+  float& GetLatitude();
+  float& GetLongitude();
+  float& GetLatitudeInRads();
+  float& GetLongitudeInRads();
   void SetLatitudeAndLongitude(double latitude, double longitude);
 }

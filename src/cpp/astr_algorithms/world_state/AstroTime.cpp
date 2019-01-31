@@ -24,16 +24,16 @@ void AstroTime::updateIsLeapYear(){
 }
 
 void AstroTime::updateDayOfTheYear(unsigned short& dayOfMonth){
-  short unsigned daysUpToMonth[11];
+  unsigned short daysUpToMonth[11];
   float fltYear = static_cast<float>(year);
-  if(fltYear == 0.0 || fltYear % 4 == 0.0){
+  if(fltYear == 0.0 || year % 4 == 0.0){
     daysUpToMonth = {31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
   }
   else{
     daysUpToMonth = {31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
   }
 
-  dayOfTheYear = daysUpToMonth[static_cast<int>(month)] + dayOfMonth;
+  dayOfTheYear = daysUpToMonth[month] + dayOfMonth;
 }
 
 void AstroTime::updateJulianDayAndCentury(){
@@ -79,13 +79,13 @@ void AstroTime::updateJulianDayAndCentury(){
   short unsigned jHour = floor(timeInDay * INV_SECONDS_IN_HOUR);
   short unsigned jMinute = floor((timeInDay % SECONDS_IN_HOUR) * INV_SECONDS_IN_MINUTE);
   short unsigned jSecond = floor(timeInDay % SECONDS_IN_MINUTE);
-  int B = 0;
+  double B = 0.0;
   //Does this happen after the Gregorian date of 1582-10-15 15:00:00
   if (1582 < jYear || 10 < jYear || 15 < jDay || 12 < jHour || 0 < jMinute || 0 < jSecond) {
-    int A = floor(jYear * 0.01);
-    B = 2 - A + floor(A * 0.25);
+    double A = floor((double) jYear * 0.01);
+    B = 2.0 - A + floor(A * 0.25);
   }
-  julianDay = floor(365.25 * (jYear + 4716)) + floor(30.6001 * (jMonth + 1)) + jDay + B - 1524.5;
+  julianDay = floor(365.25 * ((double) jYear + 4716.0)) + floor(30.6001 * ((double) jMonth + 1.0)) + (double) jDay + B - 1524.5;
 
   //Finally let's calculate the Julian Century
   //(julianDay - 2451545.0) / 36525.0;
@@ -95,9 +95,9 @@ void AstroTime::updateJulianDayAndCentury(){
 //
 //Getters
 //
-double* getJulianDay(){
+double& AstroTime::getJulianDay(){
   return julianDay;
 };
-double* getJulianCentury(){
+double& AstroTime::getJulianCentury(){
   return julianCentury;
 };

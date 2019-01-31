@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+
+    <meta charset="UTF-8">
+    <title>Dynamic Sky Example</title>
+
+    <!--Meta-->
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no,user-scalable=no,maximum-scale=1">
+
+    <script src="https://aframe.io/releases/0.8.0/aframe.min.js"></script>
+    <!--This commented out code is the unfurled stack which I use for debugging-->
+    <!-- Root methods -->
+    <script src="../src/js/starry-sky-engine.js"></script>
+
+    <!-- A-Frame Extensions -->
+    <script src="../src/js/primitives/a-starry-sky.js"></script>
+    <script src="../src/js/components/sky-engine.js"></script>
+
+    <!--- Custom HTML Tags -->
+    <script src="../src/js/html_tags/sky-assets.js"></script>
+    <script src="../src/js/html_tags/sky-location.js"></script>
+    <script src="../src/js/html_tags/sky-parameters.js"></script>
+    <script src="../src/js/html_tags/sky-time.js"></script>
+
+    <!-- <script src="../dist/askyforge.v0.2.1.min.js"></script> -->
+
+  <!--Scene Scripts-->
+  </head>
+  <body>
+    <a-scene physics>
+      <!-- Sky Setup -->
+      <a-starry-sky>
+        <sky-location>
+          <sky-latitude>37.7749</sky-latitude>
+          <sky-longitude>-122.4194</sky-longitude>
+        </sky-location>
+        <sky-time>
+          <sky-date>01-30-2019 04:53:15</sky-date>
+          <sky-utc-offset>-8</sky-utc-offset>
+          <sky-time-multiplier>8.0</sky-time-multiplier>
+        </sky-time>
+        <sky-parameters>
+          <sky-luminance>1.0</sky-luminance>
+          <sky-mie-coefficient>0.005</sky-mie-coefficient>
+          <sky-mie-directional-g>0.8</sky-mie-directional-g>
+          <sky-reileigh>2.0</sky-reileigh>
+          <sky-turbidity>1.0</sky-turbidity>
+        </sky-parameters>
+        <sky-asset-dir dir="'../images/'">
+          <sky-moon-texture>moon-dif-1024.png</sky-moon-texture>
+          <sky-moon-normal-map>mon-nor-1024.png</sky-moon-normal-map>
+          <sky-stars>star-data.bin</sky-stars>
+        </sky-asset-dir>
+      </a-starry-sky>
+
+      <!-- Scene Setup-->
+      <a-mountain></a-mountain>
+    </a-scene>
+  </body>
+</html>

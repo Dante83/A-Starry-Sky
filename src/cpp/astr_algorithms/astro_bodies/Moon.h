@@ -1,10 +1,9 @@
-#include AstronomicalBody.cpp;
-#include Sun.cpp;
+#include "AstronomicalBody.cpp"
 
 class Moon:AstronomicalBody{
-  private:
-    Sun sun;
-    AstronomicalBody positionData;
-  public:
-    Moon::Moon(WorldState worldState);
+private:
+  Sun* sun;
+public:
+  Moon(SkyManager& skyManagerRef, Sun* sunRef);
+  void update();
 }

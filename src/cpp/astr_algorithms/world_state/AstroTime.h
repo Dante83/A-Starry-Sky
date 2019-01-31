@@ -1,6 +1,6 @@
 #include <ctime>
 #include <string>
-#include "../../Constants.h"
+#include "Constants.h"
 
 using namespace std;
 
@@ -25,7 +25,7 @@ public:
   //
   //Constructors
   //
-  AstroTime::AstroTime(short yr, unsigned char mnth, unsigned char d, unsigned char h, unsigned char m, unsigned char s, float uOffset){
+  AstroTime(short yr, unsigned char mnth, unsigned char d, unsigned char h, unsigned char m, unsigned char s, float uOffset){
     //Initialize all of our variables and get everything running no matter what
     year = yr;
     month = mnth;

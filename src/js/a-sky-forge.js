@@ -458,9 +458,9 @@ var aDynamicSky = {
   },
 
   convert2NormalizedGPUCoords: function(azimuth, altitude){
-    var x = Math.sin(azimuth) * Math.cos(altitude - 3 * Math.PI / 2); //Define me as true north, switch to minus one to define me as south.
-    var y = Math.sin(azimuth) * Math.sin(altitude - 3 * Math.PI / 2);
-    var z = Math.cos(altitude - 3 * Math.PI / 2);
+    var x = Math.sin(azimuth) * Math.cos(altitudeMinusThreePiOver2); //Define me as true north, switch to minus one to define me as south.
+    var y = Math.sin(azimuth) * Math.sin(altitudeMinusThreePiOver2);
+    var z = Math.cos(altitudeMinusThreePiOver2);
 
     return {x: x, y: y, z: z};
   },

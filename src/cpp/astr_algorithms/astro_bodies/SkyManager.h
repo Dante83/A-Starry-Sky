@@ -4,15 +4,14 @@
 
 class SkyManager{
 private:
-  WorldState worldState;
+  WorldState& worldState;
   Moon moon;
   Sun sun;
-  Planet planets [4];
+  Planet planets[4];
 public:
-  SkyManager::SkyManager(WorldState worldState);
-  getMoon();
-  getSun();
-  getPlanetByNumber();
-  getPlanetByName();
-  updateAll();
+  SkyManager(WorldState& worldStateRef);
+  Moon* getMoon();
+  Sun* getSun();
+  Planet* getPlanetByNumber(planetNumber);
+  void update();
 }
