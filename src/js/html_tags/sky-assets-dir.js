@@ -4,14 +4,17 @@ window.customElements.define('sky-moon-normal-map', class extends HTMLElement{})
 window.customElements.define('sky-stars', class extends HTMLElement{});
 
 //Parent class
-class SkyAssetDir extends HTMLElement {
+class SkyAssetsDir extends HTMLElement {
   constructor(){
     super();
 
     //Check if there are any child elements. Otherwise set them to the default.
-    this.moonTexture;
-    this.moonNormalTexture;
-    this.starBinaryData;
+    this.skyDataLoaded = false;
+    this.data = {
+      moonTexture: null,
+      moonNormalTexture: null,
+      starBinaryData: null
+    };
   }
 
   connectedCallback(){
@@ -27,15 +30,22 @@ class SkyAssetDir extends HTMLElement {
 
       [moonTextureTags, moonNormalTextureTags, starBinaryDataTags].forEach(function(tags){
         if(tags.length > 1){
-          console.error(`The <sky-asset-dir> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+          console.error(`The <sky-assets-dir> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
       });
 
+      let prefix = 'dir' in self.attributes ? self.attributes.dir.value : '';
+
       //Set the params to appropriate values or default
-      self.moonTexture = moonTextureTags.length > 0 ? parseFloat(moonTextureTags[0].innerHTML) : null;
-      self.moonNormalTexture = moonNormalTextureTags.length > 0 ? parseFloat(moonNormalTextureTags[0].innerHTML) : null;
-      this.starBinaryData = starBinaryDataTags.length > 0 ? parseFloat(starBinaryDataTags[0].innerHTML) : null;
+      self.data.moonTexture = moonTextureTags.length > 0 ? prefix.concat(moonTextureTags[0].innerHTML) : null;
+      self.data.moonNormalTexture = moonNormalTextureTags.length > 0 ? prefix.concat(moonNormalTextureTags[0].innerHTML) : null;
+      self.data.starBinaryData = starBinaryDataTags.length > 0 ? prefix.concat(starBinaryDataTags[0].innerHTML) : null;
+      self.skyDataLoaded = true;
+
+      self.dispatchEvent(new Event('Sky-Data-Loaded'));
     });
+
+    this.loaded = true;
   };
 }
-window.customElements.define('sky-asset-dir', SkyAssetDir);
+window.customElements.define('sky-assets-dir', SkyAssetsDir);

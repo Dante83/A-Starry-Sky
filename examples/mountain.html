@@ -12,14 +12,14 @@
     <script src="https://aframe.io/releases/0.8.0/aframe.min.js"></script>
     <!--This commented out code is the unfurled stack which I use for debugging-->
     <!-- Root methods -->
-    <script src="../src/js/starry-sky-engine.js"></script>
+    <script src="../src/js/starry-sky-loader.js"></script>
 
     <!-- A-Frame Extensions -->
     <script src="../src/js/primitives/a-starry-sky.js"></script>
     <script src="../src/js/components/sky-engine.js"></script>
 
     <!--- Custom HTML Tags -->
-    <script src="../src/js/html_tags/sky-assets.js"></script>
+    <script src="../src/js/html_tags/sky-assets-dir.js"></script>
     <script src="../src/js/html_tags/sky-location.js"></script>
     <script src="../src/js/html_tags/sky-parameters.js"></script>
     <script src="../src/js/html_tags/sky-time.js"></script>
@@ -45,14 +45,14 @@
           <sky-luminance>1.0</sky-luminance>
           <sky-mie-coefficient>0.005</sky-mie-coefficient>
           <sky-mie-directional-g>0.8</sky-mie-directional-g>
-          <sky-reileigh>2.0</sky-reileigh>
+          <sky-rayleigh>2.0</sky-rayleigh>
           <sky-turbidity>1.0</sky-turbidity>
         </sky-parameters>
-        <sky-asset-dir dir="'../images/'">
+        <sky-assets-dir dir="../assets/">
           <sky-moon-texture>moon-dif-1024.png</sky-moon-texture>
-          <sky-moon-normal-map>mon-nor-1024.png</sky-moon-normal-map>
+          <sky-moon-normal-map>moon-nor-1024.png</sky-moon-normal-map>
           <sky-stars>star-data.bin</sky-stars>
-        </sky-asset-dir>
+        </sky-assets-dir>
       </a-starry-sky>
 
       <!-- Scene Setup-->

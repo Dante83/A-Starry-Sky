@@ -11,10 +11,12 @@ class SkyTime extends HTMLElement {
   constructor(){
     super();
 
-    //Set this to hidden
-    this.date = null;
-    this.utcOffset = null;
-    this.timeMultiplier = null;
+    this.skyDataLoaded = false;
+    this.data = {
+      date: null,
+      utcOffset: null,
+      timeMultiplier: null
+    };
   };
 
   connectedCallback(){
@@ -35,9 +37,23 @@ class SkyTime extends HTMLElement {
       });
 
       //Set the params to appropriate values or default
-      self.date = skyDateTags.length > 0 ? skyDateTags[0].innerHTML : null;
-      self.utcOffset = utcOffsetTags.length > 0 ? parseFloat(utcOffsetTags[0].innerHTML) : null;
-      self.timeMultiplier = timeMultiplierTags.length > 0 ? parseFloat(imeMultiplierTags[0].innerHTML) : null;
+      self.data.date = skyDateTags.length > 0 ? skyDateTags[0].innerHTML : null;
+      self.data.utcOffset = utcOffsetTags.length > 0 ? parseFloat(utcOffsetTags[0].innerHTML) : null;
+      self.data.timeMultiplier = timeMultiplierTags.length > 0 ? parseFloat(timeMultiplierTags[0].innerHTML) : null;
+
+      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
+        let result = Math.min(Math.max(inValue, minValue), maxValue);
+        if(inValue > maxValue || inValue < minValue){
+          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
+        }
+        return result;
+      };
+
+      //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
+      self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, -12.0, 14.0, '<sky-utc-offset>') : null;
+      self.data.mieDirectionalG = self.data.mieDirectionalG ? clampAndWarn(self.data.mieDirectionalG, 0.0, 1000.0, '<sky-time-multiplier>') :null;
+      self.skyDataLoaded = true;
+      document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });
   };
 }

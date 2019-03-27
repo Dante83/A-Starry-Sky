@@ -25,7 +25,7 @@ public:
   //
   //Constructors
   //
-  AstroTime(short yr, unsigned char mnth, unsigned char d, unsigned char h, unsigned char m, unsigned char s, float uOffset){
+  AstroTime(short yr, unsigned short int mnth, unsigned short int d, unsigned short int h, unsigned short int m, unsigned short int s, float uOffset){
     //Initialize all of our variables and get everything running no matter what
     year = yr;
     month = mnth;
