@@ -1,21 +1,23 @@
 #include "Constants.h"
 
+#ifndef LOCATION
+#define LOCATION
 class Location{
 private:
-  float lat;
-  float lon;
+  double lat;
+  double lng;
   double latInRads;
   double lonInRads;
 public:
-  Location::Location(float latitude, float longitude){
-    latitude = (lat == NULL) ? DEFAULT_LATITUDE : latitude;
-    longitude = (lon == NULL) ? DEFAULT_LONGITUDE : longitude;
-    this.SetLatitudeAndLongitude(latitude, longitude);
-  }
+  //Constructor
+  Location();
+  Location(double latitude, double longitude);
 
-  float& GetLatitude();
-  float& GetLongitude();
-  float& GetLatitudeInRads();
-  float& GetLongitudeInRads();
-  void SetLatitudeAndLongitude(double latitude, double longitude);
-}
+  //Getters and setters
+  void setLatitudeAndLongitude(double latitude, double longitude);
+  double& getLatitude();
+  double& getLongitude();
+  double& getLatitudeInRads();
+  double& getLongitudeInRads();
+};
+#endif

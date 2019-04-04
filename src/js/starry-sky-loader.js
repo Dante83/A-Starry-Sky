@@ -30,6 +30,7 @@ function StarrySkyLoader(starrySkyComponent){
   this.hasSkyParametersTag = false;
   this.skyAssetsTag;
   this.hasSkyAssetsTag = false;
+  this.readyForTickTock = false;
   let self = this;
 
   //This is the function that gets called each time our data loads.
@@ -39,14 +40,16 @@ function StarrySkyLoader(starrySkyComponent){
     self.skyDataSetsLoaded += 1;
     if(self.skyDataSetsLoaded >= self.skyDataSetsLength){
       self.loadSkyData();
+      return true;
     }
+    return false;
   };
 
   if(skyLocationTags.length === 1){
     this.skyLocationTag = skyLocationTags[0];
     this.hasSkyLocationTag = true;
-    if(this.skyLocationTag.skyDataLoaded){
-      checkIfNeedsToLoadSkyData();
+    if(this.skyLocationTag.skyDataLoaded && checkIfNeedsToLoadSkyData()){
+      return true;
     }
     else{
       this.skyLocationTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
@@ -55,8 +58,8 @@ function StarrySkyLoader(starrySkyComponent){
   if(skyTimeTags.length === 1){
     this.skyTimeTag = skyTimeTags[0];
     this.hasSkyTimeTag = true;
-    if(this.skyTimeTag.skyDataLoaded){
-      checkIfNeedsToLoadSkyData();
+    if(this.skyTimeTag.skyDataLoaded && checkIfNeedsToLoadSkyData()){
+      return true;
     }
     else{
       this.skyTimeTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
@@ -65,8 +68,8 @@ function StarrySkyLoader(starrySkyComponent){
   if(skyParametersTags.length === 1){
     this.skyParametersTag = skyParametersTags[0];
     this.hasSkyParametersTag = true;
-    if(this.skyParametersTag.skyDataLoaded){
-      checkIfNeedsToLoadSkyData();
+    if(this.skyParametersTag.skyDataLoaded && checkIfNeedsToLoadSkyData()){
+      return true;
     }
     else{
       this.skyParametersTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
@@ -75,8 +78,8 @@ function StarrySkyLoader(starrySkyComponent){
   if(skyAssetsTags.length === 1){
     this.skyAssetsTag = skyAssetsTags[0];
     this.hasSkyAssetsTag = true;
-    if(this.skyAssetsTag.skyDataLoaded){
-      checkIfNeedsToLoadSkyData();
+    if(this.skyAssetsTag.skyDataLoaded && checkIfNeedsToLoadSkyData()){
+      return true;
     }
     else{
       this.skyParametersTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
@@ -84,7 +87,9 @@ function StarrySkyLoader(starrySkyComponent){
   }
   if(this.skyDataSetsLength === 0 || this.skyDataSetsLoaded === this.skyDataSetsLength){
     this.loadSkyData();
+    return true;
   }
+  return false;
 };
 
 StarrySkyLoader.prototype.loadSkyData = function(){
@@ -139,7 +144,57 @@ StarrySkyLoader.prototype.initializeSkyEngine = function(){
   //------------------------
   //Initialize the state of our sky
   //------------------------
+  let currentDate = new Date(this.date);
 
+  //Construct our memory
+  let memory = new WebAssembly.Memory({initial: 1});
+  let buffer = memory.buffer;
+  let table = new WebAssembly.Table({ initial: 0, element: "anyfunc" });
+  function grow() {
+    let buffer = memory.buffer;
+    memory.i32 = new Int32Array(buffer);
+    memory.f32 = new Float32Array(buffer);
+  };
+  grow();
+  let env = {};
+  env.memoryBase = 0;
+  env.memory = memory;
+  env.tableBase = 0;
+  env.table = table;
+  env.tempDoublePtr;
+  env.DYNAMICTOP_PTR;
+  env._abort = errno => {throw Error("abnormal abort in " + file + ": " + errno);};
+  env._exit = code => {if (code) throw Error("abnormal exit in " + file + ": " + code);};
+  env._grow = grow;
+  let info = {
+    'env': env,
+    'global': {
+      'NaN': NaN,
+      'Infinity': Infinity
+    },
+    'global.Math': Math,
+    'asm2wasm': { // special asm2wasm imports
+      "f64-rem": function(x, y) {
+        return x % y;
+      },
+      "debugger": function() {
+        debugger;
+      }
+    }
+  };
+
+  let worker = new Worker("../src/js/starry-sky-web-worker.js");
+  fetch('../src/cpp/astr_algorithms/sky-state.wasm', { credentials: 'same-origin' })
+  .then(response => WebAssembly.instantiateStreaming(response, info))
+  .then(obj =>
+    worker.postMessage({
+      dateTime: currentDate,
+      wasmModule: obj.exports,
+      initializeSky: true,
+      callTick: false,
+      callTock: false,
+    })
+  );
 
   //------------------------
   //Construct our atmosphere dome
@@ -155,23 +210,25 @@ StarrySkyLoader.prototype.initializeSkyEngine = function(){
 }
 
 StarrySkyLoader.prototype.tick = function(){
-  //Check if any of our sky variables need updating and if so, grab them on a new web worker
+  if(this.readyForTickTock){
+    //Check if any of our sky variables need updating and if so, grab them on a new web worker
 
-  //Else run our SLERPs for each of our planetary bodies and the star dome
+    //Else run our SLERPs for each of our planetary bodies and the star dome
 
-  //Construct color intensities
+    //Construct color intensities
 
-  //Construct masks
-
+    //Construct masks
+  }
 };
 
 StarrySkyLoader.prototype.tock = function(){
-  //Implement bloom
+  if(this.readyForTickTock){
+    //Implement bloom
 
-  //Implement god rays
+    //Implement god rays
 
-  //Convert from HDR image to RGB image and merge
+    //Convert from HDR image to RGB image and merge
 
-  //Draw this as the background texture for our screen.
-
+    //Draw this as the background texture for our screen.
+  }
 };

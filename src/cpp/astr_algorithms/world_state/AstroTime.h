@@ -1,51 +1,38 @@
-#include <ctime>
-#include <string>
 #include "Constants.h"
 
-using namespace std;
-
+#ifndef ASTROTIME
+#define ASTROTIME
 class AstroTime{
 private:
-  unsigned short dayOfTheYear;
-  short year;
-  unsigned short daysInYear;
-  unsigned char month;
-  unsigned char hour;
-  unsigned char minute;
-  unsigned char second;
-  float utcOffset;
+  int dayOfTheYear;
+  int year;
+  double dblYear;
+  int daysInYear;
+  int month;
+  int day;
+  int hour;
+  int minute;
+  double second;
+  double timeOfDayInSeconds;
+  double utcOffset;
   double julianDay;
   double julianCentury;
   bool isLeapYear;
-  unsigned short daysUpToMonth[11];
+  static int daysInLeapYear[];
+  static int daysInNormalYear[];
+  int* daysUpToMonth;
   void updateIsLeapYear();
-  void updateDayOfTheYear(unsigned short& dayOfMonth);
+  void updateDayOfTheYear(int& dayOfMonth);
   void updateJulianDayAndCentury();
 public:
-  //
-  //Constructors
-  //
-  AstroTime(short yr, unsigned short int mnth, unsigned short int d, unsigned short int h, unsigned short int m, unsigned short int s, float uOffset){
-    //Initialize all of our variables and get everything running no matter what
-    year = yr;
-    month = mnth;
-    day = d;
-    hour = h;
-    minute = m;
-    second = s;
-    utcOffset = uOffset;
-    this.updateIsLeapYear();
-    this.updateDayOfTheYear(day);
-    this.updateJulianDayAndCentury();
-  };
-
-  //
-  //Public Methods
-  //
-  void setAstroTimeFromYMDHMSTZ(short yr, unsigned char mnth, unsigned char d, unsigned char h, unsigned char m, unsigned char s, float uOffset);
-  void addSeconds(unsigned short seconds);
+  //Constructor
+  AstroTime();
+  AstroTime(int yr, int mnth, int d, int h, int m, double s, double uOffset);
 
   //Getters and setters
-  double* getJulianDay();
-  double* getJulianCentury();
-}
+  void setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s, double uOffset);
+  void addSeconds(double seconds);
+  double& getJulianDay();
+  double& getJulianCentury();
+};
+#endif

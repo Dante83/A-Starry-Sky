@@ -4,12 +4,11 @@
 
 class SkyManager{
 private:
-  WorldState& worldState;
   Moon moon;
   Sun sun;
   Planet planets[4];
 public:
-  SkyManager(WorldState& worldStateRef);
+  SkyManager();
   Moon* getMoon();
   Sun* getSun();
   Planet* getPlanetByNumber(planetNumber);

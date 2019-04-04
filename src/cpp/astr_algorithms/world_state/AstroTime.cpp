@@ -1,12 +1,45 @@
 #include "AstroTime.h"
+#include <algorithm>
 #include <cmath>
-namespace "std";
 
-void AstroTime::setAstroTimeFromYMDHMSTZ(short yr, unsigned char mnth, unsigned char d, unsigned char h, unsigned char m, unsigned char s, float uOffset){
+//
+//Constructors
+//
+AstroTime::AstroTime(){};
+AstroTime::AstroTime(int yr, int mnth, int d, int h, int m, double s, double uOffset){
+  //Initialize all of our variables and get everything running no matter what
+  year = yr;
+  dblYear = static_cast<double>(year);
+  month = mnth;
+  day = d;
+  hour = h;
+  minute = m;
+  second = s;
+  timeOfDayInSeconds = static_cast<double>(((h * 60) + m) * 60) + s;
+  utcOffset = uOffset;
+
+  //Run internal methods
+  updateIsLeapYear();
+  updateDayOfTheYear(day);
+  updateJulianDayAndCentury();
+};
+
+//
+//Static variables
+//
+int AstroTime::daysInLeapYear[] = {31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
+int AstroTime::daysInNormalYear[] = {31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+
+//
+//Functions
+//
+void AstroTime::setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s, double uOffset){
   //Initialize all of our variables.
-  short potentialNewYear = yr;
+  year = yr;
+  dblYear = static_cast<double>(year);
+  int potentialNewYear = yr;
   if(potentialNewYear != year){
-    this.updateIsLeapYear();
+    updateIsLeapYear();
   }
   month = mnth;
   day = d;
@@ -14,38 +47,32 @@ void AstroTime::setAstroTimeFromYMDHMSTZ(short yr, unsigned char mnth, unsigned 
   minute = m;
   second = s;
   utcOffset = uOffset;
-  this.updateJulianDayAndCentury();
+  timeOfDayInSeconds = static_cast<double>(((h * 60) + m) * 60) + s;
+  updateJulianDayAndCentury();
 }
 
-void AstroTime::updateIsLeapYear(){
-  float fltYear = static_cast<float>(year);
-  isLeapYear = (fltYear % 4.0 == 0.0 || fltYear == 0.0) && (((fltYear % 100.0 == 0.0) && (fltYear % 400.0 == 0.0)) || (fltYear % 100.0 != 0.0);
+inline void AstroTime::updateIsLeapYear(){
+  isLeapYear = (fmod(dblYear, 4.0) == 0.0 || dblYear == 0.0) && (((fmod(dblYear, 100.0) == 0.0) && (fmod(dblYear, 400.0) == 0.0)) || (fmod(dblYear, 100.0) != 0.0));
   daysInYear = isLeapYear ? 366 : 365;
 }
 
-void AstroTime::updateDayOfTheYear(unsigned short& dayOfMonth){
-  unsigned short daysUpToMonth[11];
-  float fltYear = static_cast<float>(year);
-  if(fltYear == 0.0 || year % 4 == 0.0){
-    daysUpToMonth = {31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
+inline void AstroTime::updateDayOfTheYear(int& dayOfMonth){
+  if(dblYear == 0.0 || fmod(dblYear, 4.0) == 0.0){
+    daysUpToMonth = AstroTime::daysInLeapYear;
   }
   else{
-    daysUpToMonth = {31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
+    daysUpToMonth = AstroTime::daysInNormalYear;
   }
 
   dayOfTheYear = daysUpToMonth[month] + dayOfMonth;
 }
 
-void AstroTime::updateJulianDayAndCentury(){
-  //
-  //NOTE: We still haven't set this timeInDay thing
-  //
-  double fractionalTime = timeInDay * INV_SECONDS_IN_DAY;
-  short unsigned jMonth = 0;
-  short unsigned jDay = 0;
-  short jYear;
-  short unsigned daysPast = 0;
-  short unsigned previousMonthsDays = 0;
+inline void AstroTime::updateJulianDayAndCentury(){
+  double fractionalTime = timeOfDayInSeconds * INV_SECONDS_IN_DAY;
+  int jMonth = 0;
+  int jDay = 0;
+  int daysPast = 0;
+  int previousMonthsDays = 0;
 
   //January...
   if(daysUpToMonth[0] >= dayOfTheYear){
@@ -70,22 +97,22 @@ void AstroTime::updateJulianDayAndCentury(){
   }
 
   double fractionalDay = static_cast<double>(jDay) + fractionalTime;
-  jYear = year;
-  if(cMonth <= 2){
+  double jYear = static_cast<double>(year);
+  if(month <= 2){
     jYear = --jYear;
     jMonth = jMonth + 12;
   }
 
-  short unsigned jHour = floor(timeInDay * INV_SECONDS_IN_HOUR);
-  short unsigned jMinute = floor((timeInDay % SECONDS_IN_HOUR) * INV_SECONDS_IN_MINUTE);
-  short unsigned jSecond = floor(timeInDay % SECONDS_IN_MINUTE);
+  int jHour = floor(timeOfDayInSeconds * INV_SECONDS_IN_HOUR);
+  int jMinute = floor(fmod(timeOfDayInSeconds, SECONDS_IN_HOUR) * INV_SECONDS_IN_MINUTE);
+  int jSecond = floor(fmod(timeOfDayInSeconds, SECONDS_IN_MINUTE));
   double B = 0.0;
   //Does this happen after the Gregorian date of 1582-10-15 15:00:00
-  if (1582 < jYear || 10 < jYear || 15 < jDay || 12 < jHour || 0 < jMinute || 0 < jSecond) {
-    double A = floor((double) jYear * 0.01);
+  if (1582 < jYear || 10.0 < jYear || 15 < jDay || 12 < jHour || 0 < jMinute || 0 < jSecond) {
+    double A = floor(jYear * 0.01);
     B = 2.0 - A + floor(A * 0.25);
   }
-  julianDay = floor(365.25 * ((double) jYear + 4716.0)) + floor(30.6001 * ((double) jMonth + 1.0)) + (double) jDay + B - 1524.5;
+  julianDay = floor(365.25 * (jYear + 4716.0)) + floor(30.6001 * ((double) jMonth + 1.0)) + (double) jDay + B - 1524.5;
 
   //Finally let's calculate the Julian Century
   //(julianDay - 2451545.0) / 36525.0;

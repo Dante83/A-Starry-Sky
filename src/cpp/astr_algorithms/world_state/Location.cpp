@@ -2,30 +2,41 @@
 #include "Location.h"
 
 //
+//Constructor
+//
+Location::Location(){};//Default constructor
+Location::Location(double latitude, double longitude){
+  lat = latitude;
+  lng = longitude;
+  latInRads = latitude * DEG2RAD;
+  lonInRads = longitude * DEG2RAD;
+};
+
+//
 //Getters
 //
-float& Location::GetLatitude(){
+double& Location::getLatitude(){
   return lat;
 }
 
-float& Location::GetLongitude(){
-  return long;
+double& Location::getLongitude(){
+  return lng;
 }
 
-double& Location::GetLatitudeInRads(){
-  return long;
+double& Location::getLatitudeInRads(){
+  return latInRads;
 }
 
-double& Location::GetLongitudeInRads(){
-  return long;
+double& Location::getLongitudeInRads(){
+  return lonInRads;
 }
 
 //
 //Setters
 //
-void Location::SetLatitudeAndLongitude(double latitude, double longitude){
+void Location::setLatitudeAndLongitude(double latitude, double longitude){
   lat = latitude;
-  lon = longitude;
-  latInRads = ((double) latitude) * DEG2RAD;
-  lonInRads = ((double) longitude) * DEG2RAD;
+  lng = longitude;
+  latInRads = latitude * DEG2RAD;
+  lonInRads = longitude * DEG2RAD;
 }
