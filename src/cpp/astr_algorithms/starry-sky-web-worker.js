@@ -1,3 +1,6 @@
+// This loads the wasm generated glue code
+importScripts('sky-state.js');
+
 //
 //Return of global variables - because this is actually it's own little world
 //and so anarcho-communism still works perfectly fine... for now.
@@ -34,31 +37,32 @@ let update;
 // const float32DataArray = new Float32Array(12 + 12 + 4 + 10);
 // const uInt32DataArray = new Int32Array(5);
 // var buffer;
+Module['onRuntimeInitialized'] = function() {
+  wasmIsReady = true;
+  attemptInitializiation();
+};
 
 let attemptInitializiation = function(){
-  console.log("Initialization Attempted.");
-  //if(wasmIsReady && skyStateIsReady){
-  console.log('data inside of the web worker');
-  console.log(Module);
-  let julianDay = Module._initializeStarrySky(
-    skyState.latitude,
-    skyState.longitude,
-    skyState.year,
-    skyState.month,
-    skyState.day,
-    skyState.hour,
-    skyState.minute,
-    skyState.second,
-    postObject.utcOffset
-  );
-  console.log(julianDay);
+  if(wasmIsReady && skyStateIsReady){
+    let julianDay = Module._initializeStarrySky(
+      skyState.latitude,
+      skyState.longitude,
+      skyState.year,
+      skyState.month,
+      skyState.day,
+      skyState.hour,
+      skyState.minute,
+      skyState.second,
+      skyState.utcOffset
+    );
+    console.log(julianDay);
 
-  //Grab all values associated with our current sky state.
+    //Grab all values associated with our current sky state.
 
-  //Respond to the main thread with the current data.
+    //Respond to the main thread with the current data.
 
-  //}
-}
+ }
+};
 
 onmessage = function(e){
   let postObject = e.data;
@@ -68,22 +72,21 @@ onmessage = function(e){
     skyState = {
       latitude: postObject.latitude,
       longitude: postObject.longitude,
-      year: dt.getYear(),
-      month: dt.getMonth(),
+      year: dt.getFullYear(),
+      month: dt.getMonth() + 1,
       day: dt.getDate(),
       hour: dt.getHours(),
       minute: dt.getMinutes(),
       second: seconds,
       utcOffset: postObject.utcOffset
     };
+    if(isNaN(skyState.minute)){
+      throw 'Invalid date object. Perhaps use the date formate year-month-day hour:minute:second?';
+    }
     wasmModule = postObject.WASMModule;
     skyStateIsReady = true;
-    console.log('sky state set to true');
-    console.log(Module);
+    attemptInitializiation();
   }
 
   return true;
 };
-
-// This loads the wasm generated glue code
-importScripts('../cpp/astr_algorithms/sky-state.js');

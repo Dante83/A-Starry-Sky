@@ -1,12 +1,11 @@
 #include "AstronomicalBody.h"
-#include "Math.h"
+#include "Constants.h"
 
 /**
 * Constructor
 */
 AstromicalBody::AstronomicalBody(SkyManager& skyManagerRef){
   skyManager = skyManagerRef;
-  azAndAlt = {0.0, 0.0};
 }
 
 void AstronomicalBody::convertRAAndDecToAzAndAlt(){
@@ -56,14 +55,29 @@ void AstronomicalBody::convert2NormalizedGPUCoords(){
   gpuCoords[2] = cosAltitudeMinusThreePiOver2;
 }
 
-double AstronomicalBody::check4GreaterThan2Pi(double& inNum){
-
+double inline AstronomicalBody::check4GreaterThan2Pi(double& inRads){
+  double outRads = fmod(inRads, PI_TIMES_TWO);
+  if(outRads < 0.0){
+    return (PI_TIMES_TWO + outRads);
+  }
+  else if(outRads == PI_TIMES_TWO){
+    return 0.0;
+  }
+  return outRads;
 }
 
-double AstronomicalBody::check4GreaterThan360(double& inNum){
-
+double inline AstronomicalBody::check4GreaterThan360(double& inDegrees){
+  double outDegrees = fmod(inDegrees, 360.0);
+  if(outDegrees < 0.0){
+    return (360 + outDegrees);
+  }
+  else if(outDegrees == 360.0){
+    return 0.0;
+  }
+  return outDegrees;
 }
 
-double AstronomicalBody::checkBetweenMinusPiOver2AndPiOver2(double& inNum){
-
+double inline AstronomicalBody::checkBetweenMinusPiOver2AndPiOver2(double& inRads){
+  double outRads = check4GreaterThan2Pi(inRads + PI_OVER_TWO);
+  return (outRads - PI_OVER_TWO);
 }

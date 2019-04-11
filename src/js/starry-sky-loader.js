@@ -144,57 +144,18 @@ StarrySkyLoader.prototype.initializeSkyEngine = function(){
   //------------------------
   //Initialize the state of our sky
   //------------------------
-  let currentDate = new Date(this.date);
-
-  //Construct our memory
-  let memory = new WebAssembly.Memory({initial: 1});
-  let buffer = memory.buffer;
-  let table = new WebAssembly.Table({ initial: 0, element: "anyfunc" });
-  function grow() {
-    let buffer = memory.buffer;
-    memory.i32 = new Int32Array(buffer);
-    memory.f32 = new Float32Array(buffer);
-  };
-  grow();
-  let env = {};
-  env.memoryBase = 0;
-  env.memory = memory;
-  env.tableBase = 0;
-  env.table = table;
-  env.tempDoublePtr;
-  env.DYNAMICTOP_PTR;
-  env._abort = errno => {throw Error("abnormal abort in " + file + ": " + errno);};
-  env._exit = code => {if (code) throw Error("abnormal exit in " + file + ": " + code);};
-  env._grow = grow;
-  let info = {
-    'env': env,
-    'global': {
-      'NaN': NaN,
-      'Infinity': Infinity
-    },
-    'global.Math': Math,
-    'asm2wasm': { // special asm2wasm imports
-      "f64-rem": function(x, y) {
-        return x % y;
-      },
-      "debugger": function() {
-        debugger;
-      }
-    }
-  };
-
-  let worker = new Worker("../src/js/starry-sky-web-worker.js");
-  fetch('../src/cpp/astr_algorithms/sky-state.wasm', { credentials: 'same-origin' })
-  .then(response => WebAssembly.instantiateStreaming(response, info))
-  .then(obj =>
-    worker.postMessage({
-      dateTime: currentDate,
-      wasmModule: obj.exports,
-      initializeSky: true,
-      callTick: false,
-      callTock: false,
-    })
-  );
+  //NOTE: Change this to a cached version in the future.
+  let worker = new Worker("../src/cpp/astr_algorithms/starry-sky-web-worker.js"+ '?' + (Math.random() * 1000000));
+  let self = this;
+  worker.postMessage({
+    initializeSky: true,
+    callTick: false,
+    callTock: false,
+    latitude: self.latitude,
+    longitude: self.longitude,
+    date: self.date,
+    utcOffset: self.utcOffset,
+  });
 
   //------------------------
   //Construct our atmosphere dome

@@ -10,29 +10,29 @@ SkyState::SkyState(double latitude, double longitude, int year, int month, int d
 
   //construct the location
   location = Location(latitude, longitude);
+
+  //Update our astronomical state
+  skyManager = SkyManger(&time, &location);
 };
 
-double SkyState::getJulianDay(){
-  return time.getJulianDay();
-}
-
 extern "C" {
- double initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset);
- int swapSkyState(double secondsUntilNextEvent);
+ int main();
+ void initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset);
+ double swapSkyState(double secondsUntilNextEvent);
 }
 
-double EMSCRIPTEN_KEEPALIVE initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset){
-  static SkyState skyState = SkyState(latitude, longitude, year, month, day, hour, minute, second, utcOffset);
+//Global state variable
+SkyState skyState;
 
-  //For testing, get the julian day.
-  return skyState.getJulianDay();
+void EMSCRIPTEN_KEEPALIVE initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset){
+  skyState = SkyState(latitude, longitude, year, month, day, hour, minute, second, utcOffset);
 }
 
-int EMSCRIPTEN_KEEPALIVE swapSkyState(double secondsUntilNextEvent){
-  return 782;
+double EMSCRIPTEN_KEEPALIVE swapSkyState(double secondsUntilNextEvent){
+  return skyState;
 }
 
-int main() {
-  //Required because main.
+
+int main(){
   return 0;
 }

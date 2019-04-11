@@ -1,11 +1,13 @@
-#include AstronomicalBody.cpp;
+#include "AstronomicalBody.cpp";
 
 class Sun:AstronomicalBody{
 private:
   double distance2Earth;
   double longitude;
-  double manAnomoly;
+  double meanAnomoly;
   double meanLongitude;
 public:
-  update();
+  Sun();
+  Sun(SkyManager* skyManagerRef);
+  void updateAstronomicalState();
 }
