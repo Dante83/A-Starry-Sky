@@ -2,15 +2,15 @@
 
 class AstronomicalBody{
 protected:
-  SkyManager* skyManager;
-  AstroTime* astroTime;
-  double rightAscension;
-  double declination;
-  double lambda;
-  double beta;
-  double azimuth[2];
-  double altitude[2];
-  double timeBetweenInterpolationPoints;
+  SkyManager& skyManager;
+  AstroTime& astroTime;
+  Location& location;
+  double azimuth0;
+  double altitude0;
+  double azimuth1;
+  double altitude1;
+  double azimuth;
+  double altitude;
   void convertRAAndDecToAzAndAlt();
   void convertLambdaAndBetaToRaAndDec();
   void convert2NormalizedGPUCoords();
@@ -18,5 +18,12 @@ protected:
   double inline check4GreaterThan360(double& inNum);
   double inline checkBetweenMinusPiOver2AndPiOver2(double& inNum);
 public:
-  AstronomicalBody(SkyManager* skyManagerRef);
+  AstronomicalBody();
+  double& getAzimuth0();
+  double& getAzimuth1();
+  double& getAltitude0();
+  double& getAltitude1();
+  void interpolateAzimuthAndAltitude(double fraction);
+  double& getInterpolatedAzimuth();
+  double& getInterpolatedAltitude();
 }

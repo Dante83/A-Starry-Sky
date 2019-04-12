@@ -119,12 +119,33 @@ inline void AstroTime::updateJulianDayAndCentury(){
   julianCentury = (julianDay - 2451545.0) * JULIAN_CENTURY_DENOMINATOR;
 }
 
+void AstroTime::updateLocalApparentSiderealTime(double longitude){
+  localApparentSiderealTime = check4GreaterThan360(greenwhichApparentSiderealTime + longitude);
+}
+
 //
-//Getters
+//Getters and Setters
 //
+void AstroTime::setGreenwhichSiderealTime(double inValue){
+  greenwhichSiderealTime = check4GreaterThan360(inValue);
+}
+
+void AstroTime::setApparentGreenwhichSiderealTimeFromNutationInRAInDegs(double inValue){
+  apparentSiderealTime = greenwhichSiderealTime + inValue;
+}
+
 double& AstroTime::getJulianDay(){
   return julianDay;
 };
 double& AstroTime::getJulianCentury(){
   return julianCentury;
 };
+double& AstroTime::getGreenwhichSiderealTime(){
+  return greenwhichSiderealTime;
+};
+double& AstroTime::getApparentGreenwhichSiderealTime(){
+  return greenwhichApparentSiderealTime;
+};
+double& AstroTime::getLocalApparentSiderealTime(){
+  return localApparentSiderealTime;
+}

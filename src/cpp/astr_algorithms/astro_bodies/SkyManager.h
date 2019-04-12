@@ -1,7 +1,11 @@
 #include "Moon.cpp"
 #include "Sun.cpp"
-#include "Planet.cpp"
-#include "AstroTime.cpp"
+#include "../world_state/AstroTime.cpp"
+#include "../world_state/Location.cpp"
+#include "planets/Venus.cpp"
+#include "planets/Mars.cpp"
+#include "planets/Jupiter.cpp"
+#include "planets/Saturn.cpp"
 
 class SkyManager{
 private:
@@ -10,6 +14,11 @@ private:
   Moon moon;
   Sun sun;
   Planet planets[4];
+
+  double nutationInLongitude;
+  double deltaObliquityOfEcliptic;
+  double meanObliquityOfTheEclipitic;
+  double trueObliquityOfEcliptic;
 public:
   SkyManager(AstroTime* astroTime, *Location location);
   Moon* getMoon();
@@ -17,7 +26,7 @@ public:
   Planet* getPlanetByNumber(int planetNumber);
   AstroTime* getAstroTime();
   Location* getLocation();
-  void updateSkyState();
+  void update();
   double* getMeanObliquityOfTheEclipitic();
   void updateSunRaAndDec();
   void updateMoonRaAndDec();

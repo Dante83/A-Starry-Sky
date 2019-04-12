@@ -7,7 +7,11 @@ private:
   double meanAnomoly;
   double meanLongitude;
 public:
-  Sun();
   Sun(SkyManager* skyManagerRef);
-  void updateAstronomicalState();
+  void updatePosition();
+  void updatePosition(double secondsTillNextUpdate);
+  void setLongitude(double inValue);
+  void setMeanAnomaly(double inValue);
+  double& getLongitude();
+  double& getMeanAnomaly();
 }

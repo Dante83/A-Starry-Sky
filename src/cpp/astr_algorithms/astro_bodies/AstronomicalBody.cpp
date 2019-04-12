@@ -4,8 +4,10 @@
 /**
 * Constructor
 */
-AstromicalBody::AstronomicalBody(SkyManager& skyManagerRef){
-  skyManager = skyManagerRef;
+AstromicalBody::AstronomicalBody(){
+  //
+  //DEFAULT CONSTRUCTOR: This really doesn't do anything, it's only meant to be inherited from.
+  //
 }
 
 void AstronomicalBody::convertRAAndDecToAzAndAlt(){
@@ -80,4 +82,37 @@ double inline AstronomicalBody::check4GreaterThan360(double& inDegrees){
 double inline AstronomicalBody::checkBetweenMinusPiOver2AndPiOver2(double& inRads){
   double outRads = check4GreaterThan2Pi(inRads + PI_OVER_TWO);
   return (outRads - PI_OVER_TWO);
+}
+
+//
+//Getters and Setters
+//
+double& getAzimuth0(){
+  return azimuth0;
+}
+
+double& getAzimuth1(){
+  return azimuth1;
+}
+
+double& getAltitude0(){
+  return altitude0;
+}
+
+double& getAltitude1(){
+  return altitude1;
+}
+
+void interpolateAzimuthAndAltitude(double fraction){
+  //
+  //TODO: Figure this one out based on SLERP
+  //
+}
+
+double& getInterpolatedAzimuth(){
+  return azimuth;
+}
+
+double& getInterpolatedAltitude(){
+  return altitude;
 }
