@@ -24,10 +24,10 @@ private:
   static int daysInLeapYear[];
   static int daysInNormalYear[];
   int* daysUpToMonth;
-  void updateIsLeapYear();
+  inline void updateIsLeapYear();
   void updateDayOfTheYear(int& dayOfMonth);
-  void updateJulianDayAndCentury();
-  double inline check4GreaterThan360(double inValue);
+  inline void updateJulianDayAndCentury();
+  inline double check4GreaterThan360(double dayOfTheMonth);
 public:
   //Constructor
   AstroTime();
@@ -45,5 +45,6 @@ public:
   double& getJulianCentury();
   double& getGreenwhichSiderealTime();
   double& getApparentGreenwhichSiderealTime();
+  double& getLocalApparentSiderealTime();
 };
 #endif

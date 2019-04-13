@@ -10,6 +10,8 @@ Location::Location(double latitude, double longitude){
   lng = longitude;
   latInRads = latitude * DEG2RAD;
   lonInRads = longitude * DEG2RAD;
+  cosOfLatitude = cos(latitude);
+  sinOfLatitude = sin(latitude);
 };
 
 //
@@ -28,6 +30,14 @@ double& Location::getLatitudeInRads(){
 }
 
 double& Location::getLongitudeInRads(){
+  return lonInRads;
+}
+
+double& Location::getCosOfLatitude(){
+  return latInRads;
+}
+
+double& Location::getSinOfLatitude(){
   return lonInRads;
 }
 

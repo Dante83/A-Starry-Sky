@@ -6,21 +6,21 @@ SkyManager::SkyManager(AstroTime& astrT, Location& loc){
 
   //Start by initializing the state of earth based variables
   //and sky variables that are best updated here.
-  update();
+  update(true);
 
   //For a standard sky we have one sun, one moon and four planets
   //which are visible to the naked eye (we ignore Mercury and anything past Saturn).
-  sun = Sun();
-  moon = Moon();
+  sun = Sun(this);
+  moon = Moon(this);
 
   //Planets
-  Planet[0] = Venus();
-  Planet[1] = Mars();
-  Planet[2] = Jupiter();
-  Planet[3] = Saturn();
+  Planet[0] = Venus(this);
+  Planet[1] = Mars(this);
+  Planet[2] = Jupiter(this);
+  Planet[3] = Saturn(this);
 }
 
-void SkyManger::update(){
+void SkyManger::update(boolean updatePlanets){
   double julianCentury = astroTime.getJulianCentury();
   double julianCentury_pow2 = julianCentury * julianCentury;
   double julianCentury_pow3 = julianCentury * julianCentury_pow2;
@@ -71,7 +71,7 @@ void SkyManger::update(){
   nutationInLongitude = (-17.2 * sin(omega) - 1.32 * sin(sunsMeanLongitudeInRadsTimes2) - 0.23 * sin(moonsMeanLongitudeInRadsTimes2) + 0.21 * sin(omegaTimes2)) * ONE_OVER_THIRTY_SIX_HUNDRED;
   deltaObliquityOfEcliptic = (9.2 * cos(omega) + 0.57 * cos(sunsMeanLongitudeInRadsTimes2) + 0.1 * cos(moonsMeanLongitudeInRadsTimes2) - 0.09 * cos(omegaTimes2)) * ONE_OVER_THIRTY_SIX_HUNDRED;
   meanObliquityOfTheEclipitic = HMS_23_26_21_448_2_DEGS + (0.001813 * julianCentury_pow3 - 46.8150 * julianCentury - 0.00059 * julianCentury_pow2) * ONE_OVER_THIRTY_SIX_HUNDRED;
-  trueObliquityOfEcliptic = meanObliquityOfTheEclipitic + deltaObliquityOfEcliptic;
+  trueObliquityOfEclipticInRads = meanObliquityOfTheEclipitic + deltaObliquityOfEcliptic * DEG_2_RAD;
 
   //Now for our sidereal times
   //Normally we would include these in our astro time object, but they just fit better here.
@@ -88,18 +88,18 @@ void SkyManger::update(){
   astroTime.setGreenwhichSiderealTime(280.46061837 + 360.98564736629 * (julianDay - 2451545.0) + gmsrtT * (0.000387933 - ((gmsrtT * gmsrtT) * GMSRT_CONST2)));
 
   #define THREE_THOUSAND_SIX_HUNDRED_OVER_FIFTEEN 240
-  double nutationInRightAscensionInSeconds = (nutationInLongitude * cos(trueObliquityOfEcliptic * DEG_2_RAD)) * THREE_THOUSAND_SIX_HUNDRED_OVER_FIFTEEN;
+  double nutationInRightAscensionInSeconds = (nutationInLongitude * cos(trueObliquityOfEclipticInRads)) * THREE_THOUSAND_SIX_HUNDRED_OVER_FIFTEEN;
   #define THREE_SIXTY_OVER_EIGHTY_SIX_THOUSAND_FOUR_HUNDRED 0.00416666666666666666666666666666666666666666
   double nutationInRightAscensionInDegs = nutationInRightAscensionInSeconds * THREE_SIXTY_OVER_EIGHTY_SIX_THOUSAND_FOUR_HUNDRED;
   astroTime.setApparentSiderealTimeFromNutationInRAInDegs(nutationInRightAscensionInDegs);
   astroTime.updateLocalApparentSiderealTime(location.getLongitude());
 
-  sun.updatePosition();
-  moon.updatePosition();
-  planets[1].updatePosition(); //Venus
-  planets[2].updatePosition(); //Mars
-  planets[3].updatePosition(); //Jupiter
-  planets[4].updatePosition(); //Saturn
+  //And back to our sun again
+  double sunsMeanAnomolyInRads = sun.getMeanAnomaly() * DEG_2_RAD;
+  double sunsMeanLongitude = this.sunsMeanLongitude;
+  eccentricityOfTheEarth = 0.016708634 - 0.000042037 * julianCentury - 0.0000001267 * julianCentury_pow2;
+  double sunsEquationOfCenter = (1.914602 - 0.004817 * julianCentury - 0.000014 * julianCentury_pow2) * sin(sunsMeanAnomoly) + (0.019993 - 0.000101 * julianCentury) * sin(2 * sunsMeanAnomoly) + 0.000289 * sin(3 * sunsMeanAnomoly);
+  sun.setLongitude((sun.getMeanLongitude() + sunsEquationOfCenter) * DEG_2_RAD);
 }
 
 //
@@ -115,4 +115,24 @@ Sun& SkyManager::getSun(){
 
 Planet& SkyManager::getPlanetByNumber(planetNumber){
   return planets[planetNumber];
+}
+
+AstroTime& getAstroTime(){
+  return astroTime;
+}
+
+Location& getLocation(){
+  return location;
+}
+
+double& getMeanObliquityOfTheEclipitic(){
+  return meanObliquityOfTheEclipitic;
+}
+
+double& getEccentricityOfTheEarth(){
+  return eccentricityOfEarth;
+}
+
+double& getTrueObliquityOfEclipticInRads(){
+  return trueObliquityOfEclipticInRads;
 }

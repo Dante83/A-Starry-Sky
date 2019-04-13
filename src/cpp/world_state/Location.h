@@ -8,6 +8,8 @@ private:
   double lng;
   double latInRads;
   double lonInRads;
+  double cosOfLatitude;
+  double sinOfLatitude;
 public:
   //Constructor
   Location();
@@ -19,5 +21,7 @@ public:
   double& getLongitude();
   double& getLatitudeInRads();
   double& getLongitudeInRads();
+  double& getCosOfLatitude();
+  double& getSinOfLatitude();
 };
 #endif

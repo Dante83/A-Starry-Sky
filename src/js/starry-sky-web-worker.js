@@ -1,3 +1,28 @@
+//Copying from A-Frame so we can use Three.JS
+let THREE = global.THREE = require('super-three');
+
+// Allow cross-origin images to be loaded.
+
+// This should not be on `THREE.Loader` nor `THREE.ImageUtils`.
+// Must be on `THREE.TextureLoader`.
+if (THREE.TextureLoader) {
+  THREE.TextureLoader.prototype.crossOrigin = 'anonymous';
+}
+
+// This is for images loaded from the model loaders.
+if (THREE.ImageLoader) {
+  THREE.ImageLoader.prototype.crossOrigin = 'anonymous';
+}
+
+// In-memory caching for XHRs (for images, audio files, textures, etc.).
+if (THREE.Cache) {
+  THREE.Cache.enabled = true;
+}
+
+require('super-three/examples/js/loaders/GLTFLoader');  // THREE.GLTFLoader
+THREE.GLTFLoader.prototype.crossOrigin = 'anonymous';
+module.exports = THREE;
+
 //
 //Return of global variables - because this is actually it's own little world
 //and so anarcho-communism still works perfectly fine... for now.
@@ -8,38 +33,9 @@ let skyState;
 let wasmIsReady = false;
 let skyStateIsReady = false;
 let update;
-
-//Sun and Moon for t_0 and t_f (2*2) + Venus, Mars, Jupiter, Saturn (4*2) = 4+8=12
-//Note that we only store the right ascension and declination
-//azimuth and altitude are calculated during the interpolation process instead.
-//const astronomicalLocations = new Float32Array(12);
-
-//Interpolation constants for sun and moon (planets presumed effectively static and change only once a day
-//when they are out of sight.
-// const astronomicalInterpolationConstants = new Float32Array(12);
-// const cameraViewBox = new Float32Array(4);
-
-//These values remain relatively constant, some change by the 'minute' others should be updated
-//maybe once a day or only when out of view and then every 4 hour or so...
-//year, month, day, hour, minute
-//const dateStatus = new UInt32Array(5);
-
-//latitude, longitude, utc-offset-in-seconds, moonMeanLongitude, moonMeanElongation, moonsMeanAnomaly
-//moonsArgumentOfLatitude, LongitudeOfTheAscendingNodeOfTheMoonsOrbit, sunsMeanAnomoly, sunsMeanLongitude
-//const locationData = new Float32Array(10);
-
-//
-//Replacing all of the above with one giant float buffer for easy modification
-//
-// const float32DataArray = new Float32Array(12 + 12 + 4 + 10);
-// const uInt32DataArray = new Int32Array(5);
-// var buffer;
+let starrySkyCanvas;
 
 let attemptInitializiation = function(){
-  console.log("Initialization Attempted.");
-  //if(wasmIsReady && skyStateIsReady){
-  console.log('data inside of the web worker');
-  console.log(Module);
   let julianDay = Module._initializeStarrySky(
     skyState.latitude,
     skyState.longitude,
@@ -51,20 +47,26 @@ let attemptInitializiation = function(){
     skyState.second,
     postObject.utcOffset
   );
-  console.log(julianDay);
-
-  //Grab all values associated with our current sky state.
-
-  //Respond to the main thread with the current data.
-
-  //}
 }
 
 onmessage = function(e){
   let postObject = e.data;
-  if(postObject.initializeSky){
+  if(postObject.requestUpdate){
+    self.postMessage({imageUpdateReady: true, canvas: starrySkyCanvas}, [starrySkyCanvas]);
+  }
+  else if(postObject.returnCanvas){
+    starrySkyCanvas = postObject.canvas;
+  }
+  else if(postObject.initializeSky){
+    //Set the current date time.
     let dt = new Date(postObject.date);
     let seconds = dt.getSeconds() + (dt.getMilliseconds() * 0.001);
+
+    //Initialize our 3D environment
+    starrySkyCanvas = postObject.canvas;
+    offscreenCanvas.getContext('webgl2');
+
+    //Construct the state
     skyState = {
       latitude: postObject.latitude,
       longitude: postObject.longitude,
@@ -78,8 +80,10 @@ onmessage = function(e){
     };
     wasmModule = postObject.WASMModule;
     skyStateIsReady = true;
-    console.log('sky state set to true');
-    console.log(Module);
+
+    //Initialize our WASM now and update it five minutes from now
+    console.log("Three js in a web worker");
+    console.log(THREE);
   }
 
   return true;

@@ -35,19 +35,21 @@ int AstroTime::daysInNormalYear[] = {31, 59, 90, 120, 151, 181, 212, 243, 273, 3
 //
 void AstroTime::setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s, double uOffset){
   //Initialize all of our variables.
-  year = yr;
-  dblYear = static_cast<double>(year);
-  int potentialNewYear = yr;
-  if(potentialNewYear != year){
-    updateIsLeapYear();
-  }
   month = mnth;
-  day = d;
   hour = h;
   minute = m;
   second = s;
   utcOffset = uOffset;
   timeOfDayInSeconds = static_cast<double>(((h * 60) + m) * 60) + s;
+  if(yr != year){
+    year = yr;
+    dblYear = static_cast<double>(year);
+    updateIsLeapYear();
+  }
+  if(d != day){
+    day = d;
+    updateDayOfTheYear(day);
+  }
   updateJulianDayAndCentury();
 }
 
@@ -56,7 +58,7 @@ inline void AstroTime::updateIsLeapYear(){
   daysInYear = isLeapYear ? 366 : 365;
 }
 
-inline void AstroTime::updateDayOfTheYear(int& dayOfMonth){
+inline void AstroTime::updateDayOfTheYear(int dayOfTheMonth){
   if(dblYear == 0.0 || fmod(dblYear, 4.0) == 0.0){
     daysUpToMonth = AstroTime::daysInLeapYear;
   }
@@ -64,7 +66,7 @@ inline void AstroTime::updateDayOfTheYear(int& dayOfMonth){
     daysUpToMonth = AstroTime::daysInNormalYear;
   }
 
-  dayOfTheYear = daysUpToMonth[month] + dayOfMonth;
+  dayOfTheYear = daysUpToMonth[month] + dayOfTheMonth;
 }
 
 inline void AstroTime::updateJulianDayAndCentury(){
@@ -136,16 +138,20 @@ void AstroTime::setApparentGreenwhichSiderealTimeFromNutationInRAInDegs(double i
 
 double& AstroTime::getJulianDay(){
   return julianDay;
-};
+}
+
 double& AstroTime::getJulianCentury(){
   return julianCentury;
-};
+}
+
 double& AstroTime::getGreenwhichSiderealTime(){
   return greenwhichSiderealTime;
-};
+}
+
 double& AstroTime::getApparentGreenwhichSiderealTime(){
   return greenwhichApparentSiderealTime;
-};
+}
+
 double& AstroTime::getLocalApparentSiderealTime(){
   return localApparentSiderealTime;
 }

@@ -31,6 +31,11 @@ function StarrySkyLoader(starrySkyComponent){
   this.skyAssetsTag;
   this.hasSkyAssetsTag = false;
   this.readyForTickTock = false;
+  this.needsSkyTextureUpdate = false;
+  this.tickSinceLastUpdateRequest = 5;
+  this.skyTexture;
+  this.starrySkyCanvas;
+  this.skyWorker = new Worker("../src/cpp/astr_algorithms/starry-sky-web-worker.js"+ '?' + (Math.random() * 1000000));
   let self = this;
 
   //This is the function that gets called each time our data loads.
@@ -129,60 +134,73 @@ StarrySkyLoader.prototype.loadSkyData = function(){
 };
 
 StarrySkyLoader.prototype.loadAssets = function(){
-    //------------------------
-    //Load our moon images
-    //------------------------
+    //Load our moon textures
 
-    //------------------------
-    //Load our the star location data binary blob
-    //------------------------
+    //Load our star GLTF object
 
-    this.initializeSkyEngine();
+    //Load our star textures
+
+    //Load our planet textures
+
+    //Construct our sky box
+
+    //When our scene is set up, initialize our worker to create our sky
+    this.initializeSkyWorker();
 }
 
-StarrySkyLoader.prototype.initializeSkyEngine = function(){
-  //------------------------
-  //Initialize the state of our sky
-  //------------------------
-  //NOTE: Change this to a cached version in the future.
-  let worker = new Worker("../src/cpp/astr_algorithms/starry-sky-web-worker.js"+ '?' + (Math.random() * 1000000));
+StarrySkyLoader.prototype.initializeSkyWorker = function(){
   let self = this;
-  worker.postMessage({
+  //Start listening for texture updates from our web worker
+  this.skyWorker.addEventListener('message', function(e){
+    if(e.data.imageUpdateReady){
+      self.starrySkyCanvas = e.data.canvas;
+      self.skyTexture = self.starrySkyCanvas.transferToImageBitmap();
+      this.skyWorker.postMessage({
+        requestUpdate: false,
+        returnCanvas: true,
+        canvas: this.starrySkyCanvas
+      }
+    }
+  }, [this.starrySkyCanvas]);
+
+  //Initialize the state of our sky
+  this.starrySkyCanvas = new OffscreenCanvas();
+  this.skyWorker.postMessage({
     initializeSky: true,
-    callTick: false,
-    callTock: false,
+    returnCanvas: false,
+    requestUpdate: false,
     latitude: self.latitude,
     longitude: self.longitude,
-    date: self.date,
     utcOffset: self.utcOffset,
-  });
+    canvas: this.starrySkyCanvas;
+  }, [this.starrySkyCanvas]);
 
-  //------------------------
-  //Construct our atmosphere dome
-  //------------------------
-
-  //------------------------
-  //Construct our star dome
-  //------------------------
-
-  //------------------------
-  //Construct our astronomical body particles, moon, sun, planets
-  //------------------------
+  //Let's also prepare a nice box for our worker to populate
+  //this.readyForTickTock = true;
 }
 
 StarrySkyLoader.prototype.tick = function(){
   if(this.readyForTickTock){
-    //Check if any of our sky variables need updating and if so, grab them on a new web worker
+    if(this.needsSkyTextureUpdate){
+      //Update the sky texture.
+      this.skyWorker.postMessage({
+        returnCanvas: false,
+        requestUpdate: true
+      });
 
-    //Else run our SLERPs for each of our planetary bodies and the star dome
-
-    //Construct color intensities
-
-    //Construct masks
+      //Be lazy again.
+      this.needsSkyTextureUpdate = false;
+    }
+    else if(this.tickSinceLastUpdateRequest === 5){
+      this.tickSinceLastUpdateRequest = 0;
+      this.needsSkyTextureUpdate = true;
+    }
+    this.tickSinceLastUpdateRequest += 1;
   }
 };
 
 StarrySkyLoader.prototype.tock = function(){
+  //This updates every time the frame changes.
   if(this.readyForTickTock){
     //Implement bloom
 
@@ -190,6 +208,5 @@ StarrySkyLoader.prototype.tock = function(){
 
     //Convert from HDR image to RGB image and merge
 
-    //Draw this as the background texture for our screen.
   }
 };
