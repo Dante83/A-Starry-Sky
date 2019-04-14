@@ -1,52 +1,24 @@
-#include "../../Constants.h"
 #include "Location.h"
+#include <cmath>
 
 //
 //Constructor
 //
-Location::Location(){};//Default constructor
 Location::Location(double latitude, double longitude){
-  lat = latitude;
-  lng = longitude;
-  latInRads = latitude * DEG2RAD;
-  lonInRads = longitude * DEG2RAD;
-  cosOfLatitude = cos(latitude);
-  sinOfLatitude = sin(latitude);
-};
-
-//
-//Getters
-//
-double& Location::getLatitude(){
-  return lat;
-}
-
-double& Location::getLongitude(){
-  return lng;
-}
-
-double& Location::getLatitudeInRads(){
-  return latInRads;
-}
-
-double& Location::getLongitudeInRads(){
-  return lonInRads;
-}
-
-double& Location::getCosOfLatitude(){
-  return latInRads;
-}
-
-double& Location::getSinOfLatitude(){
-  return lonInRads;
+  this->lat = latitude;
+  this->lng = longitude;
+  this->latInRads = latitude * DEG_2_RAD;
+  this->lonInRads = longitude * DEG_2_RAD;
+  this->cosOfLatitude = cos(this->latInRads);
+  this->sinOfLatitude = sin(this->lonInRads);
 }
 
 //
 //Setters
 //
 void Location::setLatitudeAndLongitude(double latitude, double longitude){
-  lat = latitude;
-  lng = longitude;
-  latInRads = latitude * DEG2RAD;
-  lonInRads = longitude * DEG2RAD;
+  this->lat = latitude;
+  this->lng = longitude;
+  this->latInRads = latitude * DEG_2_RAD;
+  this->lonInRads = longitude * DEG_2_RAD;
 }

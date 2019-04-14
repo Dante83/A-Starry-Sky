@@ -1,38 +1,25 @@
-#include "SkyManager.cpp"
+#pragma once
+#include "../world_state/AstroTime.h"
 
-#ifndef ASTRONOMICAL_BODY
-#define ASTRONOMICAL_BODY
 class AstronomicalBody{
-protected:
-  SkyManager& skyManager;
-  AstroTime& astroTime;
-  Location& location;
+public:
+  AstronomicalBody(AstroTime& astroTimeRef);
+  AstroTime* astroTime;
+  double* trueObliquityOfEclipticInRadsRef;
+  double* eccentricityOfTheEarthRef;
+  double* meanObliquityOfTheEclipiticRef;
   double rightAscension0;
   double declination0;
   double rightAscension1;
   double declination1;
   double rightAscension;
   double declination;
-  double azimuth0;
-  double altitude0;
-  double azimuth1;
-  double altitude1;
-  double azimuth;
-  double altitude;
-  void convertLambdaAndBetaToRaAndDec();
-  inline void convert2NormalizedGPUCoords();
-  inline void updateAzimuthAndAltitudeFromRAAndDec(double ra, double dec);
+  double previousMeasurementTime; //In Julian days.
+  double timeBetweenMeasurements; //Converting between julian days and seconds.
+  void convertLambdaAndBetaToRaAndDec(double lambda, double beta, double cosBeta);
+  void updateTimeBetweenMeasurements(double newMeasurementTime);
   inline double check4GreaterThan2Pi(double inNum);
   inline double check4GreaterThan360(double inNum);
   inline double checkBetweenMinusPiOver2AndPiOver2(double inNum);
-public:
-  AstronomicalBody();
-  double& getAzimuth0();
-  double& getAzimuth1();
-  double& getAltitude0();
-  double& getAltitude1();
-  void interpolateAzimuthAndAltitude(double fraction);
-  double& getInterpolatedAzimuth();
-  double& getInterpolatedAltitude();
-}
-#endif
+  void interpolateRightAscensionAndDeclination(double fraction);
+};

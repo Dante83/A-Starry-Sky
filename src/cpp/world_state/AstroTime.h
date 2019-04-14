@@ -1,9 +1,10 @@
-#include "Constants.h"
+#pragma once
 
-#ifndef ASTROTIME
-#define ASTROTIME
 class AstroTime{
-private:
+public:
+  //Constructor
+  AstroTime(int yr, int mnth, int d, int h, int m, double s, double uOffset);
+  //variables
   int dayOfTheYear;
   int year;
   double dblYear;
@@ -20,31 +21,20 @@ private:
   double greenwhichSiderealTime;
   double greenwhichApparentSiderealTime;
   double localApparentSiderealTime;
+
+  //Updaters
+  void updateLocalApparentSiderealTime(double* longitude);
+  void setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s, double uOffset);
+  void setGreenwhichSiderealTime(double* inValue);
+  void setApparentGreenwhichSiderealTimeFromNutationInRAInDegs(double* inValue);
+private:
   bool isLeapYear;
   static int daysInLeapYear[];
   static int daysInNormalYear[];
   int* daysUpToMonth;
+
   inline void updateIsLeapYear();
-  void updateDayOfTheYear(int& dayOfMonth);
+  inline void updateDayOfTheYear(int dayOfMonth);
   inline void updateJulianDayAndCentury();
   inline double check4GreaterThan360(double dayOfTheMonth);
-public:
-  //Constructor
-  AstroTime();
-  AstroTime(int yr, int mnth, int d, int h, int m, double s, double uOffset);
-
-  //Updaters
-  void updateLocalApparentSiderealTime(double longitude);
-
-  //Getters and setters
-  void setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s, double uOffset);
-  void addSeconds(double seconds);
-  void setGreenwhichSiderealTime(double inValue);
-  void setApparentGreenwhichSiderealTimeFromNutationInRAInDegs(double inValue);
-  double& getJulianDay();
-  double& getJulianCentury();
-  double& getGreenwhichSiderealTime();
-  double& getApparentGreenwhichSiderealTime();
-  double& getLocalApparentSiderealTime();
 };
-#endif

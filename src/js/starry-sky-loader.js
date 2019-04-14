@@ -34,8 +34,7 @@ function StarrySkyLoader(starrySkyComponent){
   this.needsSkyTextureUpdate = false;
   this.tickSinceLastUpdateRequest = 5;
   this.skyTexture;
-  this.starrySkyCanvas;
-  this.skyWorker = new Worker("../src/cpp/astr_algorithms/starry-sky-web-worker.js"+ '?' + (Math.random() * 1000000));
+  this.skyWorker = new Worker("../src/cpp/starry-sky-web-worker.js"+ '?' + (Math.random() * 1000000));
   let self = this;
 
   //This is the function that gets called each time our data loads.
@@ -153,49 +152,41 @@ StarrySkyLoader.prototype.initializeSkyWorker = function(){
   //Start listening for texture updates from our web worker
   this.skyWorker.addEventListener('message', function(e){
     if(e.data.imageUpdateReady){
-      self.starrySkyCanvas = e.data.canvas;
-      self.skyTexture = self.starrySkyCanvas.transferToImageBitmap();
+      var starrySkyCanvas = e.data.canvas;
+      self.skyTexture = starrySkyCanvas.transferToImageBitmap();
       this.skyWorker.postMessage({
-        requestUpdate: false,
+        tick: false,
         returnCanvas: true,
-        canvas: this.starrySkyCanvas
-      }
+        canvas: starrySkyCanvas
+      }, [starrySkyCanvas]);
     }
-  }, [this.starrySkyCanvas]);
+  });
 
   //Initialize the state of our sky
-  this.starrySkyCanvas = new OffscreenCanvas();
+  var starrySkyCanvas = new OffscreenCanvas(3072, 3072);
   this.skyWorker.postMessage({
     initializeSky: true,
     returnCanvas: false,
     requestUpdate: false,
     latitude: self.latitude,
     longitude: self.longitude,
+    date: self.date,
+    timeMultiplier: self.timeMultiplier,
     utcOffset: self.utcOffset,
-    canvas: this.starrySkyCanvas;
-  }, [this.starrySkyCanvas]);
+    canvas: starrySkyCanvas
+  }, [starrySkyCanvas]);
 
   //Let's also prepare a nice box for our worker to populate
   //this.readyForTickTock = true;
 }
 
-StarrySkyLoader.prototype.tick = function(){
+StarrySkyLoader.prototype.tick = function(time, timeDelta){
   if(this.readyForTickTock){
-    if(this.needsSkyTextureUpdate){
-      //Update the sky texture.
-      this.skyWorker.postMessage({
-        returnCanvas: false,
-        requestUpdate: true
-      });
-
-      //Be lazy again.
-      this.needsSkyTextureUpdate = false;
-    }
-    else if(this.tickSinceLastUpdateRequest === 5){
-      this.tickSinceLastUpdateRequest = 0;
-      this.needsSkyTextureUpdate = true;
-    }
-    this.tickSinceLastUpdateRequest += 1;
+    this.skyWorker.postMessage({
+      returnCanvas: false,
+      tick: true,
+      runningTime: time
+    });
   }
 };
 

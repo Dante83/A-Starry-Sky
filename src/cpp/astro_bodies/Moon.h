@@ -1,22 +1,18 @@
-#include "Sun.cpp"
-#include "AstronomicalBody.cpp"
+#pragma once
+#include "AstronomicalBody.h"
+#include "../world_state/AstroTime.h"
 
-#ifndef MOON
-#define MOON
-class Moon:AstronomicalBody{
-private:
-  Sun* sun;
+
+class Moon : public AstronomicalBody{
+public:
+  Moon(AstroTime& astroTimeRef);
   double meanLongitude;
   double meanElongation;
   double meanAnomaly;
   double argumentOfLatitude;
   double longitudeOfTheAscendingNodeOfOrbit;
-  double e_parameter;
-  double e_parameter_squared;
   double distanceFromEarthInMeters;
-  double moon_EE
-public:
-  Moon(SkyManager& skyManagerRef, Sun* sunRef);
+  double moon_EE;
   void updatePosition();
   void updatePosition(double secondsTillNextUpdate);
   void setMeanLongitude(double inValue);
@@ -24,11 +20,4 @@ public:
   void setMeanAnomaly(double inValue);
   void setArgumentOfLatitude(double inValue);
   void setLongitudeOfTheAscendingNodeOfOrbit(double inValue);
-
-  double& getMeanLongitude();
-  double& getMeanElongation();
-  double& getMeanAnomaly();
-  double& getArgumentOfLatitude();
-  double& getLongitudeOfTheAscendingNodeOfOrbit();
-}
-#endif
+};

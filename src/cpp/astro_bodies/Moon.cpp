@@ -1,25 +1,32 @@
-#include <emscripten/emscripten.h>
+#include "../world_state/AstroTime.h"
+#include "../Constants.h"
+#include "AstronomicalBody.h"
+#include "Moon.h"
+#include <cmath>
 
 //
 //Constructor
 //
-Moon::Moon(SkyManager& skyManagerRef){
-  skyManager = skyManagerRef;
-  astroTime = skyManager.getAstroTime();
-  updateAstronomicalState();
+Moon::Moon(AstroTime& astroTimeRef) : AstronomicalBody(astroTimeRef){
+  //
+  //Do nothing, just call the parent method and populate our values.
+  //
 };
 
 //
 //Methods
 //
 void Moon::updatePosition(){
-  double julianCentury = astroTime.getJulianCentury();
+  double julianCentury = astroTime->getJulianCentury();
   double a_1 = check4GreaterThan360(119.75 + 131.849 * julianCentury) * DEG_2_RAD;
   double a_2 = check4GreaterThan360(53.09 + 479264.290 * julianCentury) * DEG_2_RAD;
   double a_3 = check4GreaterThan360(313.45 + 481266.484 * julianCentury) * DEG_2_RAD;
   const double one = 1.0;
-  e_parameter = 1.0 - 0.002516 * julianCentury - 0.0000074 * julianCentury * julianCentury;
-  e_parameter_squared = e_parameter * e_parameter;
+  double e_parameter = 1.0 - 0.002516 * julianCentury - 0.0000074 * julianCentury * julianCentury;
+  double e_parameter_squared = e_parameter * e_parameter;
+  double* onePointer = &one;
+  double* e_parameterPointer = &e_parameter;
+  double* e_parameter_squaredPointer = &e_parameter_squared;
 
   //STILL! For the love of cheese why?! BTW, there are 60 of these terms.
   const double D_coeficients[60] = {0.0, 2.0, 2.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0,
@@ -57,15 +64,15 @@ void Moon::updatePosition(){
   14403.0, -7003.0, 0.0, 10056.0, 6322.0, -9884.0, 5751.0, 0.0, -4950.0, 4130.0,
   0.0, -3958.0, 0.0, 3258.0, 2616.0, -1897.0, -2117.0, 2354.0, 0.0, 0.0, -1423.0,
   -1117.0, -1571.0, -1739.0, 0.0, -4421.0, 0.0, 0.0, 0.0, 0.0, 1165.0, 0.0, 0.0, 8752.0};
-  const double e_coeficients[60] = {&one, &one, &one, &one, &e_parameter, &one,
-  &one, &e_parameter, &one, &e_parameter, &e_parameter, &one, &e_parameter, &one,
-  &one, &one, &one, &one, &one, &e_parameter, &e_parameter, &one, &e_parameter,
-  &e_parameter, &one, &one, &one, &e_parameter, &one, &e_parameter, &one,
-  &e_parameter_squared, &e_parameter, &e_parameter_squared, &e_parameter_squared,
-  &one, &one, &e_parameter, &one, &one, &e_parameter, &e_parameter, &e_parameter_squared,
-  &e_parameter_squared, &e_parameter, &e_parameter, &one, &one, &e_parameter, &one,
-  &e_parameter, &one, &e_parameter, &one, &one, &e_parameter, &e_parameter_squared,
-  &e_parameter, &one, &one};
+  double* e_coeficients[60] = {onePointer, onePointer, onePointer, onePointer, e_parameterPointer, onePointer,
+  onePointer, e_parameterPointer, onePointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer, onePointer,
+  onePointer, onePointer, onePointer, onePointer, onePointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer,
+  e_parameterPointer, onePointer, onePointer, onePointer, e_parameterPointer, onePointer, e_parameterPointer, onePointer,
+  e_parameterPointer_squared, e_parameterPointer, e_parameter_squaredPointer, e_parameter_squaredPointer,
+  onePointer, onePointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, e_parameterPointer, e_parameter_squaredPointer,
+  e_parameter_squaredPointer, e_parameterPointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, onePointer,
+  e_parameterPointer, onePointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, e_parameter_squaredPointer,
+  e_parameterPointer, onePointer, onePointer};
   double sum_l = 0.0;
   double sum_r = 0.0;
 
@@ -117,15 +124,15 @@ void Moon::updatePosition(){
     491.0, -451.0, 439.0, 422.0, 421.0, -366.0, -351.0, 331.0, 315.0, 302.0,
     -283.0, -229.0, 223.0, 223.0, -220.0, -220.0, -185.0,  181.0, -177.0, 176.0,
     166.0, -164.0, 132.0, -119.0, 115.0, 107};
-  const double e_coeficients_2[60] = {&one, &one, &one, &one, &one, &one, &one,
-    &one, &one, &one, &e_parameter, &one, &one, &e_parameter, &e_parameter,
-    &e_parameter, &e_parameter, &e_parameter, &one, &e_parameter, &one,
-    &e_parameter, &one, &e_parameter, &e_parameter, &e_parameter, &one,
-    &one, &one, &one, &one, &one, &one, &one, &e_parameter, &one, &one,
-    &one, &one, &e_parameter, &e_parameter, &one, &e_parameter,
-    &e_parameter_squared, &one, &e_parameter, &e_parameter,
-    &e_parameter, &e_parameter, &e_parameter, &one, &e_parameter, &e_parameter,
-    &one, &e_parameter, &one, &one, &one, &e_parameter, &e_parameter_squared};
+  double* e_coeficients_2[60] = {onePointer, onePointer, onePointer, onePointer, onePointer, onePointer, onePointer,
+    onePointer, onePointer, onePointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, e_parameterPointer,
+    e_parameterPointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer, onePointer,
+    e_parameterPointer, onePointer, e_parameterPointer, e_parameterPointer, e_parameterPointer, onePointer,
+    onePointer, onePointer, onePointer, onePointer, onePointer, onePointer, onePointer, e_parameterPointer, onePointer, onePointer,
+    onePointer, onePointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer,
+    e_parameter_squaredPointer, onePointer, e_parameterPointer, e_parameterPointer,
+    e_parameterPointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer, e_parameterPointer,
+    onePointer, e_parameterPointer, onePointer, onePointer, onePointer, e_parameterPointer, e_parameter_squaredPointer};
 
   double sum_b = 0.0;
   for(int i=0; i < 60; ++i){
@@ -142,17 +149,16 @@ void Moon::updatePosition(){
   double beta = (sum_b * 0.000001) * DEG_2_RAD;
   double cosBeta = cos(beta);
   distanceFromEarthInMeters = 385000560.0 + sum_r;
+
+  //From all of the above, we can get our right ascension and declination
   convertLambdaAndBetaToRaAndDec(lambda, beta, cosBeta);
 
-  double geocentricElongationOfTheMoon = acos(cosBeta * cos((sun.getLongitude() * DEG_2_RAD) - lambda));
-
-  //This sets up the location of our moon in the sky
-  updateAzimuthAndAltitudeFromRAAndDec(rightAscension1, declination1);
+  double geocentricElongationOfTheMoon = acos(cosBeta * cos((sun->longitude * DEG_2_RAD) - lambda));
 
   //Finally,update our moon brightness
   //From approximation 48.4 in Meeus, page 346
   double twoTimesMeanElongationInRads = 2.0 * meanAnomalyInRads;
-  double lunarPhaseAngleI = 180.0 - meanElongation - 6.289 * sin(meanAnomalyInRads) + 2.1 * sin(sunsMeanAnomoly * DEG_2_RAD)
+  double lunarPhaseAngleI = 180.0 - meanElongation - 6.289 * sin(meanAnomalyInRads) + 2.1 * sin(sun->meanAnomaly * DEG_2_RAD)
   - 1.274 * sin(twoTimesMeanElongationInRads - meanAnomalyInRads) - 0.658 * sin(twoTimesMeanElongationInRads)
   - 0.214 * sin(2.0 * meanAnomalyInRads) - 0.110 * sin(meanElongationInRads);
 
@@ -188,24 +194,4 @@ void Moon::setArgumentOfLatitude(double inValue){
 
 void Moon::setLongitudeOfTheAscendingNodeOfOrbit(double inValue){
   longitudeOfTheAscendingNodeOfOrbit = check4GreaterThan360(inValue);
-}
-
-double& Moon::getMeanLongitude(){
-  return meanLongitude;
-}
-
-double& Moon::getMeanElongation(){
-  return meanElongation;
-}
-
-double& Moon::getMeanAnomaly(){
-  return meanAnomaly;
-}
-
-double& Moon::getArgumentOfLatitude(){
-  return argumentOfLatitude;
-}
-
-double& Moon::getLongitudeOfTheAscendingNodeOfOrbit(){
-  return longitudeOfTheAscendingNodeOfOrbit;
 }

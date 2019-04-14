@@ -1,20 +1,13 @@
-#include "world_state/AstroTime.cpp"
-#include "world_state/Location.cpp"
+#pragma once
 
-#ifndef SKYSTATE
-#define SKYSTATE
+#include "world_state/AstroTime.h"
+#include "world_state/Location.h"
+#include "astro_bodies/SkyManager.h"
 
 class SkyState{
-private:
+public:
+  SkyState(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset);
   Location location;
   AstroTime astroTime;
   SkyManager skyManager;
-  void updateSunAndMoon();
-  void updateEverything();
-public:
-  SkyState();
-  SkyState(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset);
-  AstroTime& getAstroTime();
-  SkyManager& getSkyManager();
 };
-#endif

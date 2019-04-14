@@ -1,9 +1,11 @@
-#include "Sun.cpp"
-#include "AstronomicalBody.cpp"
+#include "planets/Venus.cpp"
+#include "planets/Mars.cpp"
+#include "planets/Jupiter.cpp"
+#include "planets/Saturn.cpp"
 
-class Planet:AstronomicalBody{
+class Planet : public AstronomicalBody{
 private:
   Sun* sun;
 public:
   Planet(SkyManager& skyManager, Sun& sunRef);
-}
+};
