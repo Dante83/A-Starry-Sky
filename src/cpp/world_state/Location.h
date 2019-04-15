@@ -9,5 +9,4 @@ public:
   double lonInRads;
   double cosOfLatitude;
   double sinOfLatitude;
-  void setLatitudeAndLongitude(double latitude, double longitude);
 };

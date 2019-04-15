@@ -6,8 +6,8 @@
 
 class SkyState{
 public:
-  SkyState(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset);
-  Location location;
-  AstroTime astroTime;
-  SkyManager skyManager;
+  SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* skyManagerPnt);
+  Location* location;
+  AstroTime* astroTime;
+  SkyManager* skyManager;
 };

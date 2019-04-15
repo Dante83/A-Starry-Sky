@@ -21,20 +21,20 @@ public:
   double greenwhichSiderealTime;
   double greenwhichApparentSiderealTime;
   double localApparentSiderealTime;
+  double apparentSiderealTime;
 
   //Updaters
-  void updateLocalApparentSiderealTime(double* longitude);
+  void updateLocalApparentSiderealTime(double& longitude);
   void setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s, double uOffset);
-  void setGreenwhichSiderealTime(double* inValue);
-  void setApparentGreenwhichSiderealTimeFromNutationInRAInDegs(double* inValue);
+  void setGreenwhichSiderealTime(double inValue);
 private:
   bool isLeapYear;
   static int daysInLeapYear[];
   static int daysInNormalYear[];
   int* daysUpToMonth;
 
-  inline void updateIsLeapYear();
-  inline void updateDayOfTheYear(int dayOfMonth);
-  inline void updateJulianDayAndCentury();
-  inline double check4GreaterThan360(double dayOfTheMonth);
+  void updateIsLeapYear();
+  void updateDayOfTheYear();
+  void updateJulianDayAndCentury();
+  double check4GreaterThan360(double inValue);
 };

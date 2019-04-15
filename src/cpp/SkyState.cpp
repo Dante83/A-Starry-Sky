@@ -8,18 +8,13 @@
 //
 //Constructor
 //
-SkyState::SkyState(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset){
-  //construct the time
-  astroTime = new AstroTime(year, month, day, hour, minute, second, utcOffset);
-
-  //construct the location
-  location = new Location(latitude, longitude);
-
-  //Update our astronomical state
-  skyManager = new SkyManager(&astroTime, &location);
+SkyState::SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* skyManagerPnt){
+  astroTime = astroTimePnt;
+  location = locationPnt;
+  skyManager = skyManagerPnt;
 }
 
-SkyState* skyStateRef;
+SkyState* skyState;
 
 extern "C" {
   int main();
@@ -31,7 +26,10 @@ extern "C" {
 }
 
 void EMSCRIPTEN_KEEPALIVE initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset){
-  skyStateRef = new SkyState(latitude, longitude, year, month, day, hour, minute, second, utcOffset);
+  AstroTime *astroTime = new AstroTime(year, month, day, hour, minute, second, utcOffset);
+  Location *location = new Location(latitude, longitude);
+  SkyManager *skyManager = new SkyManager(astroTime, location);
+  skyState = new SkyState(astroTime, location, skyManager);
 }
 
 //
@@ -39,19 +37,19 @@ void EMSCRIPTEN_KEEPALIVE initializeStarrySky(double latitude, double longitude,
 //interpolations or even the raw image textures.
 //
 double EMSCRIPTEN_KEEPALIVE getSunRightAscension(){
-  return skyStateRef->skyManager.sun.rightAscension1;
+  return skyState->skyManager->sun.rightAscension1;
 }
 
 double EMSCRIPTEN_KEEPALIVE getSunDeclination(){
-  return skyStateRef->skyManager.sun.declination1;
+  return skyState->skyManager->sun.declination1;
 }
 
 double EMSCRIPTEN_KEEPALIVE getMoonRightAscension(){
-  return skyStateRef->skyManager.moon.rightAscension1;
+  return skyState->skyManager->moon.rightAscension1;
 }
 
 double EMSCRIPTEN_KEEPALIVE getMoonDeclination(){
-  return skyStateRef->skyManager.moon.declination1;
+  return skyState->skyManager->moon.declination1;
 }
 
 int main(){

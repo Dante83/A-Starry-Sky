@@ -6,7 +6,7 @@
 //
 //Constructor
 //
-AstronomicalBody::AstronomicalBody(AstroTime& astroTimeRef){
+AstronomicalBody::AstronomicalBody(AstroTime* astroTimeRef){
   astroTime = astroTimeRef;
 }
 
@@ -14,8 +14,8 @@ AstronomicalBody::AstronomicalBody(AstroTime& astroTimeRef){
 //Internal methods that we would like to share between sky bodies. Some might be extrapolated up to a higher level later
 //to reduce the size of our objects.
 //
-inline void AstronomicalBody::convertLambdaAndBetaToRaAndDec(double lambda, double beta, double cosBeta){
-  double epsilon = skyManagerData->trueObliquityOfEclipticInRads;
+void AstronomicalBody::convertLambdaAndBetaToRaAndDec(double lambda, double beta, double cosBeta){
+  double epsilon = *trueObliquityOfEclipticInRads;
 
   //Use these to acquire the equatorial solarGPUCoordinates
   double sinLambda = sin(lambda);
@@ -28,18 +28,14 @@ inline void AstronomicalBody::convertLambdaAndBetaToRaAndDec(double lambda, doub
   if(rightAscension1){
     rightAscension0 = rightAscension1;
     declination0 = declination1;
-    updateTimeBetweenMeasurements(newMeasurementTime);
+    timeBetweenMeasurements = (newMeasurementTime - previousMeasurementTime) * SECONDS_IN_A_DAY;
   }
   rightAscension1 = tempRightAscension;
   declination1 = tempDeclination;
   previousMeasurementTime = newMeasurementTime;
 }
 
-inline void updateTimeBetweenMeasurements(double newMeasurementTime){
-  timeBetweenMeasurements = (newMeasurementTime - previousMeasurementTime) * SECONDS_IN_A_DAY;
-}
-
-inline double AstronomicalBody::check4GreaterThan2Pi(double inNum){
+double AstronomicalBody::check4GreaterThan2Pi(double inNum){
   double outRads = fmod(inNum, PI_TIMES_TWO);
   if(outRads < 0.0){
     return (PI_TIMES_TWO + outRads);
@@ -50,7 +46,7 @@ inline double AstronomicalBody::check4GreaterThan2Pi(double inNum){
   return outRads;
 }
 
-inline double AstronomicalBody::check4GreaterThan360(double inNum){
+double AstronomicalBody::check4GreaterThan360(double inNum){
   double outDegrees = fmod(inNum, 360.0);
   if(outDegrees < 0.0){
     return (360 + outDegrees);
@@ -61,7 +57,7 @@ inline double AstronomicalBody::check4GreaterThan360(double inNum){
   return outDegrees;
 }
 
-inline double AstronomicalBody::checkBetweenMinusPiOver2AndPiOver2(double inNum){
+double AstronomicalBody::checkBetweenMinusPiOver2AndPiOver2(double inNum){
   double outRads = check4GreaterThan2Pi(inNum + PI_OVER_TWO);
   return (outRads - PI_OVER_TWO);
 }

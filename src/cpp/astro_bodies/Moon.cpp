@@ -7,9 +7,9 @@
 //
 //Constructor
 //
-Moon::Moon(AstroTime& astroTimeRef) : AstronomicalBody(astroTimeRef){
+Moon::Moon(AstroTime* astroTimeRef) : AstronomicalBody(astroTimeRef){
   //
-  //Do nothing, just call the parent method and populate our values.
+  //Default constructor
   //
 };
 
@@ -17,11 +17,11 @@ Moon::Moon(AstroTime& astroTimeRef) : AstronomicalBody(astroTimeRef){
 //Methods
 //
 void Moon::updatePosition(){
-  double julianCentury = astroTime->getJulianCentury();
+  double julianCentury = astroTime->julianCentury;
   double a_1 = check4GreaterThan360(119.75 + 131.849 * julianCentury) * DEG_2_RAD;
   double a_2 = check4GreaterThan360(53.09 + 479264.290 * julianCentury) * DEG_2_RAD;
   double a_3 = check4GreaterThan360(313.45 + 481266.484 * julianCentury) * DEG_2_RAD;
-  const double one = 1.0;
+  double one = 1.0;
   double e_parameter = 1.0 - 0.002516 * julianCentury - 0.0000074 * julianCentury * julianCentury;
   double e_parameter_squared = e_parameter * e_parameter;
   double* onePointer = &one;
@@ -68,7 +68,7 @@ void Moon::updatePosition(){
   onePointer, e_parameterPointer, onePointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer, onePointer,
   onePointer, onePointer, onePointer, onePointer, onePointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer,
   e_parameterPointer, onePointer, onePointer, onePointer, e_parameterPointer, onePointer, e_parameterPointer, onePointer,
-  e_parameterPointer_squared, e_parameterPointer, e_parameter_squaredPointer, e_parameter_squaredPointer,
+  e_parameter_squaredPointer, e_parameterPointer, e_parameter_squaredPointer, e_parameter_squaredPointer,
   onePointer, onePointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, e_parameterPointer, e_parameter_squaredPointer,
   e_parameter_squaredPointer, e_parameterPointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, onePointer,
   e_parameterPointer, onePointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, e_parameter_squaredPointer,
@@ -90,7 +90,7 @@ void Moon::updatePosition(){
   double sumOfTerms;
   double e_coeficient;
   double absOfMCoeficient;
-  double sunsMeanAnomoly = sun.getMeanAnomaly();
+  double sunsMeanAnomoly = sun->meanAnomaly;
   for(int i=0; i < 60; ++i){
     sumOfTerms = check4GreaterThan360(D_coeficients[i] * meanElongation + M_coeficients[i] * sunsMeanAnomoly + M_prime_coeficients[i] * meanAnomaly + F_coeficients[i] * argumentOfLatitude) * DEG_2_RAD;
     sum_l += (*e_coeficients[i]) * l_sum_coeficients[i] * sin(sumOfTerms);

@@ -1,5 +1,5 @@
 // This loads the wasm generated glue code
-importScripts('sky-state.js');
+importScripts('starry-sky-module.js');
 
 //
 //Return of global variables - because this is actually it's own little world
