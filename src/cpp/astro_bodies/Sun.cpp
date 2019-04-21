@@ -3,8 +3,6 @@
 #include "AstronomicalBody.h"
 #include "../Constants.h"
 #include <cmath>
-#include<iostream>
-#include<iostream>
 
 //
 //Constructor
@@ -25,11 +23,6 @@ void Sun::updatePosition(){
 
   double tempRightAscension = check4GreaterThan2Pi(atan2(cos(meanObliquityOfTheEclipiticInRads) * sin(trueLongitude), cos(trueLongitude)));
   double tempDeclination = checkBetweenMinusPiOver2AndPiOver2(asin(sin(meanObliquityOfTheEclipiticInRads) * sin(trueLongitude)));
-
-  std::cout << "WHASDJLKDSJLKNMJEOWIFILOWEJFIOWEJFOIJEWFOIEWJOFIJWE" <<std::endl;
-  std::cout << "right ascension temp:" << tempRightAscension <<std::endl;
-  std::cout << "declination temp:" << tempDeclination <<std::endl;
-
   double newMeasurementTime = astroTime->julianDay;
   if(rightAscension1){
     rightAscension0 = rightAscension1;
@@ -39,9 +32,6 @@ void Sun::updatePosition(){
   rightAscension1 = tempRightAscension;
   declination1 = tempDeclination;
   previousMeasurementTime = newMeasurementTime;
-
-  std::cout << "right ascension 1:" << rightAscension1 <<std::endl;
-  std::cout << "declination 1:" << declination1 <<std::endl;
 
   //While we're here, let's calculate the distance from the earth to the sun, useful for figuring out the illumination of the moon
   double eccentricityOfTheEarthVal = *eccentricityOfTheEarth;
@@ -58,8 +48,6 @@ void Sun::setMeanAnomaly(double inValue){
 
 void Sun::setTrueLongitude(double inValue){
   trueLongitude = check4GreaterThan2Pi(inValue);
-  std::cout << "WHASDJLKDSJLKNMJEOWIFILOWEJFIOWEJFOIJEWFOIEWJOFIJWE" <<std::endl;
-  std::cout << "The flipping true longitude:" << trueLongitude <<std::endl;
 }
 
 void Sun::setMeanLongitude(double inValue){

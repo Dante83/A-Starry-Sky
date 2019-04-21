@@ -22,8 +22,8 @@ void AstronomicalBody::convertLambdaAndBetaToRaAndDec(double lambda, double beta
   double sinEpsilon = sin(epsilon);
   double cosEpsilon = cos(epsilon);
   double sinBeta = sin(beta);
-  double tempRightAscension = check4GreaterThan2Pi(atan2(sinLambda * cosEpsilon - (sinBeta / cosBeta) * sinEpsilon, cos(lambda))) * DEG_2_RAD;
-  double tempDeclination = checkBetweenMinusPiOver2AndPiOver2(asin(sinBeta * cosEpsilon + cosBeta * sinEpsilon * sinLambda)) * DEG_2_RAD;
+  double tempRightAscension = check4GreaterThan2Pi(atan2(sinLambda * cosEpsilon - (sinBeta / cosBeta) * sinEpsilon, cos(lambda)));
+  double tempDeclination = checkBetweenMinusPiOver2AndPiOver2(asin(sinBeta * cosEpsilon + cosBeta * sinEpsilon * sinLambda));
   double newMeasurementTime = astroTime->julianDay;
   if(rightAscension1){
     rightAscension0 = rightAscension1;

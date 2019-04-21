@@ -6,7 +6,6 @@
 #include "../Constants.h"
 #include <stdbool.h>
 #include <cmath>
-#include<iostream>
 
 SkyManager::SkyManager(AstroTime* astroTimeRef, Location* locationRef): sun(astroTimeRef), moon(astroTimeRef){
   astroTime = astroTimeRef;
@@ -39,6 +38,9 @@ void SkyManager::update(int updatePlanets){
   double julianCentury_pow2 = julianCentury * julianCentury;
   double julianCentury_pow3 = julianCentury * julianCentury_pow2;
   double julianCentury_pow4 = julianCentury_pow2 * julianCentury_pow2;
+
+  //NOTE: I could potentially factor out a number in each of the below sets
+  //resulting in one less multiplication per line? I don't know if it's worth it though...
 
   //
   //Lunar constants
@@ -73,17 +75,13 @@ void SkyManager::update(int updatePlanets){
   sun.setMeanLongitude(280.46646 + 36000.76983 * julianCentury + 0.0003032 * julianCentury_pow2);
 
   double omega = moon.longitudeOfTheAscendingNodeOfOrbit * DEG_2_RAD;
-  double omegaTimes2 = omega * 2.0;
   double sunsMeanLongitudeInRadsTimes2 = sun.meanLongitudeInRads * 2.0;
   double moonsMeanLongitudeInRadsTimes2 = moon.meanLongitudeInRads * 2.0;
-  double sinOmega = sin(omega);
 
-  //NOTE: I could potentially factor out a number in each of the below sets
-  //resulting in one less multiplication per line? I don't know if it's worth it though...
   #define ONE_OVER_THIRTY_SIX_HUNDRED 0.0002777777777777777777777777777777777777
   #define HMS_23_26_21_448_2_DEGS 23.439291111111111
-  nutationInLongitude = (-17.2 * sin(omega) - 1.32 * sin(sunsMeanLongitudeInRadsTimes2) - 0.23 * sin(moonsMeanLongitudeInRadsTimes2) + 0.21 * sin(omegaTimes2)) * ONE_OVER_THIRTY_SIX_HUNDRED;
-  deltaObliquityOfEcliptic = (9.2 * cos(omega) + 0.57 * cos(sunsMeanLongitudeInRadsTimes2) + 0.1 * cos(moonsMeanLongitudeInRadsTimes2) - 0.09 * cos(omegaTimes2)) * ONE_OVER_THIRTY_SIX_HUNDRED;
+  nutationInLongitude = (-17.2 * sin(omega) - 1.32 * sin(sunsMeanLongitudeInRadsTimes2) - 0.23 * sin(moonsMeanLongitudeInRadsTimes2) + 0.21 * sin(2.0 * omega)) * ONE_OVER_THIRTY_SIX_HUNDRED;
+  deltaObliquityOfEcliptic = (9.2 * cos(omega) + 0.57 * cos(sunsMeanLongitudeInRadsTimes2) + 0.1 * cos(moonsMeanLongitudeInRadsTimes2) - 0.09 * cos(2.0 * omega)) * ONE_OVER_THIRTY_SIX_HUNDRED;
   meanObliquityOfTheEclipitic = HMS_23_26_21_448_2_DEGS + (0.001813 * julianCentury_pow3 - 46.8150 * julianCentury - 0.00059 * julianCentury_pow2) * ONE_OVER_THIRTY_SIX_HUNDRED;
   trueObliquityOfEclipticInRads = (meanObliquityOfTheEclipitic + deltaObliquityOfEcliptic) * DEG_2_RAD;
 
@@ -101,7 +99,7 @@ void SkyManager::update(int updatePlanets){
   #define GMSRT_CONST2 0.0000000258331180573495220873159390338413846551278739343
   astroTime->setGreenwhichSiderealTime(280.46061837 + 360.98564736629 * (julianDay - 2451545.0) + gmsrtT * (0.000387933 - ((gmsrtT * gmsrtT) * GMSRT_CONST2)));
 
-  #define THREE_THOUSAND_SIX_HUNDRED_OVER_FIFTEEN 240
+  #define THREE_THOUSAND_SIX_HUNDRED_OVER_FIFTEEN 240.0
   double nutationInRightAscensionInSeconds = (nutationInLongitude * cos(trueObliquityOfEclipticInRads)) * THREE_THOUSAND_SIX_HUNDRED_OVER_FIFTEEN;
   #define THREE_SIXTY_OVER_EIGHTY_SIX_THOUSAND_FOUR_HUNDRED 0.00416666666666666666666666666666666666666666
   double nutationInRightAscensionInDegs = nutationInRightAscensionInSeconds * THREE_SIXTY_OVER_EIGHTY_SIX_THOUSAND_FOUR_HUNDRED;
@@ -113,31 +111,5 @@ void SkyManager::update(int updatePlanets){
   double sunsMeanLongitude = sunsMeanLongitude;
   eccentricityOfTheEarth = 0.016708634 - 0.000042037 * julianCentury - 0.0000001267 * julianCentury_pow2;
   sun.equationOfCenter = (1.914602 - 0.004817 * julianCentury - 0.000014 * julianCentury_pow2) * sin(sunsMeanAnomolyInRads) + (0.019993 - 0.000101 * julianCentury) * sin(2 * sunsMeanAnomolyInRads) + 0.000289 * sin(3 * sunsMeanAnomolyInRads);
-
-  std::cout << "Chickens!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" <<std::endl;
-  std::cout << "Suns Mean Longitude:" << sun.meanLongitude <<std::endl;
-  std::cout << "SunsEquation of Center:" << sun.equationOfCenter <<std::endl;
-  std::cout << "SunsEquation of Center:" << sun.equationOfCenter <<std::endl;
   sun.setTrueLongitude((sun.meanLongitude + sun.equationOfCenter) * DEG_2_RAD);
-  std::cout << "Suns True Longitude:" << sun.trueLongitude <<std::endl;
-  std::cout << "DEG 2 RADS" << DEG_2_RAD <<std::endl;
-  std::cout << "Moons Mean Longitude:" << moon.meanLongitude <<std::endl;
-  std::cout << "Moons Mean Elongation:" << moon.meanElongation <<std::endl;
-  std::cout << "Moons Mean Anomaly:" << moon.meanAnomaly <<std::endl;
-  std::cout << "Moons Argument Of Latitude:" << moon.argumentOfLatitude <<std::endl;
-  std::cout << "Moons Longitude of Ascending Node:" << moon.longitudeOfTheAscendingNodeOfOrbit <<std::endl;
-  std::cout << "Suns Mean Anomaly:" << sun.meanAnomaly <<std::endl;
-  std::cout << "Suns Mean Longitude:" << sun.meanLongitude <<std::endl;
-  std::cout << "Nutation In Longitude:" << nutationInLongitude <<std::endl;
-  std::cout << "Delta Obliquity Of the Ecliptic:" << deltaObliquityOfEcliptic <<std::endl;
-  std::cout << "Mean Obliquity of the Eccliptic:" << meanObliquityOfTheEclipitic <<std::endl;
-  std::cout << "True Obliquity of the Eccliptic (In Rads):" << trueObliquityOfEclipticInRads <<std::endl;
-  std::cout << "Greenwhich Sidereal Time:" << astroTime->greenwhichSiderealTime <<std::endl;
-  std::cout << "Suns Mean Anomaly:" << sun.meanAnomaly <<std::endl;
-  std::cout << "Suns Mean Longitude:" << sun.meanLongitude <<std::endl;
-  std::cout << "Eccentricty of the Earth:" << eccentricityOfTheEarth <<std::endl;
-  std::cout << "Suns Equation of Center:" << sun.equationOfCenter <<std::endl;
-  std::cout << "Suns True Longitude:" << sun.trueLongitude <<std::endl;
-  std::cout << "Suns Right Ascension:" << sun.rightAscension1 <<std::endl;
-  std::cout << "Suns Declination:" << sun.declination1 <<std::endl;
 }
