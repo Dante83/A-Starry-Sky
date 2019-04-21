@@ -18,5 +18,5 @@ public:
   void setLongitude(double inValue);
   void setMeanAnomaly(double inValue);
   void setMeanLongitude(double inValue);
-  void setTrueLongitude(double& inValue);
+  void setTrueLongitude(double inValue);
 };

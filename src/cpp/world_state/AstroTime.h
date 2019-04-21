@@ -31,8 +31,12 @@ private:
   bool isLeapYear;
   static int daysInLeapYear[];
   static int daysInNormalYear[];
+  static int daysInMonthLeapYear[];
+  static int daysInMonthNormalYear[];
   int* daysUpToMonth;
+  int* daysInMonth;
 
+  void addSeconds(double seconds);
   void updateIsLeapYear();
   void updateDayOfTheYear();
   void updateJulianDayAndCentury();

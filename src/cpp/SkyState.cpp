@@ -4,6 +4,7 @@
 #include "world_state/Location.h"
 #include "astro_bodies/SkyManager.h"
 #include <emscripten/emscripten.h>
+#include<iostream>
 
 //
 //Constructor
@@ -30,6 +31,10 @@ void EMSCRIPTEN_KEEPALIVE initializeStarrySky(double latitude, double longitude,
   Location *location = new Location(latitude, longitude);
   SkyManager *skyManager = new SkyManager(astroTime, location);
   skyState = new SkyState(astroTime, location, skyManager);
+
+  std::cout << "Begin variable list..." << std::endl;
+  std::cout << "Julian Day" << astroTime->julianDay << std::endl;
+  std::cout << "Julian Century:" << astroTime->julianCentury <<std::endl;
 }
 
 //

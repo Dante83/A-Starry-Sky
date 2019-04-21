@@ -3,6 +3,7 @@
 #include "AstronomicalBody.h"
 #include "Moon.h"
 #include <cmath>
+#include<iostream>
 
 //
 //Constructor
@@ -145,6 +146,11 @@ void Moon::updatePosition(){
   sum_b += -2235.0 * sin(meanLongitudeInRads) + 382.0 * sin(a_3) + 175.0 * sin(a_1 - argumentOfLatitudeInRads) + 175.0 * sin(a_1 + argumentOfLatitudeInRads);
   sum_b += 127.0 * sin(meanLongitudeInRads - meanAnomalyInRads) - 115.0 * sin(meanLongitudeInRads + meanAnomalyInRads);
 
+  //For Testing
+  std::cout << "sum_l:" << sum_l  <<std::endl;
+  std::cout << "sum_r:" << sum_b  <<std::endl;
+  std::cout << "sum_b:" << sum_b  <<std::endl;
+
   double lambda = (meanLongitude + (sum_l * 0.000001)) * DEG_2_RAD;
   double beta = (sum_b * 0.000001) * DEG_2_RAD;
   double cosBeta = cos(beta);
@@ -167,6 +173,19 @@ void Moon::updatePosition(){
 
   //Using the square of the illuminated fraction of the moon for a faster falloff
   moon_EE = FULL_LUNAR_ILLUMINATION * fractionalIntensity;
+
+  //For testing...
+  std::cout << "a_1:" << a_1  <<std::endl;
+  std::cout << "a_2:" << a_2  <<std::endl;
+  std::cout << "a_3:" << a_3  <<std::endl;
+  std::cout << "eparameter:" << e_parameter  <<std::endl;
+  std::cout << "sum_l:" << sum_l  <<std::endl;
+  std::cout << "sum_b:" << sum_b  <<std::endl;
+  std::cout << "lambda:" << lambda  <<std::endl;
+  std::cout << "beta:" << beta  <<std::endl;
+  std::cout << "distance from earth to moon:" << distanceFromEarthInMeters <<std::endl;
+  std::cout << "right ascension of the moon:" << rightAscension1 <<std::endl;
+  std::cout << "declination of moon:" << declination1 <<std::endl;
 }
 
 //

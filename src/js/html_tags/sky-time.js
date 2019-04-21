@@ -27,8 +27,8 @@ class SkyTime extends HTMLElement {
     document.addEventListener('DOMContentLoaded', function(evt){
       //Get child tags and acquire their values.
       let skyDateTags = self.getElementsByTagName('sky-date');
-      let utcOffsetTags = self.getElementsByTagName('sky-time-multiplier');
-      let timeMultiplierTags = self.getElementsByTagName('sky-utc-offset');
+      let timeMultiplierTags = self.getElementsByTagName('sky-time-multiplier');
+      let utcOffsetTags = self.getElementsByTagName('sky-utc-offset');
 
       [skyDateTags, utcOffsetTags, timeMultiplierTags].forEach(function(tags){
         if(tags.length > 1){

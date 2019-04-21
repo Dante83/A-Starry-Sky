@@ -3,6 +3,8 @@
 #include "AstronomicalBody.h"
 #include "../Constants.h"
 #include <cmath>
+#include<iostream>
+#include<iostream>
 
 //
 //Constructor
@@ -20,8 +22,13 @@ void Sun::updatePosition(){
   //Get the position of the sun relative to the earth
   setLongitude((meanLongitude + equationOfCenter) * DEG_2_RAD);
   double meanObliquityOfTheEclipiticInRads = (*meanObliquityOfTheEclipitic) * DEG_2_RAD;
+
   double tempRightAscension = check4GreaterThan2Pi(atan2(cos(meanObliquityOfTheEclipiticInRads) * sin(trueLongitude), cos(trueLongitude)));
   double tempDeclination = checkBetweenMinusPiOver2AndPiOver2(asin(sin(meanObliquityOfTheEclipiticInRads) * sin(trueLongitude)));
+
+  std::cout << "WHASDJLKDSJLKNMJEOWIFILOWEJFIOWEJFOIJEWFOIEWJOFIJWE" <<std::endl;
+  std::cout << "right ascension temp:" << tempRightAscension <<std::endl;
+  std::cout << "declination temp:" << tempDeclination <<std::endl;
 
   double newMeasurementTime = astroTime->julianDay;
   if(rightAscension1){
@@ -33,12 +40,15 @@ void Sun::updatePosition(){
   declination1 = tempDeclination;
   previousMeasurementTime = newMeasurementTime;
 
+  std::cout << "right ascension 1:" << rightAscension1 <<std::endl;
+  std::cout << "declination 1:" << declination1 <<std::endl;
+
   //While we're here, let's calculate the distance from the earth to the sun, useful for figuring out the illumination of the moon
   double eccentricityOfTheEarthVal = *eccentricityOfTheEarth;
   distance2Earth = (1.000001018 * (1.0 - (eccentricityOfTheEarthVal * eccentricityOfTheEarthVal))) / (1.0 + eccentricityOfTheEarthVal * cos(equationOfCenter * DEG_2_RAD)) * 149597871.0;
 }
 
-void inline Sun::setLongitude(double inValue){
+void Sun::setLongitude(double inValue){
   longitude = check4GreaterThan360(inValue);
 }
 
@@ -46,8 +56,10 @@ void Sun::setMeanAnomaly(double inValue){
   meanAnomaly = check4GreaterThan360(inValue);
 }
 
-void Sun::setTrueLongitude(double& inValue){
-  trueLongitude = check4GreaterThan360(inValue);
+void Sun::setTrueLongitude(double inValue){
+  trueLongitude = check4GreaterThan2Pi(inValue);
+  std::cout << "WHASDJLKDSJLKNMJEOWIFILOWEJFIOWEJFOIJEWFOIEWJOFIJWE" <<std::endl;
+  std::cout << "The flipping true longitude:" << trueLongitude <<std::endl;
 }
 
 void Sun::setMeanLongitude(double inValue){

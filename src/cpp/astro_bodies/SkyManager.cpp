@@ -6,6 +6,7 @@
 #include "../Constants.h"
 #include <stdbool.h>
 #include <cmath>
+#include<iostream>
 
 SkyManager::SkyManager(AstroTime* astroTimeRef, Location* locationRef): sun(astroTimeRef), moon(astroTimeRef){
   astroTime = astroTimeRef;
@@ -112,4 +113,31 @@ void SkyManager::update(int updatePlanets){
   double sunsMeanLongitude = sunsMeanLongitude;
   eccentricityOfTheEarth = 0.016708634 - 0.000042037 * julianCentury - 0.0000001267 * julianCentury_pow2;
   sun.equationOfCenter = (1.914602 - 0.004817 * julianCentury - 0.000014 * julianCentury_pow2) * sin(sunsMeanAnomolyInRads) + (0.019993 - 0.000101 * julianCentury) * sin(2 * sunsMeanAnomolyInRads) + 0.000289 * sin(3 * sunsMeanAnomolyInRads);
+
+  std::cout << "Chickens!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" <<std::endl;
+  std::cout << "Suns Mean Longitude:" << sun.meanLongitude <<std::endl;
+  std::cout << "SunsEquation of Center:" << sun.equationOfCenter <<std::endl;
+  std::cout << "SunsEquation of Center:" << sun.equationOfCenter <<std::endl;
+  sun.setTrueLongitude((sun.meanLongitude + sun.equationOfCenter) * DEG_2_RAD);
+  std::cout << "Suns True Longitude:" << sun.trueLongitude <<std::endl;
+  std::cout << "DEG 2 RADS" << DEG_2_RAD <<std::endl;
+  std::cout << "Moons Mean Longitude:" << moon.meanLongitude <<std::endl;
+  std::cout << "Moons Mean Elongation:" << moon.meanElongation <<std::endl;
+  std::cout << "Moons Mean Anomaly:" << moon.meanAnomaly <<std::endl;
+  std::cout << "Moons Argument Of Latitude:" << moon.argumentOfLatitude <<std::endl;
+  std::cout << "Moons Longitude of Ascending Node:" << moon.longitudeOfTheAscendingNodeOfOrbit <<std::endl;
+  std::cout << "Suns Mean Anomaly:" << sun.meanAnomaly <<std::endl;
+  std::cout << "Suns Mean Longitude:" << sun.meanLongitude <<std::endl;
+  std::cout << "Nutation In Longitude:" << nutationInLongitude <<std::endl;
+  std::cout << "Delta Obliquity Of the Ecliptic:" << deltaObliquityOfEcliptic <<std::endl;
+  std::cout << "Mean Obliquity of the Eccliptic:" << meanObliquityOfTheEclipitic <<std::endl;
+  std::cout << "True Obliquity of the Eccliptic (In Rads):" << trueObliquityOfEclipticInRads <<std::endl;
+  std::cout << "Greenwhich Sidereal Time:" << astroTime->greenwhichSiderealTime <<std::endl;
+  std::cout << "Suns Mean Anomaly:" << sun.meanAnomaly <<std::endl;
+  std::cout << "Suns Mean Longitude:" << sun.meanLongitude <<std::endl;
+  std::cout << "Eccentricty of the Earth:" << eccentricityOfTheEarth <<std::endl;
+  std::cout << "Suns Equation of Center:" << sun.equationOfCenter <<std::endl;
+  std::cout << "Suns True Longitude:" << sun.trueLongitude <<std::endl;
+  std::cout << "Suns Right Ascension:" << sun.rightAscension1 <<std::endl;
+  std::cout << "Suns Declination:" << sun.declination1 <<std::endl;
 }

@@ -31,6 +31,8 @@ Module['onRuntimeInitialized'] = function() {
 
 let attemptInitializiation = function(){
   if(wasmIsReady && skyStateIsReady){
+    console.log('Initialize Starry Sky');
+    let test1 = performance.now();
     let julianDay = Module._initializeStarrySky(
       skyState.latitude,
       skyState.longitude,
@@ -42,6 +44,11 @@ let attemptInitializiation = function(){
       skyState.second,
       skyState.utcOffset
     );
+    let test2 = performance.now();
+    console.log(test2 - test1);
+    console.log(Module._getSunRightAscension());
+    console.log(Module._getSunDeclination());
+    console.log(Module);
 
     //Grab all values associated with our current sky state.
 
@@ -80,6 +87,8 @@ onmessage = function(e){
     //Initialize our 3D environment
     starrySkyCanvas = postObject.canvas;
     ctx = starrySkyCanvas.getContext('webgl2');
+
+    console.log(`UTC Offset in worker: ${postObject.utcOffset}`);
 
     //Construct the state
     skyState = {
