@@ -1342,13 +1342,13 @@ function ensureInitRuntime() {
   checkStackCookie();
   if (runtimeInitialized) return;
   runtimeInitialized = true;
-  
+
   callRuntimeCallbacks(__ATINIT__);
 }
 
 function preMain() {
   checkStackCookie();
-  
+
   callRuntimeCallbacks(__ATMAIN__);
 }
 
@@ -1746,14 +1746,14 @@ function copyTempDouble(ptr) {
 // {{PRE_LIBRARY}}
 
 
-  
+
   function __ZSt18uncaught_exceptionv() { // std::uncaught_exception()
       return !!__ZSt18uncaught_exceptionv.uncaught_exception;
     }
-  
-  
-  
-  
+
+
+
+
   function ___cxa_free_exception(ptr) {
       try {
         return _free(ptr);
@@ -1813,7 +1813,7 @@ function copyTempDouble(ptr) {
         return ((setTempRet0(0),thrown)|0);
       }
       var typeArray = Array.prototype.slice.call(arguments);
-  
+
       var pointer = Module['___cxa_is_pointer_type'](throwntype);
       // can_catch receives a **, add indirection
       if (!___cxa_find_matching_catch.buffer) ___cxa_find_matching_catch.buffer = _malloc(4);
@@ -1840,7 +1840,7 @@ function copyTempDouble(ptr) {
 
   function ___lock() {}
 
-  
+
   var SYSCALLS={buffers:[null,[],[]],printChar:function (stream, curr) {
         var buffer = SYSCALLS.buffers[stream];
         assert(buffer);
@@ -1880,7 +1880,7 @@ function copyTempDouble(ptr) {
   }
   }
 
-  
+
   function flush_NO_FILESYSTEM() {
       // flush anything remaining in the buffers during shutdown
       var fflush = Module["_fflush"];
@@ -1937,7 +1937,7 @@ function copyTempDouble(ptr) {
       return HEAP8.length;
     }
 
-  
+
   function abortOnCannotGrowMemory(requestedSize) {
       abort('Cannot enlarge memory arrays to size ' + requestedSize + ' bytes (OOM). Either (1) compile with  -s TOTAL_MEMORY=X  with X higher than the current value ' + HEAP8.length + ', (2) compile with  -s ALLOW_MEMORY_GROWTH=1  which allows increasing the size at runtime, or (3) if you want malloc to return NULL (0) instead of this abort, compile with  -s ABORTING_MALLOC=0 ');
     }function _emscripten_resize_heap(requestedSize) {
@@ -1948,21 +1948,21 @@ function copyTempDouble(ptr) {
 
   var _llvm_sin_f64=Math_sin;
 
-  
+
   function _emscripten_memcpy_big(dest, src, num) {
       HEAPU8.set(HEAPU8.subarray(src, src+num), dest);
     }
-  
-   
 
-   
 
-  
+
+
+
+
   function ___setErrNo(value) {
       if (Module['___errno_location']) HEAP32[((Module['___errno_location']())>>2)]=value;
       else err('failed to set errno from JS');
       return value;
-    } 
+    }
 var ASSERTIONS = true;
 
 // Copyright 2017 The Emscripten Authors.  All rights reserved.
@@ -2521,6 +2521,3 @@ run();
 
 
 // {{MODULE_ADDITIONS}}
-
-
-

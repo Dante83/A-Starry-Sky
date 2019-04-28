@@ -1,3 +1,6 @@
+//Pull THREE.js into our code
+import * as THREE from 'three';
+
 // This loads the wasm generated glue code
 importScripts('starry-sky-module.js');
 
@@ -29,10 +32,16 @@ Module['onRuntimeInitialized'] = function() {
   attemptInitializiation();
 };
 
+updateAllSides = function(){
+
+}
+
+updateSide = function(side){
+
+}
+
 let attemptInitializiation = function(){
   if(wasmIsReady && skyStateIsReady){
-    console.log('Initialize Starry Sky');
-    let test1 = performance.now();
     let julianDay = Module._initializeStarrySky(
       skyState.latitude,
       skyState.longitude,
@@ -44,13 +53,9 @@ let attemptInitializiation = function(){
       skyState.second,
       skyState.utcOffset
     );
-    let test2 = performance.now();
-    console.log(test2 - test1);
-    console.log(Module._getSunRightAscension());
-    console.log(Module._getSunDeclination());
-    console.log(Module);
 
     //Grab all values associated with our current sky state.
+
 
     //Respond to the main thread with the current data.
 

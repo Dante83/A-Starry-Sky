@@ -34,7 +34,7 @@ function StarrySkyLoader(starrySkyComponent){
   this.needsSkyTextureUpdate = false;
   this.tickSinceLastUpdateRequest = 5;
   this.skyTexture;
-  this.skyWorker = new Worker("../src/cpp/starry-sky-web-worker.js"+ '?' + (Math.random() * 1000000));
+  this.skyWorker = new Worker("../src/cpp/starry-sky-web-worker.js"+ '?' + (Math.random() * 1000000), { type: "module" });
   let self = this;
 
   //This is the function that gets called each time our data loads.
