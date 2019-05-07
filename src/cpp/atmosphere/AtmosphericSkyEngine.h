@@ -27,8 +27,11 @@ private:
   double oneOverOneMinusParameterizedHeight;
   double oneOverOnePlusParamaeterizedHeight;
   double distancePreCalculation;
+  std::valarray<double> ozoneBeta
   double transmitance(double p_0, double p_f, int numSteps);
   void updateHeight(double kmAboveSeaLevel);
   double parameterizeViewZenith(double cosViewZenith);
   double parameterizeSunZenith(double cosSunZenith);
+  double mieG;
+  int numRotSteps;
 };
