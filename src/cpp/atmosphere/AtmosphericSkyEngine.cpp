@@ -10,6 +10,7 @@ AtmosphericSkyEngine(double kmAboveSeaLevel, int numberOfRayleighTransmissionSte
   mieDensity = exp(-kmAboveSeaLevel * ONE_OVER_MIE_SCALE_HEIGHT);
   stepsPerkm = stepsPerKilo;
   mieG = mieDirectioanlG;
+  mieGSquared = mieG * mieG;
   numRotSteps = numRotationalSteps;
   //As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
   double moleculesPerMeterCubedAtSeaLevel = pow(2.545, 25);
@@ -140,8 +141,12 @@ void AtmosphericSkyEngine::constructLUTs(){
 
   //Perform our single scattering integration
   //Using our geometry data and transmittance data.
-  double inscatteringMie[32][64][32];
-  std::valarray<double> inscatteringRayleigh[32][64][32];
+  double sumInscatteringIntensityMie[32][64][32];
+  std::valarray<double> sumInscatteringIntensityRayleigh[32][64][32](3);
+  double inscatteringIntensityMie0[32][64][32];
+  std::valarray<double> inscatteringIntensityRayleigh0[32][64][32](3);
+  double inscatteringIntensityMieKMinusOne[32][64][32];
+  std::valarray<double> inscatteringIntensityRayleighKMinusOne[32][64][32];
   for(int x = 0; x < 32; ++x){
     double height = heightTable[x];
     double radiusOfCamera = height + RADIUS_OF_EARTH;
@@ -169,16 +174,19 @@ void AtmosphericSkyEngine::constructLUTs(){
         //We don't need to reset the transmittance location for this one as we are starting at the camera
         //so we just need the angle between our altitude and the sun.
         int y2 = parameterizeViewZenith(cosLightAngleTable[z]);
-        std::valarray<double> transmittanceFromPToPc(transmittanceFromP1ToP2[x][y2][numStepsMinus1]);
+        double transmittanceFromPToPc(transmittanceFromP1ToP2[x][y2][numStepsMinus1]);
 
         //Calculate the first integrand element
-        double mieIntegrandFirstAndLastElements = transmittanceFromPaToPTimesMieDensity[x][y][0] * transmittanceFromPToPc;
-        double rayleighIntegrandFirstAndLastElements = transmittanceFromPaToPTimesRayleighDensity[x][y][0] * transmittanceFromPToPc;
+        double previousMieElement = transmittanceFromPaToPTimesMieDensity[x][y][0] * transmittanceFromPToPc;
+        double previousRayleighElement = transmittanceFromPaToPTimesRayleighDensity[x][y][0] * transmittanceFromPToPc;
+        double nextMieElement = 0.0;
+        double nextRayleighElement = 0.0;
+        double previousAltitude = height;
 
-        double mieIntegrandInnerSum = 0.0;
-        double rayleighIntegrandInnerSum = 0.0;
+        double integrandOfMieElements = 0.0;
+        double integrandOfRayleighElements = 0.0;
         //Walk along the path from Pa to Pb
-        for(int i = 1; i < numStepsMinus1; ++i){
+        for(int i = 1; i < numPoints; ++i){
           //Get our transmittance
           std::valarray<double> transmittanceFromPaToP(transmittanceFromP1ToP2[x][y][i]);
 
@@ -189,6 +197,7 @@ void AtmosphericSkyEngine::constructLUTs(){
           //with a new height and a new angle (the vector to the sun)
           double magnitudeOfPToOrigin = sqrt(p[0] * p[0] + p[1] * p[1]);
           double altitudeOfPAtP = magnitudeOfPToOrigin - RADIUS_OF_EARTH;
+          double deltaAltitude =  altitudeOfPAtP - previousAltitude;
           double negativeAngleBetweenPAndPa = acos(p[1] / magnitudeOfPToOrigin);
 
           //Rotate the angle to the sun by the above
@@ -201,33 +210,27 @@ void AtmosphericSkyEngine::constructLUTs(){
           //Now convert this over to a transmittance lookup
           std::valarray<double> transmittanceFromPToPc(transmittanceFromP1ToP2[x2][y2][numStepsMinus1]);
 
-          mieIntegrandInnerSum += transmittanceFromPaToPTimesMieDensity[x][y][i] * transmittanceFromPToPc;
-          rayleighIntegrandInnerSum += transmittanceFromPaToPTimesRayleighDensity[x][y][i] * transmittanceFromPToPc;
+          nextMieElement = transmittanceFromPaToPTimesMieDensity[x][y][i] * transmittanceFromPToPc;
+          nextRayleighElement = transmittanceFromPaToPTimesRayleighDensity[x][y][i] * transmittanceFromPToPc;
+          integrandOfMieElements += 0.5 * deltaAltitude * (nextMieElement + previousMieElement);
+          integrandOfRayleighElements += 0.5 * deltaAltitude * (nextRayleighElement + previousRayleighElement);
+          previousMieElement = nextMieElement;
+          previousRayleighElement = nextRayleighElement;
 
+          previousAltitude = altitudeOfPAtP;
           p = p + deltaP;
         }
-        //Calculate the final iteration.
-        std::valarray<double> transmittanceFromPaToP(transmittanceFromP1ToP2[x][y][numStepsMinus1]);
-        double magnitudeOfPToOrigin = sqrt(p[0] * p[0] + p[1] * p[1]);
-        double altitudeOfPAtP = magnitudeOfPToOrigin - RADIUS_OF_EARTH;
-        double negativeAngleBetweenPAndPa = acos(p[1] / magnitudeOfPToOrigin);
+        totalInscatteringMie = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
+        totalInscatteringRayleigh = betaRayleighOver4PI * integrandOfRayleighElements;
 
-        //Rotate the angle to the sun by the above
-        double pLightAngle = intialLightAngle - negativeAngleBetweenPAndPa;
+        totalInscatteringMie[x][y][z] = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
+        totalInscatteringRayleigh[x][y][z] = betaRayleighOver4PI * integrandOfRayleighElements;
+        inscatteringIntensityMieKMinusOne[x][y][z] = totalInscatteringMie[x][y][z];
+        std::copy(begin(totalInscatteringRayleigh[x][y][z]), end(totalInscatteringRayleigh[x][y][z]), inscatteringIntensityRayleighKMinusOne[x][y][z]);
 
-        //Convert our light angle back into a valid pixel location
-        int x2 = updateHeight(altitudeOfPAtP);
-        int y2 = parameterizeViewZenith(cos(pLightAngle));
-
-        //Now convert this over to a transmittance lookup
-        std::valarray<double> transmittanceFromPToPc(transmittanceFromP1ToP2[x2][y2][numStepsMinus1]);
-
-        //Calculate the final integrand element
-        mieIntegrandFirstAndLastElements += transmittanceFromPaToPTimesMieDensity[x][y][numStepsMinus1] * transmittanceFromPToPc;
-        rayleighIntegrandFirstAndLastElements += transmittanceFromPaToPTimesRayleighDensity[x][y][numStepsMinus1] * transmittanceFromPToPc;
-
-        totalInscatteringMie = zeroPointFiveTimesdeltaX * (mieIntegrandFirstAndLastElements + 2.0 * mieIntegrandInnerSum);
-        totalInscatteringRayleigh = zeroPointFiveTimesdeltaX * (rayleighIntegrandFirstAndLastElements + 2.0 * rayleighIntegrandInnerSum);
+        //And because this is the first time, we're just going to copy instead of add
+        sumInscatteringIntensityMie[x][y][z] = totalInscatteringMie[x][y][z];
+        std::copy(begin(totalInscatteringRayleigh[x][y][z]), end(totalInscatteringRayleigh[x][y][z]), sumInscatteringIntensityRayleigh[x][y][z]);
       }
     }
   }
@@ -246,58 +249,71 @@ void AtmosphericSkyEngine::constructLUTs(){
   }
 
   int numRotStepsTimes2 = numRotSteps * 2;
-  double deltaThetaOrPhi = PI / numRotSteps;
+  double deltaTheta = PI_TIMES_TWO / numRotSteps;
   for(int k = 1; k < NUMBER_OF_SCATTERING_ORDERS; ++k){
-    for(int x = 0; x < 32; ++x){
-      double height = heightTable[x];
-      for(int y = 0; y < 64; ++y){
-        double cosViewAngle = cosViewZenithTable[x][y];
-        double sinViewZenith = sinViewZenithTable[x][y];
-        double viewAngle = atan2(sinViewAngle, cosViewAngle);
-        //Precompute our gathering from scattered light
-        //from the previous order.
-        //Note that the integral for G is often just left as an integral over 4 pi
-        //in much of the literature, leaving us to scratch our heads as to how to
-        //procede with the result. Thankfully, we learn this is a short-hand for
-        //a solid angle integration as described in
-        //https://www.gamedevs.org/uploads/deferred-rendering-of-planetary-terrains-with-accurate-atmospheres.pdf
-        std::valarray<double> gatheringOrderMie[x][y](0.0, 3);
-        std::valarray<double> gatheringOrderRayleigh[x][y](0.0, 3);
-        double theta = 0.0;
-        for(int i_phi = 0; i_phi < numRotStepsTimes2; ++i_phi){
-          double phi = 0.0;
-          for(int i_theta = 0; i_theta < numRotSteps; ++i_theta){
-            double phaseFunctionMie;
-            double phaseFunctionRayleigh;
-            std::double<double> omega({cos(phi) * sin(theta), sin(phi) * sin(theta), cos(theta)});
-
-            //Implement the double integrand of our results.
-
-            theta += deltaThetaOrPhi;
-          }
-          phi += deltaThetaOrPhi;
-        }
-
-        //Add to our gathering sum
-        gatheringSumMie[x][y] = gatheringSumMie[x][y] + gatheringOrderMie[x][y];
-        gatheringSumRayleigh[x][y] = gatheringSumRayleigh[x][y] + gatheringOrderRayleigh[x][y];
-      }
-    }
-
     //Use our precomputed gathering data to calculate the next order of scattering
     for(int x = 0; x < 32; ++x){
       for(int y = 0; y < 64; ++y){
-        //Grab our precalculated gathering function
-        std::valarray<double> gathering = gatheringSum[x][y];
         for(int z = 0; z < 32; ++z){
-          //Calculate the first integrand element
-          double mieIntegrandFirstAndLastElements = transmittanceFromPaToPTimesMieDensity[x][y][0] * ;
-          double rayleighIntegrandFirstAndLastElements = transmittanceFromPaToPTimesRayleighDensity[x][y][0];
+          double cosLightAngle = cosLightAngleTable[z];
+          double sinLightAngle = sinLightAngleTable[z];
+          double intialLightAngle = thetaOfLightAngleTable[z];
 
-          double mieIntegrandInnerSum = 0.0;
-          double rayleighIntegrandInnerSum = 0.0;
+          //Calculate the initial iteration
+          std::valarray<double> transmittanceFromPaToP(transmittanceFromP1ToP2[x][y][0]);
+
+          //We don't need to reset the transmittance location for this one as we are starting at the camera
+          //so we just need the angle between our altitude and the sun.
+          int y2 = parameterizeViewZenith(cosLightAngleTable[z]);
+          std::valarray<double> transmittanceFromPToPc(transmittanceFromP1ToP2[x][y2][numStepsMinus1]);
+
+          //For each P along the integral, integrate between 0 and 2pi
+          //along theta. Even though this is a spherical integral, we only
+          //integrate along one axis and ignore the other one which saves a
+          //lot of time.
+          //Calculate the gathered light integrand
+          double theta = 0.0;
+          double gatheredMieScattering = 0.0;
+          std::valarray<double> gatheredRayleighScattering(3);
+
+          double z2 = parameterizeSunZenith(0);
+          double miePhase = getMiePhaseAtThetaEqualsZero(); //This should just be a constant when we start this up
+          double intensityMie = inscatteringIntensityMieKMinusOne[x2][y2][z2];
+          std::valarray<double> intensityRayleigh = inscatteringIntensityRayleighKMinusOne[x2][y2][z2];
+          double previouslyGatheredMieScattering = miePhase * intensityMie;
+          std::valarray<double> previouslyGatheredRayleighScattering = RAYLEIGH_PHASE_AT_ZERO_DEGREES * intensityRayleigh;
+          for(int i = 1; i < numRotSteps; ++i){
+            theta += deltaTheta;
+            //This theta acts as a new view angle for our camera moved to point P
+            //We use this information to look up our previous intensity so that we can
+            //add the light value to our total.
+            double cosOfTheta = cos(theta);
+            double cosOfThetaSquared = cosOfTheta * cosOfTheta;
+            z2 = parameterizeSunZenith(cosOfTheta);
+
+            miePhase = getMiePhase(cosOfThetaSquared);
+            intensityMie = inscatteringIntensityMieKMinusOne[x2][y2][z2];
+            douuble rayleighPhase = getRayleighPhase(cosOfThetaSquared);
+            intensityRayleigh = inscatteringIntensityRayleighKMinusOne[x2][y2][z2];
+            double nextGatheredMieScattering = miePhase * intensityMie;
+            std::valarray<double> nextGatheredRayleighScattering = rayleighPhase * intensityRayleigh;
+
+            gatheredMieScattering += 0.5 * deltaTheta * (nextGatheredMieScattering - previouslyGatheredMieScattering);
+            gatheredRayleighScattering = 0.5 * deltaTheta * (nextGatheredRayleighScattering - previouslyGatheredRayleighScattering);
+            previouslyGatheredMieScattering = nextGatheredMieScattering;
+            previouslyGatheredRayleighScattering = nextGatheredRayleighScattering;
+          }
+
+          double previousMieElement = gatheredMieScattering * transmittanceFromPaToPTimesMieDensity[x][y][0];
+          std::valarray<double> previousRayleighElement * transmittanceFromPaToPTimesRayleighDensity[x][y][0];
+
+          double integrandOfMieElements = 0.0;
+          double integrandOfRayleighElements = 0.0;
           //Walk along the path from Pa to Pb
           for(int i = 1; i < numStepsMinus1; ++i){
+            //Get our transmittance
+            std::valarray<double> transmittanceFromPaToP(transmittanceFromP1ToP2[x][y][i]);
+
             //Get our location, p
             std::valarray<double> p(pVectors[x][y][i]);
 
@@ -312,32 +328,59 @@ void AtmosphericSkyEngine::constructLUTs(){
 
             //Convert our light angle back into a valid pixel location
             int x2 = updateHeight(altitudeOfPAtP);
+            int y2 = parameterizeViewZenith(cos(pLightAngle));
 
-            mieIntegrandInnerSum += transmittanceFromPaToPTimesMieDensity[x2][y2][i] * gathering[x2][y2];
-            rayleighIntegrandInnerSum += transmittanceFromPaToPTimesRayleighDensity[x2][y2][i] * gathering[x2][y2];
+            //Now convert this over to a transmittance lookup
+            std::valarray<double> transmittanceFromPToPc(transmittanceFromP1ToP2[x2][y2][numStepsMinus1]);
 
+            //Calculate the gathered light integrand
+            double theta = 0.0;
+            double gatheredMieScattering = 0.0;
+            std::valarray<double> gatheredRayleighScattering(3);
+
+            double z2 = parameterizeSunZenith(0);
+            double miePhase = getMiePhaseAtThetaEqualsZero(); //This should just be a constant when we start this up
+            double intensityMie = inscatteringIntensityMieKMinusOne[x2][y2][z2];
+            std::valarray<double> intensityRayleigh = inscatteringIntensityRayleighKMinusOne[x2][y2][z2];
+            double previouslyGatheredMieScattering = miePhase * intensityMie;
+            std::valarray<double> previouslyGatheredRayleighScattering = RAYLEIGH_PHASE_AT_ZERO_DEGREES * intensityRayleigh;
+            for(int i = 1; i < numRotSteps; ++i){
+              theta += deltaTheta;
+              //This theta acts as a new view angle for our camera moved to point P
+              //We use this information to look up our previous intensity so that we can
+              //add the light value to our total.
+              double cosOfTheta = cos(theta);
+              double cosOfThetaSquared = cosOfTheta * cosOfTheta;
+              z2 = parameterizeSunZenith(cosOfTheta);
+
+              miePhase = getMiePhase(cosOfThetaSquared);
+              intensityMie = inscatteringIntensityMieKMinusOne[x2][y2][z2];
+              douuble rayleighPhase = getRayleighPhase(cosOfThetaSquared);
+              intensityRayleigh = inscatteringIntensityRayleighKMinusOne[x2][y2][z2];
+              double nextGatheredMieScattering = miePhase * intensityMie;
+              std::valarray<double> nextGatheredRayleighScattering = rayleighPhase * intensityRayleigh;
+
+              gatheredMieScattering += 0.5 * deltaTheta * (nextGatheredMieScattering - previouslyGatheredMieScattering);
+              gatheredRayleighScattering = 0.5 * deltaTheta * (nextGatheredRayleighScattering - previouslyGatheredRayleighScattering);
+              previouslyGatheredMieScattering = nextGatheredMieScattering;
+              previouslyGatheredRayleighScattering = nextGatheredRayleighScattering;
+            }
+
+            //Multiply this by our transmittance from P to Pa and our density at the current altitude
+            double nextMieElement = gatheredMieScattering * transmittanceFromPaToPTimesMieDensity[x][y][i];
+            std::valarray<double> nextRayleighElement * transmittanceFromPaToPTimesRayleighDensity[x][y][i];
+            integrandOfMieElements += 0.5 * altitudeOfPAtP * (nextMieElement + previousMieElement);
+            integrandOfRayleighElements += 0.5 * altitudeOfPAtP * (nextRayleighElement + previousRayleighElement);
+
+            //Prepare our variables for the net iteration of the loop
+            previousMieElement = nextMieElement;
+            previousRayleighElement = nextRayleighElement;
+            previousAltitude = altitudeOfPAtP;
             p = p + deltaP;
           }
-          //Calculate the final iteration.
-          double magnitudeOfPToOrigin = sqrt(p[0] * p[0] + p[1] * p[1]);
-          double altitudeOfPAtP = magnitudeOfPToOrigin - RADIUS_OF_EARTH;
-          double negativeAngleBetweenPAndPa = acos(p[1] / magnitudeOfPToOrigin);
-
-          //Rotate the angle to the sun by the above
-          double pLightAngle = intialLightAngle - negativeAngleBetweenPAndPa;
-
-          //Convert our light angle back into a valid pixel location
-          int x2 = updateHeight(altitudeOfPAtP);
-
-          //Now convert this over to a transmittance lookup
-          std::valarray<double> transmittanceFromPToPc(transmittanceFromP1ToP2[x2][y2][numStepsMinus1]);
-
-          //Calculate the final integrand element
-          mieIntegrandFirstAndLastElements += transmittanceFromPaToPTimesMieDensity[x][y][numStepsMinus1];
-          rayleighIntegrandFirstAndLastElements += transmittanceFromPaToPTimesRayleighDensity[x][y][numStepsMinus1];
-
-          totalInscatteringMie += zeroPointFiveTimesdeltaX * (mieIntegrandFirstAndLastElements + 2.0 * mieIntegrandInnerSum);
-          totalInscatteringRayleigh += zeroPointFiveTimesdeltaX * (rayleighIntegrandFirstAndLastElements + 2.0 * rayleighIntegrandInnerSum);
+          //Multiply our constants
+          totalInscatteringMie = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
+          totalInscatteringRayleigh = betaRayleighOver4PI * integrandOfRayleighElements;
         }
       }
     }
@@ -356,6 +399,18 @@ void AtmosphericSkyEngine::constructLUTs(){
       }
     }
   }
+}
+
+double AtmosphericSkyEngine::getMiePhaseAtThetaEqualsZero(){
+  return -3.0 / ((2.0 + mieGSquared) * sqrt(mieGSquared - 1.0));
+}
+
+double AtmosphericSkyEngine::getMiePhase(double cosThetaSquared){
+  return (1.5 * (1.0 - mieGSquared) * (1.0 + cosThetaSquared)) / ((2.0 + mieGSquared) * pow((1.0 + mieGSquared - 2.0 * cosThetaSquared), 1.5));
+}
+
+double AtmosphericSkyEngine::getRayleighPhase(double cosThetaSquared){
+  return 0.75 * (1.0 + cosThetaSquared)
 }
 
 //
