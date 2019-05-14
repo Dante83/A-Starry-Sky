@@ -4,26 +4,28 @@
 #include "Constants.h" //Local constants
 #include "../Constants.h" //Global constants
 
-AtmosphericSkyEngine(double kmAboveSeaLevel, int numberOfRayleighTransmissionSteps, int numberOfMieTransmissionSteps, double stepsPerKilo, int numRotationalSteps, double mieDirectioanlG){
-  //Set the Rayleigh Scattering Beta Coefficient
-  rayleighDensity = exp(-kmAboveSeaLevel * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
-  mieDensity = exp(-kmAboveSeaLevel * ONE_OVER_MIE_SCALE_HEIGHT);
+SkyLUTGenerator(double mieDirectioanlG, double stepsPerKilo, int numRotationalSteps){
   stepsPerkm = stepsPerKilo;
   mieG = mieDirectioanlG;
-  mieGSquared = mieG * mieG;
   numRotSteps = numRotationalSteps;
-  //As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
-  double moleculesPerMeterCubedAtSeaLevel = pow(2.545, 25);
-  double ozoneRedBeta = pow(2.0, -25) * moleculesPerMeterCubedAtSeaLevel;
-  double ozoneGreenBeta = pow(2.0, -25) * moleculesPerMeterCubedAtSeaLevel;
-  double ozoneBlueBeta = pow(7.0, -27) * moleculesPerMeterCubedAtSeaLevel;
-  std::valarray<double> ozoneBeta({ozoneRedBeta, ozoneGreenBeta, ozoneBlueBeta}, 3);
 }
 
-void AtmosphericSkyEngine::constructLUTs(){
+void SkyLUTGenerator::constructLUTs(){
+  //Initialize our final targets
+  uint8_t transmittanceStridedLUT[12288]; //32 x 128 x 3
+  uint8_t scatteringStridedLUT[393216]; //32 x 128 x 32 x 3
+  transmittanceStridedLUTPtr = &transmittanceStridedLUT;
+  scatteringStridedLUTPrt = &scatteringStridedLUT;
+
   //General constants
-  std::valarray rayleighBeta({EARTH_RAYLEIGH_RED_BETA, EARTH_RAYLEIGH_GREEN_BETA, EARTH_RAYLEIGH_BLUE_BETA}, 3);
-  std::valarray betaRayleighOver4PI({EARTH_RAYLEIGH_RED_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_GREEN_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_BLUE_BETA_OVER_FOUR_PI}, 3);
+  double mieGSquared = mieG * mieG;
+  std::valarray<double> rayleighBeta({EARTH_RAYLEIGH_RED_BETA, EARTH_RAYLEIGH_GREEN_BETA, EARTH_RAYLEIGH_BLUE_BETA}, 3);
+  std::valarray<double> betaRayleighOver4PI({EARTH_RAYLEIGH_RED_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_GREEN_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_BLUE_BETA_OVER_FOUR_PI}, 3);
+
+  //As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
+  double moleculesPerMeterCubedAtSeaLevel = pow(2.545, 25);
+  std::valarray<double> ozoneBeta({pow(2.0, -25), pow(2.0, -25), pow(7.0, -27)}, 3);
+  ozoneBeta = ozoneBeta * moleculesPerMeterCubedAtSeaLevel;
 
   //Convert our pixel data to local coordinates
   double heightTable[32];
@@ -80,7 +82,6 @@ void AtmosphericSkyEngine::constructLUTs(){
   std::vector<std::valarray<double>> transmittanceFromPaToPTimesRayleighDensity[32][128];
   std::vector<std::valarray<double>> transmittanceFromPaToP[32][128];
   std::valarray<double> doubleTransmittanceFromPaToPb[32][128];
-  uint8 uint8TransmittanceFromPaToPb[32][128][3];
   for(int x = 0; x < 32; ++x){
     double startingHeight = heightTable[x];
     double firstRayleighValue = exp(-startingHeight * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);;
@@ -156,27 +157,25 @@ void AtmosphericSkyEngine::constructLUTs(){
       }
 
       //Copy our final value over to our output transmission table
-      //The first is used internally for accuracy, but the second is used externally for our shader
       std::copy(begin(end(transmittanceFromPaToP[x][y])), end(end(transmittanceFromPaToP[x][y])), doubleTransmittanceFromPaToPb[x][y]);
-      std::copy(begin(end(transmittanceFromPaToP[x][y])), end(end(transmittanceFromPaToP[x][y])), uint8TransmittanceFromPaToPb[x][y]);
     }
   }
 
   //Intialize our variable for our scattering calculations
-  std::valarray<double> sumInscatteringIntensityMie[32][64][32];
-  std::valarray<double> sumInscatteringIntensityRayleigh[32][64][32];
-  std::valarray<double> inscatteringIntensityMieKMinusOne[32][64][32];
-  std::valarray<double> inscatteringIntensityRayleighKMinusOne[32][64][32];
+  std::valarray<double> sumInscatteringIntensityMie[32][128][32];
+  std::valarray<double> sumInscatteringIntensityRayleigh[32][128][32];
+  std::valarray<double> inscatteringIntensityMieKMinusOne[32][128][32];
+  std::valarray<double> inscatteringIntensityRayleighKMinusOne[32][128][32];
 
   //Perform our single scattering integration
-  std::valarray<double> inscatteringIntensityMie0[32][64][32];
-  std::valarray<double> inscatteringIntensityRayleigh0[32][64][32];
+  std::valarray<double> inscatteringIntensityMie0[32][128][32];
+  std::valarray<double> inscatteringIntensityRayleigh0[32][128][32];
   for(int x = 0; x < 32; ++x){
     double height = heightTable[x];
     double radiusOfCamera = height + RADIUS_OF_EARTH;
     std::valarray<double> initialPosition({0.0, radiusOfCamera}, 2);
     //For each view angle theta
-    for(int y = 0; y < 64; ++y){
+    for(int y = 0; y < 128; ++y){
       double cosViewAngle = cosViewZenithTable[x][y];
       double sinViewZenith = sinViewZenithTable[x][y];
       std::valarray<double> deltaP({cosViewAngle, sinViewAngle}, 2);
@@ -334,7 +333,7 @@ void AtmosphericSkyEngine::constructLUTs(){
           //add the light value to our total.
           double cosOfTheta = cos(theta);
           double cosOfThetaSquared = cosOfTheta * cosOfTheta;
-          double y = parameterizeViewZenith(cosOfTheta); //This view angle is actually the angle of incoming scattered light
+          int y = parameterizeViewZenith(cosOfTheta); //This view angle is actually the angle of incoming scattered light
 
           //These would normally be the angle between the sun and the incident light scattering direction
           //but because we're integrating over all angles, we can just use our initial view theta here.
@@ -363,7 +362,7 @@ void AtmosphericSkyEngine::constructLUTs(){
     for(int x = 0; x < 32; ++x){
       double height = heightTable[x];
       updateHeight(height);
-      for(int y = 0; y < 64; ++y){
+      for(int y = 0; y < 128; ++y){
         double cosViewAngle = cosViewZenithTable[x][y];
         double sinViewZenith = sinViewZenithTable[x][y];
         std::valarray<double> deltaP({cosViewAngle, sinViewAngle}, 2);
@@ -379,8 +378,8 @@ void AtmosphericSkyEngine::constructLUTs(){
 
           //Zero here is the zeroth element as we're running down the same path from the camera to the atmosphere
           //every time.
-          std::valarray<double> previousMieElement = gatheredScattering[x][y] * transmittanceFromPaToPTimesMieDensity[x][y][0];
-          std::valarray<double> previousRayleighElement = gatheredScattering[x][y] * transmittanceFromPaToPTimesRayleighDensity[x][y][0];
+          std::valarray<double> previousMieElement = gatheredScattering[x][z] * transmittanceFromPaToPTimesMieDensity[x][y][0];
+          std::valarray<double> previousRayleighElement = gatheredScattering[x][z] * transmittanceFromPaToPTimesRayleighDensity[x][y][0];
           std::valarray<double> nextMieElement(3);
           std::valarray<double> nextRayleighElement(3);
 
@@ -388,18 +387,31 @@ void AtmosphericSkyEngine::constructLUTs(){
           double integrandOfRayleighElements = 0.0;
           //Walk along the path from Pa to Pb
           for(int i = 1; i < numStepsMinus1; ++i){
-            //Get our transmittance
+            //Get our transmittance from P to Pa
             std::valarray<double> transmittanceFromPToPa = transmittanceFromPToPaLUT[x][y][z][i];
 
             //Get our location, p
-            std::valarray<double> p(pVectors[x][y][i]);
+            std::valarray<double> p = pVectors[x][y][i];
 
-            //Get the transmittance between Pa and P
-            std::valarray<double> tr
+            //Get our gathering light intensity at this current p by rotating our solar angle
+            //Instead of calculating our transmittance again, we shall presume that p, is just a new camera
+            //with a new height and a new angle (the vector to the sun).
+            double magnitudeOfPToOrigin = sqrt(p[0] * p[0] + p[1] * p[1]);
+            double altitudeOfPAtP = magnitudeOfPToOrigin - RADIUS_OF_EARTH;
+            double deltaAltitude =  altitudeOfPAtP - previousAltitude;
+            double negativeAngleBetweenPAndPa = acos(p[1] / magnitudeOfPToOrigin);
+
+            //Rotate the angle to the sun by the above
+            double pLightAngle = intialLightAngle - negativeAngleBetweenPAndPa;
+
+            //Convert our light angle back into a valid pixel location
+            double cosLightAngle = cos(pLightAngle);
+            int xLight = updateHeight(height);
+            int zLight = parameterizeViewZenith(cosLightAngle);
 
             //Multiply this by our transmittance from P to Pa and our density at the current altitude
-            nextMieElement = gatheredScattering[x][y] * transmittanceFromPaToPTimesMieDensity[x][y][i];
-            nextRayleighElement = gatheredScattering[x][y] * transmittanceFromPaToPTimesRayleighDensity[x][y][i];
+            nextMieElement = gatheredScattering[xLight][zLight] * transmittanceFromPaToPTimesMieDensity[x][y][i];
+            nextRayleighElement = gatheredScattering[xLight][zLight] * transmittanceFromPaToPTimesRayleighDensity[x][y][i];
             integrandOfMieElements += 0.5 * altitudeOfPAtP * (nextMieElement + previousMieElement);
             integrandOfRayleighElements += 0.5 * altitudeOfPAtP * (nextRayleighElement + previousRayleighElement);
 
@@ -409,40 +421,59 @@ void AtmosphericSkyEngine::constructLUTs(){
             previousAltitude = altitudeOfPAtP;
             p = p + deltaP;
           }
-          //Multiply our constants
-          totalInscatteringMie = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
-          totalInscatteringRayleigh = betaRayleighOver4PI * integrandOfRayleighElements;
+
+          //Multiply our constants and set our LUTs
+          inscatteringIntensityMieKMinusOne[x][y][z] = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
+          inscatteringIntensityRayleighKMinusOne[x][y][z] = betaRayleighOver4PI * integrandOfRayleighElements;
+          sumInscatteringIntensityMie[x][y][z] = sumInscatteringIntensityMie[x][y][z] + inscatteringIntensityMieKMinusOne[x][y][z];
+          sumInscatteringIntensityRayleigh[x][y][z] = sumInscatteringIntensityRayleigh[x][y][z] + inscatteringIntensityRayleighKMinusOne[x][y][z];
         }
       }
     }
   }
 
-  //Swap the ordering of our results for easier lookups
-  //As we don't change our height too often, and the sun position only
-  //changes once every few frames, but the view angle changes often.
-  //Therefore, we might only wish to set one texture for our height
-  //then every few frames, change our sun angle and then finally,
-  //we can change our view angle.
+  //Export our results to the main program as strided LUTs
+  //Transmittance
+  int i = 0;
   for(int x = 0; x < 32; ++x){
-    for(int y = 0; y < 64; ++y){
-      for(int z = 0; z < 32; ++z){
-        intScatteringInterpolationTarget[x][z][y] = scatteringInterpolationTarget[x][y][z];
+    for(int y = 0; y < 128; ++y){
+      for(int c = 0; c < 4; ++c){
+        //Set our LUT here
+        transmittanceStridedLUT[i] = static_cast<int>(doubleTransmittanceFromPaToPb[x][y][c] * 255.0);
+        i++;
       }
+      i++;
     }
+    i++;
   }
 
-  //Export our results to the main program
+  //Inscattering
+  int i = 0;
+  for(int x = 0; x < 32; ++x){
+    for(int y = 0; y < 128; ++y){
+      for(int z = 0; z < 32; ++z){
+        for(int c = 0; c < 4; ++c){
+          //Set our LUT here
+          transmittanceStridedLUT[i] = static_cast<int>((sumInscatteringIntensityRayleigh[x][y][z][c] + sumInscatteringIntensityMie[x][y][z][c]) * 255.0);
+          i++;
+        }
+        i++;
+      }
+      i++;
+    }
+    i++;
+  }
 }
 
-double AtmosphericSkyEngine::getMiePhaseAtThetaEqualsZero(){
+double SkyLUTGenerator::getMiePhaseAtThetaEqualsZero(){
   return -3.0 / ((2.0 + mieGSquared) * sqrt(mieGSquared - 1.0));
 }
 
-double AtmosphericSkyEngine::getMiePhase(double cosThetaSquared){
+double SkyLUTGenerator::getMiePhase(double cosThetaSquared){
   return (1.5 * (1.0 - mieGSquared) * (1.0 + cosThetaSquared)) / ((2.0 + mieGSquared) * pow((1.0 + mieGSquared - 2.0 * cosThetaSquared), 1.5));
 }
 
-double AtmosphericSkyEngine::getRayleighPhase(double cosThetaSquared){
+double SkyLUTGenerator::getRayleighPhase(double cosThetaSquared){
   return 0.75 * (1.0 + cosThetaSquared)
 }
 
@@ -450,29 +481,28 @@ double AtmosphericSkyEngine::getRayleighPhase(double cosThetaSquared){
 //NOTE: When using these functions, if you change the view angle, it is important to call update height first.
 //all the other components will depend upon this first request
 //
-int AtmosphericSkyEngine::updateHeight(double kmAboveSeaLevel){
+int SkyLUTGenerator::updateHeight(double kmAboveSeaLevel){
   parameterizedHeight = sqrt(kmAboveSeaLevel * ONE_OVER_HEIGHT_OF_ATMOSPHERE);
   parameterizedViewZenithConst = -sqrt(kmAboveSeaLevel * (TWO_TIMES_THE_RADIUS_OF_THE_EARTH + kmAboveSeaLevel)) / (RADIUS_OF_EARTH + kmAboveSeaLevel);
   //parameterized viewZenith conversions.
   oneOverOneMinusParameterizedHeight = NUMERATOR_FOR_ONE_PLUS_OR_MINUS_PARAMETERIZED_HEIGHTS / (1.0 - parameterizedHeight);
   oneOverOnePlusParamaeterizedHeight = NUMERATOR_FOR_ONE_PLUS_OR_MINUS_PARAMETERIZED_HEIGHTS / (1.0 + parameterizedHeight);
-  distancePreCalculation = ATMOSPHERE_HEIGHT_SQUARED / (kmAboveSeaLevel * kmAboveSeaLevel);
 
   return static_cast<int>(parameterizedHeight);
 }
 
-double AtmosphericSkyEngine::parameterizeViewZenith(double cosViewZenith){
+double SkyLUTGenerator::parameterizeViewZenith(double cosViewZenith){
   if(cosViewZenith > parameterizedViewZenithConst){
     return pow((cosViewZenith - parameterizedHeight) * oneOverOneMinusParameterizedHeight, 0.2);
   }
   return pow((cosViewZenith - parameterizedHeight) * oneOverOnePlusParamaeterizedHeight, 0.2);
 }
 
-double AtmosphericSkyEngine::parameterizeLightZenith(double cosSunZenith){
+double SkyLUTGenerator::parameterizeLightZenith(double cosSunZenith){
   return atan2(max(cosSunZenith, -0.1975) * TAN_OF_ONE_POINT_THREE_EIGHT_SIX) * ZERO_POINT_FIVE_OVER_ONE_POINT_ONE + 0.37;
 }
 
-double AtmosphericSkyEngine::updateHeightFromParameter(double parameterKMAboveSeaLevel){
+double SkyLUTGenerator::updateHeightFromParameter(double parameterKMAboveSeaLevel){
   kmAboveSeaLevel = parameterKMAboveSeaLevel * HEIGHT_OF_RAYLEIGH_ATMOSPHERE;
   parameterizedViewZenithConst = - sqrt(kmAboveSeaLevel * (TWO_TIMES_THE_RADIUS_OF_THE_EARTH + kmAboveSeaLevel)) / (RADIUS_OF_EARTH + kmAboveSeaLevel);
   oneMinusParameterizedViewAngle = 1.0 - parameterizedViewZenithConst;
@@ -481,13 +511,13 @@ double AtmosphericSkyEngine::updateHeightFromParameter(double parameterKMAboveSe
   return kmAboveSeaLevel;
 }
 
-double AtmosphericSkyEngine::cosViewAngleFromParameter(double parameterizedViewZenith){
+double SkyLUTGenerator::cosViewAngleFromParameter(double parameterizedViewZenith){
   if(parameterizedViewZenith > 0.5){
     return PARAMETER_TO_COS_OF_SUN_VIEW_CONST + pow((parameterizedViewZenith - 0.5), 5) * oneMinusParameterizedViewAngle;
   }
   return PARAMETER_TO_COS_OF_SUN_VIEW_CONST - pow(parameterizedViewZenith, 5) * onePlusParameterizedViewAngle;
 }
 
-double AtmosphericSkyEngine::cosLightZenithFromParameter(double parameterizedSunZenith){
+double SkyLUTGenerator::cosLightZenithFromParameter(double parameterizedSunZenith){
   return tan(1.5 * parameterizedSunZenith - 0.555) * PARAMETER_TO_COS_ZENITH_OF_SUN_CONST;
 }
