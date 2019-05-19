@@ -1,8 +1,8 @@
 #include "Constants.h" //Local constants
 #include "../Constants.h" //Global constants
 #include "SkyLUTGenerator.h"
-#include "../lin_algebra/LAVector2.h"
-#include "../lin_algebra/LAVector3.h"
+#include "../lin_algebra/LAVectorD2.h"
+#include "../lin_algebra/LAVectorD3.h"
 #include <cmath>
 #include <vector>
 using namespace std;

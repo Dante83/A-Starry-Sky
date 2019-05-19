@@ -14,13 +14,14 @@ SkyState::SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* s
   location = locationPnt;
   skyManager = skyManagerPnt;
   skyLUTGenerator = skyLUTGeneratorPtr;
+  skyLUTGenerator->constructLUTs();
 }
 
 SkyState* skyState;
 
 extern "C" {
   int main();
-  void initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset);
+  void initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset, double stepsPerKilo, int numRotationalSteps, double mieDirectioanlG);
   int* getTransmittanceStridedLUTPtr();
   int* getScatteringStridedLUTPtr();
   double getSunRightAscension();
@@ -29,6 +30,7 @@ extern "C" {
   double getMoonDeclination();
 }
 
+//What we use to get all of this rolling.
 void EMSCRIPTEN_KEEPALIVE initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset, double stepsPerKilo, int numRotationalSteps, double mieDirectioanlG){
   SkyLUTGenerator *skyLUTGenerator = new SkyLUTGenerator(stepsPerKilo, numRotationalSteps, mieDirectioanlG);
   AstroTime *astroTime = new AstroTime(year, month, day, hour, minute, second, utcOffset);
