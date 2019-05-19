@@ -1,65 +1,56 @@
 #pragma once
-#include "LAVector.h"
-#include "stdint.h"
 
 //
-//Using LAVector methods in Doyub Kim's Fluid Engine Development as a guide.
+//Based on the work in Doyub Kim's Fluid Dynamics:
+//though I only needed double vectors so I skipped building
+//the templates.
 //
-template <typename T>
-class LAVector<T, 2> final{
+
+class LAVectorD2{
 public:
-  T x;
-  T y;
-  T* valPtr;
+  double x;
+  double y;
+  double* valPtr;
 
   //Constructors
-  LAVector();
-  explicit LAVector(T x, T y);
-  LAVector(const std::initializer_list<T>& lst);
-  LAVector(const LAVector& vector);
+  LAVectorD2();
+  explicit LAVectorD2(double x_in, double y_in);
+  LAVectorD2(const LAVectorD2& vector);
 
   //Operators
-  T& operator [](size_t i);
-  const T& operator [](size_t i) const;
+  double operator [](int i);
+  LAVectorD2& operator =(const LAVectorD2& v);
 
-  LAVector& operator =(const std::initializer_list<T>& lst);
-  LAVector& operator =(const LAVector& v);
+  LAVectorD2& operator +=(double a);
+  LAVectorD2& operator +=(const LAVectorD2& v);
 
-  LAVector& operator +=(T a);
-  LAVector& operator +=(const LAVector&v);
+  LAVectorD2& operator -=(double a);
+  LAVectorD2& operator -=(const LAVectorD2& v);
 
-  LAVector& operator -=(T a);
-  LAVector& operator -=(const LAVector&v);
-
-  LAVector& operator *=(T a);
-  LAVector& operator *=(const LAVector&v);
+  LAVectorD2& operator *=(double a);
+  LAVectorD2& operator *=(const LAVectorD2& v);
 
   //Methods
-  double dot(const LAVector<T,2>& a);
+  double dot(const LAVectorD2& v);
   void normalize();
 };
 
-template <typename T> using LAVector2 = LAVector<T, 2>;
+LAVectorD2 operator +(const LAVectorD2& a, double b);
+LAVectorD2 operator +(double a, const LAVectorD2& b);
+LAVectorD2 operator +(const LAVectorD2& a, const LAVectorD2& b);
 
-template <typename T> LAVector2<T> operator +(const LAVector2<T>& a);
-template <typename T> LAVector2<T> operator +(T a, const LAVector2<T>& b);
-template <typename T> LAVector2<T> operator +(const LAVector2<T>& a, const LAVector2<T>& b);
+LAVectorD2 operator -(const LAVectorD2& a, double b);
+LAVectorD2 operator -(double a, const LAVectorD2& b);
+LAVectorD2 operator -(const LAVectorD2& a, const LAVectorD2& b);
 
-template <typename T> LAVector2<T> operator -(const LAVector2<T>& a);
-template <typename T> LAVector2<T> operator -(T a, const LAVector2<T>& b);
-template <typename T> LAVector2<T> operator -(const LAVector2<T>& a, T b);
-template <typename T> LAVector2<T> operator -(const LAVector2<T>& a, const LAVector2<T>& b);
+LAVectorD2 operator *(const LAVectorD2& a, double b);
+LAVectorD2 operator *(double a, const LAVectorD2& b);
+LAVectorD2 operator *(const LAVectorD2& a, const LAVectorD2& b);
 
-template <typename T> LAVector2<T> operator *(const LAVector2<T>& a);
-template <typename T> LAVector2<T> operator *(T a, const LAVector2<T>& b);
-template <typename T> LAVector2<T> operator *(const LAVector2<T>& a, T b);
-template <typename T> LAVector2<T> operator *(const LAVector2<T>& a, const LAVector2<T>& b);
+LAVectorD2 operator /(const LAVectorD2& a, double b);
+LAVectorD2 operator /(double a, const LAVectorD2& b);
+LAVectorD2 operator /(const LAVectorD2& a, const LAVectorD2& b);
 
-template <typename T> LAVector2<T> operator /(const LAVector2<T>& a, T b);
-template <typename T> LAVector2<T> operator /(T a, const LAVector2<T>& b);
-template <typename T> LAVector2<T> operator /(const LAVector2<T>& a, const LAVector2<T>& b);
-
-typedef LAVector2<double> LAVectorD2;
 LAVectorD2 sin(const LAVectorD2& a);
 LAVectorD2 cos(const LAVectorD2& a);
 LAVectorD2 sqrt(const LAVectorD2& a);

@@ -16,8 +16,8 @@ private:
   double parameterizedViewZenithConst;
   double oneOverOneMinusParameterizedHeight;
   double oneOverOnePlusParamaeterizedHeight;
-  double oneMinusParameterizedViewAngle;
-  double onePlusParameterizedViewAngle;
+  double oneMinusParameterizedViewZenith;
+  double onePlusParameterizedViewZenith;
   double getMiePhaseAtThetaEqualsZero();
   double getMiePhase(double cosThetaSquared);
   double getRayleighPhase(double cosThetaSquared);

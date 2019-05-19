@@ -80,6 +80,7 @@ void SkyLUTGenerator::constructLUTs(){
 
   //Connect our geometry data up to transmittance data
   std::vector<LAVectorD2> pVectors[32][128];
+  std::vector<LAVectorD3> transmittanceFromPaToP[32][128];
   std::vector<LAVectorD3> transmittanceFromPaToPTimesMieDensity[32][128];
   std::vector<LAVectorD3> transmittanceFromPaToPTimesRayleighDensity[32][128];
   LAVectorD3 doubleTransmittanceFromPaToPb[32][128];
@@ -113,6 +114,7 @@ void SkyLUTGenerator::constructLUTs(){
       LAVectorD3 transmittanceTimesRayleighDensity = transmittance * exp(-h_0 * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
 
       //Store our results for future use
+      transmittanceFromPaToP[x][y].push_back(transmittance);
       transmittanceFromPaToPTimesMieDensity[x][y].push_back(transmittanceTimesMieDensity);
       transmittanceFromPaToPTimesRayleighDensity[x][y].push_back(transmittanceTimesRayleighDensity);
       pVectors[x][y].push_back(p);
@@ -136,17 +138,17 @@ void SkyLUTGenerator::constructLUTs(){
         double mieTransmittanceExponent = -EARTH_MIE_BETA_EXTINCTION * integralOfMieDensityFunction;
         //Using http://skyrenderer.blogspot.com/
         LAVectorD3 mieTransmittanceVector(mieTransmittanceExponent, mieTransmittanceExponent, mieTransmittanceExponent);
-        for(int j = 0; j < 3; ++j){
-          transmittance[j] = exp(-1.0 * rayleighBeta[j] * integralOfRayleighDensityFunction - mieTransmittanceVector[j] - ozoneBeta[j] * integralOfOzoneDensityFunction);
-        }
+        transmittance.x = exp(-1.0 * rayleighBeta.x * integralOfRayleighDensityFunction - mieTransmittanceVector.x - ozoneBeta.x * integralOfOzoneDensityFunction);
+        transmittance.y = exp(-1.0 * rayleighBeta.y * integralOfRayleighDensityFunction - mieTransmittanceVector.y - ozoneBeta.y * integralOfOzoneDensityFunction);
+        transmittance.z = exp(-1.0 * rayleighBeta.z * integralOfRayleighDensityFunction - mieTransmittanceVector.z - ozoneBeta.z * integralOfOzoneDensityFunction);
 
         //For our future caching of transmittance times mie or rayleigh density
         LAVectorD3 transmittanceTimesMieDensity = transmittance * exp(-h_f * ONE_OVER_MIE_SCALE_HEIGHT);
         LAVectorD3 transmittanceTimesRayleighDensity = transmittance * exp(-h_f * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
 
         //Store our results for future use
-        transmittanceFromPaToPTimesMieDensity.push_back(transmittanceTimesMieDensity);
-        transmittanceFromPaToPTimesRayleighDensity.push_back(transmittanceTimesRayleighDensity);
+        transmittanceFromPaToPTimesMieDensity[x][y].push_back(transmittanceTimesMieDensity);
+        transmittanceFromPaToPTimesRayleighDensity[x][y].push_back(transmittanceTimesRayleighDensity);
         pVectors[x][y].push_back(p);
 
         h_0 = h_f;
@@ -195,13 +197,13 @@ void SkyLUTGenerator::constructLUTs(){
         LAVectorD3 transmittanceFromPToPc = doubleTransmittanceFromPaToPb[x][yLightView];
 
         //Calculate the first integrand element
-        double nextMieElement;
-        double nextRayleighElement;
+        LAVectorD3 nextMieElement;
+        LAVectorD3 nextRayleighElement;
         LAVectorD3 previousMieElement = transmittanceFromPaToPTimesMieDensity[x][y][0] * transmittanceFromPToPc;
         LAVectorD3 previousRayleighElement = transmittanceFromPaToPTimesRayleighDensity[x][y][0] * transmittanceFromPToPc;
         double previousAltitude = height;
-        double integrandOfMieElements = 0.0;
-        double integrandOfRayleighElements = 0.0;
+        LAVectorD3 integrandOfMieElements;
+        LAVectorD3 integrandOfRayleighElements;
         //Walk along the path from Pa to Pb
         for(int i = 1; i < numberOfSteps; ++i){
           //Get our location, p
@@ -230,7 +232,7 @@ void SkyLUTGenerator::constructLUTs(){
             int xLightView = updateHeight(altitudeOfPAtP);
             int yLightView = parameterizeViewZenith(cos(pLightZenith));
             int numPointsMinus1 = numPointsBetweenPaAndPb[xLightView][yLightView] - 1;
-            transmittanceFromPToPc = doubleTransmittanceFromPaToPb[xLightView][yLightView][numPointsMinus1];
+            transmittanceFromPToPc = transmittanceFromPaToP[xLightView][yLightView][numPointsMinus1];
           }
           else{
             //Start by grabbign the transmittance in the opposite direction, from P
@@ -240,7 +242,7 @@ void SkyLUTGenerator::constructLUTs(){
             int xLightView = updateHeight(altitudeOfPAtP);
             int yLightView = parameterizeViewZenith(cosLightZenith);
             int numPointsMinus1 = numPointsBetweenPaAndPb[xLightView][yLightView] - 1;
-            double transmittanceFromPToPexit = doubleTransmittanceFromPaToPb[xLightView][yLightView][numPointsMinus1];
+            LAVectorD3 transmittanceFromPToPexit = transmittanceFromPaToP[xLightView][yLightView][numPointsMinus1];
 
             //Set our camera to the point where the sun is looking into the atmosphere
             //towards point P.
@@ -249,7 +251,7 @@ void SkyLUTGenerator::constructLUTs(){
 
             //Get the transmittance over the length from this new height to the
             //exit point.
-            double transmittanceFromPexitToPc = doubleTransmittanceFromPaToPb[xLightView][yLightView][numPointsMinus1];
+            LAVectorD3 transmittanceFromPexitToPc = transmittanceFromPaToP[xLightView][yLightView][numPointsMinus1];
 
             //Divide it by the transmittance from the point P to the exit point on the horizon.
             transmittanceFromPToPc = transmittanceFromPexitToPc / transmittanceFromPToPexit;
@@ -309,7 +311,7 @@ void SkyLUTGenerator::constructLUTs(){
         //double theta = 0.0;
         int y = parameterizeViewZenith(1.0); //cos of 0 is 1
         double miePhase = miePhaseAtZero; //This should just be a constant when we start this up
-        double intensityMie = inscatteringIntensityMieKMinusOne[x][y][z];
+        LAVectorD3 intensityMie = inscatteringIntensityMieKMinusOne[x][y][z];
         LAVectorD3 intensityRayleigh = inscatteringIntensityRayleighKMinusOne[x][y][z];
         LAVectorD3 zerothGatheredMieScattering = miePhase * intensityMie;
         LAVectorD3 zerothGatheredRayleighScattering = RAYLEIGH_PHASE_AT_ZERO_DEGREES * intensityRayleigh;
@@ -375,9 +377,8 @@ void SkyLUTGenerator::constructLUTs(){
           LAVectorD3 nextMieElement = LAVectorD3();
           LAVectorD3 nextRayleighElement = LAVectorD3();
           double previousAltitude = height;
-
-          double integrandOfMieElements = 0.0;
-          double integrandOfRayleighElements = 0.0;
+          LAVectorD3 integrandOfMieElements;
+          LAVectorD3 integrandOfRayleighElements;
           //Walk along the path from Pa to Pb
           for(int i = 1; i < numStepsMinus1; ++i){
             //Get our location, p
@@ -413,10 +414,10 @@ void SkyLUTGenerator::constructLUTs(){
           }
 
           //Multiply our constants and set our LUTs
-          inscatteringIntensityMieKMinusOne[x][y][z] = new LAVectorD3(EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements);
-          inscatteringIntensityRayleighKMinusOne[x][y][z] = new LAVectorD3(betaRayleighOver4PI * integrandOfRayleighElements);
-          sumInscatteringIntensityMie[x][y][z] = new LAVectorD3(sumInscatteringIntensityMie[x][y][z] + inscatteringIntensityMieKMinusOne[x][y][z]);
-          sumInscatteringIntensityRayleigh[x][y][z] = new LAVectorD3(sumInscatteringIntensityRayleigh[x][y][z] + inscatteringIntensityRayleighKMinusOne[x][y][z]));
+          inscatteringIntensityMieKMinusOne[x][y][z] = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
+          inscatteringIntensityRayleighKMinusOne[x][y][z] = betaRayleighOver4PI * integrandOfRayleighElements;
+          sumInscatteringIntensityMie[x][y][z] += inscatteringIntensityMieKMinusOne[x][y][z];
+          sumInscatteringIntensityRayleigh[x][y][z] += inscatteringIntensityRayleighKMinusOne[x][y][z];
         }
       }
     }
@@ -495,19 +496,19 @@ double SkyLUTGenerator::parameterizeLightZenith(double cosSunZenith){
 double SkyLUTGenerator::updateHeightFromParameter(double parameterKMAboveSeaLevel){
   double kmAboveSeaLevel = parameterKMAboveSeaLevel * parameterKMAboveSeaLevel * ATMOSPHERE_HEIGHT;
   parameterizedViewZenithConst = - sqrt(kmAboveSeaLevel * (TWO_TIMES_THE_RADIUS_OF_THE_EARTH + kmAboveSeaLevel)) / (RADIUS_OF_EARTH + kmAboveSeaLevel);
-  oneMinusParameterizedViewAngle = 1.0 - parameterizedViewZenithConst;
-  onePlusParameterizedViewAngle = 1.0 + parameterizedViewZenithConst;
+  oneMinusParameterizedViewZenith = 1.0 - parameterizedViewZenithConst;
+  onePlusParameterizedViewZenith = 1.0 + parameterizedViewZenithConst;
 
   return kmAboveSeaLevel;
 }
 
 double SkyLUTGenerator::cosViewZenithFromParameter(double parameterizedViewZenith){
   if(parameterizedViewZenith > 0.5){
-    return PARAMETER_TO_COS_OF_SUN_VIEW_CONST + pow((parameterizedViewZenith - 0.5), 5) * oneMinusParameterizedViewAngle;
+    return parameterizedViewZenithConst + pow((parameterizedViewZenith - 0.5), 5) * oneMinusParameterizedViewZenith;
   }
-  return PARAMETER_TO_COS_OF_SUN_VIEW_CONST - pow(parameterizedViewZenith, 5) * onePlusParameterizedViewAngle;
+  return parameterizedViewZenithConst - pow(parameterizedViewZenith, 5) * onePlusParameterizedViewZenith;
 }
 
 double SkyLUTGenerator::cosLightZenithFromParameter(double parameterizedSunZenith){
-  return tan(1.5 * parameterizedSunZenith - 0.555) * PARAMETER_TO_COS_ZENITH_OF_SUN_CONST;
+  return tan(1.5 * parameterizedSunZenith - 0.555) * PARAMETER_TO_COS_OF_SUN_VIEW_CONST;
 }
