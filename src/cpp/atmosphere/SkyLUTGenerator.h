@@ -1,15 +1,14 @@
 #pragma once
-#include "../world_state/AstroTime.h"
 
 class SkyLUTGenerator{
 public:
-  SkyLUTGenerator(double stepsPerKilo, int numRotationalSteps, double mieDirectioanlG);
+  SkyLUTGenerator(double mieDirectioanlG, int stepsPerKilo, int numRotationalSteps);
   void constructLUTs();
-  uint8_t* transmittanceStridedLUTPtr;
-  uint8_t* scatteringStridedLUTPrt;
+  int* transmittanceStridedLUTPtr;
+  int* scatteringStridedLUTPrt;
 private:
-  double stepsPerkm;
-  int numRotationalSteps;
+  int stepsPerkm;
+  int numRotSteps;
   double mieDirectioanlG;
   double mieG;
   double parameterizedViewZenithConst;
@@ -22,6 +21,6 @@ private:
   double parameterizeViewZenith(double cosViewZenith);
   double parameterizeLightZenith(double cosSunZenith);
   double updateHeightFromParameter(double parameterKMAboveSeaLevel);
-  double cosViewAngleFromParameter(double parameterizedViewZenith);
+  double cosViewZenithFromParameter(double parameterizedViewZenith);
   double cosLightZenithFromParameter(double parameterizedSunZenith);
 };

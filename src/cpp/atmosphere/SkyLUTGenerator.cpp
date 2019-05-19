@@ -1,10 +1,13 @@
-#include "Sun.h"
-#include "Moon.h"
-#include "SkyState.h"
 #include "Constants.h" //Local constants
 #include "../Constants.h" //Global constants
+#include "SkyLUTGenerator.h"
+#include "../lin_algebra/Vector2.h"
+#include "../lin_algebra/Vector3.h"
+#include <cmath>
+#include <vector>
+using namespace std;
 
-SkyLUTGenerator(double mieDirectioanlG, double stepsPerKilo, int numRotationalSteps){
+SkyLUTGenerator::SkyLUTGenerator(double mieDirectioanlG, int stepsPerKilo, int numRotationalSteps){
   stepsPerkm = stepsPerKilo;
   mieG = mieDirectioanlG;
   numRotSteps = numRotationalSteps;
@@ -12,122 +15,120 @@ SkyLUTGenerator(double mieDirectioanlG, double stepsPerKilo, int numRotationalSt
 
 void SkyLUTGenerator::constructLUTs(){
   //Initialize our final targets
-  uint8_t transmittanceStridedLUT[12288]; //32 x 128 x 3
-  uint8_t scatteringStridedLUT[393216]; //32 x 128 x 32 x 3
-  transmittanceStridedLUTPtr = &transmittanceStridedLUT;
-  scatteringStridedLUTPrt = &scatteringStridedLUT;
+  int* transmittanceStridedLUTPtr = new int[12288]; //32 x 128 x 3
+  int* scatteringStridedLUTPrt = new int[393216]; //32 x 128 x 32 x 3
 
   //General constants
   double mieGSquared = mieG * mieG;
-  std::valarray<double> rayleighBeta({EARTH_RAYLEIGH_RED_BETA, EARTH_RAYLEIGH_GREEN_BETA, EARTH_RAYLEIGH_BLUE_BETA}, 3);
-  std::valarray<double> betaRayleighOver4PI({EARTH_RAYLEIGH_RED_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_GREEN_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_BLUE_BETA_OVER_FOUR_PI}, 3);
+  VectorD3 rayleighBeta = VectorD3(EARTH_RAYLEIGH_RED_BETA, EARTH_RAYLEIGH_GREEN_BETA, EARTH_RAYLEIGH_BLUE_BETA);
+  VectorD3 betaRayleighOver4PI = VectorD3(EARTH_RAYLEIGH_RED_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_GREEN_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_BLUE_BETA_OVER_FOUR_PI);
 
   //As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
   double moleculesPerMeterCubedAtSeaLevel = pow(2.545, 25);
-  std::valarray<double> ozoneBeta({pow(2.0, -25), pow(2.0, -25), pow(7.0, -27)}, 3);
-  ozoneBeta = ozoneBeta * moleculesPerMeterCubedAtSeaLevel;
+  VectorD3 ozoneBeta = VectorD3(pow(2.0, -25), pow(2.0, -25), pow(7.0, -27));
+  ozoneBeta *= moleculesPerMeterCubedAtSeaLevel;
 
   //Convert our pixel data to local coordinates
   double heightTable[32];
-  double cosViewAngleTable[32][128];
-  double sinViewAngleTable[32][128];
-  double cosLightAngleTable[32];
-  double sinLightAngleTable[32];
-  double thetaOfLightAngleTable[32];
+  double cosViewZenithTable[32][128];
+  double sinViewZenithTable[32][128];
+  double cosLightZenithTable[32];
+  double sinLightZenithTable[32];
+  double thetaOfLightZenithTable[32];
   for(int x = 0; x < 32; ++x){
     heightTable[x] = updateHeightFromParameter(static_cast<double>(x));
     for(int y = 0; y < 128; ++y){
-      cosViewAngle = cosViewAngleFromParameter(static_cast<double>(y));
+      double cosViewZenith = cosViewZenithFromParameter(static_cast<double>(y));
       cosViewZenithTable[x][y] = cosViewZenith;
-      sinViewAngleTable[x][y] = sqrt(1.0 - cosViewAngle * cosViewAngle);
+      sinViewZenithTable[x][y] = sqrt(1.0 - cosViewZenith * cosViewZenith);
     }
   }
   for(int z = 0; z < 32; ++z){
-    cosLightAngleTable[z] = cosLightZenithFromParameter(static_cast<double>(z));
-    sinLightAngleTable[z] = sqrt(1.0 - cosLightAngle * cosLightAngle);
-    thetaOfLightAngleTable[z] = atan2(sinLightAngleTable[z], cosLightAngleTable[z]);
+    double cosLightZenith = cosLightZenithFromParameter(static_cast<double>(z));
+    cosLightZenithTable[z] = cosLightZenith;
+    sinLightZenithTable[z] = sqrt(1.0 - cosLightZenith * cosLightZenith);
+    thetaOfLightZenithTable[z] = atan2(sinLightZenithTable[z], cosLightZenith);
   }
 
   //Precalulate our geometry data
   //Construct our ray paths from P_a to P_b
   //And from every P to P_c
   int numPointsBetweenPaAndPb[32][128];
-  std::valarray<double> pa2PbVects[32][128];
+  VectorD2 pa2PbVects[32][128];
   for(int x = 0; x < 32; ++x){
     double height = heightTable[x];
     double radiusOfCamera = height + RADIUS_OF_EARTH;
     double radiusOfCameraSquared = radiusOfCamera * radiusOfCamera;
-    std::valarray<double> cameraPosition({0.0, radiusOfCamera}, 2);
+    VectorD2 cameraPosition(0.0, radiusOfCamera);
 
     for(int y = 0; y < 128; ++y){
       //Get the view angle
-      double cosViewAngle = cosViewZenithTable[x][y];
-      double sinViewAngle = sinViewAngleTable[x][y];
+      double cosViewZenith = cosViewZenithTable[x][y];
+      double sinViewZenith = sinViewZenithTable[x][y];
 
       //Simplifying the results from https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection
-      double t_intersection = radiusOfCamera * sinViewAngle + sqrt(ATMOSPHERE_HEIGHT_SQUARED - radiusOfCameraSquared * (1.0 - sinViewAngle * sinViewAngle));
-      std::valarray<double> pb({cosViewZenith * t_intersection, sinViewAngle * t_intersection}, 2);
+      double t_intersection = radiusOfCamera * sinViewZenith + sqrt(ATMOSPHERE_HEIGHT_SQUARED - radiusOfCameraSquared * (1.0 - sinViewZenith * sinViewZenith));
+      VectorD2 vectorFromPaToPb = vectorFromPaToPb(cosViewZenith * t_intersection, sinViewZenith * t_intersection);
 
       //Determine the number of points between P and Pb
-      std::valarray<double> vectorFromPaToPb = pb - cameraPosition;
-      int numPointsFromPaToPb = ceil(sqrt(vectorFromPaToPb[0] * vectorFromPaToPb[0] + vectorFromPaToPb[1] * vectorFromPaToPb[1]) * stepsPerkm) + 1;
+      VectorD2 vectorFromPaToPb -= cameraPosition;
+      int numPointsFromPaToPb = ceil(sqrt(vectorFromPaToPb.dot(vectorFromPaToPb)) * stepsPerkm) + 1;
       numPointsBetweenPaAndPb[x][y] = numPointsFromPaToPb;
-      pa2PbVects[x][y] = vectorFromPaToPb;
+      pa2PbVects[x][y] = new VectorD2(vectorFromPaToPb);
     }
   }
 
   //Connect our geometry data up to transmittance data
-  std::vector<std::valarray<double>> pVectors[32][128];
-  std::vector<std::valarray<double>> transmittanceFromPaToPTimesMieDensity[32][128];
-  std::vector<std::valarray<double>> transmittanceFromPaToPTimesRayleighDensity[32][128];
-  std::vector<std::valarray<double>> transmittanceFromPaToP[32][128];
-  std::valarray<double> doubleTransmittanceFromPaToPb[32][128];
+  std::vector<VectorD2> pVectors[32][128];
+  std::vector<VectorD3> transmittanceFromPaToPTimesMieDensity[32][128];
+  std::vector<VectorD3> transmittanceFromPaToPTimesRayleighDensity[32][128];
+  std::vector<VectorD3> transmittanceFromPaToP[32][128];
+  VectorD3 doubleTransmittanceFromPaToPb[32][128];
   for(int x = 0; x < 32; ++x){
     double startingHeight = heightTable[x];
-    double firstRayleighValue = exp(-startingHeight * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);;
+    double firstRayleighValue = exp(-startingHeight * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
     double firstMieValue = exp(-startingHeight * ONE_OVER_MIE_SCALE_HEIGHT);
 
-    std::valarray<double> p_start({0.0, startingHeight + RADIUS_OF_EARTH}, 2);
+    VectorD2 p_start(0.0, startingHeight + RADIUS_OF_EARTH);
     for(int y = 0; y < 128; ++y){
       //Get the vector in the direction from Pa to Pb
-      std::valarray<double> Pa2PbVect = pa2PbVects[x][y];
-
       double integralOfRayleighDensityFunction = 0.0;
       double integralOfMieDensityFunction = 0.0;
       double integralOfOzoneDensityFunction;
       int numberOfSteps = numPointsBetweenPaAndPb[x][y];
-      std::valarray<double> deltaP = Pa2PbVect / static_cast<double>(numberOfSteps - 1);
+      VectorD2 deltaP = VectorD2(pa2PbVects[x][y] / static_cast<double>(numberOfSteps - 1));
       //h_0 is just the starting height for for our view camera
       double previousRayleighValue = firstRayleighValue;
       double previousMieValue = firstMieValue;
-      std::vector<std::valarray<double>> transmittanceFromPbToPTimesMieDensityInnerArray;
-      std::vector<std::valarray<double>> transmittanceFromPbToPTimesRayleighDensityInnerArray;
-      std::valarray<double> p(p_start); //Starting location of our camera
+      VectorD2 p = VectorD2(p_start); //Starting location of our camera
       double h_0 = startingHeight;
 
       //We have an N-1 problem below. Each trapezoidal integration removes one data
       //point from our result and is only valid for values after one delta P.
       //therefore, we must pad the beginning of our result with a first value of zero.
       //as the area under a zero width element. This results in a transmittance of 1.0
-      std::valarray<double> transmittance({1.0, 1.0, 1.0}, 3);
+      VectorD3 transmittance = VectorD3(1.0, 1.0, 1.0);
 
       //For our future caching of transmittance times mie or rayleigh density
-      std::valarray<double> transmittanceTimesMieDensity = transmittance * exp(-h_f * ONE_OVER_MIE_SCALE_HEIGHT);
-      std::valarray<double> transmittanceTimesRayleighDensity = transmittance * exp(-h_f * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+      VectorD3 transmittanceTimesMieDensity = transmittance * exp(-h_0 * ONE_OVER_MIE_SCALE_HEIGHT);
+      VectorD3 transmittanceTimesRayleighDensity = transmittance * exp(-h_0 * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
 
       //Store our results for future use
-      transmittanceFromPaToP[x][y].push_back(transmittance);
-      transmittanceFromPaToPTimesMieDensity.push_back(transmittanceTimesMieDensity);
-      transmittanceFromPaToPTimesRayleighDensity.push_back(transmittanceTimesRayleighDensity);
-      pVectors[x][y].push_back(p);
+      transmittanceFromPaToP[x][y] = new std::Vector();
+      transmittanceFromPaToP[x][y].push_back(new VectorD3(transmittance));
+      transmittanceFromPaToPTimesMieDensity[x][y] = new std::Vector();
+      transmittanceFromPaToPTimesMieDensity[x][y].push_back(new VectorD3(transmittanceTimesMieDensity));
+      transmittanceFromPaToPTimesRayleighDensity[x][y] = new std::Vector();
+      transmittanceFromPaToPTimesRayleighDensity[x][y].push_back(new VectorD3(transmittanceTimesRayleighDensity));
+      pVectors[x][y] = new std::Vector();
+      pVectors[x][y].push_back(new VectorD2(p));
 
       //Now that our loop is primed, commence the primary loop from Pa to Pb
       //Note that we got to number of steps plus 1 to take care of the N-1 outcome
       //of trapezoidal integration.
       for(int i = 1; i < numberOfSteps; ++i){
-        p = p + deltaP;
-        double height = p[1];
-        h_f = sqrt(p[0] * p[0] + height * height) - RADIUS_OF_EARTH;
+        p += deltaP;
+        double h_f = sqrt(p.dot(p)) - RADIUS_OF_EARTH;
         double currentRayleighValue = exp(-h_f * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
         double currentMieValue = exp(-h_f * ONE_OVER_MIE_SCALE_HEIGHT);
         double zeroPointFiveOverDeltaH = 0.5 / (h_f - h_0);
@@ -140,114 +141,117 @@ void SkyLUTGenerator::constructLUTs(){
         double integralOfOzoneDensityFunction = integralOfRayleighDensityFunction * OZONE_PERCENT_OF_RAYLEIGH;
         double mieTransmittanceExponent = -EARTH_MIE_BETA_EXTINCTION * integralOfMieDensityFunction;
         //Using http://skyrenderer.blogspot.com/
-        std::valarray<double> mieTransmittanceVector(mieTransmittanceExponent, 3);
-        transmittance = exp(-1.0 * rayleighBeta * integralOfRayleighDensityFunction - mieTransmittanceVector - ozoneBeta * integralOfOzoneDensityFunction);
+        VectorD3 mieTransmittanceVector(mieTransmittanceExponent, mieTransmittanceExponent, mieTransmittanceExponent);
+        for(int j = 0; j < 3; ++j){
+          transmittance[j] = exp(-1.0 * rayleighBeta[j] * integralOfRayleighDensityFunction - mieTransmittanceVector[j] - ozoneBeta[j] * integralOfOzoneDensityFunction);
+        }
 
         //For our future caching of transmittance times mie or rayleigh density
-        std::valarray<double> transmittanceTimesMieDensity = transmittance * exp(-h_f * ONE_OVER_MIE_SCALE_HEIGHT);
-        std::valarray<double> transmittanceTimesRayleighDensity = transmittance * exp(-h_f * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+        VectorD3 transmittanceTimesMieDensity = transmittance * exp(-h_f * ONE_OVER_MIE_SCALE_HEIGHT);
+        VectorD3 transmittanceTimesRayleighDensity = transmittance * exp(-h_f * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
 
         //Store our results for future use
-        transmittanceFromPaToP[x][y].push_back(transmittance);
-        transmittanceFromPaToPTimesMieDensity.push_back(transmittanceTimesMieDensity);
-        transmittanceFromPaToPTimesRayleighDensity.push_back(transmittanceTimesRayleighDensity);
+        transmittanceFromPaToP[x][y].push_back(new VectorD3(transmittance));
+        transmittanceFromPaToPTimesMieDensity.push_back(new VectorD3(transmittanceTimesMieDensity));
+        transmittanceFromPaToPTimesRayleighDensity.push_back(new VectorD3(transmittanceTimesRayleighDensity));
+        pVectors[x][y].push_back(new VectorD2(p));
 
-        pVectors[x][y].push_back(p);
         h_0 = h_f;
       }
 
       //Copy our final value over to our output transmission table
-      std::copy(begin(end(transmittanceFromPaToP[x][y])), end(end(transmittanceFromPaToP[x][y])), doubleTransmittanceFromPaToPb[x][y]);
+      doubleTransmittanceFromPaToPb[x][y] = new VectorD3(transmittance);
     }
   }
 
   //Intialize our variable for our scattering calculations
-  std::valarray<double> sumInscatteringIntensityMie[32][128][32];
-  std::valarray<double> sumInscatteringIntensityRayleigh[32][128][32];
-  std::valarray<double> inscatteringIntensityMieKMinusOne[32][128][32];
-  std::valarray<double> inscatteringIntensityRayleighKMinusOne[32][128][32];
+  VectorD3 sumInscatteringIntensityMie[32][128][32];
+  VectorD3 sumInscatteringIntensityRayleigh[32][128][32];
+  VectorD3 inscatteringIntensityMieKMinusOne[32][128][32];
+  VectorD3 inscatteringIntensityRayleighKMinusOne[32][128][32];
 
   //Perform our single scattering integration
-  std::valarray<double> inscatteringIntensityMie0[32][128][32];
-  std::valarray<double> inscatteringIntensityRayleigh0[32][128][32];
+  VectorD3 inscatteringIntensityMie0[32][128][32];
+  VectorD3 inscatteringIntensityRayleigh0[32][128][32];
   for(int x = 0; x < 32; ++x){
     double height = heightTable[x];
     double radiusOfCamera = height + RADIUS_OF_EARTH;
-    std::valarray<double> initialPosition({0.0, radiusOfCamera}, 2);
+    VectorD2 initialPosition(0.0, radiusOfCamera);
+
     //For each view angle theta
     for(int y = 0; y < 128; ++y){
-      double cosViewAngle = cosViewZenithTable[x][y];
+      double cosViewZenith = cosViewZenithTable[x][y];
       double sinViewZenith = sinViewZenithTable[x][y];
-      std::valarray<double> deltaP({cosViewAngle, sinViewAngle}, 2);
+      VectorD2 deltaP(cosViewZenith, sinViewZenith);
 
       //Get P
-      std::valarray<double> p({0.0, radiusOfCamera}, 2);
+      VectorD2 p(0.0, radiusOfCamera);
       int numberOfSteps = numPointsBetweenPaAndPb[x][y];
-      double zeroPointFiveTimesdeltaH = (0.5 * pa2PbVects[x][y][1]) / static_cast<double>(numberOfSteps - 1);
+      double zeroPointFiveTimesdeltaH = (0.5 * pa2PbVects[x][y].y) / static_cast<double>(numberOfSteps - 1);
 
       //For each sun angle phi
       for(int z = 0; z < 32; ++z){
-        double cosLightAngle = cosLightAngleTable[z];
-        double sinLightAngle = sinLightAngleTable[z];
-        double intialLightAngle = thetaOfLightAngleTable[z];
+        double cosLightZenith = cosLightZenithTable[z];
+        double sinLightZenith = sinLightZenithTable[z];
+        double intialLightZenith = thetaOfLightZenithTable[z];
 
         //We don't need to reset the transmittance location for this one as we are starting at the camera
         //so we just need the angle between our altitude and the sun.
-        int yLightView = parameterizeViewZenith(cosLightAngleTable[z]);
+        int yLightView = parameterizeViewZenith(cosLightZenithTable[z]);
         //NOTE: We should really interpolate this for better results.
-        std::valarray<double> transmittanceFromPToPc = doubleTransmittanceFromPaToPb[x][yLightView];
+        VectorD3 transmittanceFromPToPc = doubleTransmittanceFromPaToPb[x][yLightView];
 
         //Calculate the first integrand element
         double nextMieElement;
         double nextRayleighElement;
-        double previousMieElement = transmittanceFromPaToPTimesMieDensity[x][y][0] * transmittanceFromPToPc;
-        double previousRayleighElement = transmittanceFromPaToPTimesRayleighDensity[x][y][0] * transmittanceFromPToPc;
+        VectorD3 previousMieElement = transmittanceFromPaToPTimesMieDensity[x][y][0] * transmittanceFromPToPc;
+        VectorD3 previousRayleighElement = transmittanceFromPaToPTimesRayleighDensity[x][y][0] * transmittanceFromPToPc;
         double previousAltitude = height;
         double integrandOfMieElements = 0.0;
         double integrandOfRayleighElements = 0.0;
         //Walk along the path from Pa to Pb
         for(int i = 1; i < numPoints; ++i){
           //Get our location, p
-          std::valarray<double> p = pVectors[x][y][i];
+          VectorD2 p = pVectors[x][y];
 
           //Instead of calculating our transmittance again, we shall presume that p, is just a new camera
           //with a new height and a new angle (the vector to the sun).
-          double magnitudeOfPToOrigin = sqrt(p[0] * p[0] + p[1] * p[1]);
+          double magnitudeOfPToOrigin = sqrt(p.dot(p));
           double altitudeOfPAtP = magnitudeOfPToOrigin - RADIUS_OF_EARTH;
           double deltaAltitude =  altitudeOfPAtP - previousAltitude;
-          double negativeAngleBetweenPAndPa = acos(p[1] / magnitudeOfPToOrigin);
+          double negativeAngleBetweenPAndPa = acos(p.y / magnitudeOfPToOrigin);
 
           //Rotate the angle to the sun by the above
-          double pLightAngle = intialLightAngle - negativeAngleBetweenPAndPa;
+          double pLightZenith = intialLightZenith - negativeAngleBetweenPAndPa;
 
           //Convert our light angle back into a valid pixel location
-          double cosLightAngle = cos(pLightAngle);
-          double sinLightAngle = sin(pLightAngle);
+          double cosLightZenith = cos(pLightZenith);
+          double sinLightZenith = sin(pLightZenith);
 
           //Now convert this over to a transmittance lookup
           //Use the method recommended by page 54 of Stefan Sperlhofer
           //https://www.gamedevs.org/uploads/deferred-rendering-of-planetary-terrains-with-accurate-atmospheres.pdf
-          //if sinLightAngle < 0
+          //if sinLightZenith < 0
           numPointsMinus1 = numPointsBetweenPaAndPb[xLightView][yLightView] - 1;
           std::valarray<double> transmittanceFromPToPc;
-          if(sinLightAngle < 0.0){
+          if(sinLightZenith < 0.0){
             int xLightView = updateHeight(altitudeOfPAtP);
-            int yLightView = parameterizeViewZenith(cos(pLightAngle));
+            int yLightView = parameterizeViewZenith(cos(pLightZenith));
             transmittanceFromPToPc = doubleTransmittanceFromPaToPb[xLightView][yLightView][numPointsMinus1];
           }
           else{
             //Start by grabbign the transmittance in the opposite direction, from P
             //to the opposition of the light source.
             //Add Pi to our light angle, this just multiplies our light angle by -1.0
-            cosLightAngle *= -1.0;
+            cosLightZenith *= -1.0;
             int xLightView = updateHeight(altitudeOfPAtP);
-            int yLightView = parameterizeViewZenith(cosLightAngle);
+            int yLightView = parameterizeViewZenith(cosLightZenith);
             double transmittanceFromPToPexit = doubleTransmittanceFromPaToPb[xLightView][yLightView][numPointsMinus1];
 
             //Set our camera to the point where the sun is looking into the atmosphere
             //towards point P.
             xLightView = updateHeight(ATMOSPHERE_HEIGHT);
-            yLightView = parameterizeViewZenith(cos(pLightAngle));
+            yLightView = parameterizeViewZenith(cos(pLightZenith));
 
             //Get the transmittance over the length from this new height to the
             //exit point.
@@ -266,8 +270,8 @@ void SkyLUTGenerator::constructLUTs(){
 
           previousAltitude = altitudeOfPAtP;
         }
-        std::valarray<double> inscatteringMie = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
-        std::valarray<double> inscatteringRayleigh = betaRayleighOver4PI * integrandOfRayleighElements;
+        VectorD3 inscatteringMie = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
+        VectorD3 inscatteringRayleigh = betaRayleighOver4PI * integrandOfRayleighElements;
         totalInscatteringMie[x][y][z] = inscatteringMie;
         totalInscatteringRayleigh[x][y][z] = inscatteringRayleigh;
 
@@ -280,12 +284,11 @@ void SkyLUTGenerator::constructLUTs(){
   }
 
   //Iterate over our multiple scattering lookups
-  std::valarray<double> gatheringSum[32][32];
+  VectorD3 gatheringSum[32][32];
   for(int x = 0; x < 32; ++x){
     for(int y = 0; y < 64; ++y){
       //Initialize our gathering sum
-      std::valarray<double> gatheringSumMie[x][y](0.0, 3);
-      std::valarray<double> gatheringSumRayleigh[x][y](0.0, 3);
+      gatheringSum[x][y] = new VectorD3();
     }
   }
 
@@ -297,12 +300,12 @@ void SkyLUTGenerator::constructLUTs(){
     //rayleigh light, but I cannot see why our inscattered light, scattered back to the origin
     //would be able to differentiate between light that came from a mie scattering and
     //light that came from rayleigh scattering. Thus, I am just going to sum the two.
-    std::valarray<double> gatheredScattering[32][32];
+    VectorD3 gatheredScattering[32][32];
     for(int x = 0; x < 32; ++x){
       double height = heightTable[x];
       for(int z = 0; z < 32; ++z){
-        double thetaLightAngle = thetaOfLightAngleTable[z];
-        double cosLightAngle = cosLightAngleTable[z];
+        double thetaLightZenith = thetaOfLightZenithTable[z];
+        double cosLightZenith = cosLightZenithTable[z];
 
         //
         //Note: I'm a bit worried that our view angle integration here isn't considering
@@ -316,18 +319,18 @@ void SkyLUTGenerator::constructLUTs(){
         //Because we're rotating the full 2 pi, it doesn't matter where our starting angle 'is'
         //relative to the view angle as every angle will ultimately be integrated. If we were to
         //exclude certain angles (perhaps because scattering was blocked) this would not be the case.
-        double theta = 0.0;
+        //double theta = 0.0;
         double y = parameterizeViewZenith(1.0); //cos of 0 is 1
         double miePhase = miePhaseAtZero; //This should just be a constant when we start this up
         double intensityMie = inscatteringIntensityMieKMinusOne[x][y][z];
-        std::valarray<double> intensityRayleigh = inscatteringIntensityRayleighKMinusOne[x][y][z];
-        std::valarray<double> zerothGatheredMieScattering = miePhase * intensityMie;
-        std::valarray<double> zerothGatheredRayleighScattering = RAYLEIGH_PHASE_AT_ZERO_DEGREES * intensityRayleigh;
-        std::valarray<double> gatheredMieScattering(3);
-        std::valarray<double> gatheredRayleighScattering(3);
+        VectorD3 intensityRayleigh = inscatteringIntensityRayleighKMinusOne[x][y][z];
+        VectorD3 zerothGatheredMieScattering = miePhase * intensityMie;
+        VectorD3 zerothGatheredRayleighScattering = RAYLEIGH_PHASE_AT_ZERO_DEGREES * intensityRayleigh;
+        VectorD3 gatheredMieScattering = VectorD3();
+        VectorD3 gatheredRayleighScattering = VectorD3();
         int numRotStepsMinusOne = numRotSteps - 1;
         for(int i = 1; i < numRotStepsMinusOne; ++i){
-          theta = i * deltaTheta;
+          double theta = i * deltaTheta;
           //This theta acts as a new view angle for our camera moved to point P
           //We use this information to look up our previous intensity so that we can
           //add the light value to our total.
@@ -351,7 +354,7 @@ void SkyLUTGenerator::constructLUTs(){
         gatheredRayleighScattering = deltaTheta * (gatheredRayleighScattering + zerothGatheredRayleighScattering);
 
         //Combine the two scatterings together to get our gathering LUT
-        gatheredScattering[x][z] = gatheredMieScattering + gatheredRayleighScattering;
+        gatheredScattering[x][z] = VectorD3(gatheredMieScattering + gatheredRayleighScattering);
 
         //Add these to our gathering SUM LUT
         gatheringSum[x][z] += gatheredScattering[x][z];
@@ -363,51 +366,51 @@ void SkyLUTGenerator::constructLUTs(){
       double height = heightTable[x];
       updateHeight(height);
       for(int y = 0; y < 128; ++y){
-        double cosViewAngle = cosViewZenithTable[x][y];
+        double cosViewZenith = cosViewZenithTable[x][y];
         double sinViewZenith = sinViewZenithTable[x][y];
-        std::valarray<double> deltaP({cosViewAngle, sinViewAngle}, 2);
+        VectorD2 deltaP = VectorD2(cosViewZenith, sinViewZenith);
 
         //Get P
-        std::valarray<double> p({0.0, radiusOfCamera}, 2);
+        VectorD2 p = VectorD2(0.0, radiusOfCamera);
         int numberOfSteps = numPointsBetweenPaAndPb[x][y];
-        double zeroPointFiveTimesdeltaH = (0.5 * pa2PbVects[x][y][1]) / static_cast<double>(numberOfSteps - 1);
+        double zeroPointFiveTimesdeltaH = (0.5 * pa2PbVects[x][y].y) / static_cast<double>(numberOfSteps - 1);
         for(int z = 0; z < 32; ++z){
-          double cosLightAngle = cosLightAngleTable[z];
-          double sinLightAngle = sinLightAngleTable[z];
-          double intialLightAngle = thetaOfLightAngleTable[z];
+          double cosLightZenith = cosLightZenithTable[z];
+          double sinLightZenith = sinLightZenithTable[z];
+          double intialLightZenith = thetaOfLightZenithTable[z];
 
           //Zero here is the zeroth element as we're running down the same path from the camera to the atmosphere
           //every time.
-          std::valarray<double> previousMieElement = gatheredScattering[x][z] * transmittanceFromPaToPTimesMieDensity[x][y][0];
-          std::valarray<double> previousRayleighElement = gatheredScattering[x][z] * transmittanceFromPaToPTimesRayleighDensity[x][y][0];
-          std::valarray<double> nextMieElement(3);
-          std::valarray<double> nextRayleighElement(3);
+          VectorD3 previousMieElement = gatheredScattering[x][z] * transmittanceFromPaToPTimesMieDensity[x][y][0];
+          VectorD3 previousRayleighElement = gatheredScattering[x][z] * transmittanceFromPaToPTimesRayleighDensity[x][y][0];
+          VectorD3 nextMieElement = VectorD3();
+          VectorD3 nextRayleighElement = VectorD3();
 
           double integrandOfMieElements = 0.0;
           double integrandOfRayleighElements = 0.0;
           //Walk along the path from Pa to Pb
           for(int i = 1; i < numStepsMinus1; ++i){
             //Get our transmittance from P to Pa
-            std::valarray<double> transmittanceFromPToPa = transmittanceFromPToPaLUT[x][y][z][i];
+            VectorD3 transmittanceFromPToPa = transmittanceFromPToPaLUT[x][y][z][i];
 
             //Get our location, p
-            std::valarray<double> p = pVectors[x][y][i];
+            VectorD2 p = pVectors[x][y][i];
 
             //Get our gathering light intensity at this current p by rotating our solar angle
             //Instead of calculating our transmittance again, we shall presume that p, is just a new camera
             //with a new height and a new angle (the vector to the sun).
-            double magnitudeOfPToOrigin = sqrt(p[0] * p[0] + p[1] * p[1]);
+            double magnitudeOfPToOrigin = sqrt(p.dot(p));
             double altitudeOfPAtP = magnitudeOfPToOrigin - RADIUS_OF_EARTH;
             double deltaAltitude =  altitudeOfPAtP - previousAltitude;
-            double negativeAngleBetweenPAndPa = acos(p[1] / magnitudeOfPToOrigin);
+            double negativeAngleBetweenPAndPa = acos(p.y / magnitudeOfPToOrigin);
 
             //Rotate the angle to the sun by the above
-            double pLightAngle = intialLightAngle - negativeAngleBetweenPAndPa;
+            double pLightZenith = intialLightZenith - negativeAngleBetweenPAndPa;
 
             //Convert our light angle back into a valid pixel location
-            double cosLightAngle = cos(pLightAngle);
+            double cosLightZenith = cos(pLightZenith);
             int xLight = updateHeight(height);
-            int zLight = parameterizeViewZenith(cosLightAngle);
+            int zLight = parameterizeViewZenith(cosLightZenith);
 
             //Multiply this by our transmittance from P to Pa and our density at the current altitude
             nextMieElement = gatheredScattering[xLight][zLight] * transmittanceFromPaToPTimesMieDensity[x][y][i];
@@ -423,10 +426,10 @@ void SkyLUTGenerator::constructLUTs(){
           }
 
           //Multiply our constants and set our LUTs
-          inscatteringIntensityMieKMinusOne[x][y][z] = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
-          inscatteringIntensityRayleighKMinusOne[x][y][z] = betaRayleighOver4PI * integrandOfRayleighElements;
-          sumInscatteringIntensityMie[x][y][z] = sumInscatteringIntensityMie[x][y][z] + inscatteringIntensityMieKMinusOne[x][y][z];
-          sumInscatteringIntensityRayleigh[x][y][z] = sumInscatteringIntensityRayleigh[x][y][z] + inscatteringIntensityRayleighKMinusOne[x][y][z];
+          inscatteringIntensityMieKMinusOne[x][y][z] = new VectorD3(EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements);
+          inscatteringIntensityRayleighKMinusOne[x][y][z] = new VectorD3(betaRayleighOver4PI * integrandOfRayleighElements);
+          sumInscatteringIntensityMie[x][y][z] = new VectorD3(sumInscatteringIntensityMie[x][y][z] + inscatteringIntensityMieKMinusOne[x][y][z]);
+          sumInscatteringIntensityRayleigh[x][y][z] = new VectorD3(sumInscatteringIntensityRayleigh[x][y][z] + inscatteringIntensityRayleighKMinusOne[x][y][z]));
         }
       }
     }
@@ -440,11 +443,11 @@ void SkyLUTGenerator::constructLUTs(){
       for(int c = 0; c < 4; ++c){
         //Set our LUT here
         transmittanceStridedLUT[i] = static_cast<int>(doubleTransmittanceFromPaToPb[x][y][c] * 255.0);
-        i++;
+        ++i;
       }
-      i++;
+      ++i;
     }
-    i++;
+    ++i;
   }
 
   //Inscattering
@@ -455,13 +458,41 @@ void SkyLUTGenerator::constructLUTs(){
         for(int c = 0; c < 4; ++c){
           //Set our LUT here
           transmittanceStridedLUT[i] = static_cast<int>((sumInscatteringIntensityRayleigh[x][y][z][c] + sumInscatteringIntensityMie[x][y][z][c]) * 255.0);
-          i++;
+          ++i;
         }
-        i++;
+        ++i;
       }
-      i++;
+      ++i;
     }
-    i++;
+    ++i;
+  }
+
+  //Free up our memory
+  for(int x = 0; x < 32; ++x){
+    for(int y = 0; y < 128; ++y){
+      VectorD2 pa2PbVects[32][128];
+      int numPVectors = pVectors[x][y].size();
+      for(int j = 0; j < numPVectors; ++j){
+        delete pVectors[x][y][j];
+      }
+      delete pVectors[x][y];
+
+      int numTransmittanceFromPaToPTimesMieDensity = transmittanceFromPaToPTimesMieDensity[x][y].size();
+      for(int j = 0; j < numTransmittanceFromPaToPTimesMieDensity; ++j){
+        delete transmittanceFromPaToPTimesMieDensity[x][y][j];
+        delete transmittanceFromPaToPTimesRayleighDensity[x][y][j];
+        delete transmittanceFromPaToP[x][y][j]
+      }
+      delete transmittanceFromPaToPTimesMieDensity[x][y];
+      delete transmittanceFromPaToPTimesMieDensity[x][y];
+      delete transmittanceFromPaToP[x][y];
+      delete doubleTransmittanceFromPaToPb[x][y];
+    }
+  }
+  for(int x = 0; x < 32; ++x){
+    for(int y = 0; y < 32; ++y){
+      delete pa2PbVects[x][y];
+    }
   }
 }
 
@@ -511,7 +542,7 @@ double SkyLUTGenerator::updateHeightFromParameter(double parameterKMAboveSeaLeve
   return kmAboveSeaLevel;
 }
 
-double SkyLUTGenerator::cosViewAngleFromParameter(double parameterizedViewZenith){
+double SkyLUTGenerator::cosViewZenithFromParameter(double parameterizedViewZenith){
   if(parameterizedViewZenith > 0.5){
     return PARAMETER_TO_COS_OF_SUN_VIEW_CONST + pow((parameterizedViewZenith - 0.5), 5) * oneMinusParameterizedViewAngle;
   }

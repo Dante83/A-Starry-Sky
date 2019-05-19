@@ -3,7 +3,7 @@
 #include "world_state/AstroTime.h"
 #include "world_state/Location.h"
 #include "astro_bodies/SkyManager.h"
-#include "atmosphere/AtmosphericSkyEngine.h"
+#include "atmosphere/SkyLUTGenerator.h"
 #include <emscripten/emscripten.h>
 
 //
@@ -21,8 +21,8 @@ SkyState* skyState;
 extern "C" {
   int main();
   void initializeStarrySky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset);
-  uint8_t* getTransmittanceStridedLUTPtr();
-  uint8_t* getScatteringStridedLUT();
+  int* getTransmittanceStridedLUTPtr();
+  int* getScatteringStridedLUTPtr();
   double getSunRightAscension();
   double getSunDeclination();
   double getMoonRightAscension();
@@ -34,16 +34,16 @@ void EMSCRIPTEN_KEEPALIVE initializeStarrySky(double latitude, double longitude,
   AstroTime *astroTime = new AstroTime(year, month, day, hour, minute, second, utcOffset);
   Location *location = new Location(latitude, longitude);
   SkyManager *skyManager = new SkyManager(astroTime, location);
-  skyState = new SkyState(astroTime, location, skyManager);
+  skyState = new SkyState(astroTime, location, skyManager, skyLUTGenerator);
 }
 
 //For our image LUT
-uint8_t* EMSCRIPTEN_KEEPALIVE getTransmittanceStridedLUTPtr(){
-  return skyState->transmittanceStridedLUTPtr;
+int* EMSCRIPTEN_KEEPALIVE getTransmittanceStridedLUTPtr(){
+  return skyState->skyLUTGenerator->transmittanceStridedLUTPtr;
 }
 
-uint8_t* EMSCRIPTEN_KEEPALIVE getScatteringStridedLUT(){
-  return skyState->scatteringStridedLUTPrt;
+int* EMSCRIPTEN_KEEPALIVE getScatteringStridedLUTPtr(){
+  return skyState->skyLUTGenerator->scatteringStridedLUTPrt;
 }
 
 //For our sky state
