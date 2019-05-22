@@ -3,8 +3,8 @@
 //
 
 #ifdef GL_ES
-precision mediump float;
-precision mediump int;
+precision highp float;
+precision highp int;
 #endif
 
 //Time
@@ -12,7 +12,6 @@ uniform float uTime;
 
 //Camera data
 varying vec3 vWorldPosition;
-uniform vec2 u_resolution;
 
 //Status of the sky
 uniform float luminance;
@@ -69,10 +68,6 @@ uniform mediump vec3 sunXYZPosition;
 uniform mediump vec2 sunPosition;
 const float angularRadiusOfTheSun = 0.0245; //Real Values
 //const float angularRadiusOfTheSun = 0.054; //FakeyValues
-
-//Sky Surface data
-varying vec3 normal;
-varying vec2 binormal;
 
 //Moon Data
 uniform mediump vec3 moonXYZPosition;
@@ -215,12 +210,6 @@ skyWithAndWithoutStars starLayerBlending(vec4 starColor, vec4 skyColor, float su
   vec4 combinedLight = vec4(linear2Rgb(rgb2Linear(starColor.rgb) * (1.0 - clamp(sunE / 150.0, 0.0, 1.0)) + rgb2Linear(skyColor.rgb)), 1.0);
 
   return skyWithAndWithoutStars(combinedLight, starlessLight);
-}
-
-vec4 moonLayerBlending(vec4 moonColor, vec4 skyColor, vec4 inColor){
-  vec3 combinedLight = clamp(linear2Rgb(rgb2Linear(moonColor.rgb) + rgb2Linear(skyColor.rgb)), 0.0, 1.0);
-
-  return vec4(mix(combinedLight.rgb, inColor.xyz, (1.0 - moonColor.a)), 1.0);
 }
 
 struct skyparams{
@@ -376,10 +365,6 @@ vec4 drawStarLayer(float azimuthOfPixel, float altitudeOfPixel, vec4 skyColor){
 //SKY
 //
 
-vec3 totalRayleigh(vec3 lambda){
-  return (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn));
-}
-
 // see http://blenderartists.org/forum/showthread.php?321110-Shaders-and-Skybox-madness
 // A simplied version of the total Rayleigh scattering to works on browsers that use ANGLE
 vec3 simplifiedRayleigh(){
@@ -417,83 +402,6 @@ const float W = 1000.0;
 
 vec3 Uncharted2Tonemap(vec3 x){
   return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
-}
-
-//
-//MOON
-//
-vec4 drawMoonLayer(float azimuthOfPixel, float altitudeOfPixel, skyparams skyParams){
-  //calculate the location of this pixels on the unit sphere
-  float zenithOfPixel = piOver2 - altitudeOfPixel;
-  float pixelX = sin(zenithOfPixel) * cos(azimuthOfPixel);
-  float pixelY = sin(zenithOfPixel) * sin(azimuthOfPixel);
-  float pixelZ = cos(zenithOfPixel);
-  vec3 pixelPos = vec3(pixelX, pixelY, pixelZ);
-
-  //Get the vector between the moons center and this pixels
-  vec3 vectorBetweenPixelAndMoon = moonPosition - pixelPos;
-
-  //Now dot this with the tangent and bitangent vectors to get our location.
-  float deltaX = dot(vectorBetweenPixelAndMoon, moonTangent);
-  float deltaY = dot(vectorBetweenPixelAndMoon, moonBitangent);
-  float angleOfPixel = atan(deltaX, deltaY);
-
-  //And finally, get the magnitude of the vector so that we can calculate the x and y positio
-  //below...
-  float radiusOfDistanceBetweenPixelAndMoon = length(vectorBetweenPixelAndMoon);
-
-  vec4 returnColor = vec4(0.0);
-  if(radiusOfDistanceBetweenPixelAndMoon < angularRadiusOfTheMoon){
-    //Hey! We are in the moon! convert our distance into a linear interpolation
-    //of half pixel radius on our sampler
-    float xPosition = (1.0 + (radiusOfDistanceBetweenPixelAndMoon / angularRadiusOfTheMoon) * sin(angleOfPixel)) / 2.0;
-    float yPosition = (1.0 + (radiusOfDistanceBetweenPixelAndMoon  / angularRadiusOfTheMoon) * cos(angleOfPixel)) / 2.0;
-
-    vec2 position = vec2(xPosition, yPosition);
-
-    //Now to grab that color!
-    vec4 moonColor = texture2D(moonTexture, position.xy);
-
-    //Get the moon shadow using the normal map
-    //Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!
-    vec3 moonNormalMapRGB = texture2D(moonNormalMap, position.xy).rgb;
-    vec3 moonNormalMapInverted = vec3(1.0 - moonNormalMapRGB.r, 1.0 - moonNormalMapRGB.g, moonNormalMapRGB.b);
-    vec3 moonSurfaceNormal = normalize(2.0 * moonNormalMapInverted.rgb - 1.0);
-
-    //The moon is presumed to be a lambert shaded object, as per:
-    //https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection
-    moonColor = vec4(moonColor.rgb * max(earthshine, dot(moonSurfaceNormal, moonTangentSpaceSunlight)), moonColor.a);
-
-    //Now that we have the moon color, implement atmospheric effects, just like with the sun
-    float moonAngularDiameterCos = cos(angularRadiusOfTheMoon);
-    float moondisk = smoothstep(moonAngularDiameterCos,moonAngularDiameterCos+0.00002, skyParams.cosThetaMoon);
-
-    vec3 L0 = (skyParams.moonE * 19000.0 * skyParams.FexMoon) * moondisk;
-    L0 *= 0.04;
-    L0 += vec3(0.0,0.001,0.0025)*0.3;
-
-    float g_fMaxLuminance = 1.0;
-    float fLumScaled = 0.1 / luminance;
-    float fLumCompressed = (fLumScaled * (1.0 + (fLumScaled / (g_fMaxLuminance * g_fMaxLuminance)))) / (1.0 + fLumScaled);
-
-    float ExposureBias = fLumCompressed;
-
-    vec3 whiteScale = 1.0/Uncharted2Tonemap(vec3(W));
-    vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*L0);
-
-    vec3 color = curr*whiteScale;
-    color = pow(color,abs(vec3(1.0/(1.2+(1.2* (skyParams.moonfade)))) ));
-
-    vec3 colorIntensity = pow(color, vec3(2.2));
-    vec3 moonIntensity = pow(moonColor.xyz, vec3(2.2));
-    vec3 combinedIntensity = colorIntensity * moonIntensity;
-
-    //TODO: We have both colors together, now we just have to appropriately mix them
-    returnColor = vec4(pow(combinedIntensity, vec3(1.0/2.2)), moonColor.a);
-  }
-
-  //Otherwise, we shall return nothing for now. In the future, perhaps we will implement the
-  return returnColor;
 }
 
 skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
@@ -547,8 +455,8 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
   vec3 FexMoon = exp(-(betaRMoon * sR + betaM * sM));
 
   // in scattering
-  float cosTheta = dot(normalize(vWorldPosition - vec3(0.0)), floatSunPosition);
-  float cosThetaMoon = dot(normalize(vWorldPosition - vec3(0.0)), floatMoonPosition);
+  float cosTheta = dot(normalize(vWorldPosition), floatSunPosition);
+  float cosThetaMoon = dot(normalize(vWorldPosition), floatMoonPosition);
 
   float rPhase = rayleighPhase(cosTheta*0.5+0.5);
   float rPhaseOfMoon = rayleighPhase(cosThetaMoon * 0.5 + 0.5);
@@ -638,8 +546,6 @@ void main(){
   vec4 outColor = starLayerData.starLayer;
 
   outColor = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);
-
-  outColor = moonLayerBlending(drawMoonLayer(azimuth, altitude, skyParams), starLayerData.starlessLayer, outColor);
 
 	gl_FragColor = outColor;
 }

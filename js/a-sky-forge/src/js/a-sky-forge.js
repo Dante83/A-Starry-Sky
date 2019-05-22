@@ -39,8 +39,15 @@ var aDynamicSky = {
     this.dayOfTheYear = dynamicSkyEntityMethods.getDayOfTheYearFromYMD(utcDate.getFullYear(), utcDate.getMonth() + 1, utcDate.getDate());
     this.timeInDay = utcDate.getHours() * 3600 + utcDate.getMinutes() * 60 + utcDate.getSeconds();
 
+    console.log(`Year: ${this.year}`);
+    console.log(`Day of the Year: ${this.dayOfTheYear}`);
+    console.log(`Second of the Day: ${this.timeInDay}`);
+
     this.julianDay = this.calculateJulianDay();
     this.julianCentury =this.calculateJulianCentury();
+
+    console.log(`Julian Century: ${this.julianDay}`);
+    console.log(`Julian Century: ${this.julianCentury}`);
 
     //Useful constants
     this.calculateSunAndMoonLongitudeElgonationAndAnomoly();
@@ -110,8 +117,8 @@ var aDynamicSky = {
       var A = Math.floor(year / 100);
       var B = 2 - A + Math.floor(A / 4);
     }
-    var julianDay = Math.floor(365.25 * (year + 4716)) + Math.floor(30.6001 * (month + 1)) + day + B - 1524.5;
 
+    var julianDay = Math.floor(365.25 * (year + 4716)) + Math.floor(30.6001 * (month + 1)) + day + B - 1524.5;
     return julianDay;
   },
 
@@ -167,6 +174,7 @@ var aDynamicSky = {
     var T = (julianDayAt0hUTC - 2451545.0) / 36525.0;
 
     var gmsrt = this.check4GreaterThan360(280.46061837 + 360.98564736629 * (this.julianDay - 2451545.0) + T * T * 0.000387933 - ((T * T * T) / 38710000.0));
+    console.log(`Greenwhich sidereal time: ${gmsrt}`);
     return gmsrt;
   },
 
@@ -174,6 +182,7 @@ var aDynamicSky = {
     var nutationInRightAscensionInSeconds = (this.nutationInLongitude * 3600 * Math.cos(this.trueObliquityOfEcliptic * this.deg2Rad) )/ 15.0;
     var nutationInRightAscensionInDegs = nutationInRightAscensionInSeconds * (360) / 86400;
     var gasrt = this.greenwhichMeanSiderealTime + nutationInRightAscensionInDegs;
+    console.log(`Apparent sidereal time: ${gasrt}`);
 
     return gasrt;
   },
@@ -211,6 +220,11 @@ var aDynamicSky = {
     this.deltaObliquityOfEcliptic = (9.2 * Math.cos(omega) + 0.57 * Math.cos(2 * sunsMeanLongitude) + 0.1 * Math.cos(2 * moonsMeanLongitude) - 0.09 * Math.cos(2 * omega)) / 3600;
     this.meanObliquityOfTheEclipitic = this.astroDegrees2NormalDegs(23, 26, 21.448) - ((T * 46.8150) / 3600)  - ((0.00059 * T * T) / 3600) + ((0.001813 * T * T * T) / 3600);
     this.trueObliquityOfEcliptic = this.meanObliquityOfTheEclipitic + this.deltaObliquityOfEcliptic;
+
+    console.log(`nutation in longitude: ${this.nutationInLongitude}`);
+    console.log(`delta obliquity of ecliptic: ${this.deltaObliquityOfEcliptic}`);
+    console.log(`mean obliquity of the ecliptic: ${this.meanObliquityOfTheEclipitic}`);
+    console.log(`true obliquity of the eccliptic: ${this.trueObliquityOfEcliptic}`);
   },
 
   //With a little help from: http://aa.usno.navy.mil/faq/docs/SunApprox.php and of course, Meeus
@@ -229,6 +243,14 @@ var aDynamicSky = {
     //While we're here, let's calculate the distance from the earth to the sun, useful for figuring out the illumination of the moon
     this.distanceFromEarthToSun = (1.000001018 * (1 - (eccentricityOfEarth * eccentricityOfEarth))) / (1 + eccentricityOfEarth * Math.cos(sunsEquationOfCenter * this.deg2Rad)) * 149597871;
 
+    console.log(`Suns mean anamamly: ${sunsMeanAnomoly}`);
+    console.log(`Suns mean longitude: ${sunsMeanLongitude}`);
+    console.log(`Eccentricity of the earth: ${eccentricityOfEarth}`);
+    console.log(`Suns equation of center: ${sunsEquationOfCenter}`);
+    console.log(`Suns true longitude: ${sunsTrueLongitude}`);
+    console.log(`suns right ascension: ${rightAscension}`);
+    console.log(`suns declination: ${declination}`);
+
     //Because we use these elsewhere...
     this.sunsRightAscension = rightAscension / this.deg2Rad;
     this.sunsDeclination = declination / this.deg2Rad;
@@ -244,6 +266,14 @@ var aDynamicSky = {
     this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit = this.check4GreaterThan360(125.04452 - 1934.136261 * T + 0.0020708 * T * T + ((T * T *T) /450000));
     this.sunsMeanAnomoly = this.check4GreaterThan360(357.5291092 + 35999.0502909 * T - 0.0001536 * T * T + (T * T * T) / 24490000.0);
     this.sunsMeanLongitude = this.check4GreaterThan360(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
+
+    console.log(`Moons mean longitude: ${this.moonMeanLongitude}`);
+    console.log(`Moons mean elongation: ${this.moonMeanElongation}`);
+    console.log(`Moons mean anomaly: ${this.moonsMeanAnomaly}`);
+    console.log(`Moons argument of latitude: ${this.moonsArgumentOfLatitude}`);
+    console.log(`Moons longitude of the ascending node: ${this.LongitudeOfTheAscendingNodeOfTheMoonsOrbit}`);
+    console.log(`Suns mean anomaly: ${this.sunsMeanAnomoly}`);
+    console.log(`Suns mean longitude: ${this.sunsMeanLongitude}`);
   },
 
   getMoonEE(D, M, MP){
@@ -272,6 +302,11 @@ var aDynamicSky = {
     var a_2 = this.check4GreaterThan360(53.09 + 479264.290 * T);
     var a_3 = this.check4GreaterThan360(313.45 + 481266.484 * T);
     var e_parameter = 1 - 0.002516 * T - 0.0000074 * T * T;
+
+    console.log(`a_1: ${a_1}`);
+    console.log(`a_2: ${a_2}`);
+    console.log(`a_3: ${a_3}`);
+    console.log(`e_parameter: ${e_parameter}`);
 
     //For the love of cheese why?!
     //TODO: kill off some of these terms. If we're limiting ourselves to 0.01
@@ -323,6 +358,9 @@ var aDynamicSky = {
       sum_r += e_coeficient * r_sum_coeficient * Math.cos(this.check4GreaterThan360(sumOfTerms) * this.deg2Rad);
     }
 
+    console.log(`sum_l: ${sum_l}`);
+    console.log(`sum_r: ${sum_r}`);
+
     //For B while we're at it :D
     //TODO: kill off some of these terms. If we're limiting ourselves to 0.01
     //degrees of accuracy, we don't require this many terms by far!
@@ -365,6 +403,8 @@ var aDynamicSky = {
       sum_b += e_coeficient * b_sum_coeficient * Math.sin(this.check4GreaterThan360(D + M + Mp + F) * this.deg2Rad);
     }
 
+    console.log(`sum_b: ${sum_b}`);
+
     //Additional terms
     var moonMeanLongitude = this.check4GreaterThan360(moonMeanLongitude);
     var moonsArgumentOfLatitude = this.check4GreaterThan360(moonsArgumentOfLatitude);
@@ -372,6 +412,9 @@ var aDynamicSky = {
     sum_l = sum_l + 3958.0 * Math.sin(a_1 * this.deg2Rad) + 1962.0 * Math.sin((moonMeanLongitude - moonsArgumentOfLatitude) * this.deg2Rad) + 318.0 * Math.sin(a_2 * this.deg2Rad);
     sum_b = sum_b - 2235.0 * Math.sin(moonMeanLongitude * this.deg2Rad) + 382.0 * Math.sin(a_3 * this.deg2Rad) + 175.0 * Math.sin((a_1 - moonsArgumentOfLatitude) * this.deg2Rad) + 175 * Math.sin((a_1 + moonsArgumentOfLatitude) * this.deg2Rad);
     sum_b = sum_b + 127.0 * Math.sin((moonMeanLongitude - moonsMeanAnomaly) * this.deg2Rad) - 115.0 * Math.sin((moonMeanLongitude + moonsMeanAnomaly) * this.deg2Rad);
+
+    console.log(`sum_l: ${sum_l}`);
+    console.log(`sum_b: ${sum_b}`);
 
     var lambda = (moonMeanLongitude + (sum_l / 1000000));
     var beta = (sum_b / 1000000);
@@ -382,6 +425,12 @@ var aDynamicSky = {
 
     var geocentricElongationOfTheMoon = Math.acos(Math.cos(beta) * Math.cos(this.longitudeOfTheSun - lambda))
     this.getMoonEE(moonMeanElongation, sunsMeanAnomoly, moonsMeanAnomaly);
+
+    console.log(`lambda: ${lambda}`);
+    console.log(`beta: ${beta}`);
+    console.log(`distance from earth to moon: ${this.distanceFromEarthToMoon}`);
+    console.log(`right ascension of moon: ${rightAscension}`);
+    console.log(`declination of moon: ${declination}`);
 
     //Because we use these elsewhere...
     this.moonsRightAscension = rightAscension;
