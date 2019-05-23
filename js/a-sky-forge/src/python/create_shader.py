@@ -80,7 +80,7 @@ def ShaderFileWatcher():
                 #
                 if (previousVertexFileChangeDate != vertexFileLastChangedAt):
                     print "Vertex File Change Detected"
-                    previousVertexFileChangeDate[i] = vertexFileLastChangedAt
+                    previousVertexFileChangeDates[i] = vertexFileLastChangedAt
                     with open(vertex_file) as vf:
                         updatedVertexFileCode = vf.read()
                 #
@@ -88,7 +88,7 @@ def ShaderFileWatcher():
                 #
                 if (previousFragmentFileChangeDate != fragmentFileLastChangedAt):
                     print "Fragment File Change Detected"
-                    previousFragmentFileChangeDate[i] = fragmentFileLastChangedAt
+                    previousFragmentFileChangeDates[i] = fragmentFileLastChangedAt
                     with open(fragment_file) as ff:
                         updatedFragmentFileCode = ff.read()
 
@@ -97,7 +97,7 @@ def ShaderFileWatcher():
                 #
                 if (previousTemplateFileChangeDate != templateFileLastChangedAt):
                     print "Template file change detected."
-                    previousTemplateFileChangeDate[i] = templateFileLastChangedAt
+                    previousTemplateFileChangeDates[i] = templateFileLastChangedAt
 
                     with open(template_name, 'r') as f:
                         templateString = f.read()

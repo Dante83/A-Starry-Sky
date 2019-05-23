@@ -59,6 +59,7 @@ AFRAME.registerComponent('sky-params', {
 
 AFRAME.registerComponent('sky-time', {
   fractionalSeconds: 0,
+  moon: null,
   dependencies: ['geo-coordinates', 'a-sky-forge'],
   schema: {
     timeOffset: {type: 'number', default: dynamicSkyEntityMethods.getSecondOfDay()},
@@ -91,9 +92,12 @@ AFRAME.registerComponent('sky-time', {
     this.el.components.material.material.uniforms.sunPosition.value.set(this.dynamicSkyObj.sunPosition.azimuth, this.dynamicSkyObj.sunPosition.altitude);
 
     //Load our normal maps for the moon
-    var textureLoader = new THREE.TextureLoader();
-    var moonTexture = textureLoader.load(this.data.imgDir + this.data.moonTexture);
-    var moonNormalMap = textureLoader.load(this.data.imgDir + this.data.moonNormalMap);
+    let textureLoader = new THREE.TextureLoader();
+    let moonTextureDir = this.data.imgDir + this.data.moonTexture;
+    let moonNormalMapDir = this.data.imgDir + this.data.moonNormalMap;
+    let skyDomeRadius = this.el.components.geometry.data.radius;
+    let sceneRef = this.el.sceneEl.object3D;
+    this.moon = new Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, textureLoader);
 
     //
     //Note: We might want to min map our moon texture and normal map so that
@@ -148,8 +152,6 @@ AFRAME.registerComponent('sky-time', {
     });
 
     //We only load our textures once upon initialization
-    this.el.components.material.material.uniforms.moonTexture.value = moonTexture;
-    this.el.components.material.material.uniforms.moonNormalMap.value = moonNormalMap;
     this.el.components.material.material.uniforms.starMask.value = starMask;
     this.el.components.material.material.uniforms.starRas.value = starRas;
     this.el.components.material.material.uniforms.starDecs.value = starDecs;
@@ -180,8 +182,10 @@ AFRAME.registerComponent('sky-time', {
       this.interpolator.setLinearInterpolationForScalar('moonEE', ['moonEE'], false);
 
       this.interpolator.setSLERPFor3Vect('sunXYZPosition', ['sunXYZPosition'], false);
+
       this.interpolator.setSLERPFor3Vect('moonXYZPosition', ['moonXYZPosition'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingTangentSpaceSunlight', ['moonMappingTangentSpaceSunlight'], false);
+
       this.interpolator.setSLERPFor3Vect('moonMappingPosition', ['moonMappingPosition'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingTangent', ['moonMappingTangent'], false);
       this.interpolator.setSLERPFor3Vect('moonMappingBitangent', ['moonMappingBitangent'], false);
@@ -206,28 +210,30 @@ AFRAME.registerComponent('sky-time', {
     if(this.hasLinearInterpolation){
       this.currentTime.setTime(this.initializationTime.getTime() + time * this.data.timeMultiplier);
 
-      var interpolatedValues = this.interpolator.getValues(this.currentTime);
+      let interpolatedValues = this.interpolator.getValues(this.currentTime);
 
       this.el.components.material.material.uniforms.sunPosition.value.set(interpolatedValues.sunAzimuth, interpolatedValues.sunAltitude);
       this.el.components.material.material.uniforms.localSiderealTime.value = interpolatedValues.localSiderealTime;
 
       //Hopefully SLERP is my answer for avoiding moon novas in the middle of the night
-      var sXYZ = interpolatedValues.sunXYZPosition;
-      var mXYZ = interpolatedValues.moonXYZPosition;
+      let sXYZ = interpolatedValues.sunXYZPosition;
+      let mXYZ = interpolatedValues.moonXYZPosition;
       this.el.components.material.material.uniforms.sunXYZPosition.value.set(sXYZ.x, sXYZ.y, sXYZ.z);
       this.el.components.material.material.uniforms.moonXYZPosition.value.set(mXYZ.x, mXYZ.y, mXYZ.z);
 
-      var mtss = interpolatedValues.moonMappingTangentSpaceSunlight;
-      var mp = interpolatedValues.moonMappingPosition;
-      var mmt = interpolatedValues.moonMappingTangent;
-      var mmb = interpolatedValues.moonMappingBitangent;
+      let mtss = interpolatedValues.moonMappingTangentSpaceSunlight;
+      let mp = interpolatedValues.moonMappingPosition;
+      let mmt = interpolatedValues.moonMappingTangent;
+      let mmb = interpolatedValues.moonMappingBitangent;
 
-      this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(mtss.x, mtss.y, mtss.z);
-      this.el.components.material.material.uniforms.moonAzimuthAndAltitude.value.set(interpolatedValues.moonAzimuth, interpolatedValues.moonAltitude);
+      // this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(mtss.x, mtss.y, mtss.z);
+      //this.el.components.material.material.uniforms.moonAzimuthAndAltitude.value.set(interpolatedValues.moonAzimuth, interpolatedValues.moonAltitude);
       this.el.components.material.material.uniforms.moonEE.value = interpolatedValues.moonEE;
       this.el.components.material.material.uniforms.moonPosition.value.set(mp.x, mp.y, mp.z);
-      this.el.components.material.material.uniforms.moonTangent.value.set(mmt.x, mmt.y, mmt.z);
-      this.el.components.material.material.uniforms.moonBitangent.value.set(mmb.x, mmb.y, mmb.z);
+      //this.el.components.material.material.uniforms.moonTangent.value.set(mmt.x, mmt.y, mmt.z);
+      //this.el.components.material.material.uniforms.moonBitangent.value.set(mmb.x, mmb.y, mmb.z);
+
+      this.moon.update(mXYZ, sXYZ, interpolatedValues.moonAzimuth, interpolatedValues.moonAltitude, interpolatedValues.moonEE);
     }
   }
 });

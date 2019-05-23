@@ -12,8 +12,8 @@ varying float sM;
 uniform float sunFade;
 uniform float moonFade;
 uniform float luminance;
-uniform vec2 twoTimesmieDirectionalG;
-uniform vec2 oneMinusmieDirectionalGSquared;
+uniform float twoTimesmieDirectionalG;
+uniform float oneMinusmieDirectionalGSquared;
 uniform float betaM;
 uniform vec3 sunXYZPosition;
 uniform vec3 betaRSun;
@@ -22,13 +22,13 @@ uniform sampler2D moonTexture;
 uniform sampler2D moonNormalMap;
 uniform vec3 moonTangentSpaceSunlight;
 uniform vec3 moonXYZPosition;
-const float earthshine = 0.02;
 uniform float moonE;
 uniform float sunE;
 uniform float linMoonCoefficient2 //clamp(pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0,1.0)
 uniform float linSunCoefficient2 //clamp(pow(1.0-dotOfSunDirectionAndUp,5.0),0.0,1.0)
 
 //Constants
+const float earthshine = 0.02;
 const vec3 up = vec3(0.0, 1.0, 0.0);
 const float e = 2.71828182845904523536028747135266249775724709369995957;
 const float piOver2 = 1.570796326794896619231321691639751442098584699687552910487;

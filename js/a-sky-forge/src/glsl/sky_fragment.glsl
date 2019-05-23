@@ -72,16 +72,7 @@ const float angularRadiusOfTheSun = 0.0245; //Real Values
 //Moon Data
 uniform mediump vec3 moonXYZPosition;
 uniform float moonEE;
-uniform sampler2D moonTexture;
-uniform sampler2D moonNormalMap;
 uniform vec2 moonAzimuthAndAltitude;
-uniform vec3 moonTangentSpaceSunlight;
-uniform vec3 moonPosition;
-uniform vec3 moonTangent;
-uniform vec3 moonBitangent;
-const float angularRadiusOfTheMoon = 0.024;
-//const float angularRadiusOfTheMoon = 0.055; //Fakey Values
-const float earthshine = 0.02;
 
 //Earth data
 uniform vec2 latLong;
@@ -296,7 +287,6 @@ vec4 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 st
 
     returnColor = vec4(colorOfPixel, lightness) * vec4(starFade);
   }
-
 
   return returnColor;
 }
