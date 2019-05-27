@@ -57,11 +57,11 @@ var aDynamicSky = {
     this.sunXYZPosition = this.azAndAlt2XYZOnUnitSphereSkydome(this.sunPosition.azimuth, this.sunPosition.altitude);
     this.moonXYZPosition = this.azAndAlt2XYZOnUnitSphereSkydome(this.moonPosition.azimuth, this.moonPosition.altitude);
 
-    var moonMappingData = this.getMoonTangentSpaceSunlight(this.moonPosition.azimuth, this.moonPosition.altitude, this.sunPosition.azimuth, this.sunPosition.altitude);
-    this.moonMappingTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
-    this.moonMappingPosition = moonMappingData.moonPosition;
-    this.moonMappingTangent = moonMappingData.moonTangent;
-    this.moonMappingBitangent = moonMappingData.moonBitangent;
+    //var moonMappingData = this.getMoonTangentSpaceSunlight(this.moonPosition.azimuth, this.moonPosition.altitude, this.sunPosition.azimuth, this.sunPosition.altitude);
+    //this.moonMappingTangentSpaceSunlight = moonMappingData.moonTangentSpaceSunlight;
+    //this.moonMappingPosition = moonMappingData.moonPosition;
+    // this.moonMappingTangent = moonMappingData.moonTangent;
+    // this.moonMappingBitangent = moonMappingData.moonBitangent;
   },
 
   calculateJulianDay: function(){
@@ -388,66 +388,6 @@ var aDynamicSky = {
 
     //Just return these values for now, we can vary the bright
     return this.getAzimuthAndAltitude(rightAscension, declination);
-  },
-
-  getMoonTangentSpaceSunlight(moonAzimuth, moonAltitude, solarAzimuth, solarAltitude){
-    //Calculate our normal, tangent and bitangent for the moon for normal mapping
-    //We don't need these for each face because our moon is effectively a billboard
-    var moonZenith = (Math.PI / 2.0) - moonAltitude;
-
-    //First acquire our normal vector for the moon.
-    var sinMZ = Math.sin(moonZenith);
-    var cosMZ = Math.cos(moonZenith);
-    var sinMA = Math.sin(moonAzimuth);
-    var cosMA = Math.cos(moonAzimuth);
-    var moonXCoordinates = sinMZ * cosMA;
-    var moonYCoordinates = sinMZ * sinMA;
-    var moonZCoordinates = cosMZ;
-    var moonCoordinates = new THREE.Vector3(moonXCoordinates, moonYCoordinates, moonZCoordinates);
-
-    //Get the unit vectors, x, y and z for our moon.
-    //https://math.stackexchange.com/questions/70493/how-do-i-convert-a-vector-field-in-cartesian-coordinates-to-spherical-coordinate
-    var sphericalUnitVectors = new THREE.Matrix3();
-    sphericalUnitVectors.set(
-      sinMZ*cosMA, sinMZ*sinMA, cosMZ,
-      cosMZ*cosMA, cosMZ*sinMA, -sinMZ,
-      -sinMA, cosMA, 0.0
-    );
-    var inverseOfSphericalUnitVectors = new THREE.Matrix3();
-    inverseOfSphericalUnitVectors.getInverse(sphericalUnitVectors);
-
-    var unitRVect = new THREE.Vector3(1.0, 0.0, 0.0);
-    var unitAzVect = new THREE.Vector3(0.0, 0.0, 1.0);
-    var moonNormal = unitRVect.applyMatrix3(inverseOfSphericalUnitVectors).normalize().negate().clone();
-    var moonTangent = unitAzVect.applyMatrix3(inverseOfSphericalUnitVectors).normalize().clone();
-
-    //Instead of just using the unit alt vector, I take the cross betweent the normal and the
-    //azimuth vectors to preserve direction when crossing altitude = 0
-    var moonBitangent = moonNormal.clone();
-    moonBitangent.cross(moonTangent);
-
-    var toTangentMoonSpace = new THREE.Matrix3();
-    toTangentMoonSpace.set(
-      moonTangent.x, moonBitangent.x, moonNormal.x,
-      moonTangent.y, moonBitangent.y, moonNormal.y,
-      moonTangent.z, moonBitangent.z, moonNormal.z);
-    toTangentMoonSpace.transpose();
-
-    var solarZenith = (Math.PI / 2.0) - solarAltitude;
-    sinOfSZenith = Math.sin(solarZenith);
-    cosOfSZenith = Math.cos(solarZenith);
-    sinOfSAzimuth = Math.sin(solarAzimuth);
-    cosOfSAzimuth = Math.cos(solarAzimuth);
-    var solarXCoordinates = sinOfSZenith * cosOfSAzimuth;
-    var solarYCoordinates = sinOfSZenith * sinOfSAzimuth;
-    var solarZCoordinates = cosOfSZenith;
-    var solarCoordinates = new THREE.Vector3(solarXCoordinates, solarYCoordinates, solarZCoordinates);
-    solarCoordinates.normalize();
-
-    var moonTangentSpaceSunlight = solarCoordinates.clone();
-    moonTangentSpaceSunlight.applyMatrix3(toTangentMoonSpace);
-
-    return {moonTangentSpaceSunlight: moonTangentSpaceSunlight, moonTangent: moonTangent, moonBitangent: moonBitangent, moonPosition: moonCoordinates};
   },
 
   getDaysInYear: function(){

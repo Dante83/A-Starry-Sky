@@ -12,8 +12,9 @@
     <script src="https://aframe.io/releases/0.8.0/aframe.min.js"></script>
     <!--This commented out code is the unfurled stack which I use for debugging-->
     <script src="../js/a-sky-forge/src/js/cloner.js"></script>
+    <script src="../js/a-sky-forge/src/js/dds-loader.js"></script>
     <script src="../js/a-sky-forge/src/js/sky-shader.js"></script>
-    <!-- <script src="../js/a-sky-forge/src/js/moon-shader.js"></script> -->
+    <script src="../js/a-sky-forge/src/js/moon-shader.js"></script>
     <script src="../js/a-sky-forge/src/js/moon.js"></script>
     <script src="../js/a-sky-forge/src/js/a-sky-forge.js"></script>
     <script src="../js/a-sky-forge/src/js/a-dynamic-sky-entity-methods.js"></script>
@@ -27,7 +28,8 @@
   <body>
     <a-scene physics>
       <!-- Sky -->
-      <a-sky-forge sky-time="timeMultiplier: 800.0; utcOffset: -7;" geo-coordinates="lat: 37; long: 112.0;" material="shader: sky; side:back;"></a-sky-forge>
+      <!-- <a-sky-forge sky-time="timeMultiplier: 800.0; utcOffset: -7;" geo-coordinates="lat: 37; long: 112.0;" material="shader: sky; side:back;"></a-sky-forge> -->
+      <a-sky-forge sky-time="timeMultiplier: 800; utcOffset: -7; dayOfTheYear: 110;" material="shader: sky; side:back;"></a-sky-forge>
       <!-- <a-mountain></a-mountain> -->
     </a-scene>
   </body>

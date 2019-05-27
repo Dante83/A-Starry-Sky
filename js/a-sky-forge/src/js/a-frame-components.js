@@ -43,7 +43,7 @@ AFRAME.registerComponent('sky-params', {
   schema:{
     luminance: { type: 'number', default: 1.0, max: 2.0, min: 0.0, is: 'uniform' },
     turbidity: { type: 'number', default: 2.0, max: 20.0, min: 0.0, is: 'uniform' },
-    reileigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
+    rayleigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
     mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
     mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' }
   },
@@ -51,7 +51,7 @@ AFRAME.registerComponent('sky-params', {
   init: function(){
     this.el.components.material.material.uniforms.luminance.value = this.data.luminance;
     this.el.components.material.material.uniforms.turbidity.value = this.data.turbidity;
-    this.el.components.material.material.uniforms.reileigh.value = this.data.reileigh;
+    this.el.components.material.material.uniforms.rayleigh.value = this.data.rayleigh;
     this.el.components.material.material.uniforms.mieCoefficient.value = this.data.mieCoefficient;
     this.el.components.material.material.uniforms.mieDirectionalG.value = this.data.mieDirectionalG;
   }
@@ -70,8 +70,8 @@ AFRAME.registerComponent('sky-time', {
     day: {type: 'int', default: -1},
     year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
     imgDir: {type: 'string', default: '../images/'},
-    moonTexture: {type: 'map', default: 'moon-dif-1024.png'},
-    moonNormalMap: {type: 'map', default: 'moon-nor-1024-padded.png'},
+    moonTexture: {type: 'map', default: 'moon-tex-512.dds'},
+    moonNormalMap: {type: 'map', default: 'moon-nor-512.dds'},
     starMask: {type: 'map', default:'padded-starry-sub-data-0.png'},
     starRas: {type: 'map', default:'padded-starry-sub-data-1.png'},
     starDecs: {type: 'map', default:'padded-starry-sub-data-2.png'},
@@ -98,11 +98,6 @@ AFRAME.registerComponent('sky-time', {
     let skyDomeRadius = this.el.components.geometry.data.radius;
     let sceneRef = this.el.sceneEl.object3D;
     this.moon = new Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, textureLoader);
-
-    //
-    //Note: We might want to min map our moon texture and normal map so that
-    //Note: we can get better texture results in our view
-    //
 
     //Populate this data into an array because we're about to do some awesome stuff
     //to each texture with Three JS.
@@ -182,13 +177,7 @@ AFRAME.registerComponent('sky-time', {
       this.interpolator.setLinearInterpolationForScalar('moonEE', ['moonEE'], false);
 
       this.interpolator.setSLERPFor3Vect('sunXYZPosition', ['sunXYZPosition'], false);
-
       this.interpolator.setSLERPFor3Vect('moonXYZPosition', ['moonXYZPosition'], false);
-      this.interpolator.setSLERPFor3Vect('moonMappingTangentSpaceSunlight', ['moonMappingTangentSpaceSunlight'], false);
-
-      this.interpolator.setSLERPFor3Vect('moonMappingPosition', ['moonMappingPosition'], false);
-      this.interpolator.setSLERPFor3Vect('moonMappingTangent', ['moonMappingTangent'], false);
-      this.interpolator.setSLERPFor3Vect('moonMappingBitangent', ['moonMappingBitangent'], false);
 
       //Once all of these are set up - prime the buffer the first time.
       this.interpolator.primeBuffer();
@@ -220,20 +209,20 @@ AFRAME.registerComponent('sky-time', {
       let mXYZ = interpolatedValues.moonXYZPosition;
       this.el.components.material.material.uniforms.sunXYZPosition.value.set(sXYZ.x, sXYZ.y, sXYZ.z);
       this.el.components.material.material.uniforms.moonXYZPosition.value.set(mXYZ.x, mXYZ.y, mXYZ.z);
-
-      let mtss = interpolatedValues.moonMappingTangentSpaceSunlight;
-      let mp = interpolatedValues.moonMappingPosition;
-      let mmt = interpolatedValues.moonMappingTangent;
-      let mmb = interpolatedValues.moonMappingBitangent;
-
-      // this.el.components.material.material.uniforms.moonTangentSpaceSunlight.value.set(mtss.x, mtss.y, mtss.z);
-      //this.el.components.material.material.uniforms.moonAzimuthAndAltitude.value.set(interpolatedValues.moonAzimuth, interpolatedValues.moonAltitude);
       this.el.components.material.material.uniforms.moonEE.value = interpolatedValues.moonEE;
-      this.el.components.material.material.uniforms.moonPosition.value.set(mp.x, mp.y, mp.z);
-      //this.el.components.material.material.uniforms.moonTangent.value.set(mmt.x, mmt.y, mmt.z);
-      //this.el.components.material.material.uniforms.moonBitangent.value.set(mmb.x, mmb.y, mmb.z);
+      this.el.components.material.material.uniforms.moonPosition.value.set(mXYZ.x, mXYZ.y, mXYZ.z);
 
-      this.moon.update(mXYZ, sXYZ, interpolatedValues.moonAzimuth, interpolatedValues.moonAltitude, interpolatedValues.moonEE);
+      // luminance: { type: 'number', default: 1.0, max: 2.0, min: 0.0, is: 'uniform' },
+      // turbidity: { type: 'number', default: 2.0, max: 20.0, min: 0.0, is: 'uniform' },
+      // rayleigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
+      // mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
+      // mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' }
+      mieDirectionalG = 0.8;
+      mieCoefficient = 0.005;
+      luminance = 1.0;
+      rayleigh = 1.0;
+      turbidity = 2.0;
+      this.moon.update(mXYZ, sXYZ, interpolatedValues.moonAzimuth, interpolatedValues.moonAltitude, interpolatedValues.moonEE, mieDirectionalG, mieCoefficient, luminance, rayleigh, turbidity);
     }
   }
 });

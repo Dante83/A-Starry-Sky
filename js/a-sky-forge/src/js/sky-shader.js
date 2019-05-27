@@ -6,7 +6,7 @@ AFRAME.registerShader('sky', {
     uTime: {type: 'number', default: 0.005, min: 0, max: 0.1, is: 'uniform' },
     luminance: { type: 'number', default: 1.0, max: 2.0, min: 0.0, is: 'uniform' },
     turbidity: { type: 'number', default: 2.0, max: 20.0, min: 0.0, is: 'uniform' },
-    reileigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
+    rayleigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
     mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
     mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' },
     sunXYZPosition: {type: 'vec3', default: {x: 0.0, y: 0.0, z: 0.0}, is: 'uniform'},
@@ -56,7 +56,7 @@ AFRAME.registerShader('sky', {
     '//Status of the sky',
     'uniform float luminance;',
     'uniform float turbidity;',
-    'uniform float reileigh;',
+    'uniform float rayleigh;',
     'uniform float mieCoefficient;',
     'uniform float mieDirectionalG;',
 
@@ -451,8 +451,8 @@ AFRAME.registerShader('sky', {
 
       'float sunfade = 1.0-clamp(1.0-exp(sunZ),0.0,1.0);',
       'float moonfade = 1.0-clamp(1.0-exp(moonZ),0.0,1.0);',
-      'float reileighCoefficientOfSun = reileigh - (1.0-sunfade);',
-      'float reileighCoefficientOfMoon = reileigh - (1.0-moonfade);',
+      'float rayleighCoefficientOfSun = rayleigh - (1.0-sunfade);',
+      'float rayleighCoefficientOfMoon = rayleigh - (1.0-moonfade);',
 
       '//Get the sun intensity',
       '//Using dot(a,b) = ||a|| ||b|| * cos(a, b);',
@@ -469,8 +469,8 @@ AFRAME.registerShader('sky', {
 
       '//Acquire betaR and betaM',
       'vec3 simplifiedRayleighVal = simplifiedRayleigh();',
-      'vec3 betaRSun = simplifiedRayleighVal * reileighCoefficientOfSun;',
-      'vec3 betaRMoon = simplifiedRayleighVal * reileighCoefficientOfMoon;',
+      'vec3 betaRSun = simplifiedRayleighVal * rayleighCoefficientOfSun;',
+      'vec3 betaRMoon = simplifiedRayleighVal * rayleighCoefficientOfMoon;',
       'vec3 betaM = totalMie(lambda, K, turbidity) * mieCoefficient;',
 
       '// Get the current optical length',

@@ -16,7 +16,7 @@ varying vec3 vWorldPosition;
 //Status of the sky
 uniform float luminance;
 uniform float turbidity;
-uniform float reileigh;
+uniform float rayleigh;
 uniform float mieCoefficient;
 uniform float mieDirectionalG;
 
@@ -411,8 +411,8 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
 
   float sunfade = 1.0-clamp(1.0-exp(sunZ),0.0,1.0);
   float moonfade = 1.0-clamp(1.0-exp(moonZ),0.0,1.0);
-  float reileighCoefficientOfSun = reileigh - (1.0-sunfade);
-  float reileighCoefficientOfMoon = reileigh - (1.0-moonfade);
+  float rayleighCoefficientOfSun = rayleigh - (1.0-sunfade);
+  float rayleighCoefficientOfMoon = rayleigh - (1.0-moonfade);
 
   //Get the sun intensity
   //Using dot(a,b) = ||a|| ||b|| * cos(a, b);
@@ -429,8 +429,8 @@ skyparams drawSkyLayer(float azimuthOfPixel, float altitudeOfPixel){
 
   //Acquire betaR and betaM
   vec3 simplifiedRayleighVal = simplifiedRayleigh();
-  vec3 betaRSun = simplifiedRayleighVal * reileighCoefficientOfSun;
-  vec3 betaRMoon = simplifiedRayleighVal * reileighCoefficientOfMoon;
+  vec3 betaRSun = simplifiedRayleighVal * rayleighCoefficientOfSun;
+  vec3 betaRMoon = simplifiedRayleighVal * rayleighCoefficientOfMoon;
   vec3 betaM = totalMie(lambda, K, turbidity) * mieCoefficient;
 
   // Get the current optical length
