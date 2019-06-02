@@ -33,27 +33,11 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     '#endif',
 
     'varying vec3 vWorldPosition;',
-    'varying float sR;',
-    'varying float sM;',
     'varying vec2 vUv;',
-
-    'const vec3 up = vec3(0.0, 1.0, 0.0);',
-    'const float rayleighAtmosphereHeight = 8.4E3;',
-    'const float mieAtmosphereHeight = 1.25E3;',
-    'const float rad2Deg = 57.29577951308232087679815481410517033240547246656432154916;',
 
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
       'vWorldPosition = worldPosition.xyz;',
-
-      '// Get the current optical length',
-      '// cutoff angle at 90 to avoid singularity in next formula.',
-      '//presuming here that the dot of the sun direction and up is also cos(zenith angle)',
-      'float cosOfZenithAngleOfCamera = max(0.0, dot(up, normalize(vWorldPosition)));',
-      'float zenithAngleOfCamera = acos(cosOfZenithAngleOfCamera);',
-      'float inverseSDenominator = 1.0 / (cosOfZenithAngleOfCamera + 0.15 * pow(93.885 - (zenithAngleOfCamera * rad2Deg), -1.253));',
-      'sR = rayleighAtmosphereHeight * inverseSDenominator;',
-      'sM = mieAtmosphereHeight * inverseSDenominator;',
       'vUv = uv;',
       'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
     '}',
@@ -67,8 +51,6 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
 
     '//Varyings',
     'varying vec3 vWorldPosition;',
-    'varying float sR;',
-    'varying float sM;',
     'varying vec2 vUv;',
 
     '//Uniforms',
@@ -96,6 +78,9 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     'const float piOver2 = 1.570796326794896619231321691639751442098584699687552910487;',
     'const float oneOverFourPi = 0.079577471545947667884441881686257181017229822870228224373;',
     'const float rayleighPhaseConst = 0.059683103659460750913331411264692885762922367152671168280;',
+    'const float rayleighAtmosphereHeight = 8.4E3;',
+    'const float mieAtmosphereHeight = 1.25E3;',
+    'const float rad2Deg = 57.29577951308232087679815481410517033240547246656432154916;',
 
     '// see http://blenderartists.org/forum/showthread.php?321110-Shaders-and-Skybox-madness',
     '// A simplied version of the total Rayleigh scattering to works on browsers that use ANGLE',
@@ -139,7 +124,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
       '//The moon is presumed to be a lambert shaded object, as per:',
       '//https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection',
 
-      'return vec4(baseMoonIntensity.rgb * min(earthshine + dot(moonSurfaceNormal, moonTangentSpaceSunlight), 1.0), baseMoonIntensity.a);',
+      'return vec4(clamp(baseMoonIntensity.rgb * min(earthshine + dot(moonSurfaceNormal, moonTangentSpaceSunlight), 1.0), 0.0, 1.0), baseMoonIntensity.a);',
     '}',
 
     '// Filmic ToneMapping http://filmicgames.com/archives/75',
@@ -161,7 +146,6 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     '}',
 
     'vec3 applyToneMapping(vec3 outIntensity, vec3 L0){',
-      'outIntensity += L0;',
       'outIntensity *= 0.04;',
       'outIntensity += vec3(0.0, 0.0003, 0.00075);',
 
@@ -171,6 +155,15 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
 
     'void main(){',
       'vec3 normalizedWorldPosition = normalize(vWorldPosition.xyz);',
+
+      '// Get the current optical length',
+      '// cutoff angle at 90 to avoid singularity in next formula.',
+      '//presuming here that the dot of the sun direction and up is also cos(zenith angle)',
+      'float cosOfZenithAngleOfCamera = max(0.0, dot(up, normalize(vWorldPosition)));',
+      'float zenithAngleOfCamera = acos(cosOfZenithAngleOfCamera);',
+      'float inverseSDenominator = 1.0 / (cosOfZenithAngleOfCamera + 0.15 * pow(93.885 - (zenithAngleOfCamera * rad2Deg), -1.253));',
+      'float sR = rayleighAtmosphereHeight * inverseSDenominator;',
+      'float sM = mieAtmosphereHeight * inverseSDenominator;',
 
       '// combined extinction factor',
       'vec3 betaMTimesSM = betaM * sM;',
@@ -185,11 +178,10 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
 
       '//Get direct illumination from the moon',
       'vec4 lunarTexture = getDirectLunarIntensity(vUv);',
-      '//outIntensity += vec3(lunarTexture.rgb);',
+      'outIntensity = clamp(sqrt(outIntensity * outIntensity + lunarTexture.rgb * lunarTexture.rgb), 0.0, 1.0);',
 
       '//Apply tone mapping to the result',
-      '//gl_FragColor = lunarTexture;',
-    '	gl_FragColor = vec4(outIntensity.rgb, 1.0);',
+    '	gl_FragColor = vec4(outIntensity.rgb, lunarTexture.a);',
     '}',
   ].join('\n')
 });
