@@ -84,13 +84,18 @@ vec4 getDirectLunarIntensity(vec2 uvCoords){
 const float A = 0.15;
 const float B = 0.50;
 const float C = 0.10;
+const float CTimesB = 0.05;
+const float DTimesE = 0.004;
 const float D = 0.20;
 const float E = 0.02;
 const float F = 0.30;
+const float DTimesF = 0.06;
+const float EOverF = 0.066666666666666666666666666666666666666666666666666666666;
 const float W = 1000.0;
+const float unchartedW = 0.93034292920990640579589580673035390594971634341319642;
 
 vec3 Uncharted2Tonemap(vec3 x){
-  return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
+  return ((x*(A*x+CTimesB)+DTimesE)/(x*(A*x+B)+DTimesF))-EOverF;
 }
 
 vec3 applyToneMapping(vec3 outIntensity, vec3 L0){
@@ -98,8 +103,8 @@ vec3 applyToneMapping(vec3 outIntensity, vec3 L0){
   outIntensity *= 0.04;
   outIntensity += vec3(0.0, 0.0003, 0.00075);
 
-  vec3 color = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*L0) / Uncharted2Tonemap(vec3(W));
-  return pow(abs(color),vec3(1.0/(1.2 + (1.2 + sunFade + moonFade))));
+  vec3 color = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))* outIntensity) / unchartedW;
+  return pow(abs(color),vec3(1.0/(1.2 *(1.0 + (sunFade + moonFade)))));
 }
 
 void main(){
@@ -114,12 +119,13 @@ void main(){
   vec3 L0 = 0.1 * (FexSun + FexMoon);
 
   //Get the inscattered light from the sun or the moon
-  //vec4 outIntensity = vec4(getDirectInscatteredIntensity(normalizedWorldPosition, FexSun, FexMoon) + L0, 1.0);
-  //vec4 outIntensity = vec4(0.0);
+  vec3 outIntensity = applyToneMapping(getDirectInscatteredIntensity(normalizedWorldPosition, FexSun, FexMoon) + L0, L0);
 
   //Get direct illumination from the moon
-  vec4 outIntensity = getDirectLunarIntensity(vUv);
+  vec4 lunarTexture = getDirectLunarIntensity(vUv);
+  //outIntensity += vec3(lunarTexture.rgb);
 
   //Apply tone mapping to the result
-	gl_FragColor = vec4(applyToneMapping(outIntensity.rgb, L0), outIntensity.a);
+  //gl_FragColor = lunarTexture;
+	gl_FragColor = vec4(outIntensity.rgb, 1.0);
 }

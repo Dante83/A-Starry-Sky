@@ -8,10 +8,7 @@ varying float sR;
 varying float sM;
 varying vec2 vUv;
 
-uniform float rayleighCoefficientOfSun;
-uniform float rayleighCoefficientOfMoon;
 const vec3 up = vec3(0.0, 1.0, 0.0);
-const vec3 simplifiedRayleighVal = vec3(0.0005 / 94.0, 0.0005 / 40.0, 0.0005 / 18.0);
 const float rayleighAtmosphereHeight = 8.4E3;
 const float mieAtmosphereHeight = 1.25E3;
 const float rad2Deg = 57.29577951308232087679815481410517033240547246656432154916;

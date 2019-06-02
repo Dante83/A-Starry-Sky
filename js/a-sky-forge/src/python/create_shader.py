@@ -20,6 +20,7 @@ def ShaderFileWatcher():
     previousVertexFileChangeDates = [None, None]
     previousFragmentFileChangeDates = [None, None]
     previousTemplateFileChangeDates = [None, None]
+
     leadingSpacesBeforeFragmentShaderCode = 2
     leadingSpacesBeforeVertextShaderCode = 2
 
@@ -27,6 +28,8 @@ def ShaderFileWatcher():
     leadingSpacesBeforeVertextShaderCodeStrings = ['', '']
     updatedVertexFileCodeStrings = ['', '']
     updatedFragmentFileCodeStrings = ['', '']
+    jsStringifiedVertexCode = ['', '']
+    jsStringifiedFragmentCode = ['', '']
 
     for i in xrange(2):
         template_name = template_names[i]
@@ -40,12 +43,10 @@ def ShaderFileWatcher():
 
         #initialize our code strings
         vertex_file = vertex_files[i]
-        updatedVertexFileCode = ""
         with open(vertex_file) as vf:
             updatedVertexFileCodeStrings[i] = vf.read()
 
         fragment_file = fragment_files[i]
-        updatedFragmentFileCode = ""
         with open(fragment_file) as ff:
             updatedFragmentFileCodeStrings[i] = ff.read()
 
@@ -82,7 +83,7 @@ def ShaderFileWatcher():
                     print "Vertex File Change Detected"
                     previousVertexFileChangeDates[i] = vertexFileLastChangedAt
                     with open(vertex_file) as vf:
-                        updatedVertexFileCode = vf.read()
+                        updatedVertexFileCodeStrings[i] = vf.read()
                 #
                 #Check if our fragment shader file was the changer - is so, update the internal values associated with this
                 #
@@ -90,7 +91,7 @@ def ShaderFileWatcher():
                     print "Fragment File Change Detected"
                     previousFragmentFileChangeDates[i] = fragmentFileLastChangedAt
                     with open(fragment_file) as ff:
-                        updatedFragmentFileCode = ff.read()
+                        updatedFragmentFileCodeStrings[i] = ff.read()
 
                 #
                 #Check if our template file was the changer - is so, update the internal values associated with this
@@ -107,7 +108,7 @@ def ShaderFileWatcher():
                         elif "\{vertex_glsl\}" in loc:
                             leadingSpacesBeforeFragmentShaderCode = len(loc) - len(loc.lstrip(' '))
 
-                codeLines = updatedVertexFileCode.splitlines()
+                codeLines = updatedVertexFileCodeStrings[i].splitlines()
                 jsStringifiedVertexLinesOfCode = []
                 for lineNumber, loc in enumerate(codeLines):
                     if len(loc) >= 1:
@@ -117,9 +118,9 @@ def ShaderFileWatcher():
                         jsStringifiedVertexLinesOfCode += [(' ' * nLeadingSpaces) + "'" + loc.lstrip(' ') + "',"]
                     else:
                         jsStringifiedVertexLinesOfCode += [loc]
-                jsStringifiedVertexCode = '\r\n'.join(jsStringifiedVertexLinesOfCode)
+                jsStringifiedVertexCode[i] = '\r\n'.join(jsStringifiedVertexLinesOfCode)
 
-                codeLines = updatedFragmentFileCode.splitlines()
+                codeLines = updatedFragmentFileCodeStrings[i].splitlines()
                 jsStringifiedFragmentLinesOfCode = []
                 for lineNumber, loc in enumerate(codeLines):
                     if len(loc) >= 1:
@@ -129,13 +130,13 @@ def ShaderFileWatcher():
                         jsStringifiedFragmentLinesOfCode += [(' ' * nLeadingSpaces) + "'" + loc.lstrip(' ') + "',"]
                     else:
                         jsStringifiedFragmentLinesOfCode += [loc]
-                jsStringifiedFragmentCode = '\r\n'.join(jsStringifiedFragmentLinesOfCode)
+                jsStringifiedFragmentCode[i] = '\r\n'.join(jsStringifiedFragmentLinesOfCode)
 
                 #Clone the template string and modify it with the imported components
-                shader_js_code = templateString
-                shader_js_code = re.sub('\s+\{vertex_glsl\}', jsStringifiedVertexCode, shader_js_code)
-                shader_js_code = re.sub('\s+\{fragment_glsl\}', jsStringifiedFragmentCode, shader_js_code)
                 with open(file_name, 'w') as w:
+                    shader_js_code = templateString
+                    shader_js_code = re.sub('\s+\{vertex_glsl\}', jsStringifiedVertexCode[i], shader_js_code)
+                    shader_js_code = re.sub('\s+\{fragment_glsl\}', jsStringifiedFragmentCode[i], shader_js_code)
                     w.write(shader_js_code)
                     print ("Shader JS File updated at: " + time.strftime('%H:%M %Y-%m-%d'))
                     print "-"*15

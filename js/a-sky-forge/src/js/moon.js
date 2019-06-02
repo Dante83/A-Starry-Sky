@@ -9,6 +9,9 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   });
   moonShaderMaterial.uniforms['moonTexture'].value = this.moonTexture;
 
+  console.log(AFRAME);
+  console.log(moonShaderMaterial);
+
   this.moonNormalMap = ddsLoader.load(moonNormalMapDir, function(moonNormalTexture){
     moonNormalTexture.magFilter = THREE.LinearFilter;
     moonNormalTexture.minFilter = THREE.LinearMipMapLinearFilter;
@@ -28,9 +31,6 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   let diameterOfMoonPlane = 2.0 * this.moonRadiusFromCamera * Math.sin(angularRadiusOfMoon);
   this.geometry = new THREE.PlaneGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
   this.geometry.translate(0.0, -0.0 * diameterOfMoonPlane, 0.0);
-
-  //Set up our shader
-  this.material = new THREE.MeshBasicMaterial({color: 0xffff00, side: THREE.DoubleSide});
 
   //Apply this shader to our plane
   this.plane = new THREE.Mesh(this.geometry, moonShaderMaterial);
@@ -63,16 +63,17 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     let moonFade = 1.0 - Math.min(Math.max(1.0 - Math.exp(moonPosition.z), 0.0), 1.0);
     moonShaderMaterial.uniforms['sunFade'].value = sunFade;
     moonShaderMaterial.uniforms['moonFade'].value = moonFade;
-    moonShaderMaterial.uniforms['rayleighCoefficientOfSun'].value = rayleigh - (1.0 - sunFade);
-    moonShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value = rayleigh - (1.0 - moonFade);
+    moonShaderMaterial.uniforms['rayleighCoefficientOfSun'].value = rayleigh + sunFade - 1.0;
+    moonShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value = rayleigh + moonFade - 1.0;
     moonShaderMaterial.uniforms['mieDirectionalG'].value = mieDirectionalG;
-    let mieCoefficientVec3 = new THREE.Vector3(mieCoefficient, mieCoefficient, mieCoefficient);
-    moonShaderMaterial.uniforms['betaM'].value = mieCoefficientVec3.multiply(totalMie(turbidty));
+    moonShaderMaterial.uniforms['betaM'].value = totalMie(turbidty).multiplyScalar(mieCoefficient);
     const up = new THREE.Vector3(0.0, 1.0, 0.0);
     let dotOfMoonDirectionAndUp = moonPosition.dot(up);
     let dotOfSunDirectionAndUp = sunPosition.dot(up);
-    moonShaderMaterial.uniforms['moonE'].value = moonEE * Math.max(0.0, 1.0 - Math.exp(-(((Math.PI / 1.95) - Math.acos(dotOfMoonDirectionAndUp))/1.5)));
-    moonShaderMaterial.uniforms['sunE'].value = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-(((Math.PI / 1.95) - Math.acos(dotOfSunDirectionAndUp))/1.5)));
+    let cutoffAngle = Math.PI / 1.95;
+    let steepness = 1.5;
+    moonShaderMaterial.uniforms['moonE'].value = moonEE * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfMoonDirectionAndUp))/steepness)));
+    moonShaderMaterial.uniforms['sunE'].value = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness)));
     moonShaderMaterial.uniforms['linMoonCoefficient2'].value = Math.min(Math.max(Math.pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0),1.0);
     moonShaderMaterial.uniforms['linSunCoefficient2'].value = Math.min(Math.max(Math.pow(1.0-dotOfSunDirectionAndUp,5.0),0.0),1.0);
     moonShaderMaterial.uniforms['sunXYZPosition'].value = sunPosition;
@@ -80,6 +81,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     moonShaderMaterial.uniforms['betaRSun'].value = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - sunFade));
     moonShaderMaterial.uniforms['betaRMoon'].value = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - moonFade));
     moonShaderMaterial.uniforms['moonXYZPosition'].value = moonPosition;
+    moonShaderMaterial.uniforms['luminance'].value = luminance;
 
     //move and rotate the moon
     let p = this.plane;
@@ -110,5 +112,8 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     this.lightDirection.applyMatrix3(this.translationToTangentSpace);
 
     moonShaderMaterial.uniforms['moonTangentSpaceSunlight'].value = this.lightDirection;
+
+    // console.log(moonShaderMaterial.uniforms);
+    // debugger;
   }
 }
