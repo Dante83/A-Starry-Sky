@@ -119,11 +119,11 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
       '//Get the moon shadow using the normal map',
       '//Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!',
       'vec3 moonNormalMapRGB = texture2D(moonNormalMap, uvCoords).rgb;',
-      'vec3 moonSurfaceNormal = normalize(2.0 * moonNormalMapRGB.rgb - 1.0);',
+      'vec3 moonNormalMapInverted = vec3(moonNormalMapRGB.r, 1.0 - moonNormalMapRGB.g, moonNormalMapRGB.b);',
+      'vec3 moonSurfaceNormal = normalize(2.0 * moonNormalMapInverted.rgb - 1.0);',
 
       '//The moon is presumed to be a lambert shaded object, as per:',
       '//https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection',
-
       'return vec4(clamp(baseMoonIntensity.rgb * min(earthshine + dot(moonSurfaceNormal, moonTangentSpaceSunlight), 1.0), 0.0, 1.0), baseMoonIntensity.a);',
     '}',
 
@@ -178,7 +178,8 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
 
       '//Get direct illumination from the moon',
       'vec4 lunarTexture = getDirectLunarIntensity(vUv);',
-      'outIntensity = clamp(sqrt(outIntensity * outIntensity + lunarTexture.rgb * lunarTexture.rgb), 0.0, 1.0);',
+      'vec3 lunarColor = 1.5 * FexMoon * lunarTexture.rgb;',
+      'outIntensity = clamp(sqrt(outIntensity * outIntensity + lunarColor * lunarColor), 0.0, 1.0);',
 
       '//Apply tone mapping to the result',
     '	gl_FragColor = vec4(outIntensity.rgb, lunarTexture.a);',

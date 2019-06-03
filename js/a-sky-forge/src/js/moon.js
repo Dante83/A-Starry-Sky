@@ -1,6 +1,5 @@
 function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, textureLoader){
-  let ddsLoader = new THREE.DDSLoader();
-  this.moonTexture = ddsLoader.load(moonTextureDir, function(moonTexture){
+  this.moonTexture = textureLoader.load(moonTextureDir, function(moonTexture){
     moonTexture.magFilter = THREE.LinearFilter;
     moonTexture.minFilter = THREE.LinearMipMapLinearFilter;
     moonTexture.wrapS = THREE.ClampToEdgeWrapping;
@@ -9,10 +8,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   });
   moonShaderMaterial.uniforms['moonTexture'].value = this.moonTexture;
 
-  console.log(AFRAME);
-  console.log(moonShaderMaterial);
-
-  this.moonNormalMap = ddsLoader.load(moonNormalMapDir, function(moonNormalTexture){
+  this.moonNormalMap = textureLoader.load(moonNormalMapDir, function(moonNormalTexture){
     moonNormalTexture.magFilter = THREE.LinearFilter;
     moonNormalTexture.minFilter = THREE.LinearMipMapLinearFilter;
     moonNormalTexture.wrapS = THREE.ClampToEdgeWrapping;
@@ -20,10 +16,11 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     moonNormalTexture.needsUpdate = true;
   });
   moonShaderMaterial.uniforms['moonNormalMap'].value = this.moonNormalMap;
+
   this.xyzPosition;
   this.moonTangentSpaceSunlight;
   this.sceneRef = sceneRef;
-  this.moonRadiusFromCamera = 0.1 * skyDomeRadius;
+  this.moonRadiusFromCamera = 0.8 * skyDomeRadius;
 
   //Create a three JS plane for our moon to live on in a hidden view
   //let angularRadiusOfMoon = 0.024;

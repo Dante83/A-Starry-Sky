@@ -532,10 +532,10 @@ void main(){
   skyparams skyParams = drawSkyLayer(azimuth, altitude);
   vec4 skyColor = skyParams.skyColor;
 
-  // skyWithAndWithoutStars starLayerData = starLayerBlending(drawStarLayer(azimuth, altitude, baseColor), skyColor, skyParams.sunE);
-  // vec4 outColor = starLayerData.starLayer;
-  //
-  // outColor = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);
+  skyWithAndWithoutStars starLayerData = starLayerBlending(drawStarLayer(azimuth, altitude, baseColor), skyColor, skyParams.sunE);
+  vec4 outColor = starLayerData.starLayer;
 
-	gl_FragColor = skyColor;
+  outColor = mixSunLayer(drawSunLayer(azimuth, altitude, skyParams), outColor);
+
+	gl_FragColor = outColor;
 }
