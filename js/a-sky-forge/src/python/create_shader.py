@@ -21,8 +21,8 @@ def ShaderFileWatcher():
     previousFragmentFileChangeDates = [None, None]
     previousTemplateFileChangeDates = [None, None]
 
-    leadingSpacesBeforeFragmentShaderCode = 2
-    leadingSpacesBeforeVertextShaderCode = 2
+    leadingSpacesBeforeFragmentShaderCode = [2, 2]
+    leadingSpacesBeforeVertextShaderCode = [2, 2]
 
     #Initialize our template for usage - we're gonna need this one no matter what gets updated
     leadingSpacesBeforeVertextShaderCodeStrings = ['', '']
@@ -30,12 +30,13 @@ def ShaderFileWatcher():
     updatedFragmentFileCodeStrings = ['', '']
     jsStringifiedVertexCode = ['', '']
     jsStringifiedFragmentCode = ['', '']
+    templateStrings = ['', '']
 
     for i in xrange(2):
         template_name = template_names[i]
         with open(template_name, 'r') as f:
-            templateString = f.read()
-        for loc in templateString:
+            templateStrings[i] = f.read()
+        for loc in templateStrings[i]:
             if "\{vertex_glsl\}" in loc:
                  leadingSpacesBeforeVertextShaderCodeStrings[i] = len(loc) - len(loc.lstrip(' '))
             elif "\{vertex_glsl\}" in loc:
@@ -101,18 +102,18 @@ def ShaderFileWatcher():
                     previousTemplateFileChangeDates[i] = templateFileLastChangedAt
 
                     with open(template_name, 'r') as f:
-                        templateString = f.read()
-                    for loc in templateString:
+                        templateStrings[i] = f.read()
+                    for loc in templateStrings[i]:
                         if "\{vertex_glsl\}" in loc:
-                             leadingSpacesBeforeVertextShaderCode = len(loc) - len(loc.lstrip(' '))
+                            leadingSpacesBeforeVertextShaderCode[i] = len(loc) - len(loc.lstrip(' '))
                         elif "\{vertex_glsl\}" in loc:
-                            leadingSpacesBeforeFragmentShaderCode = len(loc) - len(loc.lstrip(' '))
+                            leadingSpacesBeforeFragmentShaderCode[i] = len(loc) - len(loc.lstrip(' '))
 
                 codeLines = updatedVertexFileCodeStrings[i].splitlines()
                 jsStringifiedVertexLinesOfCode = []
                 for lineNumber, loc in enumerate(codeLines):
                     if len(loc) >= 1:
-                        nLeadingSpaces = len(loc) - len(loc.lstrip(' ')) + leadingSpacesBeforeVertextShaderCode + 2
+                        nLeadingSpaces = len(loc) - len(loc.lstrip(' ')) + leadingSpacesBeforeVertextShaderCode[i] + 2
                         if lineNumber == 0:
                             jsStringifiedVertexLinesOfCode += [''] #Empty newline at start
                         jsStringifiedVertexLinesOfCode += [(' ' * nLeadingSpaces) + "'" + loc.lstrip(' ') + "',"]
@@ -124,7 +125,7 @@ def ShaderFileWatcher():
                 jsStringifiedFragmentLinesOfCode = []
                 for lineNumber, loc in enumerate(codeLines):
                     if len(loc) >= 1:
-                        nLeadingSpaces = len(loc) - len(loc.lstrip(' ')) + leadingSpacesBeforeFragmentShaderCode + 2
+                        nLeadingSpaces = len(loc) - len(loc.lstrip(' ')) + leadingSpacesBeforeFragmentShaderCode[i] + 2
                         if lineNumber == 0:
                             jsStringifiedFragmentLinesOfCode += [''] #Empty newline at start
                         jsStringifiedFragmentLinesOfCode += [(' ' * nLeadingSpaces) + "'" + loc.lstrip(' ') + "',"]
@@ -134,7 +135,7 @@ def ShaderFileWatcher():
 
                 #Clone the template string and modify it with the imported components
                 with open(file_name, 'w') as w:
-                    shader_js_code = templateString
+                    shader_js_code = templateStrings[i]
                     shader_js_code = re.sub('\s+\{vertex_glsl\}', jsStringifiedVertexCode[i], shader_js_code)
                     shader_js_code = re.sub('\s+\{fragment_glsl\}', jsStringifiedFragmentCode[i], shader_js_code)
                     w.write(shader_js_code)

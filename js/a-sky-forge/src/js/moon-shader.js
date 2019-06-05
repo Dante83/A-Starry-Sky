@@ -28,8 +28,8 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
 
   vertexShader: [
     '#ifdef GL_ES',
-    'precision highp float;',
-    'precision highp int;',
+    'precision mediump float;',
+    'precision mediump int;',
     '#endif',
 
     'varying vec3 vWorldPosition;',
@@ -45,8 +45,8 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
 
   fragmentShader: [
     '#ifdef GL_ES',
-    'precision highp float;',
-    'precision highp int;',
+    'precision mediump float;',
+    'precision mediump int;',
     '#endif',
 
     '//Varyings',
@@ -159,7 +159,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
       '// Get the current optical length',
       '// cutoff angle at 90 to avoid singularity in next formula.',
       '//presuming here that the dot of the sun direction and up is also cos(zenith angle)',
-      'float cosOfZenithAngleOfCamera = max(0.0, dot(up, normalize(vWorldPosition)));',
+      'float cosOfZenithAngleOfCamera = max(0.0, dot(up, normalizedWorldPosition));',
       'float zenithAngleOfCamera = acos(cosOfZenithAngleOfCamera);',
       'float inverseSDenominator = 1.0 / (cosOfZenithAngleOfCamera + 0.15 * pow(93.885 - (zenithAngleOfCamera * rad2Deg), -1.253));',
       'float sR = rayleighAtmosphereHeight * inverseSDenominator;',

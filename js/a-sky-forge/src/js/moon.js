@@ -41,45 +41,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.translationToTangentSpace = new THREE.Matrix3();
   this.lightDirection = new THREE.Vector3();
 
-  function totalMie(T){
-    const lambda = new THREE.Vector3(680e-9, 550e-9, 450e-9);
-    const k = new THREE.Vector3(0.686, 0.678, 0.666);
-    const piTimes2 = 2.0 * Math.PI;
-    let c = (0.2 * T) * 10.0e-18;
-    let v = new THREE.Vector3(piTimes2, piTimes2, piTimes2);
-    v.divide(lambda);
-    v.multiply(v); // raise to the power of v - 2.0 where v is 4.0, so square it
-    return v.multiply(k).multiplyScalar(0.434 * c * Math.PI);
-  }
-
-  this.update = function(moonPosition, sunPosition, moonAzimuth, moonAltitude, moonEE, mieDirectionalG, mieCoefficient, luminance, rayleigh, turbidty){
-    //
-    //update our uniforms
-    //
-    let sunFade = 1.0 - Math.min(Math.max(1.0 - Math.exp(sunPosition.z), 0.0), 1.0);
-    let moonFade = 1.0 - Math.min(Math.max(1.0 - Math.exp(moonPosition.z), 0.0), 1.0);
-    moonShaderMaterial.uniforms['sunFade'].value = sunFade;
-    moonShaderMaterial.uniforms['moonFade'].value = moonFade;
-    moonShaderMaterial.uniforms['rayleighCoefficientOfSun'].value = rayleigh + sunFade - 1.0;
-    moonShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value = rayleigh + moonFade - 1.0;
-    moonShaderMaterial.uniforms['mieDirectionalG'].value = mieDirectionalG;
-    moonShaderMaterial.uniforms['betaM'].value = totalMie(turbidty).multiplyScalar(mieCoefficient);
-    const up = new THREE.Vector3(0.0, 1.0, 0.0);
-    let dotOfMoonDirectionAndUp = moonPosition.dot(up);
-    let dotOfSunDirectionAndUp = sunPosition.dot(up);
-    let cutoffAngle = Math.PI / 1.95;
-    let steepness = 1.5;
-    moonShaderMaterial.uniforms['moonE'].value = moonEE * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfMoonDirectionAndUp))/steepness)));
-    moonShaderMaterial.uniforms['sunE'].value = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness)));
-    moonShaderMaterial.uniforms['linMoonCoefficient2'].value = Math.min(Math.max(Math.pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0),1.0);
-    moonShaderMaterial.uniforms['linSunCoefficient2'].value = Math.min(Math.max(Math.pow(1.0-dotOfSunDirectionAndUp,5.0),0.0),1.0);
-    moonShaderMaterial.uniforms['sunXYZPosition'].value = sunPosition;
-    const simplifiedRayleigh = new THREE.Vector3(0.0005 / 94.0, 0.0005 / 40.0, 0.0005 / 18.0);
-    moonShaderMaterial.uniforms['betaRSun'].value = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - sunFade));
-    moonShaderMaterial.uniforms['betaRMoon'].value = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - moonFade));
-    moonShaderMaterial.uniforms['moonXYZPosition'].value = moonPosition;
-    moonShaderMaterial.uniforms['luminance'].value = luminance;
-
+  this.update = function(moonPosition, sunPosition){
     //move and rotate the moon
     let p = this.plane;
     this.position.set(moonPosition.x, moonPosition.y, moonPosition.z).multiplyScalar(this.moonRadiusFromCamera);
