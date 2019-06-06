@@ -5,15 +5,15 @@ var skyShaderMaterial = new THREE.ShaderMaterial({
   uniforms: {
     rayleigh: {type: 'f', value: 0.0},
     rayleighCoefficientOfSun: {type: 'f', value: 0.0},
-    rayleighCoefficientOfMoon: {type: 'f',value: 0.0},
-    sunFade: {type: 'f',value: 0.0},
-    moonFade: {type: 'f',value: 0.0},
-    luminance: {type: 'f',value: 0.0},
-    mieDirectionalG: {type: 'f',value: 0.0},
-    moonE: {type: 'f',value: 0.0},
-    sunE: {type: 'f',value: 0.0},
-    linMoonCoefficient2: {type: 'f',value: 0.0},
-    linSunCoefficient2: {type: 'f',value: 0.0},
+    rayleighCoefficientOfMoon: {type: 'f', value: 0.0},
+    sunFade: {type: 'f', value: 0.0},
+    moonFade: {type: 'f', value: 0.0},
+    luminance: {type: 'f', value: 0.0},
+    mieDirectionalG: {type: 'f', value: 0.0},
+    moonE: {type: 'f', value: 0.0},
+    sunE: {type: 'f', value: 0.0},
+    linMoonCoefficient2: {type: 'f', value: 0.0},
+    linSunCoefficient2: {type: 'f', value: 0.0},
     betaM: {type: 'v3',value: new THREE.Vector3()},
     sunXYZPosition: {type: 'v3', value: new THREE.Vector3()},
     betaRSun: {type: 'v3', value: new THREE.Vector3()},
@@ -31,6 +31,10 @@ var skyShaderMaterial = new THREE.ShaderMaterial({
     starColors: {type: 't', value: null}
   },
 
+  side: THREE.BackSide,
+  blending: THREE.NormalBlending,
+  transparent: false,
+
   vertexShader: [
     {vertex_glsl}
   ].join('\n'),
@@ -39,3 +43,6 @@ var skyShaderMaterial = new THREE.ShaderMaterial({
     {fragment_glsl}
   ].join('\n')
 });
+
+skyShaderMaterial.clipping = true;
+skyShaderMaterial.flatShading = true;

@@ -71,8 +71,5 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     this.lightDirection.applyMatrix3(this.translationToTangentSpace);
 
     moonShaderMaterial.uniforms['moonTangentSpaceSunlight'].value = this.lightDirection;
-
-    // console.log(moonShaderMaterial.uniforms);
-    // debugger;
   }
 }

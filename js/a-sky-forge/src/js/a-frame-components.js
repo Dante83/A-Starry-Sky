@@ -39,7 +39,7 @@ AFRAME.registerComponent('geo-coordinates', {
   }
 });
 
-var skyParamsUniformsData = {};
+var skyParamsUniformsData = {turbidity: 2.0, rayleigh: 1.0, mieCoefficient: 0.005};
 AFRAME.registerComponent('sky-params', {
   dependencies: ['a-sky-forge'],
   schema:{
@@ -153,10 +153,10 @@ AFRAME.registerComponent('sky-time', {
 
     //We only load our textures once upon initialization
     skyShaderMaterial.uniforms['starMask'].value = starMask;
-    skyShaderMaterial.uniforms['starRas'].value = starMask;
-    skyShaderMaterial.uniforms['starDecs'].value = starMask;
-    skyShaderMaterial.uniforms['starMags'].value = starMask;
-    skyShaderMaterial.uniforms['starColors'].value = starMask;
+    skyShaderMaterial.uniforms['starRas'].value = starRas;
+    skyShaderMaterial.uniforms['starDecs'].value = starDecs;
+    skyShaderMaterial.uniforms['starMags'].value = starMags;
+    skyShaderMaterial.uniforms['starColors'].value = starColors;
 
     //Hook up our interpolator and set the various uniforms we wish to track and
     //interpolate during each frame.
@@ -214,15 +214,17 @@ AFRAME.registerComponent('sky-time', {
       let rayleigh = skyParamsUniformsData.rayleigh;
       let mieCoefficient = skyParamsUniformsData.mieCoefficient;
       let sunFade = 1.0 - Math.min(Math.max(1.0 - Math.exp(sXYZ.z), 0.0), 1.0);
-      let moonFade = 1.0 - Math.min(Math.max(1.0 - Math.exp(mXYZ.z), 0.0), 1.0);
       moonShaderMaterial.uniforms['sunFade'].value = sunFade;
       skyShaderMaterial.uniforms['sunFade'].value = sunFade;
+      let moonFade = 1.0 - Math.min(Math.max(1.0 - Math.exp(mXYZ.z), 0.0), 1.0);
       moonShaderMaterial.uniforms['moonFade'].value = moonFade;
       skyShaderMaterial.uniforms['moonFade'].value = moonFade;
-      moonShaderMaterial.uniforms['rayleighCoefficientOfSun'].value = rayleigh + sunFade - 1.0;
-      skyShaderMaterial.uniforms['rayleighCoefficientOfSun'].value = moonShaderMaterial.uniforms['rayleighCoefficientOfSun'].value;
-      moonShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value = rayleigh + moonFade - 1.0;
-      skyShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value = moonShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value;
+      let rayleighCoefficientOfSun = rayleigh + sunFade - 1.0;
+      moonShaderMaterial.uniforms['rayleighCoefficientOfSun'].value = rayleighCoefficientOfSun;
+      skyShaderMaterial.uniforms['rayleighCoefficientOfSun'].value = rayleighCoefficientOfSun;
+      let rayleighCoefficientOfMoon = rayleigh + moonFade - 1.0;
+      moonShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value = rayleighCoefficientOfMoon;
+      skyShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value =rayleighCoefficientOfMoon;
 
       //
       //Calculate Total Mie
@@ -230,36 +232,43 @@ AFRAME.registerComponent('sky-time', {
       const lambda = new THREE.Vector3(680e-9, 550e-9, 450e-9);
       const k = new THREE.Vector3(0.686, 0.678, 0.666);
       const piTimes2 = 2.0 * Math.PI;
-      let c = (0.2 * skyParamsUniformsData.turbidty) * 10.0e-18;
+      let c = (0.2 * skyParamsUniformsData.turbidity) * 10.0e-18;
       let totalMie = new THREE.Vector3(piTimes2, piTimes2, piTimes2);
       totalMie.divide(lambda);
       totalMie.multiply(totalMie); // raise to the power of v - 2.0 where v is 4.0, so square it
       totalMie.multiply(k).multiplyScalar(0.434 * c * Math.PI);
 
-      moonShaderMaterial.uniforms['betaM'].value = totalMie.multiplyScalar(mieCoefficient);
-      skyShaderMaterial.uniforms['betaM'].value = moonShaderMaterial.uniforms['betaM'].value;
+      let betaM = totalMie.multiplyScalar(mieCoefficient);
+      moonShaderMaterial.uniforms['betaM'].value = betaM;
+      skyShaderMaterial.uniforms['betaM'].value = betaM;
       const up = new THREE.Vector3(0.0, 1.0, 0.0);
       let dotOfMoonDirectionAndUp = mXYZ.dot(up);
       let dotOfSunDirectionAndUp = sXYZ.dot(up);
       let cutoffAngle = Math.PI / 1.95;
       let steepness = 1.5;
-      moonShaderMaterial.uniforms['moonE'].value = interpolatedValues.moonEE * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfMoonDirectionAndUp))/steepness)));
-      skyShaderMaterial.uniforms['moonE'].value = moonShaderMaterial.uniforms['moonE'].value;
-      moonShaderMaterial.uniforms['sunE'].value = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness)));
-      skyShaderMaterial.uniforms['sunE'].value = moonShaderMaterial.uniforms['sunE'].value;
-      moonShaderMaterial.uniforms['linMoonCoefficient2'].value = Math.min(Math.max(Math.pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0),1.0);
-      skyShaderMaterial.uniforms['linMoonCoefficient2'].value = moonShaderMaterial.uniforms['linMoonCoefficient2'].value;
-      moonShaderMaterial.uniforms['linSunCoefficient2'].value = Math.min(Math.max(Math.pow(1.0-dotOfSunDirectionAndUp,5.0),0.0),1.0);
-      skyShaderMaterial.uniforms['linSunCoefficient2'].value = moonShaderMaterial.uniforms['linSunCoefficient2'].value;
-      moonShaderMaterial.uniforms['sunXYZPosition'].value = sXYZ;
-      skyShaderMaterial.uniforms['sunXYZPosition'].value = sXYZ;
+      let moonE = interpolatedValues.moonEE * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfMoonDirectionAndUp))/steepness)));
+      moonShaderMaterial.uniforms['moonE'].value = moonE;
+      skyShaderMaterial.uniforms['moonE'].value = moonE;
+      let sunE = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness)));
+      moonShaderMaterial.uniforms['sunE'].value = sunE;
+      skyShaderMaterial.uniforms['sunE'].value = sunE;
+      let linMoonCoefficient2 = Math.min(Math.max(Math.pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0),1.0);
+      moonShaderMaterial.uniforms['linMoonCoefficient2'].value =linMoonCoefficient2;
+      skyShaderMaterial.uniforms['linMoonCoefficient2'].value = linMoonCoefficient2;
+      let linSunCoefficient2 = Math.min(Math.max(Math.pow(1.0-dotOfSunDirectionAndUp,5.0),0.0),1.0);
+      moonShaderMaterial.uniforms['linSunCoefficient2'].value =linSunCoefficient2
+      skyShaderMaterial.uniforms['linSunCoefficient2'].value = linSunCoefficient2;
+      moonShaderMaterial.uniforms['sunXYZPosition'].value.set(sXYZ.x, sXYZ.y, sXYZ.z);
+      skyShaderMaterial.uniforms['sunXYZPosition'].value.set(sXYZ.x, sXYZ.y, sXYZ.z);
       const simplifiedRayleigh = new THREE.Vector3(0.0005 / 94.0, 0.0005 / 40.0, 0.0005 / 18.0);
-      moonShaderMaterial.uniforms['betaRSun'].value = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - sunFade));
-      skyShaderMaterial.uniforms['betaRSun'].value = moonShaderMaterial.uniforms['betaRSun'].value;
-      moonShaderMaterial.uniforms['betaRMoon'].value = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - moonFade));
-      skyShaderMaterial.uniforms['betaRMoon'].value = moonShaderMaterial.uniforms['betaRMoon'].value;
-      moonShaderMaterial.uniforms['moonXYZPosition'].value = mXYZ;
-      skyShaderMaterial.uniforms['moonXYZPosition'].value = mXYZ;
+      let betaRSun = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - sunFade));
+      moonShaderMaterial.uniforms['betaRSun'].value.set(betaRSun.x, betaRSun.y, betaRSun.z);
+      skyShaderMaterial.uniforms['betaRSun'].value.set(betaRSun.x, betaRSun.y, betaRSun.z);
+      let betaRMoon = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - moonFade));
+      moonShaderMaterial.uniforms['betaRMoon'].value.set(betaRMoon.x, betaRMoon.y, betaRMoon.z);
+      skyShaderMaterial.uniforms['betaRMoon'].value.set(betaRMoon.x, betaRMoon.y, betaRMoon.z);
+      moonShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
+      skyShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
 
       this.moon.update(mXYZ, sXYZ);
     }
