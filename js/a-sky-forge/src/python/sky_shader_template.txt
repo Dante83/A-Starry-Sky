@@ -14,6 +14,7 @@ var skyShaderMaterial = new THREE.ShaderMaterial({
     sunE: {type: 'f', value: 0.0},
     linMoonCoefficient2: {type: 'f', value: 0.0},
     linSunCoefficient2: {type: 'f', value: 0.0},
+    starsExposure: {type: 'f', value: 0.0},
     betaM: {type: 'v3',value: new THREE.Vector3()},
     sunXYZPosition: {type: 'v3', value: new THREE.Vector3()},
     betaRSun: {type: 'v3', value: new THREE.Vector3()},

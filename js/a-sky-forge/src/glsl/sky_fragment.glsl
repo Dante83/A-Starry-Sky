@@ -29,6 +29,7 @@ uniform float moonE;
 uniform float sunE;
 uniform float linMoonCoefficient2; //clamp(pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0,1.0)
 uniform float linSunCoefficient2; //clamp(pow(1.0-dotOfSunDirectionAndUp,5.0),0.0,1.0)
+uniform float starsExposure;
 
 //Constants
 const vec3 up = vec3(0.0, 1.0, 0.0);
@@ -194,6 +195,10 @@ float brownianNoise(float lacunarity, float gain, float initialAmplitude, float 
   return y;
 }
 
+//This whole method is one big exercise in ad hoc math for the fun of it.
+//const vec3 colorizeColor = vec3(0.265, 0.46875, 0.87890);
+const vec3 colorizeColor = vec3(0.21, 0.37, 0.50);
+const float twinkleDust = 0.002;
 vec3 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 starColor, float altitudeOfPixel){
   //float maxRadiusOfStar = 1.4 * (2.0/360.0) * piTimes2;
   float normalizedMagnitude = (1.0 - (magnitudeOfStar + 1.46) / 7.96) / 15.0;
@@ -204,7 +209,6 @@ vec3 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 st
   //Determine brightness
   float brightnessVariation = 0.99 * pow((1.0 - starAlt / piOver2), 0.5);
   float brightneesRemainder = 1.0 - brightnessVariation;
-  float twinkleDust = 0.002;
   float randSeed = uTime * twinkleDust * (1.0 + rand(rand(raAndDecOfStar.x) + rand(raAndDecOfStar.y)));
 
   // float lacunarity= 0.8;
@@ -218,21 +222,25 @@ vec3 drawStar(vec2 raAndDec, vec2 raAndDecOfStar, float magnitudeOfStar, vec3 st
   //Draw the star out from this data
   //distance from star over normalizing factor
   float distanceFromStar = haversineDistance(raAndDec.x, raAndDec.y, raAndDecOfStar.x, raAndDecOfStar.y) * 600.0;
-  float oneOverDistanceSquared = 1.0 / (distanceFromStar * distanceFromStar * distanceFromStar);
+  float oneOverDistanceSquared = 1.0 / (distanceFromStar * distanceFromStar);
   //Determine color
   // lacunarity= 0.8;
-  // gain = 0.5;
-  // initialAmplitude = 1.0;
-  // initialFrequency = 0.5;
-  float hue = brownianNoise(0.8, 0.5, 1.0, 0.5, randSeed);
+  // gain = 0.0;
+  // initialAmplitude = 0.65;
+  // initialFrequency = 1.0;
+  float hue = brownianNoise(0.8, 0.0, 0.65, 1.0, randSeed);
   vec3 starColorVariation = vec3(hue, clamp(pow((1.0 - starAlt / piOver2), 3.0) / 2.0, 0.0, 0.2), 1.0);
   vec3 pixelColor = starColor;
   vec3 pixelHSV = rgb2hsv(pixelColor);
   pixelHSV.x = pixelHSV.x + starColorVariation.x;
+  pixelHSV.y = clamp(pixelHSV.y + starColorVariation.x - 0.8, 0.0, 1.0);
   pixelColor = hsv2rgb(pixelHSV);
-  vec3 starLight = 2500.0 * pixelColor * clamp(brightness * oneOverDistanceSquared, 0.0, brightness);
+  vec3 coloredstarLight = 1200.0 * pixelColor * clamp(brightness * oneOverDistanceSquared, 0.0, brightness);
+  float avgStarLightRGB = (coloredstarLight.x + coloredstarLight.y + coloredstarLight.z) / 3.0;
+  vec3 colorize = avgStarLightRGB * colorizeColor / sqrt(dot(colorizeColor, colorizeColor));
+  coloredstarLight = mix(coloredstarLight, colorize, 0.8);
 
-  return starLight;
+  return coloredstarLight;
 }
 
 //
@@ -289,7 +297,7 @@ vec3 drawStarLayer(float azimuthOfPixel, float altitudeOfPixel){
         //Go on and use this to create our color here.
         //returnColor = clipImageWithAveragedEdge(drawStar(vec2(pixelRa, pixelDec), vec2(starRa, starDec), magnitude, starColor, altitudeOfPixel), returnColor);
         vec3 starLight = drawStar(vec2(pixelRa, pixelDec), vec2(starRa, starDec), magnitude, starColor, altitudeOfPixel);
-        returnColor = returnColor + starLight * starLight * 0.1;
+        returnColor = returnColor + starLight * starLight;
       }
     }
   }
@@ -337,18 +345,14 @@ vec3 drawSkyLayer(vec2 cosTheta, vec3 FexSun, vec3 FexMoon){
 const float A = 0.15;
 const float B = 0.50;
 const float C = 0.10;
-const float CTimesB = 0.05;
-const float DTimesE = 0.004;
 const float D = 0.20;
 const float E = 0.02;
 const float F = 0.30;
-const float DTimesF = 0.06;
-const float EOverF = 0.066666666666666666666666666666666666666666666666666666666;
 const float W = 1000.0;
 const float unchartedW = 0.93034292920990640579589580673035390594971634341319642;
 
 vec3 Uncharted2Tonemap(vec3 x){
-  return ((x*(A*x+CTimesB)+DTimesE)/(x*(A*x+B)+DTimesF))-EOverF;
+  return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;
 }
 
 vec3 applyToneMapping(vec3 outIntensity, vec3 L0){
@@ -405,7 +409,7 @@ void main(){
   vec3 FexPixel = exp(-(betaRPixel * sR + betaMTimesSM));
 
   //Get our night sky intensity
-  vec3 L0 = 0.1 * (FexSun + FexMoon);
+  vec3 L0 = 0.1 * FexMoon;
 
   //Even though everything else is behind the sky, we need this to decide the brightness of the colors returned below.
   //Also, whenever the sun falls below the horizon, everything explodes in the original code.
@@ -413,8 +417,7 @@ void main(){
   vec2 cosTheta = vec2(dot(normalizedWorldPosition, sunXYZPosition), dot(normalizedWorldPosition, moonXYZPosition));
   vec3 skyColor = applyToneMapping(drawSkyLayer(cosTheta, FexSun, FexMoon) + L0, L0);
   //skyColor = lightBlending(drawStarLayer(azimuth, altitude, skyColor).rgb, skyColor, FexPixel);
-  vec3 skyColorSquared = drawStarLayer(azimuth, altitude) * FexPixel + skyColor * skyColor;
-  //vec3 sunColor = clamp(drawSunLayer(skyColor, FexPixel, cosTheta.x).rgb, 0.0, 1.0);
-  //gl_FragColor = vec4(clamp(sqrt(sunColor * sunColor + skyColor * skyColor), 0.0, 1.0), 1.0);
-  gl_FragColor = vec4(sqrt(skyColorSquared), 1.0);
+  vec3 skyColorSquared = (drawStarLayer(azimuth, altitude) * FexPixel) * starsExposure + skyColor * skyColor;
+  vec3 sunColor = clamp(drawSunLayer(skyColor, FexPixel, cosTheta.x).rgb, 0.0, 1.0);
+  gl_FragColor = vec4(clamp(sqrt(sunColor * sunColor + skyColorSquared), 0.0, 1.0), 1.0);
 }

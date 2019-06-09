@@ -252,6 +252,12 @@ AFRAME.registerComponent('sky-time', {
       let sunE = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness)));
       moonShaderMaterial.uniforms['sunE'].value = sunE;
       skyShaderMaterial.uniforms['sunE'].value = sunE;
+      //These are used to fade our objects out a bit during the day as our eyes are contracted due to higher light levels
+      //The numbers are basically ad hoc to make them feel 'about right'
+      //sunFade * sunE + moonFade * moonE
+      let exposureCoeficient = -(sunFade * sunE + moonFade * moonE);
+      moonShaderMaterial.uniforms['moonExposure'].value =  Math.exp(exposureCoeficient * 0.0025);
+      skyShaderMaterial.uniforms['starsExposure'].value =  Math.exp(exposureCoeficient * 0.05);
       let linMoonCoefficient2 = Math.min(Math.max(Math.pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0),1.0);
       moonShaderMaterial.uniforms['linMoonCoefficient2'].value =linMoonCoefficient2;
       skyShaderMaterial.uniforms['linMoonCoefficient2'].value = linMoonCoefficient2;

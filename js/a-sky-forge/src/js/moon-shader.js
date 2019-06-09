@@ -13,6 +13,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     sunE: {type: 'f',value: 0.0},
     linMoonCoefficient2: {type: 'f',value: 0.0},
     linSunCoefficient2: {type: 'f',value: 0.0},
+    moonExposure: {type: 'f', value: 0.0},
     betaM: {type: 'v3',value: new THREE.Vector3()},
     sunXYZPosition: {type: 'v3', value: new THREE.Vector3()},
     betaRSun: {type: 'v3', value: new THREE.Vector3()},
@@ -70,6 +71,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     'uniform float sunE;',
     'uniform float linMoonCoefficient2; //clamp(pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0,1.0)',
     'uniform float linSunCoefficient2; //clamp(pow(1.0-dotOfSunDirectionAndUp,5.0),0.0,1.0)',
+    'uniform float moonExposure;',
 
     '//Constants',
     'const float earthshine = 0.02;',
@@ -131,18 +133,14 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     'const float A = 0.15;',
     'const float B = 0.50;',
     'const float C = 0.10;',
-    'const float CTimesB = 0.05;',
-    'const float DTimesE = 0.004;',
     'const float D = 0.20;',
     'const float E = 0.02;',
     'const float F = 0.30;',
-    'const float DTimesF = 0.06;',
-    'const float EOverF = 0.066666666666666666666666666666666666666666666666666666666;',
     'const float W = 1000.0;',
     'const float unchartedW = 0.93034292920990640579589580673035390594971634341319642;',
 
     'vec3 Uncharted2Tonemap(vec3 x){',
-      'return ((x*(A*x+CTimesB)+DTimesE)/(x*(A*x+B)+DTimesF))-EOverF;',
+      'return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;',
     '}',
 
     'vec3 applyToneMapping(vec3 outIntensity, vec3 L0){',
@@ -171,14 +169,14 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
       'vec3 FexMoon = exp(-(betaRMoon * sR + betaMTimesSM));',
 
       '//Get our night sky intensity',
-      'vec3 L0 = 0.1 * (FexSun + FexMoon);',
+      'vec3 L0 = 0.1 * FexMoon;',
 
       '//Get the inscattered light from the sun or the moon',
       'vec3 outIntensity = applyToneMapping(getDirectInscatteredIntensity(normalizedWorldPosition, FexSun, FexMoon) + L0, L0);',
 
       '//Get direct illumination from the moon',
       'vec4 lunarTexture = getDirectLunarIntensity(vUv);',
-      'vec3 lunarColor = 1.5 * FexMoon * lunarTexture.rgb;',
+      'vec3 lunarColor = 1.5 * FexMoon * lunarTexture.rgb * moonExposure;',
       'outIntensity = clamp(sqrt(outIntensity * outIntensity + lunarColor * lunarColor), 0.0, 1.0);',
 
       '//Apply tone mapping to the result',
