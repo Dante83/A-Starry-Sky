@@ -1,4 +1,4 @@
-function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, textureLoader){
+function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, textureLoader, angularDiameterOfTheMoon){
   this.moonTexture = textureLoader.load(moonTextureDir, function(moonTexture){
     moonTexture.magFilter = THREE.LinearFilter;
     moonTexture.minFilter = THREE.LinearMipMapLinearFilter;
@@ -20,12 +20,10 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.xyzPosition;
   this.moonTangentSpaceSunlight;
   this.sceneRef = sceneRef;
-  this.moonRadiusFromCamera = 0.8 * skyDomeRadius;
+  this.moonRadiusFromCamera = 0.75 * skyDomeRadius;
 
   //Create a three JS plane for our moon to live on in a hidden view
-  //let angularRadiusOfMoon = 0.024;
-  let angularRadiusOfMoon = 0.055;
-  let diameterOfMoonPlane = 2.0 * this.moonRadiusFromCamera * Math.sin(angularRadiusOfMoon);
+  let diameterOfMoonPlane = 2.0 * this.moonRadiusFromCamera * Math.sin(angularDiameterOfTheMoon);
   this.geometry = new THREE.PlaneGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
   this.geometry.translate(0.0, -0.0 * diameterOfMoonPlane, 0.0);
 

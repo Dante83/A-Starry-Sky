@@ -39,7 +39,7 @@ AFRAME.registerComponent('geo-coordinates', {
   }
 });
 
-var skyParamsUniformsData = {turbidity: 2.0, rayleigh: 1.0, mieCoefficient: 0.005};
+var skyParamsUniformsData = {turbidity: 2.0, rayleigh: 1.0, mieCoefficient: 0.005, angularDiameterOfTheMoon: 0.055};
 AFRAME.registerComponent('sky-params', {
   dependencies: ['a-sky-forge'],
   schema:{
@@ -47,19 +47,26 @@ AFRAME.registerComponent('sky-params', {
     turbidity: { type: 'number', default: 2.0, max: 20.0, min: 0.0, is: 'uniform' },
     rayleigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
     mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
-    mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' }
+    mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' },
+    angularDiameterOfTheSun: { type: 'number', default: 0.057, is: 'uniform' },
+    angularDiameterOfTheMoon: { type: 'number', default: 0.055, is: 'uniform' }
   },
 
   init: function(){
     this.material = this.el.getOrCreateObject3D('mesh').material = skyShaderMaterial;
     skyParamsUniformsData.turbidity = this.data.turbidity;
     skyParamsUniformsData.rayleigh = this.data.rayleigh;
+    sunShaderMaterial.uniforms['rayleigh'].value = this.data.rayleigh;
     skyShaderMaterial.uniforms['rayleigh'].value = this.data.rayleigh;
     skyParamsUniformsData.mieCoefficient = this.data.mieCoefficient;
+    sunShaderMaterial.uniforms['luminance'].value = this.data.luminance;
     moonShaderMaterial.uniforms['luminance'].value = this.data.luminance;
     skyShaderMaterial.uniforms['luminance'].value = this.data.luminance;
+    sunShaderMaterial.uniforms['mieDirectionalG'].value = this.data.mieDirectionalG;
     moonShaderMaterial.uniforms['mieDirectionalG'].value = this.data.mieDirectionalG;
     skyShaderMaterial.uniforms['mieDirectionalG'].value = this.data.mieDirectionalG;
+    sunShaderMaterial.uniforms['angularDiameterOfTheSun'].value = this.data.angularDiameterOfTheSun;
+    skyParamsUniformsData.angularDiameterOfTheMoon = this.data.angularDiameterOfTheMoon
   }
 });
 
@@ -102,7 +109,8 @@ AFRAME.registerComponent('sky-time', {
     let moonNormalMapDir = this.data.imgDir + this.data.moonNormalMap;
     let skyDomeRadius = this.el.components.geometry.data.radius;
     let sceneRef = this.el.sceneEl.object3D;
-    this.moon = new Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, textureLoader);
+    this.moon = new Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, textureLoader, skyParamsUniformsData.angularDiameterOfTheMoon);
+    this.sun = new Sun(skyDomeRadius, sceneRef);
 
     //Populate this data into an array because we're about to do some awesome stuff
     //to each texture with Three JS.
@@ -214,9 +222,11 @@ AFRAME.registerComponent('sky-time', {
       let rayleigh = skyParamsUniformsData.rayleigh;
       let mieCoefficient = skyParamsUniformsData.mieCoefficient;
       let sunFade = 1.0 - Math.min(Math.max(1.0 - Math.exp(sXYZ.z), 0.0), 1.0);
+      sunShaderMaterial.uniforms['sunFade'].value = sunFade;
       moonShaderMaterial.uniforms['sunFade'].value = sunFade;
       skyShaderMaterial.uniforms['sunFade'].value = sunFade;
       let moonFade = 1.0 - Math.min(Math.max(1.0 - Math.exp(mXYZ.z), 0.0), 1.0);
+      sunShaderMaterial.uniforms['moonFade'].value = moonFade;
       moonShaderMaterial.uniforms['moonFade'].value = moonFade;
       skyShaderMaterial.uniforms['moonFade'].value = moonFade;
       let rayleighCoefficientOfSun = rayleigh + sunFade - 1.0;
@@ -239,6 +249,7 @@ AFRAME.registerComponent('sky-time', {
       totalMie.multiply(k).multiplyScalar(0.434 * c * Math.PI);
 
       let betaM = totalMie.multiplyScalar(mieCoefficient);
+      sunShaderMaterial.uniforms['betaM'].value = betaM;
       moonShaderMaterial.uniforms['betaM'].value = betaM;
       skyShaderMaterial.uniforms['betaM'].value = betaM;
       const up = new THREE.Vector3(0.0, 1.0, 0.0);
@@ -250,6 +261,7 @@ AFRAME.registerComponent('sky-time', {
       moonShaderMaterial.uniforms['moonE'].value = moonE;
       skyShaderMaterial.uniforms['moonE'].value = moonE;
       let sunE = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness)));
+      sunShaderMaterial.uniforms['sunE'].value = sunE;
       moonShaderMaterial.uniforms['sunE'].value = sunE;
       skyShaderMaterial.uniforms['sunE'].value = sunE;
       //These are used to fade our objects out a bit during the day as our eyes are contracted due to higher light levels
@@ -264,6 +276,7 @@ AFRAME.registerComponent('sky-time', {
       let linSunCoefficient2 = Math.min(Math.max(Math.pow(1.0-dotOfSunDirectionAndUp,5.0),0.0),1.0);
       moonShaderMaterial.uniforms['linSunCoefficient2'].value =linSunCoefficient2
       skyShaderMaterial.uniforms['linSunCoefficient2'].value = linSunCoefficient2;
+      sunShaderMaterial.uniforms['sunXYZPosition'].value.set(sXYZ.x, sXYZ.y, sXYZ.z);
       moonShaderMaterial.uniforms['sunXYZPosition'].value.set(sXYZ.x, sXYZ.y, sXYZ.z);
       skyShaderMaterial.uniforms['sunXYZPosition'].value.set(sXYZ.x, sXYZ.y, sXYZ.z);
       const simplifiedRayleigh = new THREE.Vector3(0.0005 / 94.0, 0.0005 / 40.0, 0.0005 / 18.0);
@@ -276,6 +289,7 @@ AFRAME.registerComponent('sky-time', {
       moonShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
       skyShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
 
+      this.sun.update(sXYZ);
       this.moon.update(mXYZ, sXYZ);
     }
   }

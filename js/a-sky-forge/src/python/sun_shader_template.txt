@@ -1,0 +1,31 @@
+//This helps
+//--------------------------v
+//https://github.com/mrdoob/three.js/wiki/Uniforms-types
+var sunShaderMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    rayleigh: {type: 'f', value: 0.0},
+    rayleighCoefficientOfSun: {type: 'f', value: 0.0},
+    sunFade: {type: 'f',value: 0.0},
+    moonFade: {type: 'f', value: 0.0},
+    luminance: {type: 'f',value: 0.0},
+    mieDirectionalG: {type: 'f',value: 0.0},
+    sunE: {type: 'f',value: 0.0},
+    angularDiameterOfTheSun: {type: 'f', value: 0.0},
+    betaM: {type: 'v3',value: new THREE.Vector3()},
+    sunXYZPosition: {type: 'v3', value: new THREE.Vector3()},
+  },
+
+  blending: THREE.NormalBlending,
+  transparent: true,
+
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+});
+
+sunShaderMaterial.clipping = true;
+sunShaderMaterial.flatShading = true;

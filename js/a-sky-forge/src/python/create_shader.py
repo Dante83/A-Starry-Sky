@@ -12,27 +12,33 @@ def ShaderFileWatcher():
     moon_shader_vertex_file = os.path.abspath("../glsl/moon_vertex.glsl")
     moon_shader_fragment_file = os.path.abspath("../glsl/moon_fragment.glsl")
 
-    template_names = [sky_shader_template_name, moon_shader_template_name]
-    file_names = [sky_shader_file_name, moon_shader_file_name]
-    vertex_files = [sky_shader_vertex_file, moon_shader_vertex_file]
-    fragment_files = [sky_shader_fragment_file, moon_shader_fragment_file]
+    sun_shader_template_name = os.path.abspath("sun_shader_template.txt")
+    sun_shader_file_name = os.path.abspath("../js/sun-shader.js")
+    sun_shader_vertex_file = os.path.abspath("../glsl/sun_vertex.glsl")
+    sun_shader_fragment_file = os.path.abspath("../glsl/sun_fragment.glsl")
 
-    previousVertexFileChangeDates = [None, None]
-    previousFragmentFileChangeDates = [None, None]
-    previousTemplateFileChangeDates = [None, None]
+    template_names = [sky_shader_template_name, moon_shader_template_name, sun_shader_template_name]
+    file_names = [sky_shader_file_name, moon_shader_file_name, sun_shader_file_name]
+    vertex_files = [sky_shader_vertex_file, moon_shader_vertex_file, sun_shader_vertex_file]
+    fragment_files = [sky_shader_fragment_file, moon_shader_fragment_file, sun_shader_fragment_file]
 
-    leadingSpacesBeforeFragmentShaderCode = [2, 2]
-    leadingSpacesBeforeVertextShaderCode = [2, 2]
+    num_files = len(template_names)
+    previousVertexFileChangeDates = [None for x in xrange(num_files)]
+    previousFragmentFileChangeDates = [None for x in xrange(num_files)]
+    previousTemplateFileChangeDates = [None for x in xrange(num_files)]
+
+    leadingSpacesBeforeFragmentShaderCode = [2 for x in xrange(num_files)]
+    leadingSpacesBeforeVertextShaderCode = [2 for x in xrange(num_files)]
 
     #Initialize our template for usage - we're gonna need this one no matter what gets updated
-    leadingSpacesBeforeVertextShaderCodeStrings = ['', '']
-    updatedVertexFileCodeStrings = ['', '']
-    updatedFragmentFileCodeStrings = ['', '']
-    jsStringifiedVertexCode = ['', '']
-    jsStringifiedFragmentCode = ['', '']
-    templateStrings = ['', '']
+    leadingSpacesBeforeVertextShaderCodeStrings = ['' for x in xrange(num_files)]
+    updatedVertexFileCodeStrings = ['' for x in xrange(num_files)]
+    updatedFragmentFileCodeStrings = ['' for x in xrange(num_files)]
+    jsStringifiedVertexCode = ['' for x in xrange(num_files)]
+    jsStringifiedFragmentCode = ['' for x in xrange(num_files)]
+    templateStrings = ['' for x in xrange(num_files)]
 
-    for i in xrange(2):
+    for i in xrange(num_files):
         template_name = template_names[i]
         with open(template_name, 'r') as f:
             templateStrings[i] = f.read()
@@ -57,7 +63,7 @@ def ShaderFileWatcher():
         time.sleep(1)
 
         #For each of our shaders
-        for i in xrange(2):
+        for i in xrange(num_files):
             #Prepare for this iteration
             vertex_file = vertex_files[i]
             fragment_file = fragment_files[i]

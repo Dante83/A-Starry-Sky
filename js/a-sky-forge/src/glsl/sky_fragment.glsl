@@ -161,14 +161,6 @@ float haversineDistance(float az_0, float alt_0, float az_1, float alt_1){
   return 2.0 * asin(sqrt(sinOfDeltaAltOver2 * sinOfDeltaAltOver2 + cos(alt_0) * cos(alt_1) * sinOfDeltaAzOver2 * sinOfDeltaAzOver2));
 }
 
-vec4 mixSunLayer(vec4 sun, vec4 stars){
-  if(sqrt(clamp(dot(sun.xyz, sun.xyz)/3.0, 0.0, 1.0)) > 0.9){
-    //Note to self, replace sun by giant glowing orb
-    return vec4(sun.rgb, 1.0);
-  }
-  return stars;
-}
-
 //From The Book of Shaders :D
 //https://thebookofshaders.com/11/
 float noise(float x){
@@ -364,34 +356,12 @@ vec3 applyToneMapping(vec3 outIntensity, vec3 L0){
 }
 
 //
-//Sun
-//
-
-vec4 drawSunLayer(vec3 skyColor, vec3 FexPixel, float cosThetaOfSun){
-  //It seems we need to rotate our sky by pi radians.
-  float sunAngularDiameterCos = cos(angularRadiusOfTheSun);
-  float sundisk = smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002, cosThetaOfSun);
-
-  vec3 L0 = (sunE * 19000.0 * FexPixel) * sundisk;
-  L0 *= 0.04 ;
-  L0 += vec3(0.0,0.001,0.0025)*0.3;
-
-  vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*L0);
-  vec3 color = curr / unchartedW;
-  color = pow(color,abs(vec3(1.0/(1.2+(1.2 * sunFade)))) );
-  vec4 returnColor = vec4(color, sqrt(dot(color, color)));
-
-  return returnColor;
-}
-
-//
 //Draw main loop
 //
 void main(){
   vec3 normalizedWorldPosition = normalize(vWorldPosition.xyz);
   float altitude = piOver2 - acos(normalizedWorldPosition.y);
   float azimuth = atan(normalizedWorldPosition.z, normalizedWorldPosition.x) + pi;
-  dot(normalize(vWorldPosition), sunXYZPosition);
 
   // Get the current optical length
   // cutoff angle at 90 to avoid singularity in next formula.
@@ -416,8 +386,7 @@ void main(){
   //Thus, I have taken the liberty of killing the sky when that happens to avoid explody code.
   vec2 cosTheta = vec2(dot(normalizedWorldPosition, sunXYZPosition), dot(normalizedWorldPosition, moonXYZPosition));
   vec3 skyColor = applyToneMapping(drawSkyLayer(cosTheta, FexSun, FexMoon) + L0, L0);
-  //skyColor = lightBlending(drawStarLayer(azimuth, altitude, skyColor).rgb, skyColor, FexPixel);
   vec3 skyColorSquared = (drawStarLayer(azimuth, altitude) * FexPixel) * starsExposure + skyColor * skyColor;
-  vec3 sunColor = clamp(drawSunLayer(skyColor, FexPixel, cosTheta.x).rgb, 0.0, 1.0);
-  gl_FragColor = vec4(clamp(sqrt(sunColor * sunColor + skyColorSquared), 0.0, 1.0), 1.0);
+
+  gl_FragColor = vec4(clamp(sqrt(skyColorSquared), 0.0, 1.0), 1.0);
 }
