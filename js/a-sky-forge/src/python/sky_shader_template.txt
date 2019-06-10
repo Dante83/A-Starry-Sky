@@ -29,7 +29,8 @@ var skyShaderMaterial = new THREE.ShaderMaterial({
     starRas: {type: 't', value: null},
     starDecs: {type: 't', value: null},
     starMags: {type: 't', value: null},
-    starColors: {type: 't', value: null}
+    starColors: {type: 't', value: null},
+    bayerMatrix: {type: 't', value: null}
   },
 
   side: THREE.BackSide,

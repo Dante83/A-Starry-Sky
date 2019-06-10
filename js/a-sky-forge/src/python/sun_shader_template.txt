@@ -10,9 +10,16 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     luminance: {type: 'f',value: 0.0},
     mieDirectionalG: {type: 'f',value: 0.0},
     sunE: {type: 'f',value: 0.0},
+    moonE: {type: 'f',value: 0.0},
+    linMoonCoefficient2: {type: 'f',value: 0.0},
+    linSunCoefficient2: {type: 'f',value: 0.0},
     angularDiameterOfTheSun: {type: 'f', value: 0.0},
     betaM: {type: 'v3',value: new THREE.Vector3()},
+    betaRSun: {type: 'v3', value: new THREE.Vector3()},
+    betaRMoon: {type: 'v3', value: new THREE.Vector3()},
     sunXYZPosition: {type: 'v3', value: new THREE.Vector3()},
+    moonXYZPosition: {type: 'v3', value: new THREE.Vector3()},
+    bayerMatrix: {type: 't', value: null}
   },
 
   blending: THREE.NormalBlending,

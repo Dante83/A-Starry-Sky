@@ -30,6 +30,7 @@ uniform float sunE;
 uniform float linMoonCoefficient2; //clamp(pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0,1.0)
 uniform float linSunCoefficient2; //clamp(pow(1.0-dotOfSunDirectionAndUp,5.0),0.0,1.0)
 uniform float starsExposure;
+uniform sampler2D bayerMatrix;
 
 //Constants
 const vec3 up = vec3(0.0, 1.0, 0.0);
@@ -386,6 +387,11 @@ void main(){
   //Thus, I have taken the liberty of killing the sky when that happens to avoid explody code.
   vec2 cosTheta = vec2(dot(normalizedWorldPosition, sunXYZPosition), dot(normalizedWorldPosition, moonXYZPosition));
   vec3 skyColor = applyToneMapping(drawSkyLayer(cosTheta, FexSun, FexMoon) + L0, L0);
+
+  //Apply dithering via the Bayer Matrix
+  //Thanks to http://www.anisopteragames.com/how-to-fix-color-banding-with-dithering/
+  skyColor += vec3(texture2D(bayerMatrix, gl_FragCoord.xy / 8.0).r / 32.0 - (1.0 / 128.0));
+
   vec3 skyColorSquared = (drawStarLayer(azimuth, altitude) * FexPixel) * starsExposure + skyColor * skyColor;
 
   gl_FragColor = vec4(clamp(sqrt(skyColorSquared), 0.0, 1.0), 1.0);

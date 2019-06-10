@@ -25,6 +25,7 @@ uniform float sunE;
 uniform float linMoonCoefficient2; //clamp(pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0,1.0)
 uniform float linSunCoefficient2; //clamp(pow(1.0-dotOfSunDirectionAndUp,5.0),0.0,1.0)
 uniform float moonExposure;
+uniform sampler2D bayerMatrix;
 
 //Constants
 const float earthshine = 0.02;
@@ -126,6 +127,10 @@ void main(){
 
   //Get the inscattered light from the sun or the moon
   vec3 outIntensity = applyToneMapping(getDirectInscatteredIntensity(normalizedWorldPosition, FexSun, FexMoon) + L0, L0);
+
+  //Apply dithering via the Bayer Matrix
+  //Thanks to http://www.anisopteragames.com/how-to-fix-color-banding-with-dithering/
+  outIntensity += vec3(texture2D(bayerMatrix, gl_FragCoord.xy / 8.0).r / 32.0 - (1.0 / 128.0));
 
   //Get direct illumination from the moon
   vec4 lunarTexture = getDirectLunarIntensity(vUv);

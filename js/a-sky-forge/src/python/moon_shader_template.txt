@@ -22,6 +22,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     moonXYZPosition: {type: 'v3', value: new THREE.Vector3()},
     moonTexture: {type: 't', value: null},
     moonNormalMap: {type: 't', value: null},
+    bayerMatrix: {type: 't', value: null}
   },
 
   blending: THREE.NormalBlending,

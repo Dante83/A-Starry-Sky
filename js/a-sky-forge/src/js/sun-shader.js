@@ -10,9 +10,16 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     luminance: {type: 'f',value: 0.0},
     mieDirectionalG: {type: 'f',value: 0.0},
     sunE: {type: 'f',value: 0.0},
+    moonE: {type: 'f',value: 0.0},
+    linMoonCoefficient2: {type: 'f',value: 0.0},
+    linSunCoefficient2: {type: 'f',value: 0.0},
     angularDiameterOfTheSun: {type: 'f', value: 0.0},
     betaM: {type: 'v3',value: new THREE.Vector3()},
+    betaRSun: {type: 'v3', value: new THREE.Vector3()},
+    betaRMoon: {type: 'v3', value: new THREE.Vector3()},
     sunXYZPosition: {type: 'v3', value: new THREE.Vector3()},
+    moonXYZPosition: {type: 'v3', value: new THREE.Vector3()},
+    bayerMatrix: {type: 't', value: null}
   },
 
   blending: THREE.NormalBlending,
@@ -58,9 +65,16 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     'uniform float luminance;',
     'uniform float mieDirectionalG;',
     'uniform vec3 betaM;',
+    'uniform vec3 betaRSun;',
+    'uniform vec3 betaRMoon;',
     'uniform vec3 sunXYZPosition;',
+    'uniform vec3 moonXYZPosition;',
     'uniform float sunE;',
+    'uniform float moonE;',
+    'uniform float linMoonCoefficient2;',
+    'uniform float linSunCoefficient2;',
     'uniform float angularDiameterOfTheSun;',
+    'uniform sampler2D bayerMatrix;',
 
     '//Constants',
     'const vec3 up = vec3(0.0, 1.0, 0.0);',
@@ -79,6 +93,27 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
 
     'vec2 hgPhase(vec2 cosTheta){',
       'return oneOverFourPi * ((1.0 - mieDirectionalG * mieDirectionalG) / pow(1.0 - 2.0 * mieDirectionalG * cosTheta + (mieDirectionalG * mieDirectionalG), vec2(1.5)));',
+    '}',
+
+    'vec3 getDirectInscatteredIntensity(vec3 normalizedWorldPosition, vec3 FexSun, vec3 FexMoon){',
+      '//Cos theta of sun and moon',
+      'vec2 cosTheta = vec2(dot(normalizedWorldPosition, sunXYZPosition), dot(normalizedWorldPosition, moonXYZPosition));',
+      'vec2 rPhase = rayleighPhase(vec2(0.5) * (vec2(1.0) + cosTheta));',
+      'vec3 betaRThetaSun = betaRSun * rPhase.x;',
+      'vec3 betaRThetaMoon = betaRMoon * rPhase.y;',
+
+      '//Calculate the mie phase angles',
+      'vec2 mPhase = hgPhase(cosTheta);',
+      'vec3 betaMSun = betaM * mPhase.x;',
+      'vec3 betaMMoon = betaM * mPhase.y;',
+
+      'vec3 LinSunCoefficient = (sunE * (betaRThetaSun + betaMSun)) / (betaRSun + betaM);',
+      'vec3 LinMoonCoefficient = (moonE * (betaRThetaMoon + betaMMoon)) / (betaRMoon + betaM);',
+      'vec3 LinSun = pow(LinSunCoefficient * (1.0 - FexSun), vec3(1.5)) * mix(vec3(1.0),pow(LinSunCoefficient * FexSun, vec3(0.5)), linSunCoefficient2);',
+      'vec3 LinMoon = pow(LinMoonCoefficient * (1.0 - FexMoon),vec3(1.5)) * mix(vec3(1.0),pow(LinMoonCoefficient * FexMoon,vec3(0.5)), linMoonCoefficient2);',
+
+      '//Final lighting, duplicated above for coloring of sun',
+      'return LinSun + LinMoon;',
     '}',
 
     '// Filmic ToneMapping http://filmicgames.com/archives/75',
@@ -131,11 +166,24 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
       'float sM = mieAtmosphereHeight * inverseSDenominator;',
 
       'vec3 betaMTimesSM = betaM * sM;',
+      'vec3 FexSun = exp(-(betaRSun * sR + betaMTimesSM));',
+      'vec3 FexMoon = exp(-(betaRMoon * sR + betaMTimesSM));',
       'vec3 FexPixel = exp(-(betaRPixel * sR + betaMTimesSM));',
+
+      '//Get our night sky intensity',
+      'vec3 L0 = 0.1 * FexMoon;',
+
+      '//Get the inscattered light from the sun or the moon',
+      'vec3 inscatteringColor = applyToneMapping(getDirectInscatteredIntensity(normalizedWorldPosition, FexSun, FexMoon) + L0, L0);',
+
+      '//Apply dithering via the Bayer Matrix',
+      '//Thanks to http://www.anisopteragames.com/how-to-fix-color-banding-with-dithering/',
+      'inscatteringColor += vec3(texture2D(bayerMatrix, gl_FragCoord.xy / 8.0).r / 32.0 - (1.0 / 128.0));',
 
       '//Apply tone mapping to the result',
       'float cosTheta = dot(normalizedWorldPosition, sunXYZPosition);',
-    '	gl_FragColor = drawSunLayer(FexPixel, cosTheta);',
+      'vec4 sunIntensity = drawSunLayer(FexPixel, cosTheta);',
+    '	gl_FragColor =vec4(sqrt(sunIntensity.rgb * sunIntensity.rgb + inscatteringColor * inscatteringColor), sunIntensity.a);',
     '}',
   ].join('\n')
 });

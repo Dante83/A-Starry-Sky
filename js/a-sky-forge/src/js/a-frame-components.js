@@ -159,12 +159,38 @@ AFRAME.registerComponent('sky-time', {
       starColors.needsUpdate = true;
     });
 
+    //Create our Bayer Matrix
+    //Thanks to http://www.anisopteragames.com/how-to-fix-color-banding-with-dithering/
+    let data = [
+    0, 32,  8, 40,  2, 34, 10, 42,
+    48, 16, 56, 24, 50, 18, 58, 26,
+    12, 44,  4, 36, 14, 46,  6, 38,
+    60, 28, 52, 20, 62, 30, 54, 22,
+    3, 35, 11, 43,  1, 33,  9, 41,
+    51, 19, 59, 27, 49, 17, 57, 25,
+    15, 47,  7, 39, 13, 45,  5, 37,
+    63, 31, 55, 23, 61, 29, 53, 21];
+
+    let gl = this.el.sceneEl.renderer.getContext();
+    let bayerImage = gl.texImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, 8, 8, 0, gl.LUMINANCE, gl.UNSIGNED_BYTE, new Uint8Array(data))
+
+    var bayerMatrix = textureLoader.load(bayerImage, function(){
+      starColors.magFilter = THREE.NearestFilter;
+      starColors.minFilter = THREE.NearestFilter;
+      starColors.wrapS = THREE.RepeatWrapping;
+      starColors.wrapW = THREE.RepeatWrapping;
+      starColors.needsUpdate = true;
+    });
+
     //We only load our textures once upon initialization
     skyShaderMaterial.uniforms['starMask'].value = starMask;
     skyShaderMaterial.uniforms['starRas'].value = starRas;
     skyShaderMaterial.uniforms['starDecs'].value = starDecs;
     skyShaderMaterial.uniforms['starMags'].value = starMags;
     skyShaderMaterial.uniforms['starColors'].value = starColors;
+    skyShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
+    sunShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
+    moonShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
 
     //Hook up our interpolator and set the various uniforms we wish to track and
     //interpolate during each frame.
@@ -258,6 +284,7 @@ AFRAME.registerComponent('sky-time', {
       let cutoffAngle = Math.PI / 1.95;
       let steepness = 1.5;
       let moonE = interpolatedValues.moonEE * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfMoonDirectionAndUp))/steepness)));
+      sunShaderMaterial.uniforms['moonE'].value = moonE;
       moonShaderMaterial.uniforms['moonE'].value = moonE;
       skyShaderMaterial.uniforms['moonE'].value = moonE;
       let sunE = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness)));
@@ -271,9 +298,11 @@ AFRAME.registerComponent('sky-time', {
       moonShaderMaterial.uniforms['moonExposure'].value =  Math.exp(exposureCoeficient * 0.0025);
       skyShaderMaterial.uniforms['starsExposure'].value =  Math.exp(exposureCoeficient * 0.05);
       let linMoonCoefficient2 = Math.min(Math.max(Math.pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0),1.0);
+      sunShaderMaterial.uniforms['linMoonCoefficient2'].value =linMoonCoefficient2;
       moonShaderMaterial.uniforms['linMoonCoefficient2'].value =linMoonCoefficient2;
       skyShaderMaterial.uniforms['linMoonCoefficient2'].value = linMoonCoefficient2;
       let linSunCoefficient2 = Math.min(Math.max(Math.pow(1.0-dotOfSunDirectionAndUp,5.0),0.0),1.0);
+      sunShaderMaterial.uniforms['linSunCoefficient2'].value =linSunCoefficient2
       moonShaderMaterial.uniforms['linSunCoefficient2'].value =linSunCoefficient2
       skyShaderMaterial.uniforms['linSunCoefficient2'].value = linSunCoefficient2;
       sunShaderMaterial.uniforms['sunXYZPosition'].value.set(sXYZ.x, sXYZ.y, sXYZ.z);
@@ -281,11 +310,14 @@ AFRAME.registerComponent('sky-time', {
       skyShaderMaterial.uniforms['sunXYZPosition'].value.set(sXYZ.x, sXYZ.y, sXYZ.z);
       const simplifiedRayleigh = new THREE.Vector3(0.0005 / 94.0, 0.0005 / 40.0, 0.0005 / 18.0);
       let betaRSun = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - sunFade));
+      sunShaderMaterial.uniforms['betaRSun'].value.set(betaRSun.x, betaRSun.y, betaRSun.z);
       moonShaderMaterial.uniforms['betaRSun'].value.set(betaRSun.x, betaRSun.y, betaRSun.z);
       skyShaderMaterial.uniforms['betaRSun'].value.set(betaRSun.x, betaRSun.y, betaRSun.z);
       let betaRMoon = simplifiedRayleigh.clone().multiplyScalar(rayleigh - (1.0 - moonFade));
+      sunShaderMaterial.uniforms['betaRMoon'].value.set(betaRMoon.x, betaRMoon.y, betaRMoon.z);
       moonShaderMaterial.uniforms['betaRMoon'].value.set(betaRMoon.x, betaRMoon.y, betaRMoon.z);
       skyShaderMaterial.uniforms['betaRMoon'].value.set(betaRMoon.x, betaRMoon.y, betaRMoon.z);
+      sunShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
       moonShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
       skyShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
 
