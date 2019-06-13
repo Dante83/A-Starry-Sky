@@ -110,4 +110,5 @@ def parseVisibleStarsFromHyg():
     print "Done."
     print "-"*15
 
-parseVisibleStarsFromHyg()
+if __name__ == '__main__':
+    parseVisibleStarsFromHyg()

@@ -5,12 +5,7 @@ import csv, os, json, math
 import numpy as np
 from PIL import Image
 import parse_visible_stars_to_json as pvs
-
-def approximatePosition(targetWidth, targetHeight, star_ra, star_dec):
-    #First let's just try a linear map and presume that our data points are distributed evenly...
-    bestXPos = star_ra * targetWidth / (2.0 * np.pi)
-    bestYPos = (star_dec + (np.pi / 2.0)) * targetHeight / np.pi
-    return [bestXPos, bestYPos]
+import multiprocessing as mp
 
 def float2RGBA(floatNumber):
     originalValue = floatNumber
@@ -69,23 +64,61 @@ def float2RGBA(floatNumber):
 
     return [red, green, blue, alpha]
 
-def sortByDistanceFromOriginalPixel(choice, target):
-    return ((choice[0] - target[0]) ** 2 + (choice[1] - target[0]) ** 2) ** (0.5)
+def scoreStar(ra_0, dec_0, ra_1, dec_1):
+    #haversine distance from
+    #https://gist.github.com/rochacbruno/2883505
+    lat1 = dec_0
+    lat2 = dec_1
+    lon1 = ra_0 - np.pi
+    lon2 = ra_1 - np.pi
 
-def recursiveTuple(tupleThisList):
-    replacementList = []
-    for item in tupleThisList:
-        if type(item) is list:
-            tupledList = recursiveTuple(item)
-            replacementList += [tupledList]
-        else:
-            replacementList += [item]
-    return tuple(replacementList)
+    dlat = math.radians(lat2-lat1)
+    dlon = math.radians(lon2-lon1)
+    a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
+        * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
 
-def main():
-    padding = 5
-    image_width = 512 - 2 * padding
-    image_height = 256 - 2 * padding
+    return c
+
+def indexPixels(y, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list):
+    print 'Y Number: ' + str(y) + ' of ' + str(indexing_img_height)
+
+    #Connect our indexing arrays to our data_arrays
+    half_img_height = indexing_img_height / 2
+    quarter_img_height = indexing_img_height / 4
+    indexing_row = [None for i in xrange(indexing_img_width)]
+    dec = np.pi * ((float(y) / float(half_img_height)) - 0.5)
+    for x in xrange(indexing_img_width):
+        ra = (float(x) / float(indexing_img_width)) * 2.0 * np.pi
+
+        #Get the four most important stars for this pixel
+        scores = [4000.0, 3000.0, 2000.0, 1000.0]
+        top_ranked_stars = [None] * 4
+        for star in first_4096_stars:
+            score = scoreStar(ra, dec, star['ra'], star['dec'])
+            for i, previous_score in enumerate(scores):
+                if score < previous_score:
+                    scores[i] = score
+                    top_ranked_stars[i] = star
+                    break
+
+        #Find the x, y locations for each of these stars in our data_array
+        #and save the results
+        xy_locs = [id_to_xy_list[top_ranked_stars[i]['id']] for i in xrange(4)]
+
+        #These are just positive integers between 0 and 63
+        #But the image is a scale of 0 to 255
+        #and the map is on a scale of 0 to 127
+        #So to get the right number, we must double our values
+        indexing_row[x] = [xy_locs[0]['x'] * 2.0, xy_locs[0]['y'] * 2.0, xy_locs[1]['x'] * 2, xy_locs[1]['y'] * 2.0]
+        indexing_row[x] += [xy_locs[2]['x'] * 2.0, xy_locs[2]['y'] * 2.0, xy_locs[3]['x'], xy_locs[3]['y'] * 2.0]
+    return indexing_row
+
+def initialization():
+    data_img_width = 128
+    data_img_height = 128
+    indexing_img_width = 256
+    indexing_img_height = 256
 
     #Get all our stars again from that CSV File
     star_data = []
@@ -118,7 +151,7 @@ def main():
     for id, star in enumerate(sorted_star_data):
         tagged_star = {\
             'id': id,\
-            'ra': star['rightAscension'] * (np.pi / 12.0),\
+            'ra': star['rightAscension'] * (np.pi / 180.0),\
             'dec': star['declination'] * (np.pi / 180.0),\
             'mag': star['magnitude'],\
             'r': star['color']['red'],\
@@ -126,111 +159,65 @@ def main():
             'b': star['color']['blue']\
         }
         tagged_stars += [tagged_star]
+    #Get the first 64x64 or 4096 stars
+    first_4096_stars = tagged_stars[:4096]
 
     #Prepare our matrix!
-    star_array = [[-1 for i in xrange(image_height)] for j in xrange(image_width)]
+    #Our first index is oddly our y coordinate and the second is the x for Image.fromarray
+    data_array = [[[0 for c in xrange(4)] for i in xrange(data_img_width)] for j in xrange(data_img_height)]
+    indexing_array = [[[0 for c in xrange(4)] for i in xrange(indexing_img_width)] for j in xrange(indexing_img_height)]
+    i = 0
 
-    #For each star
-    #Find it's approximate position, and place it's id at the closest non-occupied position in our array
-    for star in tagged_stars:
-        pos = approximatePosition(image_width, image_height, star['ra'], star['dec'])
-        startingPosition = {'x': int(math.floor(pos[0])), 'y': int(math.floor(pos[1]))}
-        if(star_array[startingPosition['x']][startingPosition['y']] == -1):
-            star_array[startingPosition['x']][startingPosition['y']] = star['id']
-        else:
-            #print('Slightly bad alignment for the star with id: %d.'%star['id'])
-
-            #Looks like we're going to be move outwards until we reach a point that's open
-            radial_offset = 1
-            pixels_in_ring = 8 * radial_offset
-            pixels_in_ring = []
-            pixel_of_ring = 0
-            for x in range(startingPosition['y'] - radial_offset, startingPosition['y'] + radial_offset):
-                pixels_in_ring += [[x, startingPosition['x'] + radial_offset]]
-                pixels_in_ring += [[x, startingPosition['x'] - radial_offset]]
-            for y in range(startingPosition['x'] - radial_offset + 1, startingPosition['x'] + radial_offset - 1):
-                pixels_in_ring += [[startingPosition['y'] + radial_offset, y]]
-                pixels_in_ring += [[startingPosition['y'] + radial_offset, y]]
-            sorted_pixels_in_ring = sorted(pixels_in_ring, key=lambda position, target=pos: sortByDistanceFromOriginalPixel(position, target))
-            while(radial_offset <= 2):
-                next_pixel = sorted_pixels_in_ring[pixel_of_ring]
-                #print next_pixel
-                normalized_pixel = [next_pixel[0] % image_width, next_pixel[1] % image_height]
-                if(star_array[normalized_pixel[1]][normalized_pixel[0]] == -1):
-                    star_array[normalized_pixel[1]][normalized_pixel[0]] = star['id']
-                    break
-                pixel_of_ring += 1
-                if(pixel_of_ring == len(pixels_in_ring)):
-                    pixel_of_ring = 0
-                    radial_offset += 1
-                    #And calculate the distances to each of our pixels again...
-                    pixels_in_ring = []
-                    distances_to_each_pixel = []
-                    for x in range(startingPosition['y'] - radial_offset, startingPosition['y'] + radial_offset):
-                        pixels_in_ring += [[x, startingPosition['x'] + radial_offset]]
-                        pixels_in_ring += [[x, startingPosition['x'] - radial_offset]]
-                    for y in range(startingPosition['x'] - radial_offset + 1, startingPosition['x'] + radial_offset - 1):
-                        pixels_in_ring += [[startingPosition['y'] + radial_offset, y]]
-                        pixels_in_ring += [[startingPosition['y'] + radial_offset, y]]
-                    sorted_pixels_in_ring = sorted(pixels_in_ring, key=lambda position, target=pos: sortByDistanceFromOriginalPixel(position, target))
-            #Well, either we found it or it got crowded out by brighter stars in the sky
-            if(radial_offset > 2):
-                print('We lost the star with id: %d.'%star['id'])
-
-    #Now that we've populated the sky ids, create a 4*512 x 4*256 bit array converting
-    #all of our floats into RGBA values to be decoded in the vertex shader
-    star_out_array = [[[0,0,0,0] for i in xrange(image_width * 5)] for j in xrange(image_height)]
-    star_out_sub_images = [[[[0,0,0,0] for i in xrange(image_width)] for j in xrange(image_height)] for img in xrange(5)]
-
-    #Fill the first three sections with the float data for azimuth, altitude and magnitude
-
-    for x in xrange(image_width):
-        for y in xrange(image_height):
-            desired_star = False
-            #You know, I could make this into a hash table or something but... meh...
-            if star_array[x][y] != -1:
-                for tagged_star in tagged_stars:
-                    if tagged_star['id'] == star_array[x][y]:
-                        desired_star = tagged_star
-                if not desired_star:
-                    print star_array[x][y]
-                    print "The star with id %d, was not found?! Blasphemy!"%+ star_array[y][x]
-                else:
-                    star_out_array[y][x] = (255,0,0,255)
-                    star_out_array[y][x + image_width] = float2RGBA(desired_star['ra'])
-                    star_out_array[y][x + (2 * image_width)] = float2RGBA(desired_star['dec'])
-                    star_out_array[y][x + (3 * image_width)] = float2RGBA(desired_star['mag'])
-                    star_out_array[y][x + (4 * image_width)] = [math.floor(desired_star['r'] * 256.0), math.floor(desired_star['g'] * 256.0), math.floor(desired_star['b'] * 256.0), 255.0]
-
-                    #And our sub sub images
-                    star_out_sub_images[0][y][x] = star_out_array[y][x][:]
-                    star_out_sub_images[1][y][x] = star_out_array[y][x + image_width][:]
-                    star_out_sub_images[2][y][x] = star_out_array[y][x + (2 * image_width)][:]
-                    star_out_sub_images[3][y][x] = star_out_array[y][x + (3 * image_width)][:]
-                    star_out_sub_images[4][y][x] = star_out_array[y][x + (4 * image_width)][:]
-
-    #And while we're here, let's also create the padded version of the star data
-    #Python is perfect for this because of it's ability to use negative indices
-    padded_image = [[[0,0,0,0] for i in xrange((image_width + 2 * padding) * 5)] for j in xrange(image_height + 2 * padding)]
-    for index, sub_image in enumerate(star_out_sub_images):
-        padded_sub_image = [[[0,0,0,0] for i in xrange(image_width + 2 * padding)] for j in xrange(image_height + 2 * padding)]
-        for y in range(-padding, (image_height + padding)):
-            for x in range(-padding, (image_width + padding)):
-                padded_sub_image[y + padding][x + padding] = sub_image[y if y <= 0 else (y % image_height)][x if x <= 0 else (x % image_width)]
-                padded_image[y + padding][x + padding + (index * (image_width + 2 * padding))] = sub_image[y if y <= 0 else (y % image_height)][x if x <= 0 else (x % image_width)]
-        imarray = np.asarray(padded_sub_image)
-        im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-        im.save('../../../../images/padded-starry-sub-data-%d.png'%(index))
-
-    #Convert this array into a png that we can later import and use to populate our stars at key points
-    imarray = np.asarray(star_out_array)
+    id_to_xy_list = {}
+    for x in xrange(64):
+        for y in xrange(64):
+            starData = first_4096_stars[i]
+            data_array[y][x] = float2RGBA(starData['ra'])
+            data_array[y][x + 64] = float2RGBA(starData['dec'])
+            data_array[y + 64][x] = float2RGBA(starData['mag'])
+            data_array[y + 64][x + 64] = [math.floor(starData['r'] * 256.0), math.floor(starData['g'] * 256.0), math.floor(starData['b'] * 256.0), 255.0]
+            id_to_xy_list[starData['id']] = {'x': x, 'y': y}
+            i += 1
+    imarray = np.asarray(data_array)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-    im.save('../../../../images/starry-data.png')
+    im.save('../../../../images/star-data.png')
 
-    #And the padded data
-    imarray = np.asarray(padded_image)
+    #Multithreading
+    num_cpus = mp.cpu_count()
+    pool = mp.Pool(num_cpus)
+    half_img_height = indexing_img_height / 2
+
+    indexing_array_collapsed = []
+    for i in  xrange(half_img_height / 8):
+        y = i * 8
+        r1 = pool.apply_async(indexPixels, args=(y, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        r2 = pool.apply_async(indexPixels, args=(y + 1, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        r3 = pool.apply_async(indexPixels, args=(y + 2, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        r4 = pool.apply_async(indexPixels, args=(y + 3, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+
+        r5 = pool.apply_async(indexPixels, args=(y + 4, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        r6 = pool.apply_async(indexPixels, args=(y + 5, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        r7 = pool.apply_async(indexPixels, args=(y + 6, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        r8 = pool.apply_async(indexPixels, args=(y + 7, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        indexing_array_collapsed += [r1.get(), r2.get(), r3.get(), r4.get()]
+        indexing_array_collapsed += [r5.get(), r6.get(), r7.get(), r8.get()]
+    #indexing_array_collapsed = [pool.apply_async(indexPixels, args=(y, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list)) for y in xrange(half_img_height)]
+
+    #Close our threads when done
+
+    pool.close()
+
+    #Convert our data into valid indexing arrays
+    for y, row in enumerate(indexing_array_collapsed):
+        for x, column in enumerate(row):
+            indexing_array[y][x] = [column[i] for i in xrange(4)]
+            indexing_array[y + half_img_height][x] = [column[i + 4] for i in xrange(4)]
+
+    #index image 1
+    imarray = np.asarray(indexing_array)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-    im.save('../../../../images/padded-starry-data.png')
+    im.save('../../../../images/star-index.png')
 
 #And now to run the entire application :D
-main()
+if __name__ == '__main__':
+    initialization()

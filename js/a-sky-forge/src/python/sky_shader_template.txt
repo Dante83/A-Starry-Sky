@@ -25,11 +25,8 @@ var skyShaderMaterial = new THREE.ShaderMaterial({
     latLong: {type: 'v2', value: new THREE.Vector2()},
     hourAngle: {type: 'f', value: 0.0},
     localSiderealTime: {type: 'f', value: 0.0},
-    starMask: {type: 't', value: null},
-    starRas: {type: 't', value: null},
-    starDecs: {type: 't', value: null},
-    starMags: {type: 't', value: null},
-    starColors: {type: 't', value: null},
+    starIndexer: {type: 't', value: null},
+    starData: {type: 't', value: null},
     bayerMatrix: {type: 't', value: null}
   },
 

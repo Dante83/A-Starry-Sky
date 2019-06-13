@@ -85,11 +85,8 @@ AFRAME.registerComponent('sky-time', {
     imgDir: {type: 'string', default: '../images/'},
     moonTexture: {type: 'map', default: 'moon-tex-1024.png'},
     moonNormalMap: {type: 'map', default: 'moon-nor-1024.png'},
-    starMask: {type: 'map', default:'padded-starry-sub-data-0.png'},
-    starRas: {type: 'map', default:'padded-starry-sub-data-1.png'},
-    starDecs: {type: 'map', default:'padded-starry-sub-data-2.png'},
-    starMags: {type: 'map', default:'padded-starry-sub-data-3.png'},
-    starColors: {type: 'map', default:'padded-starry-sub-data-4.png'},
+    starIndexer: {type: 'map', default:'star-index.png'},
+    starData: {type: 'map', default:'star-data.png'},
   },
 
   init: function(){
@@ -119,44 +116,20 @@ AFRAME.registerComponent('sky-time', {
     //We use repeat wrapping on wrap s, to horizontally flip to the other side of the image along RA
     //And we use mirrored mapping on wrap w to just reflect back, although internally we will want to subtract 0.5 from this.
     //we also use needs update to make all this work as per, https://codepen.io/SereznoKot/pen/vNjJWd
-    var starMask = textureLoader.load(this.data.imgDir + this.data.starMask, function(starMask){
-      starMask.magFilter = THREE.NearestFilter;
-      starMask.minFilter = THREE.NearestFilter;
-      starMask.wrapS = THREE.RepeatWrapping;
-      starMask.wrapW = THREE.MirroredRepeatWrapping;
-      starMask.needsUpdate = true;
+    var starIndexer = textureLoader.load(this.data.imgDir + this.data.starIndexer, function(starIndexer){
+      starIndexer.magFilter = THREE.NearestFilter;
+      starIndexer.minFilter = THREE.NearestFilter;
+      starIndexer.wrapS = THREE.RepeatWrapping;
+      starIndexer.wrapW = THREE.MirroredRepeatWrapping;
+      starIndexer.needsUpdate = true;
     });
 
-    var starRas = textureLoader.load(this.data.imgDir + this.data.starRas, function(starRas){
-      starRas.magFilter = THREE.NearestFilter;
-      starRas.minFilter = THREE.NearestFilter;
-      starRas.wrapS = THREE.RepeatWrapping;
-      starRas.wrapW = THREE.MirroredRepeatWrapping;
-      starRas.needsUpdate = true;
-    });
-
-    var starDecs = textureLoader.load(this.data.imgDir + this.data.starDecs, function(starDecs){
-      starDecs.magFilter = THREE.NearestFilter;
-      starDecs.minFilter = THREE.NearestFilter;
-      starDecs.wrapS = THREE.RepeatWrapping;
-      starDecs.wrapW = THREE.MirroredRepeatWrapping;
-      starDecs.needsUpdate = true;
-    });
-
-    var starMags = textureLoader.load(this.data.imgDir + this.data.starMags, function(starMags){
-      starMags.magFilter = THREE.NearestFilter;
-      starMags.minFilter = THREE.NearestFilter;
-      starMags.wrapS = THREE.RepeatWrapping;
-      starMags.wrapW = THREE.MirroredRepeatWrapping;
-      starMags.needsUpdate = true;
-    });
-
-    var starColors = textureLoader.load(this.data.imgDir + this.data.starColors, function(){
-      starColors.magFilter = THREE.NearestFilter;
-      starColors.minFilter = THREE.NearestFilter;
-      starColors.wrapS = THREE.RepeatWrapping;
-      starColors.wrapW = THREE.MirroredRepeatWrapping;
-      starColors.needsUpdate = true;
+    var starData = textureLoader.load(this.data.imgDir + this.data.starData, function(starData){
+      starData.magFilter = THREE.NearestFilter;
+      starData.minFilter = THREE.NearestFilter;
+      starData.wrapS = THREE.RepeatWrapping;
+      starData.wrapW = THREE.MirroredRepeatWrapping;
+      starData.needsUpdate = true;
     });
 
     //Create our Bayer Matrix
@@ -183,11 +156,8 @@ AFRAME.registerComponent('sky-time', {
     });
 
     //We only load our textures once upon initialization
-    skyShaderMaterial.uniforms['starMask'].value = starMask;
-    skyShaderMaterial.uniforms['starRas'].value = starRas;
-    skyShaderMaterial.uniforms['starDecs'].value = starDecs;
-    skyShaderMaterial.uniforms['starMags'].value = starMags;
-    skyShaderMaterial.uniforms['starColors'].value = starColors;
+    skyShaderMaterial.uniforms['starIndexer'].value = starIndexer;
+    skyShaderMaterial.uniforms['starData'].value = starData;
     skyShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
     sunShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
     moonShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
