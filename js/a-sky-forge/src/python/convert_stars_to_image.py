@@ -117,8 +117,8 @@ def indexPixels(y, indexing_img_width, indexing_img_height, first_4096_stars, id
 def initialization():
     data_img_width = 128
     data_img_height = 128
-    indexing_img_width = 256
-    indexing_img_height = 256
+    indexing_img_width = 1024
+    indexing_img_height = 1024
 
     #Get all our stars again from that CSV File
     star_data = []
@@ -151,7 +151,7 @@ def initialization():
     for id, star in enumerate(sorted_star_data):
         tagged_star = {\
             'id': id,\
-            'ra': star['rightAscension'] * (np.pi / 180.0),\
+            'ra': star['rightAscension'] * (np.pi / 12.0),\
             'dec': star['declination'] * (np.pi / 180.0),\
             'mag': star['magnitude'],\
             'r': star['color']['red'],\
@@ -164,8 +164,8 @@ def initialization():
 
     #Prepare our matrix!
     #Our first index is oddly our y coordinate and the second is the x for Image.fromarray
-    data_array = [[[0 for c in xrange(4)] for i in xrange(data_img_width)] for j in xrange(data_img_height)]
-    indexing_array = [[[0 for c in xrange(4)] for i in xrange(indexing_img_width)] for j in xrange(indexing_img_height)]
+    data_array = [[[0.0 for c in xrange(4)] for i in xrange(data_img_width)] for j in xrange(data_img_height)]
+    indexing_array = [[[0.0 for c in xrange(4)] for i in xrange(indexing_img_width)] for j in xrange(indexing_img_height)]
     i = 0
 
     id_to_xy_list = {}

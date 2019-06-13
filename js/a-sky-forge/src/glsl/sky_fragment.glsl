@@ -245,61 +245,65 @@ vec3 drawStarLayer(float azimuthOfPixel, float altitudeOfPixel){
   float pixelDec = raAndDecOfPixel.y;
   vec2 searchPosition1 = vec2(pixelRa / piTimes2, 0.5 * ((pixelDec / pi) + 0.5));
   searchPosition1.y = 1.0 - searchPosition1.y;
-  // vec2 searchPosition2 = searchPosition1;
-  //searchPosition2.x += 0.5;
+  vec2 searchPosition2 = searchPosition1;
+  searchPosition2.y = 1.0 - searchPosition2.y;
+  searchPosition2.y += 0.5;
+
   vec4 starIndexer1 = texture2D(starIndexer, searchPosition1);
-  // vec4 starIndexer2 = texture2D(starIndexer, searchPosition2);
+  vec4 starIndexer2 = texture2D(starIndexer, searchPosition2);
   vec2 starIndex1 = starIndexer1.rg;
   starIndex1.y = 1.0 - starIndex1.y;
-  // vec2 starIndex2 = starIndexer1.ba;
-  // vec2 starIndex3 = starIndexer2.rg;
-  // vec2 starIndex4 = starIndexer2.ba;
-
+  vec2 starIndex2 = starIndexer1.ba;
+  starIndex2.y = 1.0 - starIndex2.y;
+  vec2 starIndex3 = starIndexer2.rg;
+  starIndex3.y = 1.0 - starIndex3.y;
+  vec2 starIndex4 = starIndexer2.ba;
+  starIndex4.y = 1.0 - starIndex4.y;
   //Get our data
   float star1Ra = rgba2Float(texture2D(starData, starIndex1));
-  // float star2Ra = rgba2Float(texture2D(starData, starIndex2));
-  // float star3Ra = rgba2Float(texture2D(starData, starIndex3));
-  // float star4Ra = rgba2Float(texture2D(starData, starIndex4));
+  float star2Ra = rgba2Float(texture2D(starData, starIndex2));
+  float star3Ra = rgba2Float(texture2D(starData, starIndex3));
+  float star4Ra = rgba2Float(texture2D(starData, starIndex4));
 
   vec2 decCoord1 = starIndex1 - vec2(0.5, 0.0);
-  // starIndex2.x += 0.25;
-  // starIndex3.x += 0.25;
-  // starIndex4.x += 0.25;
+  vec2 decCoord2 = starIndex2 - vec2(0.5, 0.0);
+  vec2 decCoord3 = starIndex3 - vec2(0.5, 0.0);
+  vec2 decCoord4 = starIndex4 - vec2(0.5, 0.0);
   float star1Dec = rgba2Float(texture2D(starData, decCoord1));
-  // float star2Dec = rgba2Float(texture2D(starData, starIndex2));
-  // float star3Dec = rgba2Float(texture2D(starData, starIndex3));
-  // float star4Dec = rgba2Float(texture2D(starData, starIndex4));
+  float star2Dec = rgba2Float(texture2D(starData, decCoord2));
+  float star3Dec = rgba2Float(texture2D(starData, decCoord3));
+  float star4Dec = rgba2Float(texture2D(starData, decCoord4));
 
   vec2 magCoord1 = starIndex1 - vec2(0.0, 5.0);
-  // starIndex2.x += 0.25;
-  // starIndex3.x += 0.25;
-  // starIndex4.x += 0.25;
+  vec2 magCoord2 = starIndex2 - vec2(0.0, 5.0);
+  vec2 magCoord3 = starIndex3 - vec2(0.0, 5.0);
+  vec2 magCoord4 = starIndex4 - vec2(0.0, 5.0);
   float star1Mag = rgba2Float(texture2D(starData, magCoord1));
-  // float star2Mag = rgba2Float(texture2D(starData, starIndex2));
-  // float star3Mag = rgba2Float(texture2D(starData, starIndex3));
-  // float star4Mag = rgba2Float(texture2D(starData, starIndex4));
+  float star2Mag = rgba2Float(texture2D(starData, magCoord2));
+  float star3Mag = rgba2Float(texture2D(starData, magCoord3));
+  float star4Mag = rgba2Float(texture2D(starData, magCoord4));
 
   vec2 colorCoord1 = starIndex1 - vec2(0.5, 0.5);
-  // starIndex2.x += 0.25;
-  // starIndex3.x += 0.25;
-  // starIndex4.x += 0.25;
+  vec2 colorCoord2 = starIndex2 - vec2(0.5, 0.5);
+  vec2 colorCoord3 = starIndex3 - vec2(0.5, 0.5);
+  vec2 colorCoord4 = starIndex4 - vec2(0.5, 0.5);
   vec3 star1Color = texture2D(starData, colorCoord1).rgb;
-  // vec3 star2Color = texture2D(starData, starIndex2).rgb;
-  // vec3 star3Color = texture2D(starData, starIndex3).rgb;
-  // vec3 star4Color = texture2D(starData, starIndex4).rgb;
+  vec3 star2Color = texture2D(starData, colorCoord2).rgb;
+  vec3 star3Color = texture2D(starData, colorCoord3).rgb;
+  vec3 star4Color = texture2D(starData, colorCoord4).rgb;
 
   vec3 returnColor = vec3(0.0);
   vec3 starLight = drawStar(vec2(pixelRa, pixelDec), vec2(star1Ra, star1Dec), star1Mag, star1Color, altitudeOfPixel);
   returnColor += starLight * starLight;
-  //
-  // starLight = drawStar(vec2(pixelRa, pixelDec), vec2(star2Ra, star2Dec), star2Mag, star2Color, altitudeOfPixel);
-  // returnColor += starLight * starLight;
-  //
-  // starLight = drawStar(vec2(pixelRa, pixelDec), vec2(star3Ra, star3Dec), star3Mag, star3Color, altitudeOfPixel);
-  // returnColor += starLight * starLight;
-  //
-  // starLight = draswStar(vec2(pixelRa, pixelDec), vec2(star4Ra, star4Dec), star4Mag, star4Color, altitudeOfPixel);
-  // returnColor += starLight * starLight;
+
+  starLight = drawStar(vec2(pixelRa, pixelDec), vec2(star2Ra, star2Dec), star2Mag, star2Color, altitudeOfPixel);
+  returnColor += starLight * starLight;
+
+  starLight = drawStar(vec2(pixelRa, pixelDec), vec2(star3Ra, star3Dec), star3Mag, star3Color, altitudeOfPixel);
+  returnColor += starLight * starLight;
+
+  starLight = drawStar(vec2(pixelRa, pixelDec), vec2(star4Ra, star4Dec), star4Mag, star4Color, altitudeOfPixel);
+  returnColor += starLight * starLight;
   return returnColor;
 }
 
