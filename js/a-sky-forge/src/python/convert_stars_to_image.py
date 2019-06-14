@@ -64,7 +64,7 @@ def float2RGBA(floatNumber):
 
     return [red, green, blue, alpha]
 
-def scoreStar(ra_0, dec_0, ra_1, dec_1):
+def scoreStar(ra_0, dec_0, ra_1, dec_1, magnitudeOfStar):
     #haversine distance from
     #https://gist.github.com/rochacbruno/2883505
     lat1 = dec_0
@@ -74,11 +74,15 @@ def scoreStar(ra_0, dec_0, ra_1, dec_1):
 
     dlat = math.radians(lat2-lat1)
     dlon = math.radians(lon2-lon1)
-    a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) \
-        * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    a = math.sin(dlat/2.0) * math.sin(dlat/2.0) + math.cos(math.radians(lat1)) \
+        * math.cos(math.radians(lat2)) * math.sin(dlon/2.0) * math.sin(dlon/2.0)
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0-a))
+    c = math.sqrt(c) * 15.0
 
-    return c
+    #Normalized Magnitude
+    normalizedMagnitude = (1.0 - (magnitudeOfStar + 1.46) / 7.96);
+
+    return c - normalizedMagnitude
 
 def indexPixels(y, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list):
     print 'Y Number: ' + str(y) + ' of ' + str(indexing_img_height)
@@ -95,7 +99,7 @@ def indexPixels(y, indexing_img_width, indexing_img_height, first_4096_stars, id
         scores = [4000.0, 3000.0, 2000.0, 1000.0]
         top_ranked_stars = [None] * 4
         for star in first_4096_stars:
-            score = scoreStar(ra, dec, star['ra'], star['dec'])
+            score = scoreStar(ra, dec, star['ra'], star['dec'], star['mag'])
             for i, previous_score in enumerate(scores):
                 if score < previous_score:
                     scores[i] = score
@@ -117,8 +121,8 @@ def indexPixels(y, indexing_img_width, indexing_img_height, first_4096_stars, id
 def initialization():
     data_img_width = 128
     data_img_height = 128
-    indexing_img_width = 1024
-    indexing_img_height = 1024
+    indexing_img_width = 512
+    indexing_img_height = 512
 
     #Get all our stars again from that CSV File
     star_data = []
@@ -179,6 +183,7 @@ def initialization():
             id_to_xy_list[starData['id']] = {'x': x, 'y': y}
             i += 1
     imarray = np.asarray(data_array)
+    imarray = np.flip(imarray, 0)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
     im.save('../../../../images/star-data.png')
 
@@ -188,7 +193,7 @@ def initialization():
     half_img_height = indexing_img_height / 2
 
     indexing_array_collapsed = []
-    for i in  xrange(half_img_height / 8):
+    for i in xrange(half_img_height / 8):
         y = i * 8
         r1 = pool.apply_async(indexPixels, args=(y, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
         r2 = pool.apply_async(indexPixels, args=(y + 1, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
@@ -215,6 +220,7 @@ def initialization():
 
     #index image 1
     imarray = np.asarray(indexing_array)
+    imarray = np.flip(imarray, 0)
     im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
     im.save('../../../../images/star-index.png')
 
