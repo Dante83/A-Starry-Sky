@@ -23,6 +23,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.moonRadiusFromCamera = 0.75 * skyDomeRadius;
 
   //Create a three JS plane for our moon to live on in a hidden view
+  this.angularRadiusOfTheMoon = angularDiameterOfTheMoon;
   let diameterOfMoonPlane = 2.0 * this.moonRadiusFromCamera * Math.sin(angularDiameterOfTheMoon);
   this.geometry = new THREE.PlaneGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
   this.geometry.translate(0.0, -0.0 * diameterOfMoonPlane, 0.0);
@@ -39,13 +40,57 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.translationToTangentSpace = new THREE.Matrix3();
   this.lightDirection = new THREE.Vector3();
 
-  this.update = function(moonPosition, sunPosition){
+  //Create a directional light for the moon
+  this.oneVector = new THREE.Vector3(1.0, 1.0, 1.0);
+  this.up = new THREE.Vector3(0.0, 1.0, 0.0);
+  this.light = new THREE.DirectionalLight(0xffffff, 1.0);
+  this.light.castShadow = true;
+  this.light.shadow.mapSize.width = 512*2;
+  this.light.shadow.mapSize.height = 512*2;
+  this.light.shadow.camera.near = 10.0;
+  this.light.shadow.camera.far = this.moonRadiusFromCamera * 2.0;
+  this.sceneRef.add(this.light);
+  this.fexMoon = new THREE.Vector3();
+  this.directlightColor = new THREE.Color();
+  this.directLightIntensity;
+  this.ambientColor = new THREE.Vector3();
+  this.ambientIntensity;
+
+  this.update = function(moonPosition, sunPosition, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier){
     //move and rotate the moon
     let p = this.plane;
     this.position.set(moonPosition.x, moonPosition.y, moonPosition.z).multiplyScalar(this.moonRadiusFromCamera);
     p.position.set(this.position.x, this.position.y, this.position.z);
     p.lookAt(0.0,0.0,0.0);
     p.updateMatrix();
+
+    let l = this.light;
+
+    l.position.set(this.position.x, this.position.y, this.position.z);
+    let cosZenithAngleOfMoon = Math.max(0.0, this.up.dot(moonPosition));
+    let zenithAngleOfMoon = Math.acos(cosZenithAngleOfMoon);
+    let angleOfMoon = (0.5 * Math.PI) - zenithAngleOfMoon
+    let sinOfAngleOfMoon = Math.sin(angleOfMoon);
+    let inverseSDenominator = 1.0 / (cosZenithAngleOfMoon + 0.15 * Math.pow(93.885 - (zenithAngleOfMoon * 180.0 / Math.PI), -1.253));
+    const rayleighAtmosphereHeight = 8.4E3;
+    const mieAtmosphereHeight = 1.25E3;
+    let sR = rayleighAtmosphereHeight * inverseSDenominator;
+    let sM = mieAtmosphereHeight * inverseSDenominator;
+    let betaMTimesSM = betaM.clone().multiplyScalar(sM);
+    this.fexMoon.set(
+      Math.max(Math.min(Math.exp(-(betaRMoon.x * sR + betaMTimesSM.x)), 1.0), 0.0),
+      Math.max(Math.min(Math.exp(-(betaRMoon.y * sR + betaMTimesSM.y)), 1.0), 0.0),
+      Math.max(Math.min(Math.exp(-(betaRMoon.z * sR + betaMTimesSM.z)), 1.0), 0.0)
+    );
+    l.color.setRGB(this.fexMoon.x, this.fexMoon.y, this.fexMoon.z);
+
+    let lunarLightBaseIntensitySquared = moonE / 700.0;
+    let lunarLightBaseIntensity = Math.sqrt(lunarLightBaseIntensitySquared) * lunarIntensityModifier;
+    l.color = this.directlightColor;
+    l.intensity = lunarLightBaseIntensity;
+    let ambientColorVec = this.oneVector.clone().sub(this.fexMoon);
+    this.ambientColor = ambientColorVec;
+    this.ambientIntensity = lunarLightBaseIntensity * moonFade;
 
     //update our uv coordinates
     let vertices = p.geometry.vertices;

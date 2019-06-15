@@ -73,6 +73,7 @@ AFRAME.registerComponent('sky-params', {
 AFRAME.registerComponent('sky-time', {
   fractionalSeconds: 0,
   moon: null,
+  ambientLight: null,
   dependencies: ['geo-coordinates', 'a-sky-forge'],
   schema: {
     timeOffset: {type: 'number', default: dynamicSkyEntityMethods.getSecondOfDay()},
@@ -83,8 +84,8 @@ AFRAME.registerComponent('sky-time', {
     day: {type: 'int', default: -1},
     year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
     imgDir: {type: 'string', default: '../images/'},
-    moonTexture: {type: 'map', default: 'moon-tex-1024.png'},
-    moonNormalMap: {type: 'map', default: 'moon-nor-1024.png'},
+    moonTexture: {type: 'map', default: 'moon-tex-512.png'},
+    moonNormalMap: {type: 'map', default: 'moon-nor-512.png'},
     starIndexer: {type: 'map', default:'star-index.png'},
     starData: {type: 'map', default:'star-data.png'},
   },
@@ -161,6 +162,10 @@ AFRAME.registerComponent('sky-time', {
     skyShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
     sunShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
     moonShaderMaterial.uniforms['bayerMatrix'].value = bayerMatrix;
+
+    //Initialize our ambient lighting
+    this.ambientLight = new THREE.AmbientLight(0x000000);
+    sceneRef.add(this.ambientLight);
 
     //Hook up our interpolator and set the various uniforms we wish to track and
     //interpolate during each frame.
@@ -291,8 +296,17 @@ AFRAME.registerComponent('sky-time', {
       moonShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
       skyShaderMaterial.uniforms['moonXYZPosition'].value.set(mXYZ.x,mXYZ.y,mXYZ.z);
 
-      this.sun.update(sXYZ);
-      this.moon.update(mXYZ, sXYZ);
+      this.sun.update(sXYZ, betaRSun, betaM, sunE, sunFade);
+      lunarIntensityModifier = Math.exp(exposureCoeficient * 0.1);
+      this.moon.update(mXYZ, sXYZ, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier);
+
+      let combinedColorBase = this.sun.ambientColor.clone().multiply(this.sun.ambientColor).add(this.moon.ambientColor.clone().multiply(this.moon.ambientColor));
+      combinedColorBase.x = Math.sqrt(combinedColorBase.x);
+      combinedColorBase.y = Math.sqrt(combinedColorBase.y);
+      combinedColorBase.z = Math.sqrt(combinedColorBase.z);
+      let combinedIntensity = Math.sqrt(this.sun.ambientIntensity * this.sun.ambientIntensity + this.moon.ambientIntensity * this.moon.ambientIntensity);
+      this.ambientLight.color.setRGB(combinedColorBase.x, combinedColorBase.y, combinedColorBase.z);
+      this.ambientLight.intensity = Math.max(combinedIntensity, 0.02);
     }
   }
 });
