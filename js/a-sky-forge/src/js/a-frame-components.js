@@ -39,7 +39,7 @@ AFRAME.registerComponent('geo-coordinates', {
   }
 });
 
-var skyParamsUniformsData = {turbidity: 2.0, rayleigh: 1.0, mieCoefficient: 0.005, angularDiameterOfTheMoon: 0.055};
+var skyParamsUniformsData = {turbidity: 2.0, rayleigh: 1.0, mieCoefficient: 0.005, angularDiameterOfTheMoon: 0.025, angularDiameterOfTheSun: 0.026};
 AFRAME.registerComponent('sky-params', {
   dependencies: ['a-sky-forge'],
   schema:{
@@ -48,8 +48,8 @@ AFRAME.registerComponent('sky-params', {
     rayleigh: { type: 'number', default: 1.0, max: 4.0, min: 0.0, is: 'uniform' },
     mieCoefficient: { type: 'number', default: 0.005, min: 0.0, max: 0.1, is: 'uniform' },
     mieDirectionalG: { type: 'number', default: 0.8, min: 0.0, max: 1, is: 'uniform' },
-    angularDiameterOfTheSun: { type: 'number', default: 0.057, is: 'uniform' },
-    angularDiameterOfTheMoon: { type: 'number', default: 0.055, is: 'uniform' }
+    angularDiameterOfTheSun: { type: 'number', default: 0.030, is: 'uniform' },
+    angularDiameterOfTheMoon: { type: 'number', default: 0.030, is: 'uniform' }
   },
 
   init: function(){
@@ -66,7 +66,8 @@ AFRAME.registerComponent('sky-params', {
     moonShaderMaterial.uniforms['mieDirectionalG'].value = this.data.mieDirectionalG;
     skyShaderMaterial.uniforms['mieDirectionalG'].value = this.data.mieDirectionalG;
     sunShaderMaterial.uniforms['angularDiameterOfTheSun'].value = this.data.angularDiameterOfTheSun;
-    skyParamsUniformsData.angularDiameterOfTheMoon = this.data.angularDiameterOfTheMoon
+    skyParamsUniformsData.angularDiameterOfTheSun = this.data.angularDiameterOfTheSun;
+    skyParamsUniformsData.angularDiameterOfTheMoon = this.data.angularDiameterOfTheMoon;
   }
 });
 
@@ -238,6 +239,45 @@ AFRAME.registerComponent('sky-time', {
       skyShaderMaterial.uniforms['rayleighCoefficientOfMoon'].value =rayleighCoefficientOfMoon;
 
       //
+      //Implement solar ecclipses
+      //
+      let solarEcclipseModifier = 1.0;
+      //Get the haversine distance between the sun and moon
+      //https://gist.github.com/rochacbruno/2883505
+      let sunAz = interpolatedValues.sunAzimuth;
+      let sunAlt = interpolatedValues.sunAltitude;
+      let moonAz = interpolatedValues.moonAzimuth;
+      let moonAlt = interpolatedValues.moonAltitude;
+      let modifiedSunAz = sunAz - Math.PI;
+      let modifiedMoonAz = moonAz - Math.PI;
+      let dlat = modifiedMoonAz-modifiedSunAz;
+      let dlon = moonAlt-sunAlt;
+      let haversine_a = Math.sin(dlat/2.0) * Math.sin(dlat/2.0) + Math.cos(modifiedSunAz) * Math.cos(modifiedMoonAz) * Math.sin(dlon/2.0) * Math.sin(dlon/2.0);
+      let haversineDistance = 2.0 * Math.atan2(Math.sqrt(haversine_a), Math.sqrt(1.0-haversine_a));
+
+      //Now to determine the ecclipsed area
+      //https://www.xarg.org/2016/07/calculate-the-intersection-area-of-two-circles/
+      let sunRadius = 0.5 * Math.sin(skyParamsUniformsData.angularDiameterOfTheSun);
+      let moonRadius = 0.5 * Math.sin(skyParamsUniformsData.angularDiameterOfTheMoon);
+      const sunRadiusSquared = sunRadius * sunRadius;
+      const moonRadiusSquared  = moonRadius * moonRadius;
+      if(haversineDistance < (sunRadius + moonRadius)){
+          x = (sunRadiusSquared - moonRadiusSquared + haversineDistance * haversineDistance)/(2.0 * haversineDistance);
+          z = x * x;
+          y = Math.sqrt(sunRadiusSquared - z);
+
+          let ecclipsedArea;
+          if (haversineDistance < Math.abs(moonRadius - sunRadius)) {
+            ecclipsedArea = Math.PI * Math.min(sunRadiusSquared, moonRadiusSquared);
+          }
+          else{
+            ecclipsedArea = sunRadiusSquared * Math.asin(y/sunRadius) + moonRadiusSquared * Math.asin(y/moonRadius) - y * (x + Math.sqrt(z + moonRadiusSquared - sunRadiusSquared));
+          }
+          let surfaceAreaOfSun = Math.PI * sunRadiusSquared;
+          solarEcclipseModifier = Math.max(Math.min((surfaceAreaOfSun - ecclipsedArea)/surfaceAreaOfSun, 1.0), 0.0);
+      }
+
+      //
       //Calculate Total Mie
       //
       const lambda = new THREE.Vector3(680e-9, 550e-9, 450e-9);
@@ -262,7 +302,7 @@ AFRAME.registerComponent('sky-time', {
       sunShaderMaterial.uniforms['moonE'].value = moonE;
       moonShaderMaterial.uniforms['moonE'].value = moonE;
       skyShaderMaterial.uniforms['moonE'].value = moonE;
-      let sunE = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness)));
+      let sunE = 1000.0 * Math.max(0.0, 1.0 - Math.exp(-((cutoffAngle - Math.acos(dotOfSunDirectionAndUp))/steepness))) * solarEcclipseModifier;
       sunShaderMaterial.uniforms['sunE'].value = sunE;
       moonShaderMaterial.uniforms['sunE'].value = sunE;
       skyShaderMaterial.uniforms['sunE'].value = sunE;

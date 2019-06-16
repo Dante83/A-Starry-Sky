@@ -25,8 +25,10 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     bayerMatrix: {type: 't', value: null}
   },
 
-  blending: THREE.NormalBlending,
   transparent: true,
+  lights: false,
+  flatShading: true,
+  clipping: true,
 
   vertexShader: [
     '#ifdef GL_ES',
@@ -154,6 +156,12 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     '}',
 
     'void main(){',
+      '//Get our lunar texture first in order to discard unwanted pixels',
+      'vec4 lunarTexture = getDirectLunarIntensity(vUv);',
+      'if (lunarTexture.a < 0.5){',
+          'discard;',
+      '}',
+
       'vec3 normalizedWorldPosition = normalize(vWorldPosition.xyz);',
 
       '// Get the current optical length',
@@ -181,7 +189,6 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
       'outIntensity += vec3(texture2D(bayerMatrix, gl_FragCoord.xy / 8.0).r / 32.0 - (1.0 / 128.0));',
 
       '//Get direct illumination from the moon',
-      'vec4 lunarTexture = getDirectLunarIntensity(vUv);',
       'vec3 lunarColor = 1.5 * FexMoon * lunarTexture.rgb * moonExposure;',
       'outIntensity = clamp(sqrt(outIntensity * outIntensity + lunarColor * lunarColor), 0.0, 1.0);',
 
@@ -190,6 +197,3 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     '}',
   ].join('\n')
 });
-
-moonShaderMaterial.clipping = true;
-moonShaderMaterial.flatShading = true;

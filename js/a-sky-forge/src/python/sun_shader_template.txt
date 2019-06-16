@@ -22,8 +22,10 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     bayerMatrix: {type: 't', value: null}
   },
 
-  blending: THREE.NormalBlending,
   transparent: true,
+  lights: false,
+  flatShading: true,
+  clipping: true,
 
   vertexShader: [
     {vertex_glsl}
@@ -33,6 +35,3 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     {fragment_glsl}
   ].join('\n')
 });
-
-sunShaderMaterial.clipping = true;
-sunShaderMaterial.flatShading = true;

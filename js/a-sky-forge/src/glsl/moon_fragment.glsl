@@ -106,6 +106,12 @@ vec3 applyToneMapping(vec3 outIntensity, vec3 L0){
 }
 
 void main(){
+  //Get our lunar texture first in order to discard unwanted pixels
+  vec4 lunarTexture = getDirectLunarIntensity(vUv);
+  if (lunarTexture.a < 0.5){
+      discard;
+  }
+
   vec3 normalizedWorldPosition = normalize(vWorldPosition.xyz);
 
   // Get the current optical length
@@ -133,7 +139,6 @@ void main(){
   outIntensity += vec3(texture2D(bayerMatrix, gl_FragCoord.xy / 8.0).r / 32.0 - (1.0 / 128.0));
 
   //Get direct illumination from the moon
-  vec4 lunarTexture = getDirectLunarIntensity(vUv);
   vec3 lunarColor = 1.5 * FexMoon * lunarTexture.rgb * moonExposure;
   outIntensity = clamp(sqrt(outIntensity * outIntensity + lunarColor * lunarColor), 0.0, 1.0);
 

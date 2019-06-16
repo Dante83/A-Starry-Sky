@@ -72,5 +72,5 @@ function Sun(skyDomeRadius, sceneRef){
     let ambientColorVec = this.oneVector.clone().sub(this.fexSun);
     this.ambientColor = ambientColorVec;
     this.ambientIntensity = solarLightBaseIntensity * sunFade;
-  }
+  };
 }

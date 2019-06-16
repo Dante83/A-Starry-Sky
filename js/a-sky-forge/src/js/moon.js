@@ -20,7 +20,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.xyzPosition;
   this.moonTangentSpaceSunlight;
   this.sceneRef = sceneRef;
-  this.moonRadiusFromCamera = 0.75 * skyDomeRadius;
+  this.moonRadiusFromCamera = 0.68 * skyDomeRadius;
 
   //Create a three JS plane for our moon to live on in a hidden view
   this.angularRadiusOfTheMoon = angularDiameterOfTheMoon;
