@@ -19,7 +19,8 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     betaRMoon: {type: 'v3', value: new THREE.Vector3()},
     sunXYZPosition: {type: 'v3', value: new THREE.Vector3()},
     moonXYZPosition: {type: 'v3', value: new THREE.Vector3()},
-    bayerMatrix: {type: 't', value: null}
+    bayerMatrix: {type: 't', value: null},
+    sunTexture: {type: 't', value: null}
   },
 
   transparent: true,
@@ -35,6 +36,7 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
 
     'varying vec3 vWorldPosition;',
     'varying vec3 betaRPixel;',
+    'varying vec2 vUv;',
 
     'uniform float rayleigh;',
 
@@ -42,6 +44,8 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
       'vWorldPosition = worldPosition.xyz;',
       'vec3 normalizedWorldPosition = normalize(worldPosition.xyz);',
+
+      'vUv = uv;',
 
       'vec3 simplifiedRayleigh = vec3(0.0005 / 94.0, 0.0005 / 40.0, 0.0005 / 18.0);',
       'float pixelFade = 1.0 - clamp(1.0 - exp(normalizedWorldPosition.z), 0.0, 1.0);',
@@ -60,6 +64,7 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     '//Varyings',
     'varying vec3 vWorldPosition;',
     'varying vec3 betaRPixel;',
+    'varying vec2 vUv;',
 
     '//Uniforms',
     'uniform float sunFade;',
@@ -77,6 +82,7 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     'uniform float linSunCoefficient2;',
     'uniform float angularDiameterOfTheSun;',
     'uniform sampler2D bayerMatrix;',
+    'uniform sampler2D sunTexture;',
 
     '//Constants',
     'const vec3 up = vec3(0.0, 1.0, 0.0);',
@@ -146,16 +152,17 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     'vec4 drawSunLayer(vec3 FexPixel, float cosThetaOfSun){',
       '//It seems we need to rotate our sky by pi radians.',
       'float sunAngularDiameterCos = cos(angularDiameterOfTheSun);',
-      'float sundisk = smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002, cosThetaOfSun);',
+      '//float sundisk = smoothstep(sunAngularDiameterCos,sunAngularDiameterCos+0.00002, cosThetaOfSun);',
+      'vec4 sundisk = texture2D(sunTexture, vUv);',
 
-      'vec3 L0 = (sunE * 19000.0 * FexPixel) * sundisk;',
+      'vec3 L0 = (sunE * 19000.0 * FexPixel) * sundisk.rgb;',
       'L0 *= 0.04 ;',
       'L0 += vec3(0.0,0.001,0.0025)*0.3;',
 
       'vec3 curr = Uncharted2Tonemap((log2(2.0/pow(luminance,4.0)))*L0);',
       'vec3 color = curr / unchartedW;',
       'color = pow(color,abs(vec3(1.0/(1.2+(1.2 * sunFade)))) );',
-      'return vec4(color, sundisk);',
+      'return vec4(color, sundisk.a);',
     '}',
 
     'void main(){',

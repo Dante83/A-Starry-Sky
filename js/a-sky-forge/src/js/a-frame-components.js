@@ -85,6 +85,7 @@ AFRAME.registerComponent('sky-time', {
     day: {type: 'int', default: -1},
     year: {type: 'int', default: Math.round(dynamicSkyEntityMethods.getYear())},
     imgDir: {type: 'string', default: '../images/'},
+    sunTexture: {type: 'map', default: 'sun-tex-256.png'},
     moonTexture: {type: 'map', default: 'moon-tex-512.png'},
     moonNormalMap: {type: 'map', default: 'moon-nor-512.png'},
     starIndexer: {type: 'map', default:'star-index.png'},
@@ -104,12 +105,13 @@ AFRAME.registerComponent('sky-time', {
 
     //Load our normal maps for the moon
     let textureLoader = new THREE.TextureLoader();
+    let sunTextureDir = this.data.imgDir + this.data.sunTexture;
     let moonTextureDir = this.data.imgDir + this.data.moonTexture;
     let moonNormalMapDir = this.data.imgDir + this.data.moonNormalMap;
     let skyDomeRadius = this.el.components.geometry.data.radius;
     let sceneRef = this.el.sceneEl.object3D;
     this.moon = new Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, textureLoader, skyParamsUniformsData.angularDiameterOfTheMoon);
-    this.sun = new Sun(skyDomeRadius, sceneRef);
+    this.sun = new Sun(skyDomeRadius, sceneRef, sunTextureDir, textureLoader);
 
     //Populate this data into an array because we're about to do some awesome stuff
     //to each texture with Three JS.
@@ -275,6 +277,7 @@ AFRAME.registerComponent('sky-time', {
           }
           let surfaceAreaOfSun = Math.PI * sunRadiusSquared;
           solarEcclipseModifier = Math.max(Math.min((surfaceAreaOfSun - ecclipsedArea)/surfaceAreaOfSun, 1.0), 0.0);
+          solarEcclipseModifier = Math.pow(solarEcclipseModifier, 2.0);
       }
 
       //

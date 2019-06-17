@@ -10,6 +10,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     luminance: {type: 'f',value: 0.0},
     mieDirectionalG: {type: 'f',value: 0.0},
     moonE: {type: 'f',value: 0.0},
+    earthshineE: {type: 'f', value: 0.0},
     sunE: {type: 'f',value: 0.0},
     linMoonCoefficient2: {type: 'f',value: 0.0},
     linSunCoefficient2: {type: 'f',value: 0.0},
@@ -72,13 +73,13 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     'uniform vec3 moonXYZPosition;',
     'uniform float moonE;',
     'uniform float sunE;',
+    'uniform float earthshineE;',
     'uniform float linMoonCoefficient2; //clamp(pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0,1.0)',
     'uniform float linSunCoefficient2; //clamp(pow(1.0-dotOfSunDirectionAndUp,5.0),0.0,1.0)',
     'uniform float moonExposure;',
     'uniform sampler2D bayerMatrix;',
 
     '//Constants',
-    'const float earthshine = 0.02;',
     'const vec3 up = vec3(0.0, 1.0, 0.0);',
     'const float e = 2.71828182845904523536028747135266249775724709369995957;',
     'const float piOver2 = 1.570796326794896619231321691639751442098584699687552910487;',
@@ -87,6 +88,10 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     'const float rayleighAtmosphereHeight = 8.4E3;',
     'const float mieAtmosphereHeight = 1.25E3;',
     'const float rad2Deg = 57.29577951308232087679815481410517033240547246656432154916;',
+
+    '//I decided to go with a slightly more bluish earthshine as I have seen them get pretty',
+    '//blue overall.',
+    'const vec3 earthshineColor = vec3(0.65,0.86,1.00);',
 
     '// see http://blenderartists.org/forum/showthread.php?321110-Shaders-and-Skybox-madness',
     '// A simplied version of the total Rayleigh scattering to works on browsers that use ANGLE',
@@ -130,7 +135,8 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
 
       '//The moon is presumed to be a lambert shaded object, as per:',
       '//https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection',
-      'return vec4(clamp(baseMoonIntensity.rgb * min(earthshine + dot(moonSurfaceNormal, moonTangentSpaceSunlight), 1.0), 0.0, 1.0), baseMoonIntensity.a);',
+      'float normalLighting = clamp(dot(moonSurfaceNormal, moonTangentSpaceSunlight), 0.0, 1.0);',
+      'return vec4(clamp(earthshineE * earthshineColor + normalLighting, 0.0, 1.0) * baseMoonIntensity.rgb, baseMoonIntensity.a);',
     '}',
 
     '// Filmic ToneMapping http://filmicgames.com/archives/75',

@@ -1,4 +1,13 @@
-function Sun(skyDomeRadius, sceneRef){
+function Sun(skyDomeRadius, sceneRef, sunTextureDir, textureLoader){
+  this.sunTexture = textureLoader.load(sunTextureDir, function(sunTexture){
+    sunTexture.magFilter = THREE.LinearFilter;
+    sunTexture.minFilter = THREE.LinearMipMapLinearFilter;
+    sunTexture.wrapS = THREE.ClampToEdgeWrapping;
+    sunTexture.wrapW = THREE.ClampToEdgeWrapping;
+    sunTexture.needsUpdate = true;
+  });
+  sunShaderMaterial.uniforms['sunTexture'].value = this.sunTexture;
+
   this.xyzPosition;
   this.sceneRef = sceneRef;
   this.sunRadiusFromCamera = 0.8 * skyDomeRadius;

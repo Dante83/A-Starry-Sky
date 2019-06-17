@@ -19,7 +19,8 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
     betaRMoon: {type: 'v3', value: new THREE.Vector3()},
     sunXYZPosition: {type: 'v3', value: new THREE.Vector3()},
     moonXYZPosition: {type: 'v3', value: new THREE.Vector3()},
-    bayerMatrix: {type: 't', value: null}
+    bayerMatrix: {type: 't', value: null},
+    sunTexture: {type: 't', value: null}
   },
 
   transparent: true,

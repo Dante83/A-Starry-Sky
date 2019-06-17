@@ -10,6 +10,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     luminance: {type: 'f',value: 0.0},
     mieDirectionalG: {type: 'f',value: 0.0},
     moonE: {type: 'f',value: 0.0},
+    earthshineE: {type: 'f', value: 0.0},
     sunE: {type: 'f',value: 0.0},
     linMoonCoefficient2: {type: 'f',value: 0.0},
     linSunCoefficient2: {type: 'f',value: 0.0},

@@ -92,6 +92,17 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     this.ambientColor = ambientColorVec;
     this.ambientIntensity = lunarLightBaseIntensity * moonFade;
 
+    //Update our earthshine
+    //Note that our sun and moon positions are always normalized.
+    let phaseAngle = Math.PI - Math.acos(moonPosition.clone().dot(sunPosition));
+
+    //From
+    //https://pdfs.semanticscholar.org/fce4/4229921fcb850540a636bd28b33e30b18c3f.pdf
+    let earthShine = -0.0061 * phaseAngle * phaseAngle * phaseAngle + 0.0289 * phaseAngle * phaseAngle - 0.0105 * Math.sin(phaseAngle);
+    moonShaderMaterial.uniforms['earthshineE'].value = earthShine * 1.15;
+
+    //Update our data for our lunar ecclipses
+
     //update our uv coordinates
     let vertices = p.geometry.vertices;
     p.updateMatrixWorld();
