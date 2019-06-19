@@ -29,7 +29,9 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.geometry.translate(0.0, -0.0 * diameterOfMoonPlane, 0.0);
 
   //Set up our lunar diameter once, while we are here
-  moonShaderMaterial.uniforms['normalizedLunarDiameter'].value = Math.sin(angularDiameterOfTheMoon);
+  this.normalizedLunarDiameter = Math.sin(angularDiameterOfTheMoon);
+  moonShaderMaterial.uniforms['normalizedLunarDiameter'].value = this.normalizedLunarDiameter;
+  this.lightingColor =  new THREE.Vector3(1.0, 0.45, 0.05);
 
   //Apply this shader to our plane
   this.plane = new THREE.Mesh(this.geometry, moonShaderMaterial);
@@ -81,15 +83,14 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     let sM = mieAtmosphereHeight * inverseSDenominator;
     let betaMTimesSM = betaM.clone().multiplyScalar(sM);
     this.fexMoon.set(
-      Math.max(Math.min(Math.exp(-(betaRMoon.x * sR + betaMTimesSM.x)), 1.0), 0.0),
-      Math.max(Math.min(Math.exp(-(betaRMoon.y * sR + betaMTimesSM.y)), 1.0), 0.0),
-      Math.max(Math.min(Math.exp(-(betaRMoon.z * sR + betaMTimesSM.z)), 1.0), 0.0)
+      Math.max(Math.min(this.lightingColor.x * Math.exp(-(betaRMoon.x * sR + betaMTimesSM.x)), 1.0), 0.0),
+      Math.max(Math.min(this.lightingColor.y * Math.exp(-(betaRMoon.y * sR + betaMTimesSM.y)), 1.0), 0.0),
+      Math.max(Math.min(this.lightingColor.z * Math.exp(-(betaRMoon.z * sR + betaMTimesSM.z)), 1.0), 0.0)
     );
     l.color.setRGB(this.fexMoon.x, this.fexMoon.y, this.fexMoon.z);
 
     let lunarLightBaseIntensitySquared = moonE / 700.0;
     let lunarLightBaseIntensity = Math.sqrt(lunarLightBaseIntensitySquared) * lunarIntensityModifier;
-    l.color = this.directlightColor;
     l.intensity = lunarLightBaseIntensity;
     let ambientColorVec = this.oneVector.clone().sub(this.fexMoon);
     this.ambientColor = ambientColorVec;
@@ -130,8 +131,20 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
 
     //Presuming that most of our angular objects are small, we will simply use
     //this simple approximation... http://jonisalonen.com/2014/computing-distance-between-coordinates-can-be-simple-and-fast/
-    haversineDistanceBetweenMoonAndEarthsShadow = 2.0 * Math.asin(Math.sqrt(sinOfDeltaAltOver2 * sinOfDeltaAltOver2 + Math.cos(moonAlt) * Math.cos(altitudeOfEarthsShadow) * sinOfDeltaAzOver2 * sinOfDeltaAzOver2));
-    moonShaderMaterial.uniforms['distanceToEarthsShadow'].value = haversineDistanceBetweenMoonAndEarthsShadow;
+    distanceToEarthsShadow = 2.0 * Math.asin(Math.sqrt(sinOfDeltaAltOver2 * sinOfDeltaAltOver2 + Math.cos(moonAlt) * Math.cos(altitudeOfEarthsShadow) * sinOfDeltaAzOver2 * sinOfDeltaAzOver2));
+    moonShaderMaterial.uniforms['distanceToEarthsShadow'].value = distanceToEarthsShadow;
+
+    //Determine the color of the moonlight used for atmospheric scattering
+    this.lightingColor.set(1.0, 0.5, 0.1);
+    let colorIntensity = Math.min(Math.max((distanceToEarthsShadow * distanceToEarthsShadow) / (this.normalizedLunarDiameter * this.normalizedLunarDiameter), 0.0), 1.0);
+    let lightIntensity = Math.min(Math.max((distanceToEarthsShadow * distanceToEarthsShadow) / (this.normalizedLunarDiameter * this.normalizedLunarDiameter), 0.0), 0.8);
+    this.lightingColor.x = Math.min(Math.max(this.lightingColor.x + (1.0 - this.lightingColor.x) * colorIntensity, 0.0), 1.0);
+    this.lightingColor.y = Math.min(Math.max(this.lightingColor.y + (1.0 - this.lightingColor.y) * colorIntensity, 0.0), 1.0);
+    this.lightingColor.z = Math.min(Math.max(this.lightingColor.z + (1.0 - this.lightingColor.z) * colorIntensity, 0.0), 1.0);
+    this.lightingColor.multiplyScalar(lightIntensity + 0.2);
+    skyShaderMaterial.uniforms['moonLightColor'].value.set(this.lightingColor.x, this.lightingColor.y, this.lightingColor.z);
+    sunShaderMaterial.uniforms['moonLightColor'].value.set(this.lightingColor.x, this.lightingColor.y, this.lightingColor.z);
+    moonShaderMaterial.uniforms['moonLightColor'].value.set(this.lightingColor.x, this.lightingColor.y, this.lightingColor.z);
 
     //update our uv coordinates
     let vertices = p.geometry.vertices;

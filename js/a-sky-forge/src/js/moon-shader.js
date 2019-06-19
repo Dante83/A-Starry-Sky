@@ -25,6 +25,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     betaRMoon: {type: 'v3', value: new THREE.Vector3()},
     moonTangentSpaceSunlight: {type: 'v3', value: new THREE.Vector3()},
     moonXYZPosition: {type: 'v3', value: new THREE.Vector3()},
+    moonLightColor: {type: 'v3', value: new THREE.Vector3()},
     moonTexture: {type: 't', value: null},
     moonNormalMap: {type: 't', value: null},
     bayerMatrix: {type: 't', value: null}
@@ -75,6 +76,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     'uniform vec3 moonTangentSpaceSunlight;',
     'uniform vec3 sunXYZPosition;',
     'uniform vec3 moonXYZPosition;',
+    'uniform vec3 moonLightColor;',
     'uniform float azimuthEarthsShadow;',
     'uniform float altitudeEarthsShadow;',
     'uniform float distanceToEarthsShadow;',
@@ -126,7 +128,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
       'vec3 betaMMoon = betaM * mPhase.y;',
 
       'vec3 LinSunCoefficient = (sunE * (betaRThetaSun + betaMSun)) / (betaRSun + betaM);',
-      'vec3 LinMoonCoefficient = (moonE * (betaRThetaMoon + betaMMoon)) / (betaRMoon + betaM);',
+      'vec3 LinMoonCoefficient = moonLightColor * (moonE * (betaRThetaMoon + betaMMoon)) / (betaRMoon + betaM);',
       'vec3 LinSun = pow(LinSunCoefficient * (1.0 - FexSun), vec3(1.5)) * mix(vec3(1.0),pow(LinSunCoefficient * FexSun, vec3(0.5)), linSunCoefficient2);',
       'vec3 LinMoon = pow(LinMoonCoefficient * (1.0 - FexMoon),vec3(1.5)) * mix(vec3(1.0),pow(LinMoonCoefficient * FexMoon,vec3(0.5)), linMoonCoefficient2);',
 
@@ -176,20 +178,22 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
     'vec3 getLunarEcclipseShadow(float azimuthOfPixel, float altitudeOfPixel){',
       '//Determine the distance from this pixel to the center of the sun.',
       'float haversineDistanceToPixel = haversineDistance(azimuthOfPixel, altitudeOfPixel, azimuthEarthsShadow, altitudeEarthsShadow);',
-      'float pixelToCenterDistanceInMoons = haversineDistanceToPixel / normalizedLunarDiameter;',
-      'float umbraBrightness = 0.2 + 0.8 * (clamp(pixelToCenterDistanceInMoons, 0.0, 1.5) / 1.5);',
-      'float penumbraBrightness = 0.8 + 0.20 * (clamp(pixelToCenterDistanceInMoons, 0.0, 2.25) / 2.25);',
-      'float totalBrightness = clamp(penumbraBrightness*umbraBrightness, 0.0, 1.0);',
+      'float pixelToCenterDistanceInMoonDiameter = haversineDistanceToPixel / normalizedLunarDiameter;',
+      'float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter;',
+      'float pUmbDistSq = umbDistSq / 4.0;',
+      'float umbraBrightness = 0.15 + 0.85 * clamp(umbDistSq, 0.0, 1.0);',
+      'float penumbraBrightness = 0.5 + 0.5 * clamp(pUmbDistSq, 0.0, 1.0);',
+      'float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);',
 
       '//Get color intensity based on distance from penumbra',
-      'vec3 colorOfLunarEcclipse = vec3(1.0, 0.3, 0.0);',
+      'vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);',
       '// float centerToCenterDistanceInMoons = clamp(distanceToEarthsShadow/normalizedLunarDiameter, 0.0, 1.0);',
-      'float colorIntensity = clamp(distanceToEarthsShadow / (1.0 * normalizedLunarDiameter), 0.0, 1.0);',
-      'float colorIntensityFactor2 = clamp(pixelToCenterDistanceInMoons / (0.5 * normalizedLunarDiameter), 0.0, 1.0);',
+      'float colorIntensity = clamp((distanceToEarthsShadow * distanceToEarthsShadow) / (normalizedLunarDiameter * normalizedLunarDiameter), 0.0, 1.0);',
+      '// float colorIntensityFactor2 = clamp(pixelToCenterDistanceInMoonDiameter / (0.5 * normalizedLunarDiameter), 0.0, 1.0);',
       'colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);',
       '//colorOfLunarEcclipse = (1.0 - colorOfLunarEcclipse) * clamp(distanceToEarthsShadow / (1.5 * normalizedLunarDiameter), 0.0, 1.0);',
 
-      'return colorOfLunarEcclipse * totalBrightness;',
+      'return totalBrightness * colorOfLunarEcclipse;',
     '}',
 
     'vec3 getDirectLunarIntensity(vec3 moonTextureColor, vec2 uvCoords, vec3 earthShadow){',
@@ -260,7 +264,6 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
 
       '//Get the inscattered light from the sun or the moon',
       'vec3 outIntensity = applyToneMapping(getDirectInscatteredIntensity(normalizedWorldPosition, FexSun, FexMoon) + L0, L0);',
-      'outIntensity = vec3(0.0);',
 
       '//Apply dithering via the Bayer Matrix',
       '//Thanks to http://www.anisopteragames.com/how-to-fix-color-banding-with-dithering/',

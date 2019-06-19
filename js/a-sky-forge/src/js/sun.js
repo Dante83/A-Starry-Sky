@@ -76,7 +76,6 @@ function Sun(skyDomeRadius, sceneRef, sunTextureDir, textureLoader){
 
     let solarLightBaseIntensitySquared = sunE / 700.0;
     let solarLightBaseIntensity = Math.sqrt(solarLightBaseIntensitySquared);
-    l.color = this.directlightColor;
     l.intensity = solarLightBaseIntensity;
     let ambientColorVec = this.oneVector.clone().sub(this.fexSun);
     this.ambientColor = ambientColorVec;

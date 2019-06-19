@@ -21,6 +21,7 @@ var skyShaderMaterial = new THREE.ShaderMaterial({
     betaRMoon: {type: 'v3', value: new THREE.Vector3()},
     moonTangentSpaceSunlight: {type: 'v3', value: new THREE.Vector3()},
     moonXYZPosition: {type: 'v3', value: new THREE.Vector3()},
+    moonLightColor: {type: 'v3', value: new THREE.Vector3()},
     uTime: {type: 'f', default: 0.005},
     latLong: {type: 'v2', value: new THREE.Vector2()},
     hourAngle: {type: 'f', value: 0.0},

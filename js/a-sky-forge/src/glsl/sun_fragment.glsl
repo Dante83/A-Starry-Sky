@@ -18,6 +18,7 @@ uniform vec3 betaRSun;
 uniform vec3 betaRMoon;
 uniform vec3 sunXYZPosition;
 uniform vec3 moonXYZPosition;
+uniform vec3 moonLightColor;
 uniform float sunE;
 uniform float moonE;
 uniform float linMoonCoefficient2;
@@ -58,7 +59,7 @@ vec3 getDirectInscatteredIntensity(vec3 normalizedWorldPosition, vec3 FexSun, ve
   vec3 betaMMoon = betaM * mPhase.y;
 
   vec3 LinSunCoefficient = (sunE * (betaRThetaSun + betaMSun)) / (betaRSun + betaM);
-  vec3 LinMoonCoefficient = (moonE * (betaRThetaMoon + betaMMoon)) / (betaRMoon + betaM);
+  vec3 LinMoonCoefficient = moonLightColor * (moonE * (betaRThetaMoon + betaMMoon)) / (betaRMoon + betaM);
   vec3 LinSun = pow(LinSunCoefficient * (1.0 - FexSun), vec3(1.5)) * mix(vec3(1.0),pow(LinSunCoefficient * FexSun, vec3(0.5)), linSunCoefficient2);
   vec3 LinMoon = pow(LinMoonCoefficient * (1.0 - FexMoon),vec3(1.5)) * mix(vec3(1.0),pow(LinMoonCoefficient * FexMoon,vec3(0.5)), linMoonCoefficient2);
 
