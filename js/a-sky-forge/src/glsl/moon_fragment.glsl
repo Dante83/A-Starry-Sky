@@ -13,13 +13,17 @@ uniform float moonFade;
 uniform float luminance;
 uniform float mieDirectionalG;
 uniform vec3 betaM;
-uniform vec3 sunXYZPosition;
 uniform vec3 betaRSun;
 uniform vec3 betaRMoon;
 uniform sampler2D moonTexture;
 uniform sampler2D moonNormalMap;
 uniform vec3 moonTangentSpaceSunlight;
+uniform vec3 sunXYZPosition;
 uniform vec3 moonXYZPosition;
+uniform float azimuthEarthsShadow;
+uniform float altitudeEarthsShadow;
+uniform float distanceToEarthsShadow;
+uniform float normalizedLunarDiameter;
 uniform float moonE;
 uniform float sunE;
 uniform float earthshineE;
@@ -31,7 +35,9 @@ uniform sampler2D bayerMatrix;
 //Constants
 const vec3 up = vec3(0.0, 1.0, 0.0);
 const float e = 2.71828182845904523536028747135266249775724709369995957;
+const float pi = 3.141592653589793238462643383279502884197169;
 const float piOver2 = 1.570796326794896619231321691639751442098584699687552910487;
+const float piTimes2 = 6.283185307179586476925286766559005768394338798750211641949;
 const float oneOverFourPi = 0.079577471545947667884441881686257181017229822870228224373;
 const float rayleighPhaseConst = 0.059683103659460750913331411264692885762922367152671168280;
 const float rayleighAtmosphereHeight = 8.4E3;
@@ -73,19 +79,77 @@ vec3 getDirectInscatteredIntensity(vec3 normalizedWorldPosition, vec3 FexSun, ve
   return LinSun + LinMoon;
 }
 
-vec4 getDirectLunarIntensity(vec2 uvCoords){
-  vec4 baseMoonIntensity = texture2D(moonTexture, uvCoords);
+float haversineDistance(float az_0, float alt_0, float az_1, float alt_1){
+  //There is a chance that our compliment (say moon at az_0 at 0 degree and az_2 at 364.99)
+  //Results in an inaccurately large angle, thus we must check the compliment in addition to
+  //our regular diff.
+  float deltaAZ = az_0 - az_1;
+  float compliment = -1.0 * max(piTimes2 - abs(deltaAZ), 0.0) * sign(deltaAZ);
+  deltaAZ = abs(deltaAZ) < abs(compliment) ? deltaAZ : compliment;
+
+  //Luckily we don not need to worry about this compliment stuff here because alt only goes between -pi and pi
+  float deltaAlt = alt_1 - alt_0;
+
+  float sinOfDeltaAzOver2 = sin(deltaAZ / 2.0);
+  float sinOfDeltaAltOver2 = sin(deltaAlt / 2.0);
+
+  //Presuming that most of our angular objects are small, we will simply use
+  //this simple approximation... http://jonisalonen.com/2014/computing-distance-between-coordinates-can-be-simple-and-fast/
+  return 2.0 * asin(sqrt(sinOfDeltaAltOver2 * sinOfDeltaAltOver2 + cos(alt_0) * cos(alt_1) * sinOfDeltaAzOver2 * sinOfDeltaAzOver2));
+}
+
+//From http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+//Via: https://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
+vec3 hsv2rgb(vec3 c)
+{
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+//From https://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
+vec3 rgb2hsv(vec3 c){
+  vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+  vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+  vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+  float d = q.x - min(q.w, q.y);
+  float e = 1.0e-10;
+  return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+vec3 getLunarEcclipseShadow(float azimuthOfPixel, float altitudeOfPixel){
+  //Determine the distance from this pixel to the center of the sun.
+  float haversineDistanceToPixel = haversineDistance(azimuthOfPixel, altitudeOfPixel, azimuthEarthsShadow, altitudeEarthsShadow);
+  float pixelToCenterDistanceInMoons = haversineDistanceToPixel / normalizedLunarDiameter;
+  float umbraBrightness = 0.2 + 0.8 * (clamp(pixelToCenterDistanceInMoons, 0.0, 1.5) / 1.5);
+  float penumbraBrightness = 0.8 + 0.20 * (clamp(pixelToCenterDistanceInMoons, 0.0, 2.25) / 2.25);
+  float totalBrightness = clamp(penumbraBrightness*umbraBrightness, 0.0, 1.0);
+
+  //Get color intensity based on distance from penumbra
+  vec3 colorOfLunarEcclipse = vec3(1.0, 0.3, 0.0);
+  // float centerToCenterDistanceInMoons = clamp(distanceToEarthsShadow/normalizedLunarDiameter, 0.0, 1.0);
+  float colorIntensity = clamp(distanceToEarthsShadow / (1.0 * normalizedLunarDiameter), 0.0, 1.0);
+  float colorIntensityFactor2 = clamp(pixelToCenterDistanceInMoons / (0.5 * normalizedLunarDiameter), 0.0, 1.0);
+  colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);
+  //colorOfLunarEcclipse = (1.0 - colorOfLunarEcclipse) * clamp(distanceToEarthsShadow / (1.5 * normalizedLunarDiameter), 0.0, 1.0);
+
+  return colorOfLunarEcclipse * totalBrightness;
+}
+
+vec3 getDirectLunarIntensity(vec3 moonTextureColor, vec2 uvCoords, vec3 earthShadow){
+  vec3 baseMoonIntensity = moonTextureColor;
 
   //Get the moon shadow using the normal map
   //Thank you, https://beesbuzz.biz/code/hsv_color_transforms.php!
   vec3 moonNormalMapRGB = texture2D(moonNormalMap, uvCoords).rgb;
   vec3 moonNormalMapInverted = vec3(moonNormalMapRGB.r, 1.0 - moonNormalMapRGB.g, moonNormalMapRGB.b);
-  vec3 moonSurfaceNormal = normalize(2.0 * moonNormalMapInverted.rgb - 1.0);
+  vec3 moonSurfaceNormal = normalize(2.0 * moonNormalMapInverted - 1.0);
 
   //The moon is presumed to be a lambert shaded object, as per:
   //https://en.wikibooks.org/wiki/GLSL_Programming/GLUT/Diffuse_Reflection
   float normalLighting = clamp(dot(moonSurfaceNormal, moonTangentSpaceSunlight), 0.0, 1.0);
-  return vec4(clamp(earthshineE * earthshineColor + normalLighting, 0.0, 1.0) * baseMoonIntensity.rgb, baseMoonIntensity.a);
+  return vec3(clamp(earthshineE * earthshineColor + normalLighting * earthShadow, 0.0, 1.0) * baseMoonIntensity);
 }
 
 // Filmic ToneMapping http://filmicgames.com/archives/75
@@ -112,12 +176,15 @@ vec3 applyToneMapping(vec3 outIntensity, vec3 L0){
 
 void main(){
   //Get our lunar texture first in order to discard unwanted pixels
-  vec4 lunarTexture = getDirectLunarIntensity(vUv);
-  if (lunarTexture.a < 0.5){
+  vec4 moonTextureColor = texture2D(moonTexture, vUv);
+  if (moonTextureColor.a < 0.05){
       discard;
   }
 
+  //Get our position in the sky
   vec3 normalizedWorldPosition = normalize(vWorldPosition.xyz);
+  float altitude = piOver2 - acos(normalizedWorldPosition.y);
+  float azimuth = atan(normalizedWorldPosition.z, normalizedWorldPosition.x) + pi;
 
   // Get the current optical length
   // cutoff angle at 90 to avoid singularity in next formula.
@@ -138,15 +205,18 @@ void main(){
 
   //Get the inscattered light from the sun or the moon
   vec3 outIntensity = applyToneMapping(getDirectInscatteredIntensity(normalizedWorldPosition, FexSun, FexMoon) + L0, L0);
+  outIntensity = vec3(0.0);
 
   //Apply dithering via the Bayer Matrix
   //Thanks to http://www.anisopteragames.com/how-to-fix-color-banding-with-dithering/
   outIntensity += vec3(texture2D(bayerMatrix, gl_FragCoord.xy / 8.0).r / 32.0 - (1.0 / 128.0));
 
   //Get direct illumination from the moon
-  vec3 lunarColor = 1.5 * FexMoon * lunarTexture.rgb * moonExposure;
+  vec3 earthShadow = getLunarEcclipseShadow(azimuth, altitude);
+  vec3 lunarDirectLight = getDirectLunarIntensity(moonTextureColor.rgb, vUv, earthShadow);
+  vec3 lunarColor = 1.5 * FexMoon * lunarDirectLight * moonExposure;
   outIntensity = clamp(sqrt(outIntensity * outIntensity + lunarColor * lunarColor), 0.0, 1.0);
 
   //Apply tone mapping to the result
-	gl_FragColor = vec4(outIntensity.rgb, lunarTexture.a);
+	gl_FragColor = vec4(outIntensity, moonTextureColor.a);
 }

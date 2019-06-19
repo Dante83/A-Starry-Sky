@@ -28,6 +28,9 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.geometry = new THREE.PlaneGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
   this.geometry.translate(0.0, -0.0 * diameterOfMoonPlane, 0.0);
 
+  //Set up our lunar diameter once, while we are here
+  moonShaderMaterial.uniforms['normalizedLunarDiameter'].value = Math.sin(angularDiameterOfTheMoon);
+
   //Apply this shader to our plane
   this.plane = new THREE.Mesh(this.geometry, moonShaderMaterial);
   this.plane.matrixAutoUpdate = false;
@@ -56,7 +59,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.ambientColor = new THREE.Vector3();
   this.ambientIntensity;
 
-  this.update = function(moonPosition, sunPosition, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier){
+  this.update = function(moonPosition, sunPosition, moonAz, moonAlt, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier){
     //move and rotate the moon
     let p = this.plane;
     this.position.set(moonPosition.x, moonPosition.y, moonPosition.z).multiplyScalar(this.moonRadiusFromCamera);
@@ -102,6 +105,33 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     moonShaderMaterial.uniforms['earthshineE'].value = earthShine * 1.15;
 
     //Update our data for our lunar ecclipses
+    //Get the opposite location of our sun in the sky
+    let earthShadowCenter = sunPosition.clone().negate();
+
+    //Calculate the haverstine distance between the moon and the earths shadow
+    //Determine the azimuth and altitude of this location
+    let azimuthOfEarthsShadow = Math.atan2(earthShadowCenter.z, earthShadowCenter.x) + Math.PI;
+    let altitudeOfEarthsShadow = (Math.PI * 0.5) - Math.acos(earthShadowCenter.y);
+    moonShaderMaterial.uniforms['azimuthEarthsShadow'].value = azimuthOfEarthsShadow;
+    moonShaderMaterial.uniforms['altitudeEarthsShadow'].value = altitudeOfEarthsShadow;
+
+    //Determine the haversine distance between the moon and this location
+    let modifiedAzMoon = moonAz - Math.PI;
+    let modifiedAzShadow = azimuthOfEarthsShadow - Math.PI;
+    let deltaAZ = modifiedAzMoon-modifiedAzShadow;
+    let compliment = -1.0 * Math.max(2.0 * Math.PI - Math.abs(deltaAZ), 0.0) * Math.sign(deltaAZ);
+    deltaAZ = Math.abs(deltaAZ) < Math.abs(compliment) ? deltaAZ : compliment;
+
+    //Luckily we don not need to worry about this compliment stuff here because alt only goes between -pi and pi
+    let deltaAlt = moonAlt-altitudeOfEarthsShadow;
+
+    let sinOfDeltaAzOver2 = Math.sin(deltaAZ / 2.0);
+    let sinOfDeltaAltOver2 = Math.sin(deltaAlt / 2.0);
+
+    //Presuming that most of our angular objects are small, we will simply use
+    //this simple approximation... http://jonisalonen.com/2014/computing-distance-between-coordinates-can-be-simple-and-fast/
+    haversineDistanceBetweenMoonAndEarthsShadow = 2.0 * Math.asin(Math.sqrt(sinOfDeltaAltOver2 * sinOfDeltaAltOver2 + Math.cos(moonAlt) * Math.cos(altitudeOfEarthsShadow) * sinOfDeltaAzOver2 * sinOfDeltaAzOver2));
+    moonShaderMaterial.uniforms['distanceToEarthsShadow'].value = haversineDistanceBetweenMoonAndEarthsShadow;
 
     //update our uv coordinates
     let vertices = p.geometry.vertices;

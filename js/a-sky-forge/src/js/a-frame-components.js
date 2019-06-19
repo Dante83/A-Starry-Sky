@@ -246,10 +246,10 @@ AFRAME.registerComponent('sky-time', {
       let solarEcclipseModifier = 1.0;
       //Get the haversine distance between the sun and moon
       //https://gist.github.com/rochacbruno/2883505
-      let sunAz = interpolatedValues.sunAzimuth;
-      let sunAlt = interpolatedValues.sunAltitude;
-      let moonAz = interpolatedValues.moonAzimuth;
-      let moonAlt = interpolatedValues.moonAltitude;
+      let sunAz = Math.atan2(sXYZ.z, sXYZ.x) + Math.PI;
+      let sunAlt = (Math.PI * 0.5) - Math.acos(sXYZ.y);
+      let moonAz = Math.atan2(mXYZ.z, mXYZ.x) + Math.PI;
+      let moonAlt = (Math.PI * 0.5) - Math.acos(mXYZ.y);
       let modifiedSunAz = sunAz - Math.PI;
       let modifiedMoonAz = moonAz - Math.PI;
       let dlat = modifiedMoonAz-modifiedSunAz;
@@ -341,7 +341,7 @@ AFRAME.registerComponent('sky-time', {
 
       this.sun.update(sXYZ, betaRSun, betaM, sunE, sunFade);
       lunarIntensityModifier = Math.exp(exposureCoeficient * 0.1);
-      this.moon.update(mXYZ, sXYZ, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier);
+      this.moon.update(mXYZ, sXYZ, moonAz, moonAlt, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier);
 
       let combinedColorBase = this.sun.ambientColor.clone().multiply(this.sun.ambientColor).add(this.moon.ambientColor.clone().multiply(this.moon.ambientColor));
       combinedColorBase.x = Math.sqrt(combinedColorBase.x);
