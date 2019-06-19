@@ -14,25 +14,24 @@ public:
 
   //Constructors
   LAVectorD3();
-  explicit LAVectorD3(double x, double y, double z);
+  explicit LAVectorD3(double x_in, double y_in, double z_in);
   LAVectorD3(const LAVectorD3& vector);
 
   //Operators
-  double operator [](int i);
-  void operator =(const LAVectorD3& v);
+  const LAVectorD3& operator =(const LAVectorD3& v);
 
-  void operator +=(double a);
-  void operator +=(const LAVectorD3& v);
+  const LAVectorD3& operator +=(double a);
+  const LAVectorD3& operator +=(const LAVectorD3& v);
 
-  void operator -=(double a);
-  void operator -=(const LAVectorD3& v);
+  const LAVectorD3& operator -=(double a);
+  const LAVectorD3& operator -=(const LAVectorD3& v);
 
-  void operator *=(double a);
-  void operator *=(const LAVectorD3& v);
+  const LAVectorD3& operator *=(double a);
+  const LAVectorD3& operator *=(const LAVectorD3& v);
 
   //Methods
   double dot(const LAVectorD3& a);
-  void normalize();
+  const LAVectorD3& normalize();
 };
 
 LAVectorD3 operator +(const LAVectorD3& a, double b);

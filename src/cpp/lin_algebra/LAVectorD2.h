@@ -17,20 +17,20 @@ public:
   LAVectorD2(const LAVectorD2& vector);
 
   //Operators
-  void operator =(const LAVectorD2& v);
+  const LAVectorD2&  operator =(const LAVectorD2& v);
 
-  void operator +=(double a);
-  void operator +=(const LAVectorD2& v);
+  const LAVectorD2&  operator +=(double a);
+  const LAVectorD2&  operator +=(const LAVectorD2& v);
 
-  void operator -=(double a);
-  void operator -=(const LAVectorD2& v);
+  const LAVectorD2&  operator -=(double a);
+  const LAVectorD2&  operator -=(const LAVectorD2& v);
 
-  void operator *=(double a);
-  void operator *=(const LAVectorD2& v);
+  const LAVectorD2&  operator *=(double a);
+  const LAVectorD2&  operator *=(const LAVectorD2& v);
 
   //Methods
   double dot(const LAVectorD2& v);
-  void normalize();
+  const LAVectorD2&  normalize();
 };
 
 LAVectorD2 operator +(const LAVectorD2& a, double b);

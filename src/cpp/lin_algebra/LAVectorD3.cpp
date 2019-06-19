@@ -7,9 +7,9 @@ using namespace std;
 //
 //Constructors
 LAVectorD3::LAVectorD3(){
-  x = 0;
-  y = 0;
-  z = 0;
+  x = 0.0;
+  y = 0.0;
+  z = 0.0;
 }
 
 LAVectorD3::LAVectorD3(double x_in, double y_in, double z_in){
@@ -25,53 +25,69 @@ LAVectorD3::LAVectorD3(const LAVectorD3& vector){
 }
 
 //Instance Operators
-void LAVectorD3::operator =(const LAVectorD3& v){
+const LAVectorD3& LAVectorD3::operator =(const LAVectorD3& v){
   x = v.x;
   y = v.y;
   z = v.z;
+
+  return *this;
 }
 
-void LAVectorD3::operator +=(double a){
+const LAVectorD3& LAVectorD3::operator +=(double a){
   x += a;
   y += a;
   z += a;
+
+  return *this;
 }
 
-void LAVectorD3::operator +=(const LAVectorD3& v){
+const LAVectorD3& LAVectorD3::operator +=(const LAVectorD3& v){
   x += v.x;
   y += v.y;
   z += v.z;
+
+  return *this
 }
 
-void LAVectorD3::operator -=(double a){
+const LAVectorD3& LAVectorD3::operator -=(double a){
   x -= a;
   y -= a;
   z -= a;
+
+  return *this;
 }
 
-void LAVectorD3::operator -=(const LAVectorD3& v){
+const LAVectorD3& LAVectorD3::operator -=(const LAVectorD3& v){
   x -= v.x;
   y -= v.y;
   z -= v.z;
+
+  return *this
 }
 
-void LAVectorD3::operator *=(double a){
+const LAVectorD3& LAVectorD3::operator *=(double a){
   x *= a;
   y *= a;
   z *= a;
+
+  return *this;
 }
 
-void LAVectorD3::operator*=(const LAVectorD3& v){
+LAVectorD3& LAVectorD3::operator*=(const LAVectorD3& v){
   x *= v.x;
   y *= v.y;
   z *= v.z;
+
+  return *this;
 }
 
-void LAVectorD3::normalize(){
+const LAVectorD3& LAVectorD3::normalize(){
   double normalizationConstant = 1.0 / sqrt(x * x + y * y + z * z);
   x *= normalizationConstant;
   y *= normalizationConstant;
   z *= normalizationConstant;
+
+  return *this;
 }
 
 double LAVectorD3::dot(const LAVectorD3& v){

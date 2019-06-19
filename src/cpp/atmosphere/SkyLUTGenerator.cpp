@@ -20,12 +20,12 @@ void SkyLUTGenerator::constructLUTs(){
   scatteringStridedLUTPrt = new int[393216]; //32 x 128 x 32 x 3
 
   //General constants
-  LAVectorD3 rayleighBeta = LAVectorD3(EARTH_RAYLEIGH_RED_BETA, EARTH_RAYLEIGH_GREEN_BETA, EARTH_RAYLEIGH_BLUE_BETA);
-  LAVectorD3 betaRayleighOver4PI = LAVectorD3(EARTH_RAYLEIGH_RED_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_GREEN_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_BLUE_BETA_OVER_FOUR_PI);
+  LAVectorD3 rayleighBeta(EARTH_RAYLEIGH_RED_BETA, EARTH_RAYLEIGH_GREEN_BETA, EARTH_RAYLEIGH_BLUE_BETA);
+  LAVectorD3 betaRayleighOver4PI(EARTH_RAYLEIGH_RED_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_GREEN_BETA_OVER_FOUR_PI, EARTH_RAYLEIGH_BLUE_BETA_OVER_FOUR_PI);
 
   //As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
   double moleculesPerMeterCubedAtSeaLevel = pow(2.545, 25);
-  LAVectorD3 ozoneBeta = LAVectorD3(pow(2.0, -25), pow(2.0, -25), pow(7.0, -27));
+  LAVectorD3 ozoneBeta(pow(2.0, -25), pow(2.0, -25), pow(7.0, -27));
   ozoneBeta *= moleculesPerMeterCubedAtSeaLevel;
 
   //Convert our pixel data to local coordinates
@@ -96,7 +96,7 @@ void SkyLUTGenerator::constructLUTs(){
       double integralOfMieDensityFunction = 0.0;
       double integralOfOzoneDensityFunction;
       int numberOfSteps = numPointsBetweenPaAndPb[x][y];
-      LAVectorD2 deltaP = LAVectorD2(pa2PbVects[x][y] / static_cast<double>(numberOfSteps - 1));
+      LAVectorD2 deltaP = pa2PbVects[x][y] / static_cast<double>(numberOfSteps - 1);
       //h_0 is just the starting height for for our view camera
       double previousRayleighValue = firstRayleighValue;
       double previousMieValue = firstMieValue;
@@ -107,17 +107,17 @@ void SkyLUTGenerator::constructLUTs(){
       //point from our result and is only valid for values after one delta P.
       //therefore, we must pad the beginning of our result with a first value of zero.
       //as the area under a zero width element. This results in a transmittance of 1.0
-      LAVectorD3 transmittance = LAVectorD3(1.0, 1.0, 1.0);
+      LAVectorD3 transmittance(1.0, 1.0, 1.0);
 
       //For our future caching of transmittance times mie or rayleigh density
       LAVectorD3 transmittanceTimesMieDensity = transmittance * exp(-h_0 * ONE_OVER_MIE_SCALE_HEIGHT);
       LAVectorD3 transmittanceTimesRayleighDensity = transmittance * exp(-h_0 * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
 
       //Store our results for future use
-      transmittanceFromPaToP[x][y].push_back(transmittance);
-      transmittanceFromPaToPTimesMieDensity[x][y].push_back(transmittanceTimesMieDensity);
-      transmittanceFromPaToPTimesRayleighDensity[x][y].push_back(transmittanceTimesRayleighDensity);
-      pVectors[x][y].push_back(p);
+      transmittanceFromPaToP[x][y].push_back(new LAVectorD3(transmittance));
+      transmittanceFromPaToPTimesMieDensity[x][y].push_back(new LAVectorD3(transmittanceTimesMieDensity));
+      transmittanceFromPaToPTimesRayleighDensity[x][y].push_back(new LAVectorD3(transmittanceTimesRayleighDensity));
+      pVectors[x][y].push_back(new LAVectorD2(p));
 
       //Now that our loop is primed, commence the primary loop from Pa to Pb
       //Note that we got to number of steps plus 1 to take care of the N-1 outcome
@@ -147,9 +147,9 @@ void SkyLUTGenerator::constructLUTs(){
         LAVectorD3 transmittanceTimesRayleighDensity = transmittance * exp(-h_f * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
 
         //Store our results for future use
-        transmittanceFromPaToPTimesMieDensity[x][y].push_back(transmittanceTimesMieDensity);
-        transmittanceFromPaToPTimesRayleighDensity[x][y].push_back(transmittanceTimesRayleighDensity);
-        pVectors[x][y].push_back(p);
+        transmittanceFromPaToPTimesMieDensity[x][y].push_back(new LAVectorD3(transmittanceTimesMieDensity));
+        transmittanceFromPaToPTimesRayleighDensity[x][y].push_back(new LAVectorD3(transmittanceTimesRayleighDensity));
+        pVectors[x][y].push_back(new LAVectorD2(p));
 
         h_0 = h_f;
       }
@@ -268,11 +268,11 @@ void SkyLUTGenerator::constructLUTs(){
         }
         LAVectorD3 inscatteringMie = EARTH_MIE_BETA_OVER_FOUR_PI * integrandOfMieElements;
         LAVectorD3 inscatteringRayleigh = betaRayleighOver4PI * integrandOfRayleighElements;
-        inscatteringIntensityMie0[x][y][z] = inscatteringMie;
-        inscatteringIntensityRayleigh0[x][y][z] = inscatteringRayleigh;
+        inscatteringIntensityMie0[x][y][z] = new LAVectorD3(inscatteringMie);
+        inscatteringIntensityRayleigh0[x][y][z] = new LAVectorD3(inscatteringRayleigh);
 
-        inscatteringIntensityMieKMinusOne[x][y][z] = inscatteringMie;
-        inscatteringIntensityRayleighKMinusOne[x][y][z] = inscatteringRayleigh;
+        inscatteringIntensityMieKMinusOne[x][y][z] = new LAVectorD3(inscatteringMie);
+        inscatteringIntensityRayleighKMinusOne[x][y][z] = new LAVectorD3(inscatteringRayleigh);
         sumInscatteringIntensityMie[x][y][z] += inscatteringMie;
         sumInscatteringIntensityRayleigh[x][y][z] += inscatteringRayleigh;
       }
@@ -315,8 +315,8 @@ void SkyLUTGenerator::constructLUTs(){
         LAVectorD3 intensityRayleigh = inscatteringIntensityRayleighKMinusOne[x][y][z];
         LAVectorD3 zerothGatheredMieScattering = miePhase * intensityMie;
         LAVectorD3 zerothGatheredRayleighScattering = RAYLEIGH_PHASE_AT_ZERO_DEGREES * intensityRayleigh;
-        LAVectorD3 gatheredMieScattering = LAVectorD3();
-        LAVectorD3 gatheredRayleighScattering = LAVectorD3();
+        LAVectorD3 gatheredMieScattering;
+        LAVectorD3 gatheredRayleighScattering;
         int numRotStepsMinusOne = numRotSteps - 1;
         for(int i = 1; i < numRotStepsMinusOne; ++i){
           double theta = i * deltaTheta;
@@ -343,7 +343,7 @@ void SkyLUTGenerator::constructLUTs(){
         gatheredRayleighScattering = deltaTheta * (gatheredRayleighScattering + zerothGatheredRayleighScattering);
 
         //Combine the two scatterings together to get our gathering LUT
-        gatheredScattering[x][z] = LAVectorD3(gatheredMieScattering + gatheredRayleighScattering);
+        gatheredScattering[x][z] = gatheredMieScattering + gatheredRayleighScattering;
 
         //Add these to our gathering SUM LUT
         gatheringSum[x][z] += gatheredScattering[x][z];
@@ -374,8 +374,8 @@ void SkyLUTGenerator::constructLUTs(){
           //every time.
           LAVectorD3 previousMieElement = gatheredScattering[x][z] * transmittanceFromPaToPTimesMieDensity[x][y][0];
           LAVectorD3 previousRayleighElement = gatheredScattering[x][z] * transmittanceFromPaToPTimesRayleighDensity[x][y][0];
-          LAVectorD3 nextMieElement = LAVectorD3();
-          LAVectorD3 nextRayleighElement = LAVectorD3();
+          LAVectorD3 nextMieElement;
+          LAVectorD3 nextRayleighElement;
           double previousAltitude = height;
           LAVectorD3 integrandOfMieElements;
           LAVectorD3 integrandOfRayleighElements;
