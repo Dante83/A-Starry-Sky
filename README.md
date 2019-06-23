@@ -1,12 +1,16 @@
 # A Sky Forge
 
-A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It builds upon on the work of [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to provide a vibrant living sky for your metaverse. Click [here](http://code-panda.com/pages/projects/v0_3_0/a_sky_forge_example) to see this project in action (**Warning: Not designed for mobile environments.**).
+A-Sky-Forge is a sky dome for [A-Frame Web Framework](https://aframe.io/). It builds upon on the work of [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to provide a vibrant living sky for your metaverse. Click [here](http://code-panda.com/pages/projects/v_0_3_0/a_sky_forge_example) to see this project in action (**Warning: Still not suitable for mobile environments.**).
+
+[Solar Eclipse Example](http://code-panda.com/pages/projects/v_0_3_0/a_sky_forge_solar_eclipse_example)
+
+[Lunar Eclipse Example](http://code-panda.com/pages/projects/v_0_3_0/a_sky_forge_lunar_eclipse_example)
 
 ## Prerequisites
 
 This is built for the [A-Frame Web Framework](https://aframe.io/).
 
-`https://aframe.io/releases/0.8.0/aframe.min.js`
+`https://aframe.io/releases/0.9.0/aframe.min.js`
 
 ## Installing
 
@@ -18,13 +22,6 @@ On your webpage make sure that the script link to ask forge goes below aframe, l
 ```html
 <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
 <script src="../js/a-sky-forge/dist/askyforge.v0.3.0.min.js"></script>
-```
-
-For **version 0.8.0** [See issue here](https://github.com/aframevr/aframe/issues/3428):
-```html
-<a-scene>
-  <a-sky-forge></a-sky-forge>
-</a-scene>
 ```
 
 **!Important:** In version 0.3.0 and above, you should no longer include the  ```material="shader: sky;"``` attribute as all of our shaders have been internalized.
