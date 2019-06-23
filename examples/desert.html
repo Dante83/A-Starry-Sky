@@ -11,7 +11,7 @@
 
     <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
     <!--This commented out code is the unfurled stack which I use for debugging-->
-    <script src="../js/a-sky-forge/src/js/cloner.js"></script>
+    <!-- <script src="../js/a-sky-forge/src/js/cloner.js"></script>
     <script src="../js/a-sky-forge/src/js/sky-shader.js"></script>
     <script src="../js/a-sky-forge/src/js/moon-shader.js"></script>
     <script src="../js/a-sky-forge/src/js/moon.js"></script>
@@ -20,28 +20,27 @@
     <script src="../js/a-sky-forge/src/js/a-sky-forge.js"></script>
     <script src="../js/a-sky-forge/src/js/a-dynamic-sky-entity-methods.js"></script>
     <script src="../js/a-sky-forge/src/js/a-frame-components.js"></script>
-    <script src="../js/a-sky-forge/src/js/a-sky-interpolator.js"></script>
-    <script src="js-libraries/a-mountain.js"></script>
-    <!-- <script src="../js/a-sky-forge/dist/askyforge.v0.2.1.min.js"></script> -->
+    <script src="../js/a-sky-forge/src/js/a-sky-interpolator.js"></script> -->
+    <script src="../js/a-sky-forge/dist/askyforge.v0.3.0.min.js"></script>
 
   <!--Scene Scripts-->
   </head>
   <body>
     <a-scene light="defaultLightsEnabled: false">
       <a-assets>
-        <a-asset-item id="low-poly-desert" src="3d-models/low-poly-desert-6.glb" ></a-asset-item>
+        <a-asset-item id="low-poly-desert" src="3d-models/low-poly-desert.glb" ></a-asset-item>
       </a-assets>
 
       <a-entity camera look-controls wasd-controls="acceleration: 300"></a-entity>
 
       <!-- Example of Solar Ecclipse -->
-      <!-- <a-sky-forge sky-time="timeMultiplier: 400; utcOffset: +7; dayOfTheYear: 99; year: 2024; timeOffset: 20940;" geo-coordinates="lat: 30.05; long: -99.18;"></a-sky-forge> -->
+      <!-- <a-sky-forge sky-time="timeMultiplier: 200; utcOffset: +7; dayOfTheYear: 99; year: 2024; timeOffset: 20940;" geo-coordinates="lat: 30.05; long: -99.18;"></a-sky-forge> -->
 
       <!-- Example of Lunar Ecclipse-->
-      <!-- <a-sky-forge sky-time="timeMultiplier: 400; utcOffset: +13; dayOfTheYear: 30; year: 2018; timeOffset: 70000;" geo-coordinates="lat: -40.9; long: 174.9;"></a-sky-forge> -->
+      <!-- <a-sky-forge sky-time="timeMultiplier: 200; utcOffset: +13; dayOfTheYear: 30; year: 2018; timeOffset: 70000;" geo-coordinates="lat: -40.9; long: 174.9;"></a-sky-forge> -->
 
       <!--Normal -->
-      <a-sky-forge sky-time="timeMultiplier: 800; utcOffset: -8.0;" geo-coordinates="lat: 37; long: -122;"></a-sky-forge>
+      <a-sky-forge sky-time="timeMultiplier:  200.0; utcOffset: +7;"></a-sky-forge>
       <a-entity gltf-model="#low-poly-desert" position="0 0 0"></a-entity>
 
     </a-scene>

@@ -69,22 +69,20 @@ def scoreStar(ra_0, dec_0, ra_1, dec_1, magnitudeOfStar):
     #https://gist.github.com/rochacbruno/2883505
     lat1 = dec_0
     lat2 = dec_1
-    lon1 = ra_0 - np.pi
-    lon2 = ra_1 - np.pi
+    lng1 = ra_0 - np.pi
+    lng2 = ra_1 - np.pi
 
-    dlat = math.radians(lat2-lat1)
-    dlon = math.radians(lon2-lon1)
-    a = math.sin(dlat/2.0) * math.sin(dlat/2.0) + math.cos(math.radians(lat1)) \
-        * math.cos(math.radians(lat2)) * math.sin(dlon/2.0) * math.sin(dlon/2.0)
-    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0-a))
-    c = math.sqrt(c) * 15.0
+    lat = lat2 - lat1
+    lng = lng2 - lng1
+    d = math.sin(lat * 0.5) ** 2.0 + math.cos(lat1) * math.cos(lat2) * math.sin(lng * 0.5) ** 2.0
+    haversine_distance = 2.0 * 1.0 * math.asin(math.sqrt(d))
 
     #Normalized Magnitude
-    normalizedMagnitude = (1.0 - (magnitudeOfStar + 1.46) / 7.96);
+    #normalizedMagnitude = (1.0 - (magnitudeOfStar + 1.46) / 7.96);
 
-    return c - normalizedMagnitude
+    return haversine_distance
 
-def indexPixels(y, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list):
+def indexPixels(y, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list):
     print 'Y Number: ' + str(y) + ' of ' + str(indexing_img_height)
 
     #Connect our indexing arrays to our data_arrays
@@ -96,14 +94,29 @@ def indexPixels(y, indexing_img_width, indexing_img_height, first_4096_stars, id
         ra = (float(x) / float(indexing_img_width)) * 2.0 * np.pi
 
         #Get the four most important stars for this pixel
-        scores = [4000.0, 3000.0, 2000.0, 1000.0]
-        top_ranked_stars = [None] * 4
-        for star in first_4096_stars:
+        closest_star_scores = [1000.0] * 6
+        closest_stars = [None] * 6
+        for star in first_8192_stars:
             score = scoreStar(ra, dec, star['ra'], star['dec'], star['mag'])
-            for i, previous_score in enumerate(scores):
+            for i, previous_score in enumerate(closest_star_scores):
                 if score < previous_score:
-                    scores[i] = score
-                    top_ranked_stars[i] = star
+                    closest_star_scores = closest_star_scores[:i] + [score] + closest_star_scores[i:]
+                    closest_star_scores.pop()
+                    closest_stars = closest_stars[:i] + [star] + closest_stars[i:]
+                    closest_stars.pop()
+                    break
+        #After ranking the stars by distance
+        #rank them by brightness and take the top four
+        scores = [0.0 for i in xrange(4)]
+        top_ranked_stars = [closest_stars[i] for i in xrange(4)]
+        for i, star in enumerate(closest_stars):
+            score = ((1.0 - (star['mag'] + 1.46) / 7.96) / 15.0) / (closest_star_scores[i] * closest_star_scores[i]);
+            for j, previous_score in enumerate(scores):
+                if score > previous_score:
+                    scores = scores[:j] + [score] + scores[j:]
+                    scores.pop()
+                    top_ranked_stars = top_ranked_stars[:j] + [star] + top_ranked_stars[j:]
+                    top_ranked_stars.pop()
                     break
 
         #Find the x, y locations for each of these stars in our data_array
@@ -114,15 +127,15 @@ def indexPixels(y, indexing_img_width, indexing_img_height, first_4096_stars, id
         #But the image is a scale of 0 to 255
         #and the map is on a scale of 0 to 127
         #So to get the right number, we must double our values
-        indexing_row[x] = [xy_locs[0]['x'] * 2.0, xy_locs[0]['y'] * 2.0, xy_locs[1]['x'] * 2, xy_locs[1]['y'] * 2.0]
-        indexing_row[x] += [xy_locs[2]['x'] * 2.0, xy_locs[2]['y'] * 2.0, xy_locs[3]['x'], xy_locs[3]['y'] * 2.0]
+        indexing_row[x] = [xy_locs[0]['x'], xy_locs[0]['y'] * 2.0, xy_locs[1]['x'], xy_locs[1]['y'] * 2.0]
+        indexing_row[x] += [xy_locs[2]['x'], xy_locs[2]['y'] * 2.0, xy_locs[3]['x'], xy_locs[3]['y'] * 2.0]
     return indexing_row
 
 def initialization():
-    data_img_width = 128
+    data_img_width = 256
     data_img_height = 128
-    indexing_img_width = 512
-    indexing_img_height = 512
+    indexing_img_width = 2048
+    indexing_img_height = 2048
 
     #Get all our stars again from that CSV File
     star_data = []
@@ -163,8 +176,8 @@ def initialization():
             'b': star['color']['blue']\
         }
         tagged_stars += [tagged_star]
-    #Get the first 64x64 or 4096 stars
-    first_4096_stars = tagged_stars[:4096]
+    #Get the first 64x64 or 8192 stars
+    first_8192_stars = tagged_stars[:8192]
 
     #Prepare our matrix!
     #Our first index is oddly our y coordinate and the second is the x for Image.fromarray
@@ -173,13 +186,13 @@ def initialization():
     i = 0
 
     id_to_xy_list = {}
-    for x in xrange(64):
+    for x in xrange(128):
         for y in xrange(64):
-            starData = first_4096_stars[i]
+            starData = first_8192_stars[i]
             data_array[y][x] = float2RGBA(starData['ra'])
-            data_array[y][x + 64] = float2RGBA(starData['dec'])
+            data_array[y][x + 128] = float2RGBA(starData['dec'])
             data_array[y + 64][x] = float2RGBA(starData['mag'])
-            data_array[y + 64][x + 64] = [math.floor(starData['r'] * 256.0), math.floor(starData['g'] * 256.0), math.floor(starData['b'] * 256.0), 255.0]
+            data_array[y + 64][x + 128] = [math.floor(starData['r'] * 256.0), math.floor(starData['g'] * 256.0), math.floor(starData['b'] * 256.0), 255.0]
             id_to_xy_list[starData['id']] = {'x': x, 'y': y}
             i += 1
     imarray = np.asarray(data_array)
@@ -195,18 +208,18 @@ def initialization():
     indexing_array_collapsed = []
     for i in xrange(half_img_height / 8):
         y = i * 8
-        r1 = pool.apply_async(indexPixels, args=(y, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
-        r2 = pool.apply_async(indexPixels, args=(y + 1, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
-        r3 = pool.apply_async(indexPixels, args=(y + 2, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
-        r4 = pool.apply_async(indexPixels, args=(y + 3, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        r1 = pool.apply_async(indexPixels, args=(y, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list))
+        r2 = pool.apply_async(indexPixels, args=(y + 1, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list))
+        r3 = pool.apply_async(indexPixels, args=(y + 2, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list))
+        r4 = pool.apply_async(indexPixels, args=(y + 3, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list))
 
-        r5 = pool.apply_async(indexPixels, args=(y + 4, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
-        r6 = pool.apply_async(indexPixels, args=(y + 5, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
-        r7 = pool.apply_async(indexPixels, args=(y + 6, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
-        r8 = pool.apply_async(indexPixels, args=(y + 7, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list))
+        r5 = pool.apply_async(indexPixels, args=(y + 4, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list))
+        r6 = pool.apply_async(indexPixels, args=(y + 5, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list))
+        r7 = pool.apply_async(indexPixels, args=(y + 6, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list))
+        r8 = pool.apply_async(indexPixels, args=(y + 7, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list))
         indexing_array_collapsed += [r1.get(), r2.get(), r3.get(), r4.get()]
         indexing_array_collapsed += [r5.get(), r6.get(), r7.get(), r8.get()]
-    #indexing_array_collapsed = [pool.apply_async(indexPixels, args=(y, indexing_img_width, indexing_img_height, first_4096_stars, id_to_xy_list)) for y in xrange(half_img_height)]
+    #indexing_array_collapsed = [pool.apply_async(indexPixels, args=(y, indexing_img_width, indexing_img_height, first_8192_stars, id_to_xy_list)) for y in xrange(half_img_height)]
 
     #Close our threads when done
 

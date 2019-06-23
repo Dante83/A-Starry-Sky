@@ -11,8 +11,17 @@ def main():
 
     #Directy and ordered list of files to load
     js_dir = '../js/'
-    js_fil_names = ['cloner.js', 'sky-shader.js', 'a-sky-forge.js', 'a-dynamic-sky-entity-methods.js',\
-    'a-frame-components.js', 'a-sky-interpolator.js']
+    js_fil_names = [\
+    'a-dynamic-sky-entity-methods.js',\
+    'a-frame-components.js',\
+    'a-sky-forge.js',\
+    'a-sky-interpolator.js',\
+    'cloner.js',\
+    'moon-shader.js',\
+    'moon.js',\
+    'sky-shader.js',\
+    'sun-shader.js',\
+    'sun.js']
 
     #Grab the strings for each of these files, and pull out any branches of code related to if(typeof exports !== 'undefined') {..}
     code_blocks = []

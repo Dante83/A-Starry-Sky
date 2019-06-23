@@ -311,8 +311,8 @@ AFRAME.registerComponent('sky-time', {
       skyShaderMaterial.uniforms['sunE'].value = sunE;
       //These are used to fade our objects out a bit during the day as our eyes are contracted due to higher light levels
       //The numbers are basically ad hoc to make them feel 'about right'
-      //sunFade * sunE + moonFade * moonE
-      let exposureCoeficient = -(sunFade * sunE + moonFade * moonE);
+      let sunFadeTimesSunE = sunFade * sunE;
+      let exposureCoeficient = -(sunFadeTimesSunE + moonFade * moonE);
       moonShaderMaterial.uniforms['moonExposure'].value =  Math.exp(exposureCoeficient * 0.0025);
       skyShaderMaterial.uniforms['starsExposure'].value =  Math.exp(exposureCoeficient * 0.05);
       let linMoonCoefficient2 = Math.min(Math.max(Math.pow(1.0-dotOfMoonDirectionAndUp,5.0),0.0),1.0);
@@ -341,7 +341,7 @@ AFRAME.registerComponent('sky-time', {
 
       this.sun.update(sXYZ, betaRSun, betaM, sunE, sunFade);
       lunarIntensityModifier = Math.exp(exposureCoeficient * 0.1);
-      this.moon.update(mXYZ, sXYZ, moonAz, moonAlt, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier);
+      this.moon.update(mXYZ, sXYZ, moonAz, moonAlt, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier, sunFadeTimesSunE);
 
       let combinedColorBase = this.sun.ambientColor.clone().multiply(this.sun.ambientColor).add(this.moon.ambientColor.clone().multiply(this.moon.ambientColor));
       combinedColorBase.x = Math.sqrt(combinedColorBase.x);

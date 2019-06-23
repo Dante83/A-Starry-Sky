@@ -61,7 +61,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.ambientColor = new THREE.Vector3();
   this.ambientIntensity;
 
-  this.update = function(moonPosition, sunPosition, moonAz, moonAlt, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier){
+  this.update = function(moonPosition, sunPosition, moonAz, moonAlt, betaRMoon, betaM, moonE, moonFade, lunarIntensityModifier, sunFadeTimesSunE){
     //move and rotate the moon
     let p = this.plane;
     this.position.set(moonPosition.x, moonPosition.y, moonPosition.z).multiplyScalar(this.moonRadiusFromCamera);
@@ -89,7 +89,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
     );
     l.color.setRGB(this.fexMoon.x, this.fexMoon.y, this.fexMoon.z);
 
-    let lunarLightBaseIntensitySquared = moonE / 700.0;
+    let lunarLightBaseIntensitySquared = moonE / (40.0 + Math.sqrt(sunFadeTimesSunE) * 0.001);
     let lunarLightBaseIntensity = Math.sqrt(lunarLightBaseIntensitySquared) * lunarIntensityModifier;
     l.intensity = lunarLightBaseIntensity;
     let ambientColorVec = this.oneVector.clone().sub(this.fexMoon);
