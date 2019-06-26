@@ -10,7 +10,7 @@ function Sun(skyDomeRadius, sceneRef, sunTextureDir, textureLoader){
 
   this.xyzPosition;
   this.sceneRef = sceneRef;
-  this.sunRadiusFromCamera = 0.8 * skyDomeRadius;
+  this.sunRadiusFromCamera = skyDomeRadius;
 
   //Create a three JS plane for our sun to live on in a hidden view
   let angularDiameterOfTheSun = 0.059;

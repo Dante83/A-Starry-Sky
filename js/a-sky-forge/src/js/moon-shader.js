@@ -50,6 +50,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
       'vWorldPosition = worldPosition.xyz;',
       'vUv = uv;',
       'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      'gl_Position.z -= 2.0;',
     '}',
   ].join('\n'),
 

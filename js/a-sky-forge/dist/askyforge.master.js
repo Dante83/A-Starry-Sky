@@ -1508,6 +1508,7 @@ var moonShaderMaterial = new THREE.ShaderMaterial({
       'vWorldPosition = worldPosition.xyz;',
       'vUv = uv;',
       'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      'gl_Position.z -= 2.0;',
     '}',
   ].join('\n'),
 
@@ -1761,7 +1762,7 @@ function Moon(moonTextureDir, moonNormalMapDir, skyDomeRadius, sceneRef, texture
   this.xyzPosition;
   this.moonTangentSpaceSunlight;
   this.sceneRef = sceneRef;
-  this.moonRadiusFromCamera = 0.68 * skyDomeRadius;
+  this.moonRadiusFromCamera = skyDomeRadius;
 
   //Create a three JS plane for our moon to live on in a hidden view
   this.angularRadiusOfTheMoon = angularDiameterOfTheMoon;
@@ -2431,6 +2432,7 @@ var sunShaderMaterial = new THREE.ShaderMaterial({
       'betaRPixel = simplifiedRayleigh * (rayleigh - (1.0 - pixelFade));',
 
       'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      'gl_Position.z -= 1.0;',
     '}',
   ].join('\n'),
 
@@ -2589,7 +2591,7 @@ function Sun(skyDomeRadius, sceneRef, sunTextureDir, textureLoader){
 
   this.xyzPosition;
   this.sceneRef = sceneRef;
-  this.sunRadiusFromCamera = 0.8 * skyDomeRadius;
+  this.sunRadiusFromCamera = skyDomeRadius;
 
   //Create a three JS plane for our sun to live on in a hidden view
   let angularDiameterOfTheSun = 0.059;
