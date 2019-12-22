@@ -1,0 +1,22 @@
+//This helps
+//--------------------------v
+//https://github.com/mrdoob/three.js/wiki/Uniforms-types
+//Currently has no uniforms, but might get them in the future
+var waveComposerShaderMaterial = {
+  uniforms: {},
+  fragmentShader: function(numberOfSteps){
+    let originalGLSL = [
+      {fragment_glsl}
+    ];
+
+    let updatedLines = [];
+    let numberOfStepsMinusOne = numberOfSteps - 1;
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i].replace(/\$numberOfSteps;/g, numberOfSteps);
+      updatedGLSL = updatedGLSL.replace(/\$numberOfStepsMinusOne;/g, numberOfStepsMinusOne);
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  }
+};

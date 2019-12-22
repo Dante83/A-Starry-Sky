@@ -39,8 +39,7 @@ updateSide = function(side){
 
 let attemptInitializiation = function(){
   if(wasmIsReady && skyStateIsReady){
-    console.log("Initializing sky");
-    let x = performance.now();
+    //Fire up the sky
     let julianDay = Module._initializeStarrySky(
       skyState.latitude,
       skyState.longitude,
@@ -55,11 +54,6 @@ let attemptInitializiation = function(){
       5,
       0.73
     );
-    y = performance.now();
-    console.log("DONE!");
-    console.log(x);
-    console.log(y);
-    console.log('*************************');
 
     //Grab all values associated with our current sky state.
 
@@ -123,10 +117,6 @@ onmessage = function(e){
     skyStateIsReady = true;
 
     attemptInitializiation();
-
-    //When we first begin, it's a crazy panic to get everything rendered to screen as quickly as
-    //possible.
-    //self.postMessage({imageUpdateReady: true, canvas: starrySkyCanvas}, [starrySkyCanvas]);
   }
 
   return true;

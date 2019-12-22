@@ -1,0 +1,8 @@
+group:
+  base_glsl_dir: '../glsl/atmosphere'
+  base_js_dir: '../js/materials/atmosphere'
+  shaders:
+    shader:
+      fragment: 'transmittance.glsl'
+      template: 'transmittance-template.txt'
+      material: 'transmittance-template.js'

@@ -3,7 +3,6 @@
 #include "Sun.h"
 #include "../world_state/AstroTime.h"
 
-
 class Moon : public AstronomicalBody{
 public:
   Moon(AstroTime* astroTimeRef);
