@@ -2,7 +2,7 @@
 //--------------------------v
 //https://github.com/mrdoob/three.js/wiki/Uniforms-types
 //Currently has no uniforms, but might get them in the future
-var waveComposerShaderMaterial = {
+StarrySky.materials.atmosphere.transmittanceMaterial = {
   uniforms: {},
   fragmentShader: function(numberOfSteps){
     let originalGLSL = [
@@ -12,8 +12,9 @@ var waveComposerShaderMaterial = {
     let updatedLines = [];
     let numberOfStepsMinusOne = numberOfSteps - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$numberOfSteps;/g, numberOfSteps);
-      updatedGLSL = updatedGLSL.replace(/\$numberOfStepsMinusOne;/g, numberOfStepsMinusOne);
+      let updatedGLSL = originalGLSL[i].replace(/\$numberOfStepsMinusOne/g, numberOfStepsMinusOne.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$numberOfSteps/g, numberOfSteps);
+
       updatedLines.push(updatedGLSL);
     }
 

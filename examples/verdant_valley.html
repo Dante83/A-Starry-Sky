@@ -9,16 +9,20 @@
     <!--Meta-->
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no,user-scalable=no,maximum-scale=1">
 
-    <script src="https://aframe.io/releases/1.0.0/aframe.min.js"></script>
+    <!-- Built for A-Frame -->
+    <!-- 1.0.0 doesn't work for some strange reason. I wonder if I get this for my water, too.-->
+    <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
     <!--This commented out code is the unfurled stack which I use for debugging-->
-
-    <!-- Root methods -->
-
-    <script src="../src/js/starry-sky-loader.js"></script>
 
     <!-- A-Frame Extensions -->
     <script src="../src/js/primitives/a-starry-sky.js"></script>
     <script src="../src/js/components/sky-engine.js"></script>
+
+    <!--Library Namespace -->
+    <script src="../src/js/StarrySky.js"></script>
+
+    <!-- Materials -->
+    <script src="../src/js/materials/atmosphere/transmittance.js"></script>
 
     <!--- Custom HTML Tags -->
     <script src="../src/js/html_tags/sky-assets-dir.js"></script>
@@ -26,8 +30,13 @@
     <script src="../src/js/html_tags/sky-parameters.js"></script>
     <script src="../src/js/html_tags/sky-time.js"></script>
 
-    <!-- For double checking... -->
-    <script src="../src/js/a-sky-forge.js"></script>
+    <!-- Three.js extensions -->
+    <script src="../src/js/three_js_extensions/GPUComputeRender.js"></script>
+
+    <!-- Main Library -->
+    <script src="../src/js/AtmosphericLUTLibrary.js"></script>
+    <script src="../src/js/Renderer.js"></script>
+    <script src="../src/js/AssetLoader.js"></script>
   <!--Scene Scripts-->
   </head>
   <body>
@@ -49,6 +58,7 @@
           <sky-mie-directional-g>0.8</sky-mie-directional-g>
           <sky-rayleigh>2.0</sky-rayleigh>
           <sky-turbidity>1.0</sky-turbidity>
+          <sky-number-of-ray-steps>10</sky-number-of-ray-steps>
         </sky-parameters>
         <sky-assets-dir dir="../assets/">
           <sky-moon-texture>moon-dif-1024.png</sky-moon-texture>

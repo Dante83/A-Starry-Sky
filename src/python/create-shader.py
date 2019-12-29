@@ -40,13 +40,6 @@ def ParseShader(yaml_structure):
     vertex_file = os.path.abspath(relative_vertex_path) if relative_vertex_path != False else False
     fragment_file = os.path.abspath(relative_fragment_path) if relative_fragment_path != False else False
 
-    #Initialize our template for usage - we're gonna need this one no matter what gets updated
-    updated_vertex_file_code_string = ''
-    update_fragment_file_code_string = ''
-    js_stringified_vertex_code = ''
-    js_stringified_fragment_code = ''
-    template_string = ''
-
     #Get times for last changed events
     is_first_template_iteration = False
     is_first_vertex_iteration = False
@@ -76,35 +69,53 @@ def ParseShader(yaml_structure):
     changes_detected = False
     template_file_changed = False
     if template_file != False and (os.path.getmtime(template_file) != template_file_last_changed_at or is_first_template_iteration):
-        with open(template_file, 'r') as f:
-            try:
-                template_string = f.read()
-            except f.IOError as exc:
-                print exc
-                return 0
         changes_detected = True
         template_file_changed = True
+        last_update_times_for_dir[template_file] = os.path.getmtime(template_file)
 
     #initialize our code strings
     if vertex_file != False and (os.path.getmtime(vertex_file) != vertex_file_last_changed_at or is_first_vertex_iteration):
-        with open(vertex_file) as vf:
-            try:
-                updated_vertex_file_code_string = vf.read()
-            except vf.IOError as exc:
-                print exc
-                return 0
         changes_detected = True
+        last_update_times_for_dir[vertex_file] = os.path.getmtime(vertex_file)
+
     if fragment_file != False and (os.path.getmtime(fragment_file) != fragment_file_last_changed_at or is_first_shader_iteration):
-        with open(fragment_file) as ff:
-            try:
-                update_fragment_file_code_string = ff.read()
-            except ff.IOError as exc:
-                print exc
-                return 0
         changes_detected = True
+        last_update_times_for_dir[fragment_file] = os.path.getmtime(fragment_file)
 
     #If any changes were detected above, rewrite our shader JS file
     if changes_detected:
+        #Initialize our variables
+        updated_vertex_file_code_string = ''
+        update_fragment_file_code_string = ''
+        js_stringified_vertex_code = ''
+        js_stringified_fragment_code = ''
+        template_string = ''
+
+        #Load all our files as we are updating things
+        if template_file != False:
+            with open(template_file, 'r') as f:
+                try:
+                    template_string = f.read()
+                except f.IOError as exc:
+                    print exc
+                    return 0
+
+        if vertex_file != False:
+            with open(vertex_file) as vf:
+                try:
+                    updated_vertex_file_code_string = vf.read()
+                except vf.IOError as exc:
+                    print exc
+                    return 0
+
+        if fragment_file != False:
+            with open(fragment_file) as ff:
+                try:
+                    update_fragment_file_code_string = ff.read()
+                except ff.IOError as exc:
+                    print exc
+                    return 0
+
         #Clone the template string and modify it with the imported components
         with open(material_file, 'w') as w:
             material_code = template_string
@@ -145,6 +156,8 @@ def ShaderFileWatcher():
     while True:
         #Get the YAML file containing instructions for organizing our GLSL files
         with open("shader-file-structure.yaml", 'r') as stream:
+            current_glsl_dir = []
+            current_js_dir = []
             try:
                 yaml_data = yaml.safe_load(stream)
                 NextAction(yaml_data)

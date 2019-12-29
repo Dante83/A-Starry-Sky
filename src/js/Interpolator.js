@@ -1,0 +1,3 @@
+StarrySky.Interpolator = function(){
+
+}

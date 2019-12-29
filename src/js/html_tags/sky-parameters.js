@@ -4,6 +4,7 @@ window.customElements.define('sky-mie-coefficient', class extends HTMLElement{})
 window.customElements.define('sky-mie-directional-g', class extends HTMLElement{});
 window.customElements.define('sky-rayleigh', class extends HTMLElement{});
 window.customElements.define('sky-turbity', class extends HTMLElement{});
+window.customElements.define('sky-number-of-ray-steps', class extends HTMLElement{});
 
 //Parent tag
 class SkyParameters extends HTMLElement {
@@ -17,7 +18,8 @@ class SkyParameters extends HTMLElement {
       mieCoefficient: null,
       mieDirectionalG: null,
       rayleigh: null,
-      turbidity: null
+      turbidity: null,
+      numberOfRaySteps: null,
     };
   }
 
@@ -33,8 +35,9 @@ class SkyParameters extends HTMLElement {
       let mieDirectionalGTags = self.getElementsByTagName('sky-mie-directional-g');
       let rayleighTags = self.getElementsByTagName('sky-rayleigh');
       let turbidityTags = self.getElementsByTagName('sky-turbidity');
+      let numberOfRayStepsTags = self.getElementsByTagName('sky-number-of-ray-steps');
 
-      [luminanceTags, mieCoefficientTags, mieDirectionalGTags, rayleighTags, turbidityTags].forEach(function(tags){
+      [luminanceTags, mieCoefficientTags, mieDirectionalGTags, rayleighTags, turbidityTags, numberOfRayStepsTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -46,6 +49,7 @@ class SkyParameters extends HTMLElement {
       self.data.mieDirectionalG = mieDirectionalGTags.length > 0 ? parseFloat(mieDirectionalGTags[0].innerHTML) : null;
       self.data.rayleigh = rayleighTags.length > 0 ? parseFloat(rayleighTags[0].innerHTML) : null;
       self.data.turbidity = turbidityTags.length > 0 ? parseFloat(turbidityTags[0].innerHTML) : null;
+      self.data.numberOfRaySteps = numberOfRayStepsTags.length > 0 ? parseInt(numberOfRayStepsTags[0].innerHTML) : null;
 
       //Clamp our results to the appropriate ranges
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){
@@ -61,6 +65,7 @@ class SkyParameters extends HTMLElement {
       self.data.mieDirectionalG = self.data.mieDirectionalG ? clampAndWarn(self.data.mieDirectionalG, 0.0, 1.0, '<sky-mie-directional-g>') : null;
       self.data.rayleigh = self.data.rayleigh ? clampAndWarn(self.data.rayleigh, 0.0, 4.0, '<sky-rayleigh>') : null;
       self.data.turbidity = self.data.turbidity ? clampAndWarn(self.data.turbidity, 0.0, 20.0, '<sky-turbidity>') : null;
+      self.data.numberOfRaySteps = self.data.numberOfRaySteps ? clampAndWarn(self.data.numberOfRaySteps, 3, 1000, '<sky-number-of-ray-steps>') : null;
       self.skyDataLoaded = true;
       self.dispatchEvent(new Event('Sky-Data-Loaded'));
     });

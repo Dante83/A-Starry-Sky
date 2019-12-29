@@ -1,4 +1,4 @@
-function StarrySkyLoader(starrySkyComponent){
+StarrySky.AssetLoader = function(starrySkyComponent){
   //------------------------
   //Capture all the information from our child elements for our usage here.
   //------------------------
@@ -31,10 +31,8 @@ function StarrySkyLoader(starrySkyComponent){
   this.skyAssetsTag;
   this.hasSkyAssetsTag = false;
   this.readyForTickTock = false;
-  this.needsSkyTextureUpdate = false;
   this.tickSinceLastUpdateRequest = 5;
-  this.skyTexture;
-  this.skyWorker = new Worker("../src/cpp/starry-sky-web-worker.js"+ '?' + (Math.random() * 1000000), { type: "module" });
+  this.skyWorker = new Worker("../src/cpp/starry-sky-web-worker.js", { type: "module" });
   let self = this;
 
   //This is the function that gets called each time our data loads.
@@ -93,111 +91,92 @@ function StarrySkyLoader(starrySkyComponent){
     this.loadSkyData();
     return true;
   }
+
   return false;
 };
 
-StarrySkyLoader.prototype.loadSkyData = function(){
+StarrySky.AssetLoader.prototype.loadSkyData = function(){
   //Now that we have verified our tags, let's grab the first one in each.
   let defaultValues = this.starrySkyComponent.defaultValues;
   let skyLocationData = this.hasSkyLocationTag ? this.skyLocationTag.data : defaultValues.location;
   let skyTimeData = this.hasSkyTimeTag ? this.skyTimeTag.data : defaultValues.time;
-  let skyParametersData = this.hasSkyParametersTag ? this.skyParametersTag.data : defaultValues.parameters;
+  let skyParametersData = this.hasSkyParametersTag ? this.skyParametersTag.data : defaultValues.skyParameters;
   let skyAssetsData = this.hasSkyAssetsTag ? this.skyAssetsTag.data : defaultValues.assets;
 
+  //Prepare a location for all of our data
+  this.data = {};
+
   //Location
-  this.latitude = skyLocationData.latitude;
-  this.longitude = skyLocationData.longitude;
+  this.data.location = {};
+  this.data.location.latitude = skyLocationData.latitude;
+  this.data.location.longitude = skyLocationData.longitude;
 
   //Time
   let skyTimeTag
-  this.date = skyTimeData.date;
-  this.utcOffset = skyTimeData.utcOffset;
-  this.timeMultiplier = skyTimeData.timeMultiplier;
+  this.data.time = {};
+  this.data.time.date = skyTimeData.date;
+  this.data.time.utcOffset = skyTimeData.utcOffset;
+  this.data.time.timeMultiplier = skyTimeData.timeMultiplier;
 
   //Sky Parameters
   let skyParametersTag;
-  this.luminance = skyParametersData.luminance;
-  this.mieCoefficient = skyParametersData.mieCoefficient;
-  this.mieDirectionalG = skyParametersData.mieDirectionalG;
-  this.rayleigh = skyParametersData.rayleigh;
-  this.turbidity = skyParametersData.turbidity;
+  this.data.skyParameters = {};
+  this.data.skyParameters.luminance = skyParametersData.luminance;
+  this.data.skyParameters.mieCoefficient = skyParametersData.mieCoefficient;
+  this.data.skyParameters.mieDirectionalG = skyParametersData.mieDirectionalG;
+  this.data.skyParameters.rayleigh = skyParametersData.rayleigh;
+  this.data.skyParameters.turbidity = skyParametersData.turbidity;
+  this.data.skyParameters.numberOfRaySteps = skyParametersData.numberOfRaySteps;
 
   //Asset Locations
   let skyAssetsTag;
-  this.moonImgSrc = skyAssetsData.moonTexture;
-  this.moonNormalSrc = skyAssetsData.moonNormalTexture;
-  this.starDataBlobSrc = skyAssetsData.starBinaryData;
+  this.data.skyAssets = {};
+  this.data.skyAssets.moonImgSrc = skyAssetsData.moonTexture;
+  this.data.skyAssets.moonNormalSrc = skyAssetsData.moonNormalTexture;
+  this.data.skyAssets.starDataBlobSrc = skyAssetsData.starBinaryData;
 
   //Proceed on to load all of our assets from the webpage.
   this.loadAssets();
 };
 
-StarrySkyLoader.prototype.loadAssets = function(){
-    //Load our moon textures
+StarrySky.AssetLoader.prototype.loadAssets = function(){
+  //Prepare our atmospheric LUT data
+  let atmosphericLUT = StarrySky.AtmosphericLUTLibrary(this);
 
-    //Load our star GLTF object
+  //Load our sun texture
 
-    //Load our star textures
+  //Load our moon textures
 
-    //Load our planet textures
+  //Load our star textures
 
-    //Construct our sky box
+  //Load our planet textures
 
-    //When our scene is set up, initialize our worker to create our sky
-    this.initializeSkyWorker();
+  //All assets have been loaded. Request the first data set from our sky
+  //this.initializeSkyWorker();
 }
 
-StarrySkyLoader.prototype.initializeSkyWorker = function(){
+StarrySky.AssetLoader.prototype.EVENT_INITIALIZE = 0;
+StarrySky.AssetLoader.prototype.EVENT_UPDATE = 1;
+StarrySky.AssetLoader.prototype.initializeSkyWorker = function(){
   let self = this;
-  //Start listening for texture updates from our web worker
-  this.skyWorker.addEventListener('message', function(e){
-    if(e.data.imageUpdateReady){
-      var starrySkyCanvas = e.data.canvas;
-      self.skyTexture = starrySkyCanvas.transferToImageBitmap();
-      this.skyWorker.postMessage({
-        tick: false,
-        returnCanvas: true,
-        canvas: starrySkyCanvas
-      }, [starrySkyCanvas]);
-    }
-  });
 
   //Initialize the state of our sky
-  var starrySkyCanvas = new OffscreenCanvas(3072, 3072);
   this.skyWorker.postMessage({
-    initializeSky: true,
-    returnCanvas: false,
-    requestUpdate: false,
+    eventType: self.EVENT_INITIALIZE,
     latitude: self.latitude,
     longitude: self.longitude,
     date: self.date,
     timeMultiplier: self.timeMultiplier,
-    utcOffset: self.utcOffset,
-    canvas: starrySkyCanvas
-  }, [starrySkyCanvas]);
-
-  //Let's also prepare a nice box for our worker to populate
-  //this.readyForTickTock = true;
-}
-
-StarrySkyLoader.prototype.tick = function(time, timeDelta){
-  if(this.readyForTickTock){
-    this.skyWorker.postMessage({
-      returnCanvas: false,
-      tick: true,
-      runningTime: time
-    });
-  }
+    utcOffset: self.utcOffset
+  });
 };
 
-StarrySkyLoader.prototype.tock = function(){
-  //This updates every time the frame changes.
-  if(this.readyForTickTock){
-    //Implement bloom
+StarrySky.AssetLoader.prototype.requestSkyUpdate = function(){
+  let self = this;
 
-    //Implement god rays
-
-    //Convert from HDR image to RGB image and merge
-
-  }
+  //Initialize the state of our sky
+  this.skyWorker.postMessage({
+    eventType: self.UPDATE,
+    date: self.date
+  });
 };
