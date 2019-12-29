@@ -24,6 +24,7 @@ AFRAME.registerComponent('skyengine', {
   },
   init: function(){
     this.renderer = this.el.sceneEl.renderer;
+    this.scene = this.el.sceneEl.object3D;
     let self = this;
 
     window.addEventListener('DOMContentLoaded', function(){
