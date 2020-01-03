@@ -14,7 +14,8 @@ AFRAME.registerComponent('skyengine', {
       mieCoefficient: 1.0,
       mieDirectionalG: 1.0,
       rayleigh: 1.0,
-      turbidity: 1.0
+      turbidity: 1.0,
+      numberOfRaySteps: 30
     },
     assets:{
       moonImgSrc: null,

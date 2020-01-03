@@ -4,16 +4,17 @@
 //Currently has no uniforms, but might get them in the future
 StarrySky.materials.atmosphere.transmittanceMaterial = {
   uniforms: {},
-  fragmentShader: function(numberOfSteps){
+  fragmentShader: function(numberOfPoints){
     let originalGLSL = [
       {fragment_glsl}
     ];
 
     let updatedLines = [];
-    let numberOfStepsMinusOne = numberOfSteps - 1;
+    let numberOfChunks = numberOfPoints - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$numberOfStepsMinusOne/g, numberOfStepsMinusOne.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$numberOfSteps/g, numberOfSteps);
+      let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+      updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
+
 
       updatedLines.push(updatedGLSL);
     }

@@ -4,20 +4,22 @@
 //Currently has no uniforms, but might get them in the future
 StarrySky.materials.atmosphere.transmittanceMaterial = {
   uniforms: {},
-  fragmentShader: function(numberOfSteps){
+  fragmentShader: function(numberOfPoints){
     let originalGLSL = [
     '//Based on the thesis of from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
     '//By Gustav Bodare and Edvard Sandberg',
 
     'const float RADIUS_OF_EARTH = 6366.7;',
-    'const float TWO_TIMES_THE_RADIUS_OF_THE_EARTH = 12733.4;',
+    'const float RADIUS_OF_EARTH_SQUARED = 40534868.89;',
+    'const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = 1025072.0;',
     'const float ATMOSPHERE_HEIGHT = 80.0;',
     'const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;',
     'const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333333333333333333333333333;',
     'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
     'const float OZONE_PERCENT_OF_RAYLEIGH = 0.0000006;',
     '//Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
-    'const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;',
+    '//const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;',
+    'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;',
 
     '//8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))',
     '//(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)',
@@ -26,29 +28,19 @@ StarrySky.materials.atmosphere.transmittanceMaterial = {
     '//lambda_red = 650nm',
     '//labda_green = 510nm',
     '//lambda_blue = 475nm',
-    'const vec3 RAYLEIGH_BETA = vec3(0.00000612434, 0.0000161596, 0.0000214752);',
+    'const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);',
 
     '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
     'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
 
-    'float cosViewZenithFromParameter(float parameterizedViewZenith, float kmAboveSeaLevel){',
-      'float parameterizedViewZenithConst = - sqrt(kmAboveSeaLevel * (TWO_TIMES_THE_RADIUS_OF_THE_EARTH + kmAboveSeaLevel)) / (RADIUS_OF_EARTH + kmAboveSeaLevel);',
-      'float cosOfViewZenith = 0.0;',
-      'if(parameterizedViewZenith > 0.5){',
-        'cosOfViewZenith = parameterizedViewZenithConst + pow((parameterizedViewZenith - 0.5), 5.0) * (1.0 - parameterizedViewZenithConst);',
-      '}',
-      'cosOfViewZenith = parameterizedViewZenithConst - pow(parameterizedViewZenith, 5.0) * (1.0 + parameterizedViewZenithConst);',
-      'return cosOfViewZenith;',
-    '}',
+    '//Variation of the ideas from Page 178 of Real Time Collision Detection, by Christer Ericson',
+    'vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection){',
+      'float tc = dot(-rayOrigin, rayDirection);',
+      'float y = length(rayOrigin + rayDirection * tc);',
+      'float rA = RADIUS_OF_EARTH + ATMOSPHERE_HEIGHT;',
+      'float x = sqrt(rA * rA - y * y);',
 
-    'vec2 calculatePB(vec2 uv, float startingHeightInKM, float radiusOfCamera){',
-      'float cosViewZenith = cosViewZenithFromParameter(uv.y, startingHeightInKM);',
-      'float sinViewZenith = sqrt(1.0 - cosViewZenith * cosViewZenith);',
-      'float radiusOfCameraSquared = radiusOfCamera * radiusOfCamera;',
-
-      '//Simplifying the results from https://www.scratchapixel.com/lessons/3d-basic-rendering/minimal-ray-tracer-rendering-simple-shapes/ray-sphere-intersection',
-      'float t_intersection = radiusOfCamera * sinViewZenith + sqrt(ATMOSPHERE_HEIGHT_SQUARED - radiusOfCameraSquared * (1.0 - sinViewZenith * sinViewZenith));',
-      'return vec2(cosViewZenith * t_intersection, sinViewZenith * t_intersection);',
+      'return vec2(x, y);',
     '}',
 
     'void main(){',
@@ -56,46 +48,64 @@ StarrySky.materials.atmosphere.transmittanceMaterial = {
       '//Height and view angle is parameterized',
       '//Calculate these and determine the intersection of the ray and the edge of the',
       "//Earth's atmosphere.",
-      'float startingHeight = uv.x * uv.x * ATMOSPHERE_HEIGHT;',
-      'vec2 pA = vec2(0.0, startingHeight + RADIUS_OF_EARTH);',
+      'float r = sqrt(uv.y * uv.y * RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED + RADIUS_OF_EARTH_SQUARED);',
+      'float h = r - RADIUS_OF_EARTH;',
+      'vec2 pA = vec2(0.0, r);',
       'vec2 p = pA;',
-      'float height = 0.0;',
-      'vec2 pB = calculatePB(uv, startingHeight, pA.y);',
-      'float distFromPaToPb = distance(pA, pB);',
-      'float deltaP = distFromPaToPb / $numberOfStepsMinusOne;',
-      'vec2 direction = (pB - pA) / distFromPaToPb;',
+      'float cosOfViewZenith = 2.0 * uv.x - 1.0;',
+      'vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);',
 
-      '//Initialize our final variables used in our loop',
-      'float totalDensityMie = 0.0;',
-      'float currentMieDensity = 0.0;',
-      'float totalDensityRayleigh = 0.0;',
-      'float currentRayleighDensity = 0.0;',
+      '//Check if we intersect the earth. If so, return a transmittance of zero.',
+      '//Otherwise, intersect our ray with the atmosphere.',
 
-      '//Integrate from Pa to Pb to determine the total transmittance',
-      'vec3 transmittance = vec3(1.0);',
-      '#pragma unroll',
-      'for(int i = 0; i < $numberOfSteps; i++){',
-        'p = pA + direction * float(i) * deltaP;',
-        'height = length(p) - RADIUS_OF_EARTH;',
-        'currentMieDensity = exp(-height * ONE_OVER_MIE_SCALE_HEIGHT);',
-        'currentRayleighDensity = exp(-height * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
-        'totalDensityMie += 2.0 * currentMieDensity;',
-        'totalDensityMie += 2.0 * currentRayleighDensity;',
+      'vec2 pB = intersectRaySphere(vec2(0.0, r), cameraDirection);',
+      'vec3 transmittance = vec3(0.0);',
+      'if(pB.y > RADIUS_OF_EARTH){',
+        'float distFromPaToPb = distance(pA, pB);',
+        'float chunkLength = distFromPaToPb / $numberOfChunks;',
+        'vec2 direction = (pB - pA) / distFromPaToPb;',
+        'vec2 deltaP = direction * chunkLength;',
+
+        '//Prime our trapezoidal rule',
+        'float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
+        'float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+        'float totalDensityMie = 0.0;',
+        'float totalDensityRayleigh = 0.0;',
+
+        '//Integrate from Pa to Pb to determine the total transmittance',
+        '//Using the trapezoidal rule.',
+        'float mieDensity;',
+        'float rayleighDensity;',
+        '#pragma unroll',
+        'for(int i = 1; i < $numberOfChunksInt; i++){',
+          'p += deltaP;',
+          'h = length(p) - RADIUS_OF_EARTH;',
+          'mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
+          'rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+          'totalDensityMie += (previousMieDensity + mieDensity) * chunkLength;',
+          'totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength;',
+
+          '//Store our values for the next iteration',
+          'previousMieDensity = mieDensity;',
+          'previousRayleighDensity = rayleighDensity;',
+        '}',
+        'totalDensityMie *= 0.5;',
+        'totalDensityRayleigh *= 0.5;',
+
+        'float integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
+        'transmittance = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
       '}',
-      'totalDensityMie = (totalDensityMie - currentMieDensity) / (2.0 * deltaP);',
-      'totalDensityRayleigh = (totalDensityRayleigh - currentRayleighDensity) / (2.0 * deltaP);',
-      'float integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
-      'transmittance = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
 
       'gl_FragColor = vec4(transmittance, 1.0);',
     '}',
     ];
 
     let updatedLines = [];
-    let numberOfStepsMinusOne = numberOfSteps - 1;
+    let numberOfChunks = numberOfPoints - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$numberOfStepsMinusOne/g, numberOfStepsMinusOne.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$numberOfSteps/g, numberOfSteps);
+      let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+      updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
+
 
       updatedLines.push(updatedGLSL);
     }
