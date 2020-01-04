@@ -27,6 +27,7 @@ StarrySky.AtmosphericLUTLibrary = function(parentAssetLoader){
 
   //Fire up our compute shader twice to fill in both renderers
   transmittanceRenderer.compute();
+  transmittanceRenderer.compute();
   let transmittanceLUT = transmittanceRenderer.getCurrentRenderTarget(transmittanceVar).texture;
 
   //For testing purposes
