@@ -7,3 +7,7 @@ groups:
         fragment: 'transmittance.glsl'
         template: 'transmittance-template.txt'
         material: 'transmittance.js'
+      -
+        fragment: 'single-scattering.glsl'
+        template: 'single-scattering-template.txt'
+        material: 'single-scattering.js'
