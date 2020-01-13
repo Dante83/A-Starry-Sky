@@ -67,7 +67,7 @@ StarrySky.AtmosphericLUTLibrary = function(parentAssetLoader){
   let geometry = new THREE.PlaneBufferGeometry(1.0, 1.0, 32, 128);
   let testMaterial = new THREE.MeshBasicMaterial({
    side: THREE.FrontSide,
-   map: transmittanceLUT,
+   map: singleScatteringLUT,
   });
   testMaterial.flatShading = true;
   let plane = new THREE.Mesh(geometry, testMaterial);

@@ -29,8 +29,23 @@ const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);
 vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection) {
     float b = dot(rayDirection, rayOrigin);
     float c = dot(rayOrigin, rayOrigin) - RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED;
-    float t = (-b + sqrt((b * b) - c));
+    float t = (-b - sqrt((b * b) - c));
     return rayOrigin + t * rayDirection;
+}
+
+//From page 178 of Real Time Collision Detection by Christer Ericson
+bool intersectsSphere(vec2 origin, vec2 direction, float radius){
+  //presume that the sphere is located at the origin (0,0)
+  bool collides = false;
+  float b = dot(origin, direction);
+  float c = dot(origin, origin) - radius * radius;
+  if(c > 0.0 && b > 0.0){
+    collides = true;
+  }
+  else{
+    collides = (b * b - c) < 0.0 ? true : false;
+  }
+  return collides;
 }
 
 //Converts the parameterized x to cos(zenith) where zenith is between 0 and pi
@@ -59,7 +74,8 @@ void main(){
   vec2 pB = intersectRaySphere(vec2(0.0, r), cameraDirection);
   vec3 transmittance = vec3(0.0);
   float distFromPaToPb = 0.0;
-  if(true){
+  bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);
+  if(!intersectsEarth){
     distFromPaToPb = distance(pA, pB);
     float chunkLength = distFromPaToPb / $numberOfChunks;
     vec2 direction = (pB - pA) / distFromPaToPb;
