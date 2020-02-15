@@ -11,3 +11,16 @@ groups:
         fragment: 'single-scattering.glsl'
         template: 'single-scattering-template.txt'
         material: 'single-scattering.js'
+      -
+        fragment: 'kth-inscattering.glsl'
+        template: 'kth-inscattering-template.txt'
+        material: 'kth-inscattering.js'
+      -
+        fragment: 'inscattering-sum.glsl'
+        template: 'inscattering-sum-template.txt'
+        material: 'inscattering-sum.js'
+      -
+        fragment: 'atmosphere-shader.glsl'
+        vertex: 'vertex.glsl'
+        template: 'atmosphere-shader-template.txt'
+        material: 'atmosphere-shader.js'

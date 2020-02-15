@@ -1,6 +1,6 @@
 //This helps
 //--------------------------v
-//https://github.com/mrdoob/three.js/wiki/Uniforms-types
+//https://threejs.org/docs/#api/en/core/Uniform
 //Currently has no uniforms, but might get them in the future
 StarrySky.materials.atmosphere.transmittanceMaterial = {
   uniforms: {},
@@ -17,10 +17,11 @@ StarrySky.materials.atmosphere.transmittanceMaterial = {
     'const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;',
     'const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333333333333333333333333333;',
     'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
-    'const float OZONE_PERCENT_OF_RAYLEIGH = 0.0000006;',
+    'const float OZONE_PERCENT_OF_RAYLEIGH = 6E-7;',
     '//Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
     '//const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;',
     'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;',
+    '//float EARTH_MIE_BETA_EXTINCTION = 0.000002222222222222222222222222222222222222222222;',
 
     '//8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))',
     '//(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)',
@@ -30,6 +31,7 @@ StarrySky.materials.atmosphere.transmittanceMaterial = {
     '//labda_green = 510nm',
     '//lambda_blue = 475nm',
     'const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);',
+    '//const vec3 RAYLEIGH_BETA = vec3(6.5E-6,1.73E-5,2.30E-5);',
 
     '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
     'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
@@ -115,8 +117,9 @@ StarrySky.materials.atmosphere.transmittanceMaterial = {
         'totalDensityMie *= 0.5;',
         'totalDensityRayleigh *= 0.5;',
 
-        'float integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
-        'transmittance = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
+        '//float integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
+        'float integralOfOzoneDensityFunction = 0.0;',
+        'transmittance = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
       '}',
 
       'gl_FragColor = vec4(transmittance, 1.0);',

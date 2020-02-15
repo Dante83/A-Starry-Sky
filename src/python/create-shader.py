@@ -85,7 +85,7 @@ def ParseShader(yaml_structure):
     #If any changes were detected above, rewrite our shader JS file
     if changes_detected:
         #Initialize our variables
-        updated_vertex_file_code_string = ''
+        update_vertex_file_code_string = ''
         update_fragment_file_code_string = ''
         js_stringified_vertex_code = ''
         js_stringified_fragment_code = ''
@@ -103,7 +103,7 @@ def ParseShader(yaml_structure):
         if vertex_file != False:
             with open(vertex_file) as vf:
                 try:
-                    updated_vertex_file_code_string = vf.read()
+                    update_vertex_file_code_string = vf.read()
                 except vf.IOError as exc:
                     print exc
                     return 0

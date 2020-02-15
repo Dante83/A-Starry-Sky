@@ -1,6 +1,6 @@
 //This helps
 //--------------------------v
-//https://github.com/mrdoob/three.js/wiki/Uniforms-types
+//https://threejs.org/docs/#api/en/core/Uniform
 //Currently has no uniforms, but might get them in the future
 StarrySky.materials.atmosphere.transmittanceMaterial = {
   uniforms: {},
