@@ -20,7 +20,7 @@ groups:
         template: 'inscattering-sum-template.txt'
         material: 'inscattering-sum.js'
       -
-        fragment: 'atmosphere-shader.glsl'
+        fragment: 'atmosphere-pass.glsl'
         vertex: 'vertex.glsl'
-        template: 'atmosphere-shader-template.txt'
-        material: 'atmosphere-shader.js'
+        template: 'atmosphere-pass-template.txt'
+        material: 'atmosphere-pass.js'

@@ -6,17 +6,19 @@ window.customElements.define('sky-utc-offset', class extends HTMLElement{});
 let hideStarrySkyTemplate = document.createElement('template');
 hideStarrySkyTemplate.innerHTML = `<style display="none;">{ ... }</style>`;
 
+StarrySky.DefaultData.skyTime = {
+  date: (new Date()).toLocaleDateString(),
+  utcOffset: -7,
+  timeMultiplier: 1.0
+};
+
 //Parent tag
 class SkyTime extends HTMLElement {
   constructor(){
     super();
 
     this.skyDataLoaded = false;
-    this.data = {
-      date: null,
-      utcOffset: null,
-      timeMultiplier: null
-    };
+    this.data = StarrySky.DefaultData.skyTime;
   };
 
   connectedCallback(){

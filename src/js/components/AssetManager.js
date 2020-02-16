@@ -1,4 +1,7 @@
-StarrySky.AssetLoader = function(starrySkyComponent){
+StarrySky.AssetManager = function(starrySkyEngine){
+  this.starrySkyEngine = starrySkyEngine;
+  let starrySkyComponent = starrySkyEngine.parentComponent;
+
   //------------------------
   //Capture all the information from our child elements for our usage here.
   //------------------------
@@ -32,7 +35,6 @@ StarrySky.AssetLoader = function(starrySkyComponent){
   this.hasSkyAssetsTag = false;
   this.readyForTickTock = false;
   this.tickSinceLastUpdateRequest = 5;
-  this.skyWorker = new Worker("../src/cpp/starry-sky-web-worker.js", { type: "module" });
   let self = this;
 
   //This is the function that gets called each time our data loads.
@@ -103,40 +105,13 @@ StarrySky.AssetLoader.prototype.loadSkyData = function(){
   let skyParametersData = this.hasSkyParametersTag ? this.skyParametersTag.data : defaultValues.skyParameters;
   let skyAssetsData = this.hasSkyAssetsTag ? this.skyAssetsTag.data : defaultValues.assets;
 
-  //Prepare a location for all of our data
-  StarrySky.initialData = {
+  //Clone our data over
+  this.starrySkyEngine.data = {
     location: this.hasSkyLocationTag ? this.skyLocationTag.data : defaultValues.location,
     time: this.hasSkyTimeTag ? this.skyTimeTag.data : defaultValues.time,
     skyParameters: this.hasSkyParametersTag ? this.skyParametersTag.data : defaultValues.skyParameters,
-    assets: this.hasSkyAssetsTag ? this.skyAssetsTag.data : defaultValues.assets
   };
 
-  //Proceed on to load all of our assets from the webpage.
-  this.loadAssets();
-};
-
-StarrySky.AssetLoader.prototype.EVENT_INITIALIZE = 0;
-StarrySky.AssetLoader.prototype.EVENT_UPDATE = 1;
-StarrySky.AssetLoader.prototype.initializeSkyWorker = function(){
-  let self = this;
-
-  //Initialize the state of our sky
-  this.skyWorker.postMessage({
-    eventType: self.EVENT_INITIALIZE,
-    latitude: self.latitude,
-    longitude: self.longitude,
-    date: self.date,
-    timeMultiplier: self.timeMultiplier,
-    utcOffset: self.utcOffset
-  });
-};
-
-StarrySky.AssetLoader.prototype.requestSkyUpdate = function(){
-  let self = this;
-
-  //Initialize the state of our sky
-  this.skyWorker.postMessage({
-    eventType: self.UPDATE,
-    date: self.date
-  });
+  //Use the assets we have to load all of our asset images and populate the engine
+  //TODO: Right now, we do not need any images
 };

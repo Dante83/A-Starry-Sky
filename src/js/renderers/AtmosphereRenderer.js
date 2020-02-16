@@ -1,28 +1,39 @@
 StarrySky.Renderers.AtmosphereRenderer = function(skyEngine){
-  //Create a plane that's big enough to cover the entire screen
-  this.drawPlaneGeometry = new THREE.PlaneBufferGeometry(1.0, 1.0, 32, 128);
+  //
+  //TODO: Replace the sky dome with a plane
+  //
+  this.skyGeometry = new THREE.SphereGeometry(5000.0, 64, 32, 0, 2.0 * Math.PI, 0.0, 2.0 * Math.PI);
 
-  //Set up our shader material to render out the color of the sky on this plane
-  this.atmosphericMaterial = new THREE.MeshBasicMaterial({
-    side: THREE.FrontSide,
-    map: scatteringSum,
+  //Create our material late
+  let atmosphericShader;
+  let atmospherePass = StarrySky.materials.atmosphere.atmosphereShader;
+  this.atmosphereMaterial = new THREE.ShaderMaterial({
+    uniforms: JSON.parse(JSON.stringify(atmospherePass.uniforms)),
+    side: THREE.BackSide,
+    blending: THREE.NormalBlending,
+    transparent: false,
+    lights: false,
+    flatShading: true,
+    clipping: true,
+    vertexShader: atmospherePass.vertexShader,
+    fragmentShader: atmospherePass.fragmentShader(mieG, packingWidth, packingHeight)
   });
-  this.atmosphericMaterial.flatShading = true;
-  this.atmosphericMaterial.clipping = true;
 
-  //Attach the material to our plane
-  let plane = new THREE.Mesh(geometry, testMaterial);
+  //Populate all of uniform values
 
-  //Position our plane as far away from us that it's almost outside of the draw plane
-  //and then orient it to face us.
-  plane.position.set(0.0, 1.5, -1.0);
 
-  //Add the plane to the scene.
+  //Attach the material to our geometry
+  this.skyMesh = new THREE.Mesh(geometry, this.atmosphereMaterial);
+
+  //Initialize the position of the sky at the location of the camera
+  this.skyMesh.position.set(0.0, 0.0, 0.0);
+
+  //Add this object to the scene
   parentAssetLoader.starrySkyComponent.scene.add(plane);
 }
 
 StarrySky.Renderers.AtmosphereRenderer.prototype.tick(){
-  //Move the draw plane so that it is back in the view and rotate it so that it is facing us
+  //Get all the data for our current view to update the view parameters of our component
 
   //Update the uniforms so that we can see where we are on this sky.
 

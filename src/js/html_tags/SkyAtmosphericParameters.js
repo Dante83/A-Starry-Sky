@@ -13,38 +13,40 @@ window.customElements.define('sky-number-of-ray-steps', class extends HTMLElemen
 window.customElements.define('sky-number-of-gathering-steps', class extends HTMLElement{});
 window.customElements.define('sky-ozone-enabled', class extends HTMLElement{});
 
+StarrySky.DefaultData.skyAtmosphericParameters = {
+  solarIntensity: 1367.0,
+  lunarMaxIntensity: 29,
+  rayleighMolecularDensity: 2.545E25,
+  indexOfRefractionofAir: 1.0003,
+  solarColor: {
+    red: 6.5E-7,
+    green: 5.1E-7,
+    bluee: 4.75E-7
+  },
+  lunarColor: {
+    red: 6.5E-7,
+    green: 5.1E-7,
+    bluee: 4.75E-7
+  },
+  mieBeta: {
+    red: 2E-6,
+    green: 2E-6,
+    blue: 2E-6
+  },
+  mieDirectionalG: 0.8,
+  numberOfRaySteps: 30,
+  numberOfGatheringSteps: 30,
+  ozoneEnabled: true
+};
+
 //Parent tag
-class SkyParameters extends HTMLElement {
+class SkyAtmosphericParameters extends HTMLElement {
   constructor(){
     super();
 
     //Check if there are any child elements. Otherwise set them to the default.
     this.skyDataLoaded = false;
-    this.data = {
-      solarIntensity: 1367.0,
-      lunarMaxIntensity: 29,
-      rayleighMolecularDensity: 2.545E25,
-      indexOfRefractionofAir: 1.0003,
-      solarColor: {
-        red: 6.5E-7,
-        green: 5.1E-7,
-        bluee: 4.75E-7
-      },
-      lunarColor: {
-        red: 6.5E-7,
-        green: 5.1E-7,
-        bluee: 4.75E-7
-      },
-      mieBeta: {
-        red: 2E-6,
-        green: 2E-6,
-        blue: 2E-6
-      },
-      mieDirectionalG: 0.8,
-      numberOfRaySteps: 30,
-      numberOfGatheringSteps: 30,
-      ozoneEnabled: true
-    };
+    this.data = StarrySky.DefaultData.skyAtmosphericParameters;
   }
 
   connectedCallback(){

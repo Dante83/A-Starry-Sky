@@ -13,11 +13,10 @@
     <script src="https://aframe.io/releases/1.0.0/aframe.min.js"></script>
     <!--This commented out code is the unfurled stack which I use for debugging-->
 
-    <!-- A-Frame Extensions -->
-    <script src="../src/js/primitives/a-starry-sky.js"></script>
-    <script src="../src/js/components/sky-engine.js"></script>
+    <!-- Three.js extensions -->
+    <script src="../src/js/three_js_extensions/GPUComputeRender.js"></script>
 
-    <!--Library Namespace -->
+    <!-- Namespace -->
     <script src="../src/js/StarrySky.js"></script>
 
     <!-- Materials -->
@@ -25,20 +24,28 @@
     <script src="../src/js/materials/atmosphere/single-scattering.js"></script>
     <script src="../src/js/materials/atmosphere/inscattering-sum.js"></script>
     <script src="../src/js/materials/atmosphere/kth-inscattering.js"></script>
+    <script src="../src/js/materials/atmosphere/atmosphere-pass.js"></script>
 
     <!--- Custom HTML Tags -->
-    <script src="../src/js/html_tags/sky-assets-dir.js"></script>
-    <script src="../src/js/html_tags/sky-location.js"></script>
-    <script src="../src/js/html_tags/sky-parameters.js"></script>
-    <script src="../src/js/html_tags/sky-time.js"></script>
+    <script src="../src/js/html_tags/SkyAssets.js"></script>
+    <script src="../src/js/html_tags/SkyAtmosphericParameters.js"></script>
+    <script src="../src/js/html_tags/SkyLocation.js"></script>
+    <script src="../src/js/html_tags/SkyTime.js"></script>
 
-    <!-- Three.js extensions -->
-    <script src="../src/js/three_js_extensions/GPUComputeRender.js"></script>
-
-    <!-- Main Library -->
+    <!-- LUT Libraries -->
     <script src="../src/js/AtmosphericLUTLibrary.js"></script>
-    <script src="../src/js/Renderer.js"></script>
-    <script src="../src/js/AssetLoader.js"></script>
+
+    <!-- Renderers -->
+    <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
+
+    <!--Players -->
+    <script src="../src/js/components/AssetManager.js"></script>
+    <script src="../src/js/components/SkyDirector.js"></script>
+
+    <!-- A-Frame Hooks -->
+    <script src="../src/js/primitives/a-starry-sky.js"></script>
+    <script src="../src/js/components/sky-engine.js"></script>
+
   <!--Scene Scripts-->
   </head>
   <body>
@@ -46,23 +53,15 @@
       <!-- Sky Setup -->
       <a-starry-sky>
         <sky-location>
-          <sky-latitude>37</sky-latitude>
-          <sky-longitude>112</sky-longitude>
+          <sky-latitude>33</sky-latitude>
+          <sky-longitude>-112</sky-longitude>
         </sky-location>
         <sky-time>
-          <sky-date>2019-04-20 21:27:00</sky-date>
-          <sky-utc-offset>0.0</sky-utc-offset>
-          <sky-time-multiplier>8.0</sky-time-multiplier>
+          <sky-date>2019-2-16 00:00:00</sky-date>
+          <sky-utc-offset>-7.0</sky-utc-offset>
+          <sky-time-multiplier>1.0</sky-time-multiplier>
         </sky-time>
-        <sky-parameters>
-          <sky-luminance>1.0</sky-luminance>
-          <sky-mie-coefficient>0.005</sky-mie-coefficient>
-          <sky-mie-directional-g>0.8</sky-mie-directional-g>
-          <sky-rayleigh>2.0</sky-rayleigh>
-          <sky-turbidity>1.0</sky-turbidity>
-          <sky-number-of-ray-steps>30</sky-number-of-ray-steps>
-        </sky-parameters>
-        <sky-assets-dir dir="../assets/">
+        <sky-assets-dir dir="../../assets/">
           <sky-moon-texture>moon-dif-1024.png</sky-moon-texture>
           <sky-moon-normal-map>moon-nor-1024.png</sky-moon-normal-map>
           <sky-stars>star-data.png</sky-stars>

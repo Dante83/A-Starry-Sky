@@ -41,4 +41,4 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     return updatedLines.join('\n');
   }
-};
+}

@@ -70,6 +70,9 @@ void main(){
   //Star Pass
 
 
+  //Planet Pass
+
+
   //Atmosphere
   vec3 solarAtmosphericPass = atmosphericPass(sunPosition, vWorldPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);
 
