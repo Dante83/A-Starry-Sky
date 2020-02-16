@@ -1,7 +1,7 @@
 //This helps
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.materials.atmosphere.inscatteringSumMaterial = {
+StarrySky.Materials.Atmosphere.inscatteringSumMaterial = {
   uniforms: {
     previousInscatteringSum: {type: 't', 'value': null},
     kthInscatteringMie: {type: 't', 'value': null},

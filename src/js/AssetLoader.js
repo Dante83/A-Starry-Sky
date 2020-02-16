@@ -8,7 +8,7 @@ StarrySky.AssetLoader = function(starrySkyComponent){
   tagLists.push(skyLocationTags);
   let skyTimeTags = starrySkyComponent.el.getElementsByTagName('sky-time');
   tagLists.push(skyTimeTags);
-  let skyParametersTags = starrySkyComponent.el.getElementsByTagName('sky-parameters');
+  let skyParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
   tagLists.push(skyParametersTags);
   let skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
   tagLists.push(skyAssetsTags);
@@ -84,7 +84,7 @@ StarrySky.AssetLoader = function(starrySkyComponent){
       return true;
     }
     else{
-      this.skyParametersTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
+      this.skyAssetsTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
     }
   }
   if(this.skyDataSetsLength === 0 || this.skyDataSetsLoaded === this.skyDataSetsLength){
@@ -104,56 +104,16 @@ StarrySky.AssetLoader.prototype.loadSkyData = function(){
   let skyAssetsData = this.hasSkyAssetsTag ? this.skyAssetsTag.data : defaultValues.assets;
 
   //Prepare a location for all of our data
-  this.data = {};
-
-  //Location
-  this.data.location = {};
-  this.data.location.latitude = skyLocationData.latitude;
-  this.data.location.longitude = skyLocationData.longitude;
-
-  //Time
-  let skyTimeTag
-  this.data.time = {};
-  this.data.time.date = skyTimeData.date;
-  this.data.time.utcOffset = skyTimeData.utcOffset;
-  this.data.time.timeMultiplier = skyTimeData.timeMultiplier;
-
-  //Sky Parameters
-  let skyParametersTag;
-  this.data.skyParameters = {};
-  this.data.skyParameters.luminance = skyParametersData.luminance;
-  this.data.skyParameters.mieCoefficient = skyParametersData.mieCoefficient;
-  this.data.skyParameters.mieDirectionalG = skyParametersData.mieDirectionalG;
-  this.data.skyParameters.rayleigh = skyParametersData.rayleigh;
-  this.data.skyParameters.turbidity = skyParametersData.turbidity;
-  this.data.skyParameters.numberOfRaySteps = skyParametersData.numberOfRaySteps;
-
-  //Asset Locations
-  let skyAssetsTag;
-  this.data.skyAssets = {};
-  this.data.skyAssets.moonImgSrc = skyAssetsData.moonTexture;
-  this.data.skyAssets.moonNormalSrc = skyAssetsData.moonNormalTexture;
-  this.data.skyAssets.starDataBlobSrc = skyAssetsData.starBinaryData;
+  StarrySky.initialData = {
+    location: this.hasSkyLocationTag ? this.skyLocationTag.data : defaultValues.location,
+    time: this.hasSkyTimeTag ? this.skyTimeTag.data : defaultValues.time,
+    skyParameters: this.hasSkyParametersTag ? this.skyParametersTag.data : defaultValues.skyParameters,
+    assets: this.hasSkyAssetsTag ? this.skyAssetsTag.data : defaultValues.assets
+  };
 
   //Proceed on to load all of our assets from the webpage.
   this.loadAssets();
 };
-
-StarrySky.AssetLoader.prototype.loadAssets = function(){
-  //Prepare our atmospheric LUT data
-  let atmosphericLUT = StarrySky.AtmosphericLUTLibrary(this);
-
-  //Load our sun texture
-
-  //Load our moon textures
-
-  //Load our star textures
-
-  //Load our planet textures
-
-  //All assets have been loaded. Request the first data set from our sky
-  //this.initializeSkyWorker();
-}
 
 StarrySky.AssetLoader.prototype.EVENT_INITIALIZE = 0;
 StarrySky.AssetLoader.prototype.EVENT_UPDATE = 1;

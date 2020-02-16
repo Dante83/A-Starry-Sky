@@ -51,8 +51,11 @@ class SkyLocation extends HTMLElement {
       //Clamp the results
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){
         let result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue || inValue < minValue){
+        if(inValue > maxValue){
           console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
+        }
+        else if(inValue < minValue){
+          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
         }
         return result;
       };

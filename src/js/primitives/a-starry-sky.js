@@ -3,13 +3,6 @@
 AFRAME.registerPrimitive('a-starry-sky', AFRAME.utils.extendDeep({}, AFRAME.primitives.getMeshMixin(), {
   // Preset default components. These components and component properties will be attached to the entity out-of-the-box.
   defaultComponents: {
-    geometry: {
-      primitive: 'sphere',
-      radius: 5000,
-      segmentsWidth: 64,
-      segmentsHeight: 32
-    },
-    scale: '-1, 1, 1',
     skyengine: {}
   }
 }));

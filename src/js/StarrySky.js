@@ -1,8 +1,8 @@
+//Basic skeleton for the overall namespace of the A-Starry-Sky
 StarrySky = {
-  materials: {
-    atmosphere: {}
+  Materials: {
+    Atmosphere: {}
   },
-  Initializer: null,
-  Renderer: null,
-  AtmosphereLUTLibrary: null
+  Renderers: {},
+  LUTlibraries: {},
 };

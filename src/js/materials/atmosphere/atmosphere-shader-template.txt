@@ -1,7 +1,7 @@
 //This helps
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.materials.atmosphere.atmosphereShader = {
+StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: {
     sunPosition: {type: 'vec3', value: new THREE.Vector3()},
     solarMieInscatteringSum: {type: 't', value: null},

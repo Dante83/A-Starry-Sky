@@ -1,5 +1,16 @@
-StarrySky.AtmosphericLUTLibrary = function(parentAssetLoader){
-  let renderer = parentAssetLoader.starrySkyComponent.renderer;
+StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
+  this.renderer = renderer;
+  this.data = data;
+  this.sunLUT;
+  this.moonLUT;
+  this.lunarEcclipseLUTs = [];
+
+  //
+  //NOTE: For now, we will simply run through our sun lut to see it makes the
+  //atmosphere correctly. But eventuallly, we will fill up the above LUT collection
+  //so we can interpolate between LUTs in the event of key astronomical events.
+  //
+
   document.body.appendChild(renderer.domElement);
 
   let transmittanceRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
@@ -11,7 +22,7 @@ StarrySky.AtmosphericLUTLibrary = function(parentAssetLoader){
   let scatteringSumRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
 
   let skyParameters = parentAssetLoader.data.skyParameters;
-  let materials = StarrySky.materials.atmosphere;
+  let materials = StarrySky.Materials.Atmosphere;
 
   //Depth texture parameters. Note that texture depth is packing width * packing height
   const scatteringTextureWidth = 256;
