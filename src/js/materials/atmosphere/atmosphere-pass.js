@@ -1,7 +1,7 @@
 //This helps
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.materials.atmosphere.atmosphereShader = {
+StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: {
     sunPosition: {type: 'vec3', value: new THREE.Vector3()},
     solarMieInscatteringSum: {type: 't', value: null},
@@ -17,7 +17,7 @@ StarrySky.materials.atmosphere.atmosphereShader = {
       'gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );',
     '}',
   ].join('\n'),
-  fragmentShader: function(mieG, packingWidth, packingHeight){
+  fragmentShader: function(mieG, packingWidth, packingHeight, atmosphereFunctions){
     let originalGLSL = [
     'varying vec3 vWorldPosition;',
 
@@ -30,28 +30,14 @@ StarrySky.materials.atmosphere.atmosphereShader = {
     'const float MIE_PHASE_FUNCTION_COEFFICIENT $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))',
     'const float ELOK_Z_CONST = 0.9726762775527075;',
 
+    '$atmosphericFunctions',
+
     'float rayleighPhaseFunction(float cosTheta){',
       'return 0.8 * (1.4 + 0.5 * cosTheta);',
     '}',
 
     'float miePhaseFunction(float cosTheta){',
       'return MIE_PHASE_FUNCTION_COEFFICIENT * ((1 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2 * MIE_G * cosTheta, 1.5));',
-    '}',
-
-    'float parameterizationOfCosOfSourceZenithToZ(float cosTheta){',
-      'return (1.0 - exp(-2.8 * cosTheta - 0.8)) / ELOK_Z_CONST;',
-    '}',
-
-    'float parameterizationOfCosOfZenithToX(float cosTheta){',
-      'return 0.5 * (1.0 + cosTheta);',
-    '}',
-
-    'vec2 getUV2From3DUV(vec3 uv3Coords){',
-      'float row = floor(uv3Coords.z * $packingHeight);',
-      'float column = fModulo(row * packingWidth, $packingWidth);',
-      'float x = (column * $packingWidth + $textureWidth * uv3Coords.x) / ($packingWidth * $textureWidth);',
-      'float y = (row * $packingHeight + $textureHeight * uv3Coords.y) / ($packingHeight * $textureHeight);',
-      'return vec2(x, y);',
     '}',
 
     'vec3 atmosphericPass(vec3 sourcePosition, vec3 vWorldPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable){',
@@ -91,6 +77,9 @@ StarrySky.materials.atmosphere.atmosphereShader = {
       '//Star Pass',
 
 
+      '//Planet Pass',
+
+
       '//Atmosphere',
       'vec3 solarAtmosphericPass = atmosphericPass(sunPosition, vWorldPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
 
@@ -110,6 +99,7 @@ StarrySky.materials.atmosphere.atmosphereShader = {
     let numberOfChunks = numberOfPoints - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$packingWidth/g, packingWidth);
+      updatedGLSL = updatedGLSL.replace(/\$atmosphereFunctions/g, packingHeight);
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight);
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth);
       updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
@@ -128,4 +118,4 @@ StarrySky.materials.atmosphere.atmosphereShader = {
 
     return updatedLines.join('\n');
   }
-};
+}

@@ -13,6 +13,7 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
 
   document.body.appendChild(renderer.domElement);
 
+  //Create our first renderer, for transmittance
   let transmittanceRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
 
   //Using a 3D look up table of 256x32x32, I can have 2 256x32 textures per row
@@ -31,10 +32,15 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
   const scatteringTexturePackingHeight = 16;
   const mieGCoefficient = 1.0; //TODO: Update this
 
+  //Grab our atmospheric functions partial, we also store it in the library
+  //as we use it in the final atmospheric material.
+  this.atmosphereFunctionsString = materials.partialFragmentShader(scatteringTextureWidth, scatteringTextureHeight, scatteringTexturePackingWidth, scatteringTexturePackingHeight);
+  let atmosphereFunctions = this.atmosphereFunctionsString;
+
   //Set up our transmittance texture
   let transmittanceTexture = transmittanceRenderer.createTexture();
   let transmittanceVar = transmittanceRenderer.addVariable('transmittanceTexture',
-    materials.transmittanceMaterial.fragmentShader(skyParameters.numberOfRaySteps),
+    materials.transmittanceMaterial.fragmentShader(skyParameters.numberOfRaySteps, atmosphereFunctions),
     transmittanceTexture
   );
   transmittanceRenderer.setVariableDependencies(transmittanceVar, []);
@@ -62,7 +68,8 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
       scatteringTextureHeight,
       scatteringTexturePackingWidth,
       scatteringTexturePackingHeight,
-      false //Is Rayleigh
+      false, //Is Rayleigh
+      atmosphereFunctions
     ),
     singleScatteringMieTexture
   );
@@ -79,7 +86,8 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
       scatteringTextureHeight,
       scatteringTexturePackingWidth,
       scatteringTexturePackingHeight,
-      true //Is Rayleigh
+      true, //Is Rayleigh
+      atmosphereFunctions
     ),
     singleScatteringRayleighTexture
   );
@@ -133,7 +141,8 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
       scatteringTexturePackingWidth,
       scatteringTexturePackingHeight,
       mieGCoefficient,
-      false //Is Rayleigh
+      false, //Is Rayleigh
+      atmosphereFunctions
     ),
     multipleScatteringMieTexture
   );
@@ -153,7 +162,8 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
       scatteringTexturePackingWidth,
       scatteringTexturePackingHeight,
       mieGCoefficient,
-      true //Is Rayleigh
+      true, //Is Rayleigh
+      atmosphereFunctions
     ),
     multipleScatteringRayleighTexture
   );

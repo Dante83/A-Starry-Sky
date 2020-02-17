@@ -7,6 +7,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyEngine){
   //Create our material late
   let atmosphericShader;
   let atmospherePass = StarrySky.materials.atmosphere.atmosphereShader;
+  let lutLibrary = StarrySky.LUTLibraries.AtmosphericLUTLibrary;
   this.atmosphereMaterial = new THREE.ShaderMaterial({
     uniforms: JSON.parse(JSON.stringify(atmospherePass.uniforms)),
     side: THREE.BackSide,
@@ -16,11 +17,10 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyEngine){
     flatShading: true,
     clipping: true,
     vertexShader: atmospherePass.vertexShader,
-    fragmentShader: atmospherePass.fragmentShader(mieG, packingWidth, packingHeight)
+    fragmentShader: atmospherePass.fragmentShader(mieG, packingWidth, packingHeight, lutLibrary.atmosphereFunctionsString)
   });
 
   //Populate all of uniform values
-
 
   //Attach the material to our geometry
   this.skyMesh = new THREE.Mesh(geometry, this.atmosphereMaterial);

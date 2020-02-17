@@ -10,7 +10,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   vertexShader: [
     {vertex_glsl}
   ].join('\n'),
-  fragmentShader: function(mieG, packingWidth, packingHeight){
+  fragmentShader: function(mieG, packingWidth, packingHeight, atmosphereFunctions){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -23,6 +23,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     let numberOfChunks = numberOfPoints - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$packingWidth/g, packingWidth);
+      updatedGLSL = updatedGLSL.replace(/\$atmosphereFunctions/g, packingHeight);
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight);
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth);
       updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));

@@ -1,0 +1,25 @@
+//This is not your usual file, instead it is a kind of fragment file that contains
+//a partial glsl fragment file with functions that are used in multiple locations
+StarrySky.Materials.Atmosphere.atmosphereFunctions = {
+  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight){
+    let originalGLSL = [
+      {fragment_glsl}
+    ];
+
+    let textureDepth = packingWidth * packingHeight;
+
+    let updatedLines = [];
+    let numberOfChunks = numberOfPoints - 1;
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i].replace(/\$textureWidth/g, textureWidth);
+      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight);
+      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth);
+      updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  }
+}

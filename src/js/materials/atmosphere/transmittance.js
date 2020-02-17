@@ -2,71 +2,14 @@
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
 //Currently has no uniforms, but might get them in the future
-StarrySky.materials.atmosphere.transmittanceMaterial = {
+StarrySky.Materials.Atmosphere.transmittanceMaterial = {
   uniforms: {},
   fragmentShader: function(numberOfPoints){
     let originalGLSL = [
     '//Based on the thesis of from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
     '//By Gustav Bodare and Edvard Sandberg',
 
-    'const float RADIUS_OF_EARTH = 6366.7;',
-    'const float RADIUS_OF_EARTH_SQUARED = 40534868.89;',
-    'const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = 41559940.89;',
-    'const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = 1025072.0;',
-    'const float ATMOSPHERE_HEIGHT = 80.0;',
-    'const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;',
-    'const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333333333333333333333333333;',
-    'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
-    'const float OZONE_PERCENT_OF_RAYLEIGH = 6E-7;',
-    '//Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
-    '//const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;',
-    'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;',
-    '//float EARTH_MIE_BETA_EXTINCTION = 0.000002222222222222222222222222222222222222222222;',
-
-    '//8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))',
-    '//(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)',
-    '//n_air = 1.00029',
-    '//N_atmos = 2.545e25',
-    '//lambda_red = 650nm',
-    '//labda_green = 510nm',
-    '//lambda_blue = 475nm',
-    'const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);',
-    '//const vec3 RAYLEIGH_BETA = vec3(6.5E-6,1.73E-5,2.30E-5);',
-
-    '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
-    'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
-
-    'vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection) {',
-        'float b = dot(rayDirection, rayOrigin);',
-        'float c = dot(rayOrigin, rayOrigin) - RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED;',
-        'float t = (-b - sqrt((b * b) - c));',
-        'return rayOrigin + t * rayDirection;',
-    '}',
-
-    '//From page 178 of Real Time Collision Detection by Christer Ericson',
-    'bool intersectsSphere(vec2 origin, vec2 direction, float radius){',
-      '//presume that the sphere is located at the origin (0,0)',
-      'bool collides = false;',
-      'float b = dot(origin, direction);',
-      'float c = dot(origin, origin) - radius * radius;',
-      'if(c > 0.0 && b > 0.0){',
-        'collides = true;',
-      '}',
-      'else{',
-        'collides = (b * b - c) < 0.0 ? true : false;',
-      '}',
-      'return collides;',
-    '}',
-
-    '//Converts the parameterized x to cos(zenith) where zenith is between 0 and pi',
-    'float inverseParameterizationOfXToCosOfZenith(float x){',
-      'return 2.0 * x - 1.0;',
-    '}',
-
-    '//Converts the parameterized y to a radius (r + R_e) between R_e and R_e + 80',
-    'float inverseParameterizationOfYToRPlusRe(float y){',
-      'return sqrt(y * y * RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED + RADIUS_OF_EARTH_SQUARED);',
-    '}',
+    '$atmosphereFunctions',
 
     'void main(){',
       'vec2 uv = gl_FragCoord.xy / resolution.xy;',
@@ -80,7 +23,6 @@ StarrySky.materials.atmosphere.transmittanceMaterial = {
 
       '//Check if we intersect the earth. If so, return a transmittance of zero.',
       '//Otherwise, intersect our ray with the atmosphere.',
-
       'vec2 pB = intersectRaySphere(vec2(0.0, r), cameraDirection);',
       'vec3 transmittance = vec3(0.0);',
       'float distFromPaToPb = 0.0;',

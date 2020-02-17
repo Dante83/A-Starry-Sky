@@ -24,3 +24,7 @@ groups:
         vertex: 'vertex.glsl'
         template: 'atmosphere-pass-template.txt'
         material: 'atmosphere-pass.js'
+      -
+        fragment: 'atmosphere-functions.glsl'
+        template: 'atmosphere-functions-template.txt'
+        material: 'atmosphere-functions.js'

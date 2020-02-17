@@ -3,99 +3,7 @@
 
 uniform sampler2D transmittanceTexture;
 
-const float PI_OVER_TWO = 1.57079632679;
-const float RADIUS_OF_EARTH = 6366.7;
-const float RADIUS_OF_EARTH_SQUARED = 40534868.89;
-const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = 41559940.89;
-const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = 1025072.0;
-const float ATMOSPHERE_HEIGHT = 80.0;
-const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;
-const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333333333333333333333333333;
-const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;
-const float OZONE_PERCENT_OF_RAYLEIGH = 0.0000006;
-//Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf
-//const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;
-const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;
-const float ELOK_Z_CONST = 0.9726762775527075;
-const float ONE_OVER_EIGHT_PI = 0.039788735772973836;
-const vec3 intensity = vec3(15.0);
-
-//8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))
-//(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)
-//n_air = 1.00029
-//N_atmos = 2.545e25
-//lambda_red = 650nm
-//labda_green = 510nm
-//lambda_blue = 475nm
-const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);
-
-//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
-const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);
-
-//Texture setup
-const float textureWidth = $textureWidth;
-const float textureHeight = $textureHeight;
-const float packingWidth = $packingWidth;
-const float packingHeight = $packingHeight;
-
-vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection) {
-    float b = dot(rayDirection, rayOrigin);
-    float c = dot(rayOrigin, rayOrigin) - RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED;
-    float t = (-b + sqrt((b * b) - c));
-    return rayOrigin + t * rayDirection;
-}
-
-//From page 178 of Real Time Collision Detection by Christer Ericson
-bool intersectsSphere(vec2 origin, vec2 direction, float radius){
-  //presume that the sphere is located at the origin (0,0)
-  bool collides = true;
-  float b = dot(origin, direction);
-  float c = dot(origin, origin) - radius * radius;
-  if(c > 0.0 && b > 0.0){
-    collides = false;
-  }
-  else{
-    collides = (b * b - c) < 0.0 ? false : true;
-  }
-  return collides;
-}
-
-//Converts the parameterized x to cos(zenith) of the sun
-float inverseParameterizationOfZToCosOfSunZenith(float z){
-    return -(log(1.0 - z * ELOK_Z_CONST) + 0.8) / 2.8;
-}
-
-//Converts the parameterized x to cos(zenith) where zenith is between 0 and pi
-float inverseParameterizationOfXToCosOfZenith(float x){
-  return 2.0 * x - 1.0;
-}
-
-//Converts the cosine of a given theta to a pixel x location betweeen 0 and 1
-float parameterizationOfCosOfZenithToX(float cs_theta){
-  return 0.5 * (1.0 + cs_theta);
-}
-
-//Converts the parameterized y to a radius (r + R_e) between R_e and R_e + 80
-float inverseParameterizationOfYToRPlusRe(float y){
-  return sqrt(y * y * RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED + RADIUS_OF_EARTH_SQUARED);
-}
-
-//Converts radius (r + R_e) to a y value between 0 and 1
-float parameterizationOfHeightToY(float r){
-  return sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED);
-}
-
-vec3 get3DUVFrom2DUV(vec2 glFragCoords){
-  float row = floor(glFragCoords.y / textureHeight);
-  float column = floor(glFragCoords.x / textureWidth);
-  float zPixelCoord = row * packingWidth + column;
-  vec3 uv;
-  uv.x = (glFragCoords.x - column * textureWidth) / textureWidth;
-  uv.y = (glFragCoords.y - row * textureHeight) / textureHeight;
-  uv.z = zPixelCoord / (packingWidth * packingHeight - 1.0);
-
-  return uv;
-}
+$atmosphericFunctions
 
 void main(){
   //This is actually a packed 3D Texture
@@ -105,7 +13,7 @@ void main(){
   float h = r - RADIUS_OF_EARTH;
   vec2 pA = vec2(0.0, r);
   vec2 p = pA;
-  float cosOfViewZenith = inverseParameterizationOfXToCosOfZenith(uv.x);
+  float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);
   float cosOfSunZenith = inverseParameterizationOfZToCosOfSunZenith(uv.z);
   //sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction
   vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);
