@@ -1,4 +1,4 @@
-StarrySky.Renderers.AtmosphereRenderer = function(skyEngine){
+StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //
   //TODO: Replace the sky dome with a plane
   //
@@ -6,8 +6,10 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyEngine){
 
   //Create our material late
   let atmosphericShader;
-  let atmospherePass = StarrySky.materials.atmosphere.atmosphereShader;
-  let lutLibrary = StarrySky.LUTLibraries.AtmosphericLUTLibrary;
+  let atmospherePass = StarrySky.Materials.Atmosphere.atmosphereShader;
+  console.log("BING!");
+  console.log(skyDirector);
+  let lutLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer);
   this.atmosphereMaterial = new THREE.ShaderMaterial({
     uniforms: JSON.parse(JSON.stringify(atmospherePass.uniforms)),
     side: THREE.BackSide,
@@ -32,7 +34,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyEngine){
   parentAssetLoader.starrySkyComponent.scene.add(plane);
 }
 
-StarrySky.Renderers.AtmosphereRenderer.prototype.tick(){
+StarrySky.Renderers.AtmosphereRenderer.prototype.tick = function(){
   //Get all the data for our current view to update the view parameters of our component
 
   //Update the uniforms so that we can see where we are on this sky.

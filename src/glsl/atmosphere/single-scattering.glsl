@@ -2,6 +2,7 @@
 //By Gustav Bodare and Edvard Sandberg
 
 uniform sampler2D transmittanceTexture;
+const intensity = 20;
 
 $atmosphericFunctions
 
@@ -92,6 +93,8 @@ void main(){
       previousMieDensity = mieDensity;
       previousRayleighDensity = rayleighDensity;
     }
+
+    //Note that we ignore intensity until the final render as a multiplicative factor
     #if($isRayleigh)
       totalInscattering *= ONE_OVER_EIGHT_PI * intensity * RAYLEIGH_BETA;
     #else

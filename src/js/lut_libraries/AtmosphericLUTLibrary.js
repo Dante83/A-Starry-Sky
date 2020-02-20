@@ -1,9 +1,11 @@
-StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
+StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   this.renderer = renderer;
   this.data = data;
   this.sunLUT;
   this.moonLUT;
   this.lunarEcclipseLUTs = [];
+
+  console.log("BING!");
 
   //
   //NOTE: For now, we will simply run through our sun lut to see it makes the
@@ -107,16 +109,25 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
   let rayleighScattering = singleScatteringRenderer.getCurrentRenderTarget(singleScatteringRayleighVar).texture;
 
   //Combine our two shaders together into an inscattering sum texture
-  let inscatteringSumTexture = scatteringSumRenderer.createTexture();
-  let inscatteringSumVar = scatteringSumRenderer.addVariable('inscatteringSumTexture',
+  let inscatteringRayleighSumTexture = scatteringSumRenderer.createTexture();
+  let inscatteringRayleighSumVar = scatteringSumRenderer.addVariable('inscatteringRayleighSumTexture',
     materials.inscatteringSumMaterial.fragmentShader, //Initializing
-    inscatteringSumTexture
+    inscatteringRayleighSumTexture
   );
-  scatteringSumRenderer.setVariableDependencies(inscatteringSumVar, []);
-  inscatteringSumVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
-  inscatteringSumVar.material.uniforms.isNotFirstIteration.value = 0;
-  inscatteringSumVar.material.uniforms.kthInscatteringMie.value = mieScattering;
-  inscatteringSumVar.material.uniforms.kthInscatteringRayleigh.value = rayleighScattering;
+  scatteringSumRenderer.setVariableDependencies(inscatteringRayleighSumVar, []);
+  inscatteringRayleighSumVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
+  inscatteringRayleighSumVar.material.uniforms.isNotFirstIteration.value = 0;
+  inscatteringRayleighSumVar.material.uniforms.inscatteringTexture.value = rayleighScattering;
+
+  let inscatteringMieSumTexture = scatteringSumRenderer.createTexture();
+  let inscatteringMieSumVar = scatteringSumRenderer.addVariable('inscatteringMieSumTexture',
+    materials.inscatteringSumMaterial.fragmentShader, //Initializing
+    inscatteringMieSumTexture
+  );
+  scatteringSumRenderer.setVariableDependencies(inscatteringMieSumVar, []);
+  inscatteringMieSumVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
+  inscatteringMieSumVar.material.uniforms.isNotFirstIteration.value = 0;
+  inscatteringMieSumVar.material.uniforms.inscatteringTexture.value = mieScattering;
 
   //Check for any errors in initialization
   let error3 = scatteringSumRenderer.init();
@@ -124,7 +135,8 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
     console.error(`Single Scattering Sum Renderer: ${error3}`);
   }
   scatteringSumRenderer.compute();
-  let scatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringSumVar).texture;
+  let rayleighScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar).texture;
+  let mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
 
   //
   //Set up our multiple scattering textures
@@ -185,12 +197,15 @@ StarrySky.LUTLibraries.AtmosphericLUTLibrary = function(data, renderer){
   rayleighScattering = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringRayleighVar).texture;
 
   //Sum
-  inscatteringSumVar.material.uniforms.isNotFirstIteration.value = 1;
-  inscatteringSumVar.material.uniforms.kthInscatteringMie.value = mieScattering;
-  inscatteringSumVar.material.uniforms.kthInscatteringRayleigh.value = rayleighScattering;
-  inscatteringSumVar.material.uniforms.previousInscatteringSum.value = scatteringSum;
+  inscatteringRayleighSumVar.material.uniforms.isNotFirstIteration.value = 1;
+  inscatteringRayleighSumVar.material.uniforms.kthInscatteringRayleigh.value = rayleighScattering;
+  inscatteringRayleighSumVar.material.uniforms.previousInscatteringSum.value = scatteringSum;
+  inscatteringMieSumVar.material.uniforms.isNotFirstIteration.value = 1;
+  inscatteringMieSumVar.material.uniforms.kthInscatteringMie.value = mieScattering;
+  inscatteringMieSumVar.material.uniforms.previousInscatteringSum.value = scatteringSum;
   scatteringSumRenderer.compute();
-  scatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringSumVar).texture;
+  rayleighScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar).texture;
+  mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
 
   //Let's just focus on the second order scattering until that looks correct, possibly giving
   //another look over the first order scattering to make sure we have that correct as well.

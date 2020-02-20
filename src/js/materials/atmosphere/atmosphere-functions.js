@@ -1,7 +1,7 @@
 //This is not your usual file, instead it is a kind of fragment file that contains
 //a partial glsl fragment file with functions that are used in multiple locations
 StarrySky.Materials.Atmosphere.atmosphereFunctions = {
-  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight){
+  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, mieG){
     let originalGLSL = [
     'const float PI_TIMES_FOUR = 12.5663706144;',
     'const float PI_OVER_TWO = 1.57079632679;',
@@ -20,7 +20,11 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;',
     'const float ELOK_Z_CONST = 0.9726762775527075;',
     'const float ONE_OVER_EIGHT_PI = 0.039788735772973836;',
-    'const vec3 intensity = vec3(15.0);',
+
+    'const float MIE_G $mieG;',
+    'const float MIE_G_SQUARED $mieGSquared;',
+    'const float MIE_PHASE_FUNCTION_COEFFICIENT $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))',
+    'const float ELOK_Z_CONST = 0.9726762775527075;',
 
     '//8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))',
     '//(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)',
@@ -33,6 +37,17 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
 
     '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
     'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
+
+    '//',
+    '//Scattering functions',
+    '//',
+    'float rayleighPhaseFunction(float cosTheta){',
+      'return 1.12 + 0.4 * cosTheta;',
+    '}',
+
+    'float miePhaseFunction(float cosTheta){',
+      'return MIE_PHASE_FUNCTION_COEFFICIENT * ((1 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2 * MIE_G * cosTheta, 1.5));',
+    '}',
 
     '//',
     '//Sphere Collision methods',
@@ -123,7 +138,9 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     '}',
     ];
 
-    let textureDepth = packingWidth * packingHeight;
+    const textureDepth = packingWidth * packingHeight;
+    const mieGSquared = mieG * mieG;
+    const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared))
 
     let updatedLines = [];
     let numberOfChunks = numberOfPoints - 1;
@@ -133,6 +150,10 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth);
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+
+      updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient.toFixed(16));
 
       updatedLines.push(updatedGLSL);
     }

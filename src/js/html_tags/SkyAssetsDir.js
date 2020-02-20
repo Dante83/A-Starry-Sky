@@ -20,7 +20,7 @@ class SkyAssetsDir extends HTMLElement {
 
     //Check if there are any child elements. Otherwise set them to the default.
     this.skyDataLoaded = false;
-    this.data = StarrySky.defaultData.skyAssets;
+    this.data = StarrySky.DefaultData.skyAssets;
   }
 
   connectedCallback(){
@@ -34,9 +34,9 @@ class SkyAssetsDir extends HTMLElement {
       let moonSpecularTextureTags = self.getElementsByTagName('sky-moon-specular-map');
       let moonNormalTextureTags = self.getElementsByTagName('sky-moon-normal-map');
       let starDataLibaryTags = self.getElementsByTagName('sky-star-data-libary');
-      let starHashMap = self.getElementsByTagName('sky-star-hash-map');
+      let starHashMapTags = self.getElementsByTagName('sky-star-hash-map');
 
-      [moonDiffuseTextureTags, moonNormalTextureTags, starBinaryDataTags].forEach(function(tags){
+      [moonDiffuseTextureTags, moonNormalTextureTags, starDataLibaryTags, starHashMapTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-assets-dir> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -48,7 +48,7 @@ class SkyAssetsDir extends HTMLElement {
       self.data.moonDiffuseTexture = moonDiffuseTextureTags.length > 0 ? prefix.concat(moonDiffuseTextureTags[0].innerHTML) : null;
       self.data.moonSpecularMap = moonSpecularTextureTags.length > 0 ? prefix.concat(moonSpecularTextureTags[0].innerHTML) : null;
       self.data.moonNormalTexture = moonNormalTextureTags.length > 0 ? prefix.concat(moonNormalTextureTags[0].innerHTML) : null;
-      self.data.starDataLibrary = starDataLibraryTags.length > 0 ? prefix.concat(starDataLibraryTags[0].innerHTML) : null;
+      self.data.starDataLibrary = starDataLibaryTags.length > 0 ? prefix.concat(starDataLibaryTags[0].innerHTML) : null;
       self.data.starHashMap = starHashMapTags.length > 0 ? prefix.concat(starHashMapTags[0].innerHTML) : null;
       self.skyDataLoaded = true;
 

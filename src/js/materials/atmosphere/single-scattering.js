@@ -1,7 +1,6 @@
 //This helps
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
-//Currently has no uniforms, but might get them in the future
 StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
   uniforms: {
     transmittanceTexture: {type: 't', value: null}
@@ -12,6 +11,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
     '//By Gustav Bodare and Edvard Sandberg',
 
     'uniform sampler2D transmittanceTexture;',
+    'const intensity = 20;',
 
     '$atmosphericFunctions',
 
@@ -102,6 +102,8 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
           'previousMieDensity = mieDensity;',
           'previousRayleighDensity = rayleighDensity;',
         '}',
+
+        '//Note that we ignore intensity until the final render as a multiplicative factor',
         '#if($isRayleigh)',
           'totalInscattering *= ONE_OVER_EIGHT_PI * intensity * RAYLEIGH_BETA;',
         '#else',

@@ -15,7 +15,11 @@ const float OZONE_PERCENT_OF_RAYLEIGH = 0.0000006;
 const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;
 const float ELOK_Z_CONST = 0.9726762775527075;
 const float ONE_OVER_EIGHT_PI = 0.039788735772973836;
-const vec3 intensity = vec3(15.0);
+
+const float MIE_G $mieG;
+const float MIE_G_SQUARED $mieGSquared;
+const float MIE_PHASE_FUNCTION_COEFFICIENT $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))
+const float ELOK_Z_CONST = 0.9726762775527075;
 
 //8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))
 //(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)
@@ -28,6 +32,17 @@ const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);
 
 //As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
 const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);
+
+//
+//Scattering functions
+//
+float rayleighPhaseFunction(float cosTheta){
+  return 1.12 + 0.4 * cosTheta;
+}
+
+float miePhaseFunction(float cosTheta){
+  return MIE_PHASE_FUNCTION_COEFFICIENT * ((1 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2 * MIE_G * cosTheta, 1.5));
+}
 
 //
 //Sphere Collision methods

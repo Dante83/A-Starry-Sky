@@ -19,17 +19,6 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
 
     '$atmosphericFunctions',
 
-    'float phaseMie(float cosTheta){',
-      'float g_squared = mieGCoefficient * mieGCoefficient;',
-      'return (1.5 * (1.0 - g_squared) / (2.0 + g_squared)) * ((1.0 + cosTheta * cosTheta) / pow((1.0 +  g_squared - 2.0 *  mieGCoefficient * + cosTheta * cosTheta), 1.5));',
-    '}',
-
-    '//Modified Rayleigh Phase Function',
-    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
-    'float phaseRayleigh(float cosTheta){',
-      'return 0.8 * (1.4 + 0.5 * cosTheta);',
-    '}',
-
     'vec3 gatherInscatteredLight(float r, float cameraZenith, float sunAngleAtP){',
       'float x;',
       'float y = parameterizationOfHeightToY(r);',
@@ -52,11 +41,10 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
         'cosAngle = cos(angleBetweenCameraAndIncomingRay);',
         '#if($isRayleigh)',
           'inscatteredLight = texture2D(kMinusOneRayleighInscattering, uvInscattered).rgb;',
-          'phaseValue = 0.75 * (1.0 + cosAngle * cosAngle);',
+          'phaseValue = rayleighPhaseFunction(cosAngle);',
         '#else',
           'inscatteredLight = texture2D(kMinusOneMieInscattering, uvInscattered).rgb;',
-          'phaseValue = ((3.0 * (1.0 - mieGCoefficient * mieGCoefficient)) / (2.0 * (2.0 + mieGCoefficient * mieGCoefficient)));',
-          'phaseValue *= ((1.0 + cosAngle * cosAngle) / pow((1.0 + mieGCoefficient * mieGCoefficient - 2.0 * mieGCoefficient * cosAngle * cosAngle), 3.0 / 2.0));',
+          'phaseValue = miePhaseFunction(cosAngle);',
         '#endif',
 
         'gatheredInscatteredIntensity += inscatteredLight * phaseValue;',
@@ -84,8 +72,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
       'vec2 pB = intersectRaySphere(vec2(0.0, r), cameraDirection);',
       'float distFromPaToPb = distance(pA, pB);',
       'float chunkLength = distFromPaToPb / $numberOfChunks;',
-      'vec2 direction = (pB - pA) / distFromPaToPb;',
-      'vec2 deltaP = direction * chunkLength;',
+      'vec2 deltaP = cameraDirection * chunkLength;',
 
       'vec3 totalInscattering = vec3(0.0);',
       '//Prime our trapezoidal rule',
@@ -99,13 +86,11 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
       'vec2 uvt = vec2(parameterizationOfCosOfZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));',
       'vec3 transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;',
 
-      'vec3 previousMieInscattering = previousMieDensity * transmittance;',
-      'vec3 previousRayleighInscattering = previousRayleighDensity * transmittance;',
-
+      'vec3 gatheringFunction = gatherInscatteredLight(distance(p), cameraAngle, initialSunAngle);',
       '#if($isRayleigh)',
-        'vec3 previousInscattering = previousMieDensity * transmittance;',
+        'vec3 previousInscattering = gatheringFunction * previousMieDensity * exp(-1.0);',
       '#else',
-        'vec3 previousInscattering = previousRayleighDensity * transmittance;',
+        'vec3 previousInscattering = gatheringFunction * previousRayleighDensity * exp(-1.0);',
       '#endif',
 
       '//Integrate from Pa to Pb to determine the total transmittance',

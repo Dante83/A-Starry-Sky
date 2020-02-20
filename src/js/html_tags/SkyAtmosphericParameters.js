@@ -87,7 +87,7 @@ class SkyAtmosphericParameters extends HTMLElement {
             if(tags.length !== 1){
               console.error(`The <${tags[0].tagName}> tag must contain 1 and only 1 tag of type <${colorTags[0].tagName}>. ${colorTags.length} found.`);
             }
-          }
+          });
         }
       });
 
@@ -149,4 +149,4 @@ class SkyAtmosphericParameters extends HTMLElement {
     });
   };
 }
-window.customElements.define('sky-atmospheric-parameters', SkyParameters);
+window.customElements.define('sky-atmospheric-parameters', SkyAtmosphericParameters);

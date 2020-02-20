@@ -1,6 +1,8 @@
-StarrySky.AssetManager = function(starrySkyEngine){
-  this.starrySkyEngine = starrySkyEngine;
-  let starrySkyComponent = starrySkyEngine.parentComponent;
+StarrySky.AssetManager = function(skyDirector){
+  this.skyDirector = skyDirector;
+  this.data = {};
+  this.images = {};
+  let starrySkyComponent = skyDirector.parentComponent;
 
   //------------------------
   //Capture all the information from our child elements for our usage here.
@@ -24,7 +26,7 @@ StarrySky.AssetManager = function(starrySkyEngine){
   //Now grab each of or our elements and check for events.
   this.starrySkyComponent = starrySkyComponent;
   this.skyDataSetsLoaded = 0;
-  this.skyDataSetsLength = tagLists.length;
+  this.skyDataSetsLength = 0;
   this.skyLocationTag;
   this.hasSkyLocationTag = false;
   this.skyTimeTag;
@@ -37,6 +39,27 @@ StarrySky.AssetManager = function(starrySkyEngine){
   this.tickSinceLastUpdateRequest = 5;
   let self = this;
 
+  //Internal function for loading our sky data once the DOM is ready
+  this.loadSkyData = function(){
+    console.log("Load sky data!");
+    //Remove our event listener for loading sky data from the DOM
+    //and attach a new listener for loading all of our visual assets and data
+    self.skyAssetsTag.removeEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
+
+    //Now that we have verified our tags, let's grab the first one in each.
+    let defaultValues = self.starrySkyComponent.defaultValues;
+    self.data.skyLocationData = self.hasSkyLocationTag ? self.skyLocationTag.data : defaultValues.location;
+    self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
+    self.data.skyParametersData = self.hasSkyParametersTag ? self.skyParametersTag.data : defaultValues.skyParameters;
+    self.data.skyAssetsData = self.hasSkyAssetsTag ? self.skyAssetsTag.data : defaultValues.assets;
+
+    //Use the assets we have to load all of our asset images and populate the engine
+    //TODO: Right now, we do not need any images
+
+    //Once we are finished loading all of our images, we can start up our renderers
+    self.skyDirector.initializeRenderers();
+  };
+
   //This is the function that gets called each time our data loads.
   //In the event that we have loaded everything the number of tags should
   //equal the number of events.
@@ -44,74 +67,48 @@ StarrySky.AssetManager = function(starrySkyEngine){
     self.skyDataSetsLoaded += 1;
     if(self.skyDataSetsLoaded >= self.skyDataSetsLength){
       self.loadSkyData();
-      return true;
     }
-    return false;
   };
 
+  //Closure to simplify our code below to avoid code duplication.
+  function checkIfAllHTMLDataLoaded(tag){
+    if(!tag.skyDataLoaded || !checkIfNeedsToLoadSkyData()){
+      //Tags still yet exist to be loaded? Add a listener for the next event
+      tag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
+    }
+  }
+
+  let activeTags = [];
   if(skyLocationTags.length === 1){
+    this.skyDataSetsLength += 1;
     this.skyLocationTag = skyLocationTags[0];
     this.hasSkyLocationTag = true;
-    if(this.skyLocationTag.skyDataLoaded && checkIfNeedsToLoadSkyData()){
-      return true;
-    }
-    else{
-      this.skyLocationTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
-    }
+    hasSkyDataLoadedEventListener = false;
+    activeTags.push(this.skyLocationTag);
   }
   if(skyTimeTags.length === 1){
+    this.skyDataSetsLength += 1;
     this.skyTimeTag = skyTimeTags[0];
     this.hasSkyTimeTag = true;
-    if(this.skyTimeTag.skyDataLoaded && checkIfNeedsToLoadSkyData()){
-      return true;
-    }
-    else{
-      this.skyTimeTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
-    }
+    activeTags.push(this.skyTimeTag);
   }
   if(skyParametersTags.length === 1){
+    this.skyDataSetsLength += 1;
     this.skyParametersTag = skyParametersTags[0];
     this.hasSkyParametersTag = true;
-    if(this.skyParametersTag.skyDataLoaded && checkIfNeedsToLoadSkyData()){
-      return true;
-    }
-    else{
-      this.skyParametersTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
-    }
+    activeTags.push(this.skyParametersTag);
   }
   if(skyAssetsTags.length === 1){
+    this.skyDataSetsLength += 1;
     this.skyAssetsTag = skyAssetsTags[0];
     this.hasSkyAssetsTag = true;
-    if(this.skyAssetsTag.skyDataLoaded && checkIfNeedsToLoadSkyData()){
-      return true;
-    }
-    else{
-      this.skyAssetsTag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
-    }
+    activeTags.push(this.skyAssetsTag);
   }
+  for(let i = 0; i < activeTags.length; ++i){
+    checkIfAllHTMLDataLoaded(activeTags[i]);
+  }
+
   if(this.skyDataSetsLength === 0 || this.skyDataSetsLoaded === this.skyDataSetsLength){
     this.loadSkyData();
-    return true;
   }
-
-  return false;
-};
-
-StarrySky.AssetLoader.prototype.loadSkyData = function(){
-  //Now that we have verified our tags, let's grab the first one in each.
-  let defaultValues = this.starrySkyComponent.defaultValues;
-  let skyLocationData = this.hasSkyLocationTag ? this.skyLocationTag.data : defaultValues.location;
-  let skyTimeData = this.hasSkyTimeTag ? this.skyTimeTag.data : defaultValues.time;
-  let skyParametersData = this.hasSkyParametersTag ? this.skyParametersTag.data : defaultValues.skyParameters;
-  let skyAssetsData = this.hasSkyAssetsTag ? this.skyAssetsTag.data : defaultValues.assets;
-
-  //Clone our data over
-  this.starrySkyEngine.data = {
-    location: this.hasSkyLocationTag ? this.skyLocationTag.data : defaultValues.location,
-    time: this.hasSkyTimeTag ? this.skyTimeTag.data : defaultValues.time,
-    skyParameters: this.hasSkyParametersTag ? this.skyParametersTag.data : defaultValues.skyParameters,
-  };
-
-  //Use the assets we have to load all of our asset images and populate the engine
-  //TODO: Right now, we do not need any images
 };

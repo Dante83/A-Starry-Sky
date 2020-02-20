@@ -25,20 +25,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform sampler2D solarMieInscatteringSum;',
     'uniform sampler2D solarRayleighInscatteringSum;',
 
-    'const float MIE_G $mieG;',
-    'const float MIE_G_SQUARED $mieGSquared;',
-    'const float MIE_PHASE_FUNCTION_COEFFICIENT $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))',
-    'const float ELOK_Z_CONST = 0.9726762775527075;',
-
     '$atmosphericFunctions',
-
-    'float rayleighPhaseFunction(float cosTheta){',
-      'return 0.8 * (1.4 + 0.5 * cosTheta);',
-    '}',
-
-    'float miePhaseFunction(float cosTheta){',
-      'return MIE_PHASE_FUNCTION_COEFFICIENT * ((1 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2 * MIE_G * cosTheta, 1.5));',
-    '}',
 
     'vec3 atmosphericPass(vec3 sourcePosition, vec3 vWorldPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable){',
       'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, vWorldPosition);',
