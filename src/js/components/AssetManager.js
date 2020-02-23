@@ -31,8 +31,8 @@ StarrySky.AssetManager = function(skyDirector){
   this.hasSkyLocationTag = false;
   this.skyTimeTag;
   this.hasSkyTimeTag = false;
-  this.skyParametersTag;
-  this.hasSkyParametersTag = false;
+  this.skyAtmosphericParametersTag;
+  this.hasSkyAtmosphericParametersTag = false;
   this.skyAssetsTag;
   this.hasSkyAssetsTag = false;
   this.readyForTickTock = false;
@@ -41,7 +41,6 @@ StarrySky.AssetManager = function(skyDirector){
 
   //Internal function for loading our sky data once the DOM is ready
   this.loadSkyData = function(){
-    console.log("Load sky data!");
     //Remove our event listener for loading sky data from the DOM
     //and attach a new listener for loading all of our visual assets and data
     self.skyAssetsTag.removeEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
@@ -50,14 +49,12 @@ StarrySky.AssetManager = function(skyDirector){
     let defaultValues = self.starrySkyComponent.defaultValues;
     self.data.skyLocationData = self.hasSkyLocationTag ? self.skyLocationTag.data : defaultValues.location;
     self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
-    self.data.skyParametersData = self.hasSkyParametersTag ? self.skyParametersTag.data : defaultValues.skyParameters;
+    self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
     self.data.skyAssetsData = self.hasSkyAssetsTag ? self.skyAssetsTag.data : defaultValues.assets;
 
     //Use the assets we have to load all of our asset images and populate the engine
     //TODO: Right now, we do not need any images
-
-    //Once we are finished loading all of our images, we can start up our renderers
-    self.skyDirector.initializeRenderers();
+    skyDirector.initializeRenderers(self);
   };
 
   //This is the function that gets called each time our data loads.
@@ -94,9 +91,9 @@ StarrySky.AssetManager = function(skyDirector){
   }
   if(skyParametersTags.length === 1){
     this.skyDataSetsLength += 1;
-    this.skyParametersTag = skyParametersTags[0];
-    this.hasSkyParametersTag = true;
-    activeTags.push(this.skyParametersTag);
+    this.skyAtmosphericParametersTag = skyAtmosphericParametersTags[0];
+    this.hasSkyAtmosphericParametersTag = true;
+    activeTags.push(this.skyAtmosphericParametersTag);
   }
   if(skyAssetsTags.length === 1){
     this.skyDataSetsLength += 1;

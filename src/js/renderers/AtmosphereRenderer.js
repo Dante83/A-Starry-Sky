@@ -7,9 +7,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //Create our material late
   let atmosphericShader;
   let atmospherePass = StarrySky.Materials.Atmosphere.atmosphereShader;
-  console.log("BING!");
-  console.log(skyDirector);
-  let lutLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer);
+  let lutLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
   this.atmosphereMaterial = new THREE.ShaderMaterial({
     uniforms: JSON.parse(JSON.stringify(atmospherePass.uniforms)),
     side: THREE.BackSide,
@@ -19,19 +17,24 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     flatShading: true,
     clipping: true,
     vertexShader: atmospherePass.vertexShader,
-    fragmentShader: atmospherePass.fragmentShader(mieG, packingWidth, packingHeight, lutLibrary.atmosphereFunctionsString)
+    fragmentShader: atmospherePass.fragmentShader(
+      skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      lutLibrary.packingWidth,
+      lutLibrary.packingHeight,
+      lutLibrary.atmosphereFunctionsString
+    )
   });
 
   //Populate all of uniform values
 
   //Attach the material to our geometry
-  this.skyMesh = new THREE.Mesh(geometry, this.atmosphereMaterial);
+  this.skyMesh = new THREE.Mesh(this.skyGeometry, this.atmosphereMaterial);
 
   //Initialize the position of the sky at the location of the camera
   this.skyMesh.position.set(0.0, 0.0, 0.0);
 
   //Add this object to the scene
-  parentAssetLoader.starrySkyComponent.scene.add(plane);
+  skyDirector.scene.add(this.skyMesh);
 }
 
 StarrySky.Renderers.AtmosphereRenderer.prototype.tick = function(){

@@ -1,11 +1,9 @@
-StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
+StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.renderer = renderer;
   this.data = data;
   this.sunLUT;
   this.moonLUT;
   this.lunarEcclipseLUTs = [];
-
-  console.log("BING!");
 
   //
   //NOTE: For now, we will simply run through our sun lut to see it makes the
@@ -24,7 +22,6 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   let singleScatteringRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
   let scatteringSumRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
 
-  let skyParameters = parentAssetLoader.data.skyParameters;
   let materials = StarrySky.Materials.Atmosphere;
 
   //Depth texture parameters. Note that texture depth is packing width * packing height
@@ -36,13 +33,19 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
 
   //Grab our atmospheric functions partial, we also store it in the library
   //as we use it in the final atmospheric material.
-  this.atmosphereFunctionsString = materials.partialFragmentShader(scatteringTextureWidth, scatteringTextureHeight, scatteringTexturePackingWidth, scatteringTexturePackingHeight);
+  this.atmosphereFunctionsString = materials.atmosphereFunctions.partialFragmentShader(
+    scatteringTextureWidth,
+    scatteringTextureHeight,
+    scatteringTexturePackingWidth,
+    scatteringTexturePackingHeight,
+    this.data.skyAtmosphericParameters.mieDirectionalG
+  );
   let atmosphereFunctions = this.atmosphereFunctionsString;
 
   //Set up our transmittance texture
   let transmittanceTexture = transmittanceRenderer.createTexture();
   let transmittanceVar = transmittanceRenderer.addVariable('transmittanceTexture',
-    materials.transmittanceMaterial.fragmentShader(skyParameters.numberOfRaySteps, atmosphereFunctions),
+    materials.transmittanceMaterial.fragmentShader(data.skyAtmosphericParameters.numberOfRaySteps, atmosphereFunctions),
     transmittanceTexture
   );
   transmittanceRenderer.setVariableDependencies(transmittanceVar, []);
@@ -65,7 +68,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   let singleScatteringMieTexture = singleScatteringRenderer.createTexture();
   let singleScatteringMieVar = singleScatteringRenderer.addVariable('kthInscatteringMie',
     materials.singleScatteringMaterial.fragmentShader(
-      skyParameters.numberOfRaySteps,
+      data.skyAtmosphericParameters.numberOfRaySteps,
       scatteringTextureWidth,
       scatteringTextureHeight,
       scatteringTexturePackingWidth,
@@ -83,7 +86,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   let singleScatteringRayleighTexture = singleScatteringRenderer.createTexture();
   let singleScatteringRayleighVar = singleScatteringRenderer.addVariable('kthInscatteringRayleigh',
     materials.singleScatteringMaterial.fragmentShader(
-      skyParameters.numberOfRaySteps,
+      data.skyAtmosphericParameters.numberOfRaySteps,
       scatteringTextureWidth,
       scatteringTextureHeight,
       scatteringTexturePackingWidth,
@@ -147,7 +150,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   let multipleScatteringMieTexture = multipleScatteringRenderer.createTexture();
   let multipleScatteringMieVar = multipleScatteringRenderer.addVariable('kthInscatteringMie',
     materials.kthInscatteringMaterial.fragmentShader(
-      skyParameters.numberOfRaySteps,
+      data.skyAtmosphericParameters.numberOfRaySteps,
       scatteringTextureWidth,
       scatteringTextureHeight,
       scatteringTexturePackingWidth,
@@ -168,7 +171,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   let multipleScatteringRayleighTexture = multipleScatteringRenderer.createTexture();
   let multipleScatteringRayleighVar = multipleScatteringRenderer.addVariable('kthInscatteringRayleigh',
     materials.kthInscatteringMaterial.fragmentShader(
-      skyParameters.numberOfRaySteps,
+      data.skyAtmosphericParameters.numberOfRaySteps,
       scatteringTextureWidth,
       scatteringTextureHeight,
       scatteringTexturePackingWidth,
@@ -198,11 +201,11 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
 
   //Sum
   inscatteringRayleighSumVar.material.uniforms.isNotFirstIteration.value = 1;
-  inscatteringRayleighSumVar.material.uniforms.kthInscatteringRayleigh.value = rayleighScattering;
-  inscatteringRayleighSumVar.material.uniforms.previousInscatteringSum.value = scatteringSum;
+  inscatteringRayleighSumVar.material.uniforms.inscatteringTexture.value = rayleighScattering;
+  inscatteringRayleighSumVar.material.uniforms.previousInscatteringSum.value = rayleighScatteringSum;
   inscatteringMieSumVar.material.uniforms.isNotFirstIteration.value = 1;
-  inscatteringMieSumVar.material.uniforms.kthInscatteringMie.value = mieScattering;
-  inscatteringMieSumVar.material.uniforms.previousInscatteringSum.value = scatteringSum;
+  inscatteringMieSumVar.material.uniforms.inscatteringTexture.value = mieScattering;
+  inscatteringMieSumVar.material.uniforms.previousInscatteringSum.value = mieScatteringSum;
   scatteringSumRenderer.compute();
   rayleighScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar).texture;
   mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
@@ -235,12 +238,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   let geometry = new THREE.PlaneBufferGeometry(1.0, 1.0, 32, 128);
   let testMaterial = new THREE.MeshBasicMaterial({
    side: THREE.FrontSide,
-   map: scatteringSum,
+   map: rayleighScatteringSum,
   });
   testMaterial.flatShading = true;
   let plane = new THREE.Mesh(geometry, testMaterial);
   plane.position.set(0.0, 1.5, -1.0);
-  parentAssetLoader.starrySkyComponent.scene.add(plane);
-
-  return transmittanceLUT;
+  scene.add(plane);
 }

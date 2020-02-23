@@ -11,17 +11,16 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared))
 
     let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$textureWidth/g, textureWidth);
-      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight);
-      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth);
+      let updatedGLSL = originalGLSL[i].replace(/\$textureWidth/g, textureWidth.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
 
-      updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
 
       updatedLines.push(updatedGLSL);
     }

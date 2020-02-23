@@ -11,7 +11,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
     '//By Gustav Bodare and Edvard Sandberg',
 
     'uniform sampler2D transmittanceTexture;',
-    'const intensity = 20;',
+    'const float intensity = 20.0;',
 
     '$atmosphericFunctions',
 
@@ -119,7 +119,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
     let numberOfChunks = numberOfPoints - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
-      updatedGLSL = updatedGLSL.replace(/\$atmosphereFunctions/g, packingHeight);
+      updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));

@@ -20,22 +20,14 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     let textureDepth = packingWidth * packingHeight;
 
     let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$packingWidth/g, packingWidth);
-      updatedGLSL = updatedGLSL.replace(/\$atmosphereFunctions/g, packingHeight);
+      updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight);
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth);
       updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseFunctionCoefficient.toFixed(16));
-
-      //Choose which texture to use
-      updatedGLSL = updatedGLSL.replace(/\$isRayleigh/g, isRayleigh ? '1' : '0');
-
-      //Texture depth is packingWidth * packingHeight
-      updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
 
       updatedLines.push(updatedGLSL);
     }

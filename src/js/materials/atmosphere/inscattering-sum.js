@@ -4,8 +4,7 @@
 StarrySky.Materials.Atmosphere.inscatteringSumMaterial = {
   uniforms: {
     previousInscatteringSum: {type: 't', 'value': null},
-    kthInscatteringMie: {type: 't', 'value': null},
-    kthInscatteringRayleigh: {type: 't', 'value': null},
+    inscatteringTexture : {type: 't', 'value': null},
     isNotFirstIteration: {type: 'b', 'value': false}
   },
   fragmentShader: [

@@ -2,7 +2,7 @@
 //By Gustav Bodare and Edvard Sandberg
 
 uniform sampler2D transmittanceTexture;
-const intensity = 20;
+const float intensity = 20.0;
 
 $atmosphericFunctions
 

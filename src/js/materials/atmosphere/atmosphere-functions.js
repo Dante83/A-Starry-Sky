@@ -5,7 +5,6 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     let originalGLSL = [
     'const float PI_TIMES_FOUR = 12.5663706144;',
     'const float PI_OVER_TWO = 1.57079632679;',
-    'const float PI_OVER_TWO = 1.57079632679;',
     'const float RADIUS_OF_EARTH = 6366.7;',
     'const float RADIUS_OF_EARTH_SQUARED = 40534868.89;',
     'const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = 41559940.89;',
@@ -21,10 +20,9 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'const float ELOK_Z_CONST = 0.9726762775527075;',
     'const float ONE_OVER_EIGHT_PI = 0.039788735772973836;',
 
-    'const float MIE_G $mieG;',
-    'const float MIE_G_SQUARED $mieGSquared;',
-    'const float MIE_PHASE_FUNCTION_COEFFICIENT $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))',
-    'const float ELOK_Z_CONST = 0.9726762775527075;',
+    'const float MIE_G = $mieG;',
+    'const float MIE_G_SQUARED = $mieGSquared;',
+    'const float MIE_PHASE_FUNCTION_COEFFICIENT = $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))',
 
     '//8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))',
     '//(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)',
@@ -39,6 +37,13 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
 
     '//',
+    '//General methods',
+    '//',
+    'float fModulo(float a, float b){',
+      'return (a - (b * floor(a / b)));',
+    '}',
+
+    '//',
     '//Scattering functions',
     '//',
     'float rayleighPhaseFunction(float cosTheta){',
@@ -46,7 +51,7 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     '}',
 
     'float miePhaseFunction(float cosTheta){',
-      'return MIE_PHASE_FUNCTION_COEFFICIENT * ((1 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2 * MIE_G * cosTheta, 1.5));',
+      'return MIE_PHASE_FUNCTION_COEFFICIENT * ((1.0 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2.0 * MIE_G * cosTheta, 1.5));',
     '}',
 
     '//',
@@ -130,11 +135,6 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       'float x = (column * $packingWidth + $textureWidth * uv3Coords.x) / ($packingWidth * $textureWidth);',
       'float y = (row * $packingHeight + $textureHeight * uv3Coords.y) / ($packingHeight * $textureHeight);',
       'return vec2(x, y);',
-    '}',
-
-    '//General methods',
-    'float fModulo(float a, float b){',
-      'return (a - (b * floor(a / b)));',
     '}',
     ];
 
@@ -143,17 +143,16 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared))
 
     let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$textureWidth/g, textureWidth);
-      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight);
-      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth);
+      let updatedGLSL = originalGLSL[i].replace(/\$textureWidth/g, textureWidth.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
 
-      updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
 
       updatedLines.push(updatedGLSL);
     }

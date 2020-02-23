@@ -18,9 +18,9 @@ StarrySky.SkyDirector = function(parentComponent){
   let self = this;
   this.renderers = {};
 
-  this.initializeRenderers = function(){
-    console.log(self.assetManager);
-    console.log("BING!");
+  this.initializeRenderers = function(assetManager){
+    self.assetManager = assetManager;
+
     //Prepare all of our renderers to display stuff
     self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
     self.start();
@@ -29,10 +29,10 @@ StarrySky.SkyDirector = function(parentComponent){
   this.start = function(){
     //Update our tick and tock functions
     parentComponent.tick = function(){
-
+      //Do nothing for now
     }
     parentComponent.tock = function(){
-
+      //Do nothing for now
     }
     parentComponent.initialized = true;
   }
@@ -61,7 +61,6 @@ StarrySky.SkyDirector = function(parentComponent){
 
   window.addEventListener('DOMContentLoaded', function(){
     //Grab all of our assets
-    self.assetManager = new StarrySky.AssetManager(self);
-    self.initializeRenderers();
+    let assetManager = new StarrySky.AssetManager(self);
   });
 }

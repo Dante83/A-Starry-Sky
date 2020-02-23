@@ -1,6 +1,5 @@
 const float PI_TIMES_FOUR = 12.5663706144;
 const float PI_OVER_TWO = 1.57079632679;
-const float PI_OVER_TWO = 1.57079632679;
 const float RADIUS_OF_EARTH = 6366.7;
 const float RADIUS_OF_EARTH_SQUARED = 40534868.89;
 const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = 41559940.89;
@@ -16,10 +15,9 @@ const float EARTH_MIE_BETA_EXTINCTION = 0.00444444444444444444444444444444444444
 const float ELOK_Z_CONST = 0.9726762775527075;
 const float ONE_OVER_EIGHT_PI = 0.039788735772973836;
 
-const float MIE_G $mieG;
-const float MIE_G_SQUARED $mieGSquared;
-const float MIE_PHASE_FUNCTION_COEFFICIENT $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))
-const float ELOK_Z_CONST = 0.9726762775527075;
+const float MIE_G = $mieG;
+const float MIE_G_SQUARED = $mieGSquared;
+const float MIE_PHASE_FUNCTION_COEFFICIENT = $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))
 
 //8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))
 //(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)
@@ -34,6 +32,13 @@ const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);
 const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);
 
 //
+//General methods
+//
+float fModulo(float a, float b){
+  return (a - (b * floor(a / b)));
+}
+
+//
 //Scattering functions
 //
 float rayleighPhaseFunction(float cosTheta){
@@ -41,7 +46,7 @@ float rayleighPhaseFunction(float cosTheta){
 }
 
 float miePhaseFunction(float cosTheta){
-  return MIE_PHASE_FUNCTION_COEFFICIENT * ((1 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2 * MIE_G * cosTheta, 1.5));
+  return MIE_PHASE_FUNCTION_COEFFICIENT * ((1.0 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2.0 * MIE_G * cosTheta, 1.5));
 }
 
 //
@@ -125,9 +130,4 @@ vec2 getUV2From3DUV(vec3 uv3Coords){
   float x = (column * $packingWidth + $textureWidth * uv3Coords.x) / ($packingWidth * $textureWidth);
   float y = (row * $packingHeight + $textureHeight * uv3Coords.y) / ($packingHeight * $textureHeight);
   return vec2(x, y);
-}
-
-//General methods
-float fModulo(float a, float b){
-  return (a - (b * floor(a / b)));
 }

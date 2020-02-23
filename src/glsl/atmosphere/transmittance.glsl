@@ -1,7 +1,7 @@
 //Based on the thesis of from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
 //By Gustav Bodare and Edvard Sandberg
 
-$atmosphereFunctions
+$atmosphericFunctions
 
 void main(){
   vec2 uv = gl_FragCoord.xy / resolution.xy;
@@ -9,7 +9,7 @@ void main(){
   float h = r - RADIUS_OF_EARTH;
   vec2 pA = vec2(0.0, r);
   vec2 p = pA;
-  float cosOfViewZenith = inverseParameterizationOfXToCosOfZenith(uv.x);
+  float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);
   //sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction
   vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);
 

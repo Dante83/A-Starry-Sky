@@ -4,12 +4,12 @@
 //Currently has no uniforms, but might get them in the future
 StarrySky.Materials.Atmosphere.transmittanceMaterial = {
   uniforms: {},
-  fragmentShader: function(numberOfPoints){
+  fragmentShader: function(numberOfPoints, atmosphereFunctions){
     let originalGLSL = [
     '//Based on the thesis of from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
     '//By Gustav Bodare and Edvard Sandberg',
 
-    '$atmosphereFunctions',
+    '$atmosphericFunctions',
 
     'void main(){',
       'vec2 uv = gl_FragCoord.xy / resolution.xy;',
@@ -17,7 +17,7 @@ StarrySky.Materials.Atmosphere.transmittanceMaterial = {
       'float h = r - RADIUS_OF_EARTH;',
       'vec2 pA = vec2(0.0, r);',
       'vec2 p = pA;',
-      'float cosOfViewZenith = inverseParameterizationOfXToCosOfZenith(uv.x);',
+      'float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);',
       '//sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction',
       'vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);',
 
@@ -73,7 +73,7 @@ StarrySky.Materials.Atmosphere.transmittanceMaterial = {
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
       updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
-
+      updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
 
       updatedLines.push(updatedGLSL);
     }
