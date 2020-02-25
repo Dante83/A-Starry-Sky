@@ -10,7 +10,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   vertexShader: [
     {vertex_glsl}
   ].join('\n'),
-  fragmentShader: function(mieG, packingWidth, packingHeight, atmosphereFunctions){
+  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -21,13 +21,17 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     let updatedLines = [];
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$packingWidth/g, packingWidth);
-      updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
-      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight);
-      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth);
+      let updatedGLSL = originalGLSL[i].replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseFunctionCoefficient.toFixed(16));
+
+      //Texture constants
+      updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
 
       updatedLines.push(updatedGLSL);
     }

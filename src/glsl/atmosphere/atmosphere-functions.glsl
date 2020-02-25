@@ -1,4 +1,5 @@
 const float PI_TIMES_FOUR = 12.5663706144;
+const float PI_TIMES_TWO = 6.28318530718;
 const float PI_OVER_TWO = 1.57079632679;
 const float RADIUS_OF_EARTH = 6366.7;
 const float RADIUS_OF_EARTH_SQUARED = 40534868.89;
@@ -75,11 +76,11 @@ bool intersectsSphere(vec2 origin, vec2 direction, float radius){
 }
 
 //solar-zenith angle parameterization methods
-float inverseParameterizationOfZToCosOfSunZenith(float z){
+float inverseParameterizationOfZToCosOfSourceZenith(float z){
     return -(log(1.0 - z * ELOK_Z_CONST) + 0.8) / 2.8;
 }
 
-float parameterizationOfCosOfSunZenithToZ(float cosOfSolarZenithAngle){
+float parameterizationOfCosOfSourceZenithToZ(float cosOfSolarZenithAngle){
   return (1.0 - exp(-2.8 * cosOfSolarZenithAngle - 0.8)) / ELOK_Z_CONST;
 }
 
@@ -90,7 +91,7 @@ float inverseParameterizationOfXToCosOfViewZenith(float x){
 
 //height parameterization methods
 //[0, 1]
-float parameterizationOfCosOfZenithToX(float viewZenithAngle){
+float parameterizationOfCosOfViewZenithToX(float viewZenithAngle){
   return 0.5 * (1.0 + viewZenithAngle);
 }
 
@@ -107,27 +108,37 @@ float parameterizationOfHeightToY(float r){
 }
 
 //2D-3D texture conversion methods
+//All of this stuff is zero-indexed
 const float textureWidth = $textureWidth;
 const float textureHeight = $textureHeight;
 const float packingWidth = $packingWidth;
 const float packingHeight = $packingHeight;
 
-vec3 get3DUVFrom2DUV(vec2 glFragCoords){
-  float row = floor(glFragCoords.y / textureHeight);
-  float column = floor(glFragCoords.x / textureWidth);
-  float zPixelCoord = row * packingWidth + column;
-  vec3 uv;
-  uv.x = (glFragCoords.x - column * textureWidth) / textureWidth;
-  uv.y = (glFragCoords.y - row * textureHeight) / textureHeight;
-  uv.z = zPixelCoord / (packingWidth * packingHeight - 1.0);
+vec3 get3DUVFrom2DUV(vec2 uv2){
+  vec3 uv3;
+  vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);
+  vec2 pixelPosition = uv2 * parentTextureDimensions;
+  float row = floor(pixelPosition.y / textureHeight);
+  float column = floor(pixelPosition.x / textureWidth);
+  float rowRemainder = pixelPosition.y - row * textureHeight;
+  float columnRemainder = pixelPosition.x - column * textureWidth;
+  uv3.x = columnRemainder / textureWidth;
+  uv3.y = rowRemainder / textureHeight;
+  uv3.z = (row * packingWidth + column) / (packingWidth * packingHeight);
 
-  return uv;
+  return uv3;
 }
 
-vec2 getUV2From3DUV(vec3 uv3Coords){
-  float row = floor(uv3Coords.z * $packingHeight);
-  float column = fModulo(row * packingWidth, $packingWidth);
-  float x = (column * $packingWidth + $textureWidth * uv3Coords.x) / ($packingWidth * $textureWidth);
-  float y = (row * $packingHeight + $textureHeight * uv3Coords.y) / ($packingHeight * $textureHeight);
-  return vec2(x, y);
+vec2 getUV2From3DUV(vec3 uv3){
+  vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);
+  float zIndex = uv3.z * packingHeight * packingWidth;
+  float row = floor(zIndex / packingWidth);
+  float column = zIndex - row * packingWidth;
+  column = 1.0;
+  vec2 uv2;
+  uv2.x = ((column * textureWidth) + uv3.x * textureWidth) / parentTextureDimensions.x;
+  uv2.y = ((row * textureHeight) + 0.0) / parentTextureDimensions.y;
+  uv2.y = 1.0 - (1.0 / packingHeight);
+
+  return vec2(uv2.y);
 }

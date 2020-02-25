@@ -2,28 +2,32 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //
   //TODO: Replace the sky dome with a plane
   //
-  this.skyGeometry = new THREE.SphereGeometry(5000.0, 64, 32, 0, 2.0 * Math.PI, 0.0, 2.0 * Math.PI);
+  this.skyGeometry = new THREE.SphereGeometry(5000.0, 128, 64, 0, 2.0 * Math.PI, 0.0, 2.0 * Math.PI);
 
   //Create our material late
-  let atmosphericShader;
-  let atmospherePass = StarrySky.Materials.Atmosphere.atmosphereShader;
   let lutLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
   this.atmosphereMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(atmospherePass.uniforms)),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms)),
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
     transparent: false,
     lights: false,
     flatShading: true,
     clipping: true,
-    vertexShader: atmospherePass.vertexShader,
-    fragmentShader: atmospherePass.fragmentShader(
+    vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
+    fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
       skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
-      lutLibrary.packingWidth,
-      lutLibrary.packingHeight,
+      lutLibrary.scatteringTextureWidth,
+      lutLibrary.scatteringTextureHeight,
+      lutLibrary.scatteringTexturePackingWidth,
+      lutLibrary.scatteringTexturePackingHeight,
       lutLibrary.atmosphereFunctionsString
     )
   });
+  this.atmosphereMaterial.uniforms.solarRayleighInscatteringSum.value = lutLibrary.rayleighScatteringSum;
+  this.atmosphereMaterial.uniforms.solarRayleighInscatteringSum.needsUpdate = true;
+  this.atmosphereMaterial.uniforms.solarMieInscatteringSum.value = lutLibrary.mieScatteringSum;
+  this.atmosphereMaterial.uniforms.solarMieInscatteringSum.needsUpdate = true;
 
   //Populate all of uniform values
 

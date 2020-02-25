@@ -8,10 +8,12 @@ const float mieGCoefficient = $mieGCoefficient;
 
 $atmosphericFunctions
 
+const float intensity = 20.0;
+
 vec3 gatherInscatteredLight(float r, float cameraZenith, float sunAngleAtP){
   float x;
   float y = parameterizationOfHeightToY(r);
-  float z = inverseParameterizationOfZToCosOfSunZenith(sunAngleAtP);
+  float z = parameterizationOfCosOfSourceZenithToZ(sunAngleAtP);
   vec2 uvInscattered;
   vec3 gatheredInscatteredIntensity = vec3(0.0);
   vec3 inscatteredLight;
@@ -24,7 +26,7 @@ vec3 gatherInscatteredLight(float r, float cameraZenith, float sunAngleAtP){
   #pragma unroll
   for(int i = 1; i < $numberOfChunksInt; i++){
     theta += deltaTheta;
-    x = parameterizationOfCosOfZenithToX(cos(theta));
+    x = parameterizationOfCosOfViewZenithToX(cos(theta));
     uvInscattered = getUV2From3DUV(vec3(x, y, z));
     angleBetweenCameraAndIncomingRay = cameraZenith - deltaTheta;
     cosAngle = cos(angleBetweenCameraAndIncomingRay);
@@ -43,13 +45,13 @@ vec3 gatherInscatteredLight(float r, float cameraZenith, float sunAngleAtP){
 
 void main(){
   //This is actually a packed 3D Texture
-  vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy / resolution.xy);
+  vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy/resolution.xy);
   float r = inverseParameterizationOfYToRPlusRe(uv.y);
   float h = r - RADIUS_OF_EARTH;
   vec2 pA = vec2(0.0, r);
   vec2 p = pA;
   float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);
-  float cosOfSunZenith = inverseParameterizationOfZToCosOfSunZenith(uv.z);
+  float cosOfSunZenith = inverseParameterizationOfZToCosOfSourceZenith(uv.z);
   //sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction
   vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);
   float cameraAngle = atan(cameraDirection.x, cameraDirection.y);
@@ -58,7 +60,7 @@ void main(){
 
   //Check if we intersect the earth. If so, return a transmittance of zero.
   //Otherwise, intersect our ray with the atmosphere.
-  vec2 pB = intersectRaySphere(vec2(0.0, r), cameraDirection);
+  vec2 pB = intersectRaySphere(pA, cameraDirection);
   float distFromPaToPb = distance(pA, pB);
   float chunkLength = distFromPaToPb / $numberOfChunks;
   vec2 deltaP = cameraDirection * chunkLength;
@@ -72,10 +74,10 @@ void main(){
 
   vec3 transmittancePaToP = vec3(1.0);
   //Was better when this was just the initial angle of the sun
-  vec2 uvt = vec2(parameterizationOfCosOfZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));
+  vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));
   vec3 transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;
 
-  vec3 gatheringFunction = gatherInscatteredLight(distance(p), cameraAngle, initialSunAngle);
+  vec3 gatheringFunction = gatherInscatteredLight(length(p), cameraAngle, initialSunAngle);
   #if($isRayleigh)
     vec3 previousInscattering = gatheringFunction * previousMieDensity * exp(-1.0);
   #else
@@ -111,7 +113,7 @@ void main(){
 
       //Now that we have the transmittance from Pa to P, get the transmittance from P to Pc
       //and combine them to determine the net transmittance
-      uvt = vec2(parameterizationOfCosOfZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));
+      uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));
       transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;
       #if($isRayleigh)
         inscattering = rayleighDensity * transmittance * gatherInscatteredLight(r_p, cameraAngle, sunAngle);
