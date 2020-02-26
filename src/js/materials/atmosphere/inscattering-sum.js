@@ -8,6 +8,11 @@ StarrySky.Materials.Atmosphere.inscatteringSumMaterial = {
     isNotFirstIteration: {type: 'b', 'value': false}
   },
   fragmentShader: [
+    '//Based on the work of Oskar Elek',
+    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
+    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
+    '//by Gustav Bodare and Edvard Sandberg',
+
     'uniform sampler2D inscatteringTexture;',
     'uniform sampler2D previousInscatteringSum;',
     'uniform bool isNotFirstIteration;',

@@ -164,8 +164,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   multipleScatteringRenderer.setVariableDependencies(multipleScatteringMieVar, []);
   multipleScatteringMieVar.material.uniforms = JSON.parse(JSON.stringify(materials.kthInscatteringMaterial.uniforms));
   multipleScatteringMieVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
-  multipleScatteringMieVar.material.uniforms.kMinusOneMieInscattering.value = mieScattering;
-  multipleScatteringMieVar.material.uniforms.kMinusOneRayleighInscattering.value = rayleighScattering;
+  multipleScatteringMieVar.material.uniforms.inscatteredLightLUT.value = mieScattering;
 
   //Rayleigh
   let multipleScatteringRayleighTexture = multipleScatteringRenderer.createTexture();
@@ -185,8 +184,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   multipleScatteringRenderer.setVariableDependencies(multipleScatteringRayleighVar, []);
   multipleScatteringRayleighVar.material.uniforms = JSON.parse(JSON.stringify(materials.kthInscatteringMaterial.uniforms));
   multipleScatteringRayleighVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
-  multipleScatteringRayleighVar.material.uniforms.kMinusOneMieInscattering.value = mieScattering;
-  multipleScatteringRayleighVar.material.uniforms.kMinusOneRayleighInscattering.value = rayleighScattering;
+  multipleScatteringRayleighVar.material.uniforms.inscatteredLightLUT.value = rayleighScattering;
 
   //Check for any errors in initialization
   let error4 = multipleScatteringRenderer.init();
@@ -206,33 +204,30 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   inscatteringMieSumVar.material.uniforms.isNotFirstIteration.value = 1;
   inscatteringMieSumVar.material.uniforms.inscatteringTexture.value = mieScattering;
   inscatteringMieSumVar.material.uniforms.previousInscatteringSum.value = mieScatteringSum;
-  // scatteringSumRenderer.compute();
-  // rayleighScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar).texture;
-  // mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
+  scatteringSumRenderer.compute();
+  rayleighScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar).texture;
+  mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
 
-  //Let's just focus on the second order scattering until that looks correct, possibly giving
-  //another look over the first order scattering to make sure we have that correct as well.
-  // for(let i = 0; i < 7; ++i){
-  //   //Mie
-  //   multipleScatteringMieVar.material.uniforms.kMinusOneMieInscattering.value = mieScattering;
-  //   multipleScatteringMieVar.material.uniforms.kMinusOneRayleighInscattering.value = rayleighScattering;
-  //
-  //   //Rayleigh
-  //   multipleScatteringRayleighVar.material.uniforms.kMinusOneMieInscattering.value = mieScattering;
-  //   multipleScatteringRayleighVar.material.uniforms.kMinusOneRayleighInscattering.value = rayleighScattering;
-  //
-  //   //Compute this mie and rayliegh scattering order
-  //   multipleScatteringRenderer.compute();
-  //   mieScattering = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringMieVar).texture;
-  //   rayleighScattering = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringRayleighVar).texture;
-  //
-  //   //Add these into the sum
-  //   inscatteringSumVar.material.uniforms.kthInscatteringMie.value = mieScattering;
-  //   inscatteringSumVar.material.uniforms.kthInscatteringRayleigh.value = rayleighScattering;
-  //   inscatteringSumVar.material.uniforms.previousInscatteringSum.value = scatteringSum;
-  //   scatteringSumRenderer.compute();
-  //   scatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringSumVar).texture;
-  // }
+  // Let's just focus on the second order scattering until that looks correct, possibly giving
+  // another look over the first order scattering to make sure we have that correct as well.
+  for(let i = 0; i < 7; ++i){
+    multipleScatteringMieVar.material.uniforms.inscatteredLightLUT.value = mieScattering;
+    multipleScatteringRayleighVar.material.uniforms.inscatteredLightLUT.value = rayleighScattering;
+
+    //Compute this mie and rayliegh scattering order
+    multipleScatteringRenderer.compute();
+    mieScattering = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringMieVar).texture;
+    rayleighScattering = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringRayleighVar).texture;
+
+    //Sum
+    inscatteringRayleighSumVar.material.uniforms.inscatteringTexture.value = rayleighScattering;
+    inscatteringRayleighSumVar.material.uniforms.previousInscatteringSum.value = rayleighScatteringSum;
+    inscatteringMieSumVar.material.uniforms.inscatteringTexture.value = mieScattering;
+    inscatteringMieSumVar.material.uniforms.previousInscatteringSum.value = mieScatteringSum;
+    scatteringSumRenderer.compute();
+    rayleighScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar).texture;
+    mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
+  }
 
   //For testing purposes
   let geometry = new THREE.PlaneBufferGeometry(1.0, 1.0, 32, 128);

@@ -1,3 +1,9 @@
+//Based on the work of Oskar Elek
+//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf
+//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
+//by Gustav Bodare and Edvard Sandberg
+
+const float PI = 3.14159265359;
 const float PI_TIMES_FOUR = 12.5663706144;
 const float PI_TIMES_TWO = 6.28318530718;
 const float PI_OVER_TWO = 1.57079632679;
@@ -9,7 +15,6 @@ const float ATMOSPHERE_HEIGHT = 80.0;
 const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;
 const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333333333333333333333333333;
 const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;
-const float OZONE_PERCENT_OF_RAYLEIGH = 0.0000006;
 //Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf
 //const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;
 const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;
@@ -21,15 +26,13 @@ const float MIE_G_SQUARED = $mieGSquared;
 const float MIE_PHASE_FUNCTION_COEFFICIENT = $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))
 
 //8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))
-//(http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf - page 10)
-//n_air = 1.00029
-//N_atmos = 2.545e25
-//lambda_red = 650nm
-//labda_green = 510nm
-//lambda_blue = 475nm
+//I actually found the values from the ET Engine by Illation
+//https://github.com/Illation/ETEngine
+//Far more helpful for determining my mie and rayleigh values
 const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);
 
 //As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
+const float OZONE_PERCENT_OF_RAYLEIGH = 6e-7;
 const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);
 
 //

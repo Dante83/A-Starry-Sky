@@ -4,8 +4,7 @@
 StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
   uniforms: {
     transmittanceTexture: {type: 't', value: null},
-    kMinusOneMieInscattering: {type: 't', value: null},
-    kMinusOneRayleighInscattering: {type: 't', value: null},
+    inscatteredLightLUT: {type: 't', value: null},
   },
   fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
     let originalGLSL = [

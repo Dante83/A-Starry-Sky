@@ -1,5 +1,7 @@
-//Based on the thesis of from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
-//By Gustav Bodare and Edvard Sandberg
+//Based on the work of Oskar Elek
+//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf
+//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
+//by Gustav Bodare and Edvard Sandberg
 
 uniform sampler2D transmittanceTexture;
 const float intensity = 20.0;
@@ -9,7 +11,6 @@ $atmosphericFunctions
 void main(){
   //This is actually a packed 3D Texture
   vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy/resolution.xy);
-  vec2 uvOut = getUV2From3DUV(uv);
   float r = inverseParameterizationOfYToRPlusRe(uv.y);
   float h = r - RADIUS_OF_EARTH;
   vec2 pA = vec2(0.0, r);
@@ -62,35 +63,40 @@ void main(){
       p += deltaP;
       r_p = length(p);
       h = r_p - RADIUS_OF_EARTH;
-      //Do I add or subtract the angle? O_o
-      sunAngle = initialSunAngle + atan(p.x, p.y);
 
-      //Iterate our progress through the transmittance along P
-      //We do this for both mie and rayleigh as we are reffering to the transmittance here
-      mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);
-      rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
-      totalDensityMie += (previousMieDensity + mieDensity) * chunkLength * 0.5;
-      totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength * 0.5;
-      integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;
-      transmittancePaToP = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));
+      //Only inscatter if this point is outside of the earth
+      //otherwise it contributes nothing to the final result
+      if(h > 0.0){
+        //Do I add or subtract the angle? O_o
+        sunAngle = initialSunAngle + atan(p.x, p.y);
 
-      //Now that we have the transmittance from Pa to P, get the transmittance from P to Pc
-      //and combine them to determine the net transmittance
-      uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));
-      transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;
-      #if($isRayleigh)
-        //Is Rayleigh Scattering
-        inscattering = rayleighDensity * transmittance;
-      #else
-        //Is Mie Scattering
-        inscattering = mieDensity * transmittance;
-      #endif
-      totalInscattering += (previousInscattering + inscattering) * chunkLength;
+        //Iterate our progress through the transmittance along P
+        //We do this for both mie and rayleigh as we are reffering to the transmittance here
+        mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);
+        rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+        totalDensityMie += (previousMieDensity + mieDensity) * chunkLength * 0.5;
+        totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength * 0.5;
+        integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;
+        transmittancePaToP = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));
 
-      //Store our values for the next iteration
-      previousInscattering = inscattering;
-      previousMieDensity = mieDensity;
-      previousRayleighDensity = rayleighDensity;
+        //Now that we have the transmittance from Pa to P, get the transmittance from P to Pc
+        //and combine them to determine the net transmittance
+        uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));
+        transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;
+        #if($isRayleigh)
+          //Is Rayleigh Scattering
+          inscattering = rayleighDensity * transmittance;
+        #else
+          //Is Mie Scattering
+          inscattering = mieDensity * transmittance;
+        #endif
+        totalInscattering += (previousInscattering + inscattering) * chunkLength;
+
+        //Store our values for the next iteration
+        previousInscattering = inscattering;
+        previousMieDensity = mieDensity;
+        previousRayleighDensity = rayleighDensity;
+      }
     }
 
     //Note that we ignore intensity until the final render as a multiplicative factor

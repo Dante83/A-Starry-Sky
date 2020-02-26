@@ -6,8 +6,10 @@ StarrySky.Materials.Atmosphere.transmittanceMaterial = {
   uniforms: {},
   fragmentShader: function(numberOfPoints, atmosphereFunctions){
     let originalGLSL = [
-    '//Based on the thesis of from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
-    '//By Gustav Bodare and Edvard Sandberg',
+    '//Based on the work of Oskar Elek',
+    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
+    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
+    '//by Gustav Bodare and Edvard Sandberg',
 
     '$atmosphericFunctions',
 
@@ -59,8 +61,7 @@ StarrySky.Materials.Atmosphere.transmittanceMaterial = {
         'totalDensityMie *= 0.5;',
         'totalDensityRayleigh *= 0.5;',
 
-        '//float integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
-        'float integralOfOzoneDensityFunction = 0.0;',
+        'float integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
         'transmittance = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
       '}',
 
