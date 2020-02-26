@@ -31,31 +31,27 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'float cosOfViewAngle = vWorldPosition.y;',
       'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, vWorldPosition);',
       'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
-      'vec3 uv3 = vec3(parameterizationOfCosOfViewZenithToX(cosOfViewAngle), parameterizationOfHeightToY(0.0), parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
+      'vec3 uv3 = vec3(parameterizationOfCosOfViewZenithToX(cosOfViewAngle), parameterizationOfHeightToY(RADIUS_OF_EARTH), parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
       'float pixelValue = uv3.z * $textureDepth;',
-      'float floorZValue = floor(pixelValue) / $textureDepth;',
-      'float ceilingZValue = ceil(pixelValue) / $textureDepth;',
+      'float floorZValue = clamp(floor(clamp(pixelValue, 0.0, $textureDepth - 1.0)) / $textureDepth, 0.0, 1.0);',
+      'float ceilingZValue = clamp(ceil(clamp(pixelValue, 1.0, $textureDepth)) / $textureDepth, 0.0, 1.0);',
 
       '//As we do not natively support 3D textures, we must linearly interpolate between values ourselves.',
-      '// vec2 uv2_0 = getUV2From3DUV(vec3(uv3.xy, floorZValue));',
-      '// vec2 uv2_f = getUV2From3DUV(vec3(uv3.xy, ceilingZValue));',
-
-      'vec2 uv2 = getUV2From3DUV(uv3);',
-      'vec3 mieLUTsample1 = texture2D(mieLookupTable, uv2).rgb;',
-      'vec3 rayleighLUTsample1 = texture2D(rayleighLookupTable, uv2).rgb;',
+      'vec2 uv2_0 = getUV2From3DUV(vec3(uv3.xy, floorZValue));',
+      'vec2 uv2_f = getUV2From3DUV(vec3(uv3.xy, ceilingZValue));',
+      'float uvz_fraction = (uv3.z - floorZValue) / (ceilingZValue - floorZValue);',
 
       '//Mie Pass',
-      '// vec2 offset = vec2((1.0/$textureWidth), (1.0/$textureHeight));',
-      '// vec3 mieLUTsample1 = texture2D(mieLookupTable, uv2_0 + offset).rgb;',
-      '// vec3 mieLUTsample2 = texture2D(mieLookupTable, uv2_f + offset).rgb;',
-      '// vec3 mieLUTWeightedAvg = ((uv3.z - floorZValue) * mieLUTsample1 + (ceilingZValue - uv3.z) * mieLUTsample2) / (ceilingZValue - floorZValue);',
+      'vec3 mieLUTsample1 = texture2D(mieLookupTable, uv2_0).rgb;',
+      'vec3 mieLUTsample2 = texture2D(mieLookupTable, uv2_f).rgb;',
+      'vec3 mieLUTWeightedAvg = mieLUTsample1 + (mieLUTsample2 - mieLUTsample1) * uvz_fraction;',
 
       '//Rayleigh Pass',
-      '// vec3 rayleighLUTsample1 = texture2D(rayleighLookupTable, uv2_0 + offset).rgb;',
-      '// vec3 rayleighLUTsample2 = texture2D(rayleighLookupTable, uv2_f + offset).rgb;',
-      '// vec3 rayleighLUTWeightedAvg = ((uv3.z - floorZValue) * rayleighLUTsample1 + (ceilingZValue - uv3.z) * rayleighLUTsample2) / (ceilingZValue - floorZValue);',
+      'vec3 rayleighLUTsample1 = texture2D(rayleighLookupTable, uv2_0).rgb;',
+      'vec3 rayleighLUTsample2 = texture2D(rayleighLookupTable, uv2_f).rgb;',
+      'vec3 rayleighLUTWeightedAvg = rayleighLUTsample1 + (rayleighLUTsample2 - rayleighLUTsample1) * uvz_fraction;',
 
-      'return miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * mieLUTsample1 + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * rayleighLUTsample1;',
+      'return miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * mieLUTWeightedAvg + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * rayleighLUTWeightedAvg;',
     '}',
 
     'void main(){',
@@ -74,7 +70,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
       '//Atmosphere',
-      'vec3 sunPosition = normalize(vec3(0.0, 1.0, 0.0));',
+      'vec3 sunPosition = normalize(vec3(1.0, 0.1, 0.0));',
       'vec3 solarAtmosphericPass = atmosphericPass(sunPosition, vWorldPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
 
       '//Color Adjustment Pass',
