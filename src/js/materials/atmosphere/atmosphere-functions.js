@@ -140,14 +140,13 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'vec2 getUV2From3DUV(vec3 uv3){',
       'vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);',
       'float zIndex = uv3.z * packingHeight * packingWidth - 1.0;',
-      'float row = floor(zIndex / packingWidth);',
-      'float column = zIndex - row * packingWidth;',
-      'column = 1.0;',
+      'float row = floor((zIndex + 1.0) / 2.0);',
+      'float column = (zIndex + 1.0) - row * packingWidth;',
       'vec2 uv2;',
       'uv2.x = ((column + uv3.x) * textureWidth) / parentTextureDimensions.x;',
-      'uv2.y = (((row + uv3.y) * textureHeight)) / parentTextureDimensions.y;',
+      'uv2.y = (((row + uv3.y - 1.0) * textureHeight)) / parentTextureDimensions.y;',
 
-      'return uv2;',
+      'return vec2(uv2);',
     '}',
     ];
 

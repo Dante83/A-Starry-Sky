@@ -20,6 +20,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
     'void main(){',
       '//This is actually a packed 3D Texture',
       'vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy/resolution.xy);',
+      'vec2 uv2 = getUV2From3DUV(uv);',
       'float r = inverseParameterizationOfYToRPlusRe(uv.y);',
       'float h = r - RADIUS_OF_EARTH;',
       'vec2 pA = vec2(0.0, r);',
