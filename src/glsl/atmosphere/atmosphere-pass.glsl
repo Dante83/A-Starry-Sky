@@ -88,7 +88,7 @@ void main(){
 
 
   //Atmosphere
-  vec3 sunPosition = normalize(vec3(1.0, 1.0, 0.0));
+  vec3 sunPosition = normalize(vec3(1.0, 0.1, 0.0));
   vec3 solarAtmosphericPass = atmosphericPass(sunPosition, vWorldPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);
 
   //Color Adjustment Pass

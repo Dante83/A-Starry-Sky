@@ -9,8 +9,6 @@ const float mieGCoefficient = $mieGCoefficient;
 
 $atmosphericFunctions
 
-const float intensity = 20.0;
-
 vec3 gatherInscatteredLight(float r, float sunAngleAtP){
   float x;
   float y = parameterizationOfHeightToY(r);
@@ -32,7 +30,7 @@ vec3 gatherInscatteredLight(float r, float sunAngleAtP){
     inscatteredUV2 = getUV2From3DUV(vec3(x, y, z));
     inscatteredLight = texture2D(inscatteredLightLUT, inscatteredUV2).rgb;
     transmittanceFromPToPb = texture2D(transmittanceTexture, vec2(x, y)).rgb;
-    angleBetweenCameraAndIncomingRay = abs(fModulo(theta - sunAngleAtP, PI_TIMES_TWO)) - PI;
+    angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;
     cosAngle = cos(angleBetweenCameraAndIncomingRay);
     #if($isRayleigh)
       phaseValue = rayleighPhaseFunction(cosAngle);
@@ -101,7 +99,6 @@ void main(){
       //Only inscatter if this point is outside of the earth
       //otherwise it contributes nothing to the final result
       if(h > 0.0){
-        //Do I add or subtract the angle? O_o
         sunAngle = initialSunAngle + atan(p.x, p.y);
 
         //Iterate our progress through the transmittance along P
