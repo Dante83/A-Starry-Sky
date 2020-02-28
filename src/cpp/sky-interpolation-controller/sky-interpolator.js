@@ -1,2 +1,2 @@
 // This loads the wasm generated glue code
-importScripts('starry-sky-module.js');
+importScripts('sky-interpolator-module.js');

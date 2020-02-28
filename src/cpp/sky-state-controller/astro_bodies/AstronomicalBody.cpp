@@ -22,17 +22,14 @@ void AstronomicalBody::convertLambdaAndBetaToRaAndDec(double lambda, double beta
   double sinEpsilon = sin(epsilon);
   double cosEpsilon = cos(epsilon);
   double sinBeta = sin(beta);
-  double tempRightAscension = check4GreaterThan2Pi(atan2(sinLambda * cosEpsilon - (sinBeta / cosBeta) * sinEpsilon, cos(lambda)));
-  double tempDeclination = checkBetweenMinusPiOver2AndPiOver2(asin(sinBeta * cosEpsilon + cosBeta * sinEpsilon * sinLambda));
-  double newMeasurementTime = astroTime->julianDay;
-  if(rightAscension1){
-    rightAscension0 = rightAscension1;
-    declination0 = declination1;
-    timeBetweenMeasurements = (newMeasurementTime - previousMeasurementTime) * SECONDS_IN_A_DAY;
-  }
-  rightAscension1 = tempRightAscension;
-  declination1 = tempDeclination;
-  previousMeasurementTime = newMeasurementTime;
+  rightAscension = check4GreaterThan2Pi(atan2(sinLambda * cosEpsilon - (sinBeta / cosBeta) * sinEpsilon, cos(lambda)));
+  declination = checkBetweenMinusPiOver2AndPiOver2(asin(sinBeta * cosEpsilon + cosBeta * sinEpsilon * sinLambda));
+}
+
+void AstronomicalBody::updateParalacticAngle(){
+  double hourAngle = (astroTime->greenwhichSiderealTime * DEG_2_RAD) - location->lonInRads - rightAscension;
+  double paralacticAngleDenominator = tan(location->latInRads) * cos(declination) - sin(declination) * cos(hourAngle);
+  paralacticAngle = paralacticAngleDenominator != 0.0 ? sin(hourAngle) / paralacticAngleDenominator : PI_OVER_TWO;
 }
 
 double AstronomicalBody::check4GreaterThan2Pi(double inNum){
@@ -60,10 +57,4 @@ double AstronomicalBody::check4GreaterThan360(double inNum){
 double AstronomicalBody::checkBetweenMinusPiOver2AndPiOver2(double inNum){
   double outRads = check4GreaterThan2Pi(inNum + PI_OVER_TWO);
   return (outRads - PI_OVER_TWO);
-}
-
-void interpolateAzimuthAndAltitude(double fraction){
-  //
-  //TODO: Figure this one out based on SLERP
-  //
 }

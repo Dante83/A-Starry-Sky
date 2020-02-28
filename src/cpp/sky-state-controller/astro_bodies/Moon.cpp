@@ -137,7 +137,7 @@ void Moon::updatePosition(){
   double sum_b = 0.0;
   for(int i=0; i < 60; ++i){
     sumOfTerms = check4GreaterThan360(D_coeficients[i] * meanElongation + M_coeficients[i] * sunsMeanAnomoly + M_prime_coeficients[i] * meanAnomaly + F_coeficients[i] * argumentOfLatitude) * DEG_2_RAD;
-    sum_b += ((*e_coeficients_2[i])) * b_sum_coeficients[i] * sin(sumOfTerms);
+    sum_b += (*e_coeficients_2[i]) * b_sum_coeficients[i] * sin(sumOfTerms);
   }
 
   //Additional terms
@@ -161,12 +161,23 @@ void Moon::updatePosition(){
   double lunarPhaseAngleI = 180.0 - meanElongation - 6.289 * sin(meanAnomalyInRads) + 2.1 * sin(sun->meanAnomaly * DEG_2_RAD)
   - 1.274 * sin(twoTimesMeanElongationInRads - meanAnomalyInRads) - 0.658 * sin(twoTimesMeanElongationInRads)
   - 0.214 * sin(2.0 * meanAnomalyInRads) - 0.110 * sin(meanElongationInRads);
+  double lunarPhaseAngleInRads = lunarPhaseAngleI * DEG_2_RAD;
 
-  //Using HN Russell's data as a guide and guestimating a rough equation for the intensity of moonlight from the phase angle...
-  double fractionalIntensity = 1.032391 * exp(-0.0257614 * abs(lunarPhaseAngleI));
+  //Changing our lunar intensity model over to the one used by A Physically-Based Night Sky Model
+  //by Henrik Jensen et. al.
+  #define AVERAGE_ALBEDO_OF_MOON 0.072
+  #define RADIUS_OF_THE_MOON_IN_M 1737100.0
+  #define TWO_THIRDS 0.6666666666666
+  double illuminationOfMoonCoefficient = TWO_THIRDS * AVERAGE_ALBEDO_OF_MOON * (RADIUS_OF_THE_MOON_IN_M * RADIUS_OF_THE_MOON_IN_M) / (distanceFromEarthInMeters * distanceFromEarthInMeters);
+  double phiMinusPiOverTwo = 0.5 * (PI - lunarPhaseAngleInRads);
+  #define FULL_EARTHSHINE 0.19
+  #define IRRADIANCE_OF_SUN 28.8
+  double phiOverTwo = 0.5 * lunarPhaseAngleInRads;
+  earthShineIntensity = 0.5 * FULL_EARTHSHINE (1.0 - sin(phiMinusPiOverTwo) * tan(phiMinusPiOverTwo) * log(0.5 * phiMinusPiOverTwo));
+  intensity = illuminationOfMoonCoefficient * (earthShineIntensity + sun->intensity * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(0.5 *phiOverTwo)));
 
-  //Using the square of the illuminated fraction of the moon for a faster falloff
-  moon_EE = FULL_LUNAR_ILLUMINATION * fractionalIntensity;
+  //Update the paralactic angle
+  updateParalacticAngle();
 }
 
 //

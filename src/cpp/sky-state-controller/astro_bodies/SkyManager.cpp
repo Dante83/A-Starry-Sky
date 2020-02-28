@@ -33,7 +33,7 @@ SkyManager::SkyManager(AstroTime* astroTimeRef, Location* locationRef): sun(astr
   // Planet[3] = Saturn(this);
 }
 
-void SkyManager::update(int updatePlanets){
+void SkyManager::update(){
   double julianCentury = astroTime->julianCentury;
   double julianCentury_pow2 = julianCentury * julianCentury;
   double julianCentury_pow3 = julianCentury * julianCentury_pow2;
@@ -91,7 +91,7 @@ void SkyManager::update(int updatePlanets){
   double julianDay = astroTime->julianDay;
   double truncJulianDay;
   double fractPart = modf(julianDay, &truncJulianDay);
-  double julianDayAt0hUTC =  truncJulianDay + 0.5;
+  double julianDayAt0hUTC = truncJulianDay + 0.5;
   // 1.0 / 36525.0
   #define GMSRT_CONST1 0.0000273785078713210130047912388774811772758384668035592
   double gmsrtT = (julianDayAt0hUTC - 2451545.0) * GMSRT_CONST1;

@@ -23,11 +23,13 @@ extern "C" {
   //Sun
   double getSunRightAscension();
   double getSunDeclination();
+  double getSunIntensityFromEarth();
 
   //Moon
   double getMoonRightAscension();
   double getMoonDeclination();
   double getMoonIntensity();
+  double getEarthShineIntensity();
   double getMoonParalacticAngle();
 
   //Planet Venus
@@ -68,6 +70,10 @@ double EMSCRIPTEN_KEEPALIVE getSunRightAscension(){
 
 double EMSCRIPTEN_KEEPALIVE getSunDeclination(){
   return skyState->skyManager->sun.declination;
+}
+
+double EMSCRIPTEN_KEEPALIVE getSunIntensityFromEarth(){
+  return skyState->skyManager->sun.intensityFromEarthsSurface;
 }
 
 //

@@ -1,22 +1,21 @@
 #pragma once
 #include "../world_state/AstroTime.h"
+#include "../world_state/Location.h"
 
 class AstronomicalBody{
 public:
   AstronomicalBody(AstroTime* astroTimeRef);
   AstroTime* astroTime;
+  Location* location;
   double* trueObliquityOfEclipticInRads;
-  double rightAscension0;
-  double declination0;
-  double rightAscension1;
-  double declination1;
   double rightAscension;
   double declination;
-  double previousMeasurementTime; //In Julian days.
-  double timeBetweenMeasurements; //Converting between julian days and seconds.
+  double angularDiameterMultiplier;
+  double intensity;
+  double paralacticAngle;
   void convertLambdaAndBetaToRaAndDec(double lambda, double beta, double cosBeta);
+  void updateParalacticAngle();
   double check4GreaterThan2Pi(double inNum);
   double check4GreaterThan360(double inNum);
   double checkBetweenMinusPiOver2AndPiOver2(double inNum);
-  void interpolateRightAscensionAndDeclination(double fraction);
 };

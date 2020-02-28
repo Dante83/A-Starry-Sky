@@ -17,7 +17,8 @@ public:
   double argumentOfLatitudeInRads;
   double longitudeOfTheAscendingNodeOfOrbit;
   double distanceFromEarthInMeters;
-  double moon_EE;
+  double earthShineIntensity;
+  double angularDiameterMultiplier;
   void updatePosition();
   void updatePosition(double secondsTillNextUpdate);
   void setMeanLongitude(double inValue);
