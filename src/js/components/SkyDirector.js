@@ -12,8 +12,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.assetManager;
   this.LUTLibraries;
   this.renderers;
-  this.webAssemblyWorker;
-  //this.webAssemblyWorker = new Worker("../src/cpp/starry-sky-web-worker.js", { type: "module" });
+  this.skyStateWebWorker = new Worker("../src/cpp/sky-state-controller/starry-sky-web-worker.js", { type: "module" });
   this.webAssembly;
   let self = this;
   this.renderers = {};
