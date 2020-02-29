@@ -26,6 +26,10 @@ void AstronomicalBody::convertLambdaAndBetaToRaAndDec(double lambda, double beta
   declination = checkBetweenMinusPiOver2AndPiOver2(asin(sinBeta * cosEpsilon + cosBeta * sinEpsilon * sinLambda));
 }
 
+void AstronomicalBody::convertGeocentricLatitudeAndLongitudeToRaAndDec(double heliocentricLatitude, double heliocentricLongitude){
+  
+}
+
 void AstronomicalBody::updateParalacticAngle(){
   double hourAngle = (astroTime->greenwhichSiderealTime * DEG_2_RAD) - location->lonInRads - rightAscension;
   double paralacticAngleDenominator = tan(location->latInRads) * cos(declination) - sin(declination) * cos(hourAngle);

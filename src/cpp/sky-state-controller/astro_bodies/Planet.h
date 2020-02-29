@@ -1,13 +1,21 @@
 #pragma once
-#include "planets/Venus.cpp"
-#include "planets/Mars.cpp"
-#include "planets/Jupiter.cpp"
-#include "planets/Saturn.cpp"
+#include "planets/Earth.cpp"
 #include "Sun.h"
 
 class Planet : public AstronomicalBody{
-private:
-  Sun* sun;
 public:
-  Planet(Sun* sunRef);
+  Planet(AstroTime* astroTimeRef, Sun* sunRef);
+  Sun* sun;
+  double eclipticalLongitude; //L
+  double eclipticalLatitude; //B
+  double radiusVector; //R
+  double heliocentric_x;
+  double heliocentric_y;
+  double heliocentric_z;
+  double distanceFromSun;
+protected:
+  virtual void updatePosition();
+  virtual void updateEclipticalLongitude();
+  virtual void updateEclipticalLatitude();
+  virtual void updateRadiusVector();
 };

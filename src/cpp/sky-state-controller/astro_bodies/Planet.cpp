@@ -3,7 +3,7 @@
 //
 //Constructor
 //
-Planet::Planet(AstroTime* astroTimeRef) : AstronomicalBody(astroTimeRef){
+Planet::Planet(AstroTime* astroTimeRef, Sun* sunRef) : AstronomicalBody(astroTimeRef){
   //
   //Default constructor
   //

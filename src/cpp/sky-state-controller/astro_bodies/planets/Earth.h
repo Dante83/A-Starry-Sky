@@ -1,14 +1,13 @@
 #pragma once
 #include "AstronomicalBody.h"
 #include "Sun.h"
-#include "Earth.h"
 #include "../world_state/AstroTime.h"
 
-class Jupiter : public OtherPlanet{
+class Earth : public Planet{
 public:
-  Jupiter(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef);
+  Earth(AstroTime* astroTimeRef, Sun* sunRef);
+  void updatePosition();
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();
   void updateRadiusVector();
-  void updateMagnitudeOfPlanet();
 };

@@ -14,6 +14,7 @@ public:
   double intensity;
   double paralacticAngle;
   void convertLambdaAndBetaToRaAndDec(double lambda, double beta, double cosBeta);
+  void convertGeocentricLatitudeAndLongitudeToRaAndDec(double heliocentricLatitude, double heliocentricLongitude);
   void updateParalacticAngle();
   double check4GreaterThan2Pi(double inNum);
   double check4GreaterThan360(double inNum);

@@ -1,10 +1,14 @@
 #pragma once
 #include "AstronomicalBody.h"
 #include "Sun.h"
+#include "Earth.h"
 #include "../world_state/AstroTime.h"
 
-class Venus : public Planet{
+class Venus : public OtherPlanet{
 public:
-  Venus(SkyManager* skyManager, Sun* sunRef);
-  void updatePosition();
+  Venus(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef);
+  void updateEclipticalLongitude();
+  void updateEclipticalLatitude();
+  void updateRadiusVector();
+  void updateMagnitudeOfPlanet();
 };

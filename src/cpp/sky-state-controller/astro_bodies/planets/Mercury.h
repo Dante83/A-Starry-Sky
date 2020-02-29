@@ -4,9 +4,9 @@
 #include "Earth.h"
 #include "../world_state/AstroTime.h"
 
-class Jupiter : public OtherPlanet{
+class Mercury : public OtherPlanet{
 public:
-  Jupiter(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef);
+  Mercury(SkyManager* skyManager, Sun* sunRef, Earth* earthRef);
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();
   void updateRadiusVector();

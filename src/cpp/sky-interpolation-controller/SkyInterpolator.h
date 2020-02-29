@@ -1,0 +1,4 @@
+class SkyInterpolator{
+public:
+  SkyInterpolator();
+};
