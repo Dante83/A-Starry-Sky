@@ -2,6 +2,7 @@ node_modules/
 package-lock.json
 package-lock0.json
 package.json
+*.tmp
 src/python/VSOP87B_data/VSOP87B_Earth.txt
 src/python/VSOP87B_data/VSOP87B_Mercury.txt
 src/python/VSOP87B_data/VSOP87B_Venus.txt

@@ -130,14 +130,14 @@ def ParseShader(yaml_structure):
             print "-"*15
 
 def NextAction(yaml_structure):
-    deleteBaseGLSLDirWhenDone = False
-    deleteBaseJSDirWhenDone = False
+    delete_base_glsl_when_done = False
+    delete_base_js_dir_when_done = False
     if 'base_glsl_dir' in yaml_structure:
         current_glsl_dir.append(yaml_structure['base_glsl_dir'])
-        deleteBaseGLSLDirWhenDone = True
+        delete_base_glsl_when_done = True
     if 'base_js_dir' in yaml_structure:
         current_js_dir.append(yaml_structure['base_js_dir'])
-        deleteBaseJSDirWhenDone = True
+        delete_base_js_dir_when_done = True
     if 'shaders' in yaml_structure:
         for shader in yaml_structure['shaders']:
             ParseShader(shader)
@@ -146,9 +146,9 @@ def NextAction(yaml_structure):
             NextAction(group)
 
     #Now that we are done, remove the above groupings from the shader directories
-    if deleteBaseGLSLDirWhenDone:
+    if delete_base_glsl_when_done:
         del current_glsl_dir[-1]
-    if deleteBaseJSDirWhenDone:
+    if delete_base_js_dir_when_done:
         del current_js_dir[-1]
 
 def ShaderFileWatcher():
