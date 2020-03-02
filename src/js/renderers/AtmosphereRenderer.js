@@ -2,7 +2,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //
   //TODO: Replace the sky dome with a plane
   //
-  this.skyGeometry = new THREE.SphereGeometry(5000.0, 256, 256, 0, 2.0 * Math.PI, 0.0, 2.0 * Math.PI);
+  this.skyGeometry = new THREE.SphereGeometry(5000.0, 64, 64);
 
   //Create our material late
   let lutLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);

@@ -7,7 +7,7 @@
 //
 //Constructor
 //
-Earth::Earth(AstroTime* astroTimeRef, Sun* sunRef) : Planet(astroTimeRef, sunRef){
+Earth::Earth(AstroTime* astroTimeRef) : Planet(astroTimeRef){
   //
   //Default constructor
   //

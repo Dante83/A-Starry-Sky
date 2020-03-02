@@ -35,6 +35,10 @@ void Sun::updatePosition(){
 
   //Update the paralactic angle
   updateParalacticAngle();
+
+  //
+  //TODO: Implement all of our intensity equations
+  //
 }
 
 void Sun::setLongitude(double inValue){

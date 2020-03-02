@@ -7,7 +7,7 @@
 //
 //Constructor
 //
-Venus::Venus(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef) : OtherPlanet(astroTimeRef, sunRef){
+Venus::Venus(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
   //
   //Default constructor
   //

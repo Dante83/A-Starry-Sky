@@ -9,15 +9,14 @@
 
 class OtherPlanet : public Planet{
 public:
-  OtherPlanet(AstroTime* astroTimeRef, Sun* sunRef, Earth* earth);
+  OtherPlanet(AstroTime* astroTimeRef);
+  AstroTime* astroTimeRef;
+  Sun* sun;
+  Earth* earth;
   double averageAlbedo;
   double distanceFromEarth;
   double magnitudeOfPlanetFromEarth;
   void updatePosition();
   double getPhaseAngleInDegrees();
   virtual void updateMagnitudeOfPlanet();
-private:
-  AstroTime* astroTimeRef;
-  Sun* sun;
-  Earth* earth;
 };

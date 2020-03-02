@@ -229,16 +229,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
   }
 
-  //For testing purposes
-  let geometry = new THREE.PlaneBufferGeometry(1.0, 1.0, 32, 128);
-  let testMaterial = new THREE.MeshBasicMaterial({
-   side: THREE.FrontSide,
-   map: rayleighScatteringSum,
-  });
-  testMaterial.flatShading = true;
-  let plane = new THREE.Mesh(geometry, testMaterial);
-  plane.position.set(0.0, 1.5, -1.0);
-  scene.add(plane);
+  //Clean up and finishin attaching things we will need
+  mieScattering.dispose();
+  rayleighScattering.dispose();
+  this.transmittance = transmittanceLUT;
   this.rayleighScatteringSum = rayleighScatteringSum;
   this.mieScatteringSum = mieScatteringSum;
 }

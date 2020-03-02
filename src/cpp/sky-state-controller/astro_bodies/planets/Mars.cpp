@@ -7,7 +7,7 @@
 //
 //Constructor
 //
-Mars::Mars(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef) : OtherPlanet(astroTimeRef, sunRef){
+Mars::Mars(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
   //
   //Default constructor
   //

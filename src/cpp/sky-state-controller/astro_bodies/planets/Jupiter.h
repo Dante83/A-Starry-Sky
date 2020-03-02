@@ -6,7 +6,7 @@
 
 class Jupiter : public OtherPlanet{
 public:
-  Jupiter(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef);
+  Jupiter(AstsroTime* astroTime);
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();
   void updateRadiusVector();

@@ -7,7 +7,7 @@
 //
 //Constructor
 //
-Mercury::Mercury(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef) : OtherPlanet(astroTimeRef, sunRef){
+Mercury::Mercury(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
   //
   //Default constructor
   //
@@ -16,7 +16,8 @@ Mercury::Mercury(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef) : OtherPla
 //From page 286 of Meeus
 void Mercury::updateMagnitudeOfPlanet(){
   double phaseAngle = getPhaseAngleInDegrees();
-  magnitudeOfPlanetFromEarth =;
+  double phaseAngleTerms = 0.0380 * phaseAngle - 0.000273 * phaseAngle * phaseAngle + 0.000002 * phaseAngle * phaseAngle * phaseAngle;
+  magnitudeOfPlanetFromEarth = -0.42 + 5.0 * log(distanceFromEarth * distanceFromSun) + phaseAngleTerms;
 }
 
 void Mercury::updateEclipticalLongitude(){

@@ -6,7 +6,7 @@
 
 class Venus : public OtherPlanet{
 public:
-  Venus(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef);
+  Venus(AstsroTime* astroTime);
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();
   void updateRadiusVector();

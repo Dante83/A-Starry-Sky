@@ -7,7 +7,7 @@
 //
 //Constructor
 //
-Jupiter::Jupiter(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef) : OtherPlanet(astroTimeRef, sunRef){
+Jupiter::Jupiter(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
   //
   //Default constructor
   //

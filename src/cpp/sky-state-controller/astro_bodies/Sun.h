@@ -15,6 +15,7 @@ public:
   double meanLongitudeInRads;
   double trueLongitude;
   double intensityFromEarthsSurface;
+  double intensityFromLunarSurface;
   void updatePosition();
   void setLongitude(double inValue);
   void setMeanAnomaly(double inValue);

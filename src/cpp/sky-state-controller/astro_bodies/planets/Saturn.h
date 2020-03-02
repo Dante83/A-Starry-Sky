@@ -6,7 +6,7 @@
 
 class Saturn : public OtherPlanet{
 public:
-  Saturn(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef);
+  Saturn(AstsroTime* astroTime);
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();
   void updateRadiusVector();

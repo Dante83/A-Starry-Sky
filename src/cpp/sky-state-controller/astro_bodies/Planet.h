@@ -4,7 +4,7 @@
 
 class Planet : public AstronomicalBody{
 public:
-  Planet(AstroTime* astroTimeRef, Sun* sunRef);
+  Planet(AstroTime* astroTimeRef);
   Sun* sun;
   double eclipticalLongitude; //L
   double eclipticalLatitude; //B

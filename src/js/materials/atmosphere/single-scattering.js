@@ -13,7 +13,8 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
     '//by Gustav Bodare and Edvard Sandberg',
 
     'uniform sampler2D transmittanceTexture;',
-    'const float intensity = 20.0;',
+    '//Moon reflects 0.072% of all light',
+    'const float intensity = 8.0;',
 
     '$atmosphericFunctions',
 

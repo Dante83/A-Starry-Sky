@@ -6,7 +6,7 @@
 
 class Mars : public OtherPlanet{
 public:
-  Mars(SkyManager* skyManager, Sun* sunRef, Earth* earthRef);
+  Mars(SkyManager* skyManager);
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();
   void updateRadiusVector();

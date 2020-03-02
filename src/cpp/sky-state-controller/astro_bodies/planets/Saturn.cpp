@@ -7,7 +7,7 @@
 //
 //Constructor
 //
-Saturn::Saturn(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef) : OtherPlanet(astroTimeRef, sunRef){
+Saturn::Saturn(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
   //
   //Default constructor
   //
@@ -15,11 +15,24 @@ Saturn::Saturn(AstsroTime* astroTime, Sun* sunRef, Earth* earthRef) : OtherPlane
 
 //From page 286 of Meeus
 void Saturn::updateMagnitudeOfPlanet(){
-  double phaseAngle = getPhaseAngleInDegrees();
-  //
-  //TODO: Get delta U and B  from Meeus in Chapter 45
-  //
-  double sinB = sin(B);
+  //We ignore the abberation effects when calculating this value
+  double i = check4GreaterThan360(28.075216 - 0.012998 * astroTime->julianCentury + 0.000004 * astroTime->julianCentury * astroTime->julianCentury) * DEG_2_RAD;
+  double omega = check4GreaterThan360(169.508470 + 1.394681 * astroTime->julianCentury + 0.000412 * astroTime->julianCentury * astroTime->julianCentury) * DEG_2_RAD
+  double sin_lambda_minus_omega = sin(lambda - omega);
+  double lambda = atan2(y, x);
+  double x = heliocentric_x - earth->heliocentric_x;
+  double y = heliocentric_y - earth->heliocentric_y;
+  double z = heliocentric_z - earth->heliocentric_z;
+  double beta = atan2(z, sqrt(x * x + y * y));
+  double sin_i = sin(i);
+  double cos_i = cos(i);
+  double sin_beta = sin(beta);
+  double cos_beta = cos(beta);
+  double sinB = sin_i * cos_beta * sin_lambda_minus_omega - cos_i * sin_beta;
+  double eclipticalLongitude = eclipticalLongitude;
+  double u1 = atan2(sin_i * sin(eclipticalLatitude) + cos_i * cos_eclipticalLatitude * sin(eclipticalLongitude - omega)), (cos_eclipticalLatitude * cos(eclipticalLongitude - omega)));
+  double u2 = atan2(sin_i * sin_beta + cos_i * cos_beta * sin_lambda_minus_omega), (cos_beta * cos(lambda - omega)));
+  double deltaU = abs(u1 - u2);
   magnitudeOfPlanetFromEarth = -8.88 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.44 * abs(deltaU) - 2.60 * abs(sinB) + 1.25 * sinB * sinB;
 }
 

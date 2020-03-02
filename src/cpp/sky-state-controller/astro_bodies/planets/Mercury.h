@@ -6,7 +6,7 @@
 
 class Mercury : public OtherPlanet{
 public:
-  Mercury(SkyManager* skyManager, Sun* sunRef, Earth* earthRef);
+  Mercury(SkyManager* skyManager);
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();
   void updateRadiusVector();

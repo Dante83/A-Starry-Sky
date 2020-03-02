@@ -11,6 +11,12 @@ public:
   Location* location;
   Moon moon;
   Sun sun;
+  Earth earth;
+  Mercury mercury;
+  Venus venus;
+  Mars mars;
+  Jupiter jupiter;
+  Saturn saturn;
   double nutationInLongitude;
   double deltaObliquityOfEcliptic;
   double meanObliquityOfTheEclipitic;

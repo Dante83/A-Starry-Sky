@@ -13,21 +13,19 @@ AstronomicalBody::AstronomicalBody(AstroTime* astroTimeRef){
 //
 //Internal methods that we would like to share between sky bodies. Some might be extrapolated up to a higher level later
 //to reduce the size of our objects.
+//EclipticalLongitude is eclipticalLongitude
+//Beta is eclipticalLatitude
 //
-void AstronomicalBody::convertLambdaAndBetaToRaAndDec(double lambda, double beta, double cosBeta){
+void AstronomicalBody::convertEclipticalLongitudeAndLatitudeToRaAndDec(double eclipticalLongitude, double eclipticalLatitude, double cos_eclipticalLatitude){
   double epsilon = *trueObliquityOfEclipticInRads;
 
   //Use these to acquire the equatorial solarGPUCoordinates
-  double sinLambda = sin(lambda);
+  double sinEclipticalLongitude = sin(eclipticalLongitude);
   double sinEpsilon = sin(epsilon);
   double cosEpsilon = cos(epsilon);
-  double sinBeta = sin(beta);
-  rightAscension = check4GreaterThan2Pi(atan2(sinLambda * cosEpsilon - (sinBeta / cosBeta) * sinEpsilon, cos(lambda)));
-  declination = checkBetweenMinusPiOver2AndPiOver2(asin(sinBeta * cosEpsilon + cosBeta * sinEpsilon * sinLambda));
-}
-
-void AstronomicalBody::convertGeocentricLatitudeAndLongitudeToRaAndDec(double heliocentricLatitude, double heliocentricLongitude){
-  
+  double sin_eclipticalLatitude = sin(eclipticalLatitude);
+  rightAscension = check4GreaterThan2Pi(atan2(sinEclipticalLongitude * cosEpsilon - (sin_eclipticalLatitude / cos_eclipticalLatitude) * sinEpsilon, cos(eclipticalLongitude)));
+  declination = checkBetweenMinusPiOver2AndPiOver2(asin(sin_eclipticalLatitude * cosEpsilon + cos_eclipticalLatitude * sinEpsilon * sinEclipticalLongitude));
 }
 
 void AstronomicalBody::updateParalacticAngle(){

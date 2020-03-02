@@ -3,34 +3,38 @@
 #include "SkyManager.h"
 #include "Sun.h"
 #include "Moon.h"
+#include "Earth.h"
+#include "Mercury.h"
+#include "Venus.h"
+#include "Mars.h"
+#include "Jupiter.h"
+#include "Saturn.h"
 #include "../Constants.h"
 #include <stdbool.h>
 #include <cmath>
 
-SkyManager::SkyManager(AstroTime* astroTimeRef, Location* locationRef): sun(astroTimeRef), moon(astroTimeRef){
+SkyManager::SkyManager(AstroTime* astroTimeRef, Location* locationRef): sun(astroTimeRef), moon(astroTimeRef),
+earth(astroTimeRef), mercury(astroTimeRef), venus(astroTimeRef), mars(astroTimeRef), jupiter(astroTimeRef), saturn(astroTimeRef),{
   astroTime = astroTimeRef;
   location = locationRef;
 
   //Now that our sun and moon are created, we can set the sun pointer for our moon
   moon.sun = &sun;
 
-  //For a standard sky we have one sun, one moon and four planets
-  //which are visible to the naked eye (we ignore Mercury and anything past Saturn).
-  update(1);
-  sun.eccentricityOfTheEarth = &eccentricityOfTheEarth;
-  sun.meanObliquityOfTheEclipitic = &meanObliquityOfTheEclipitic;
-  moon.trueObliquityOfEclipticInRads = &trueObliquityOfEclipticInRads;
-  sun.updatePosition();
-  moon.updatePosition();
+  //We can also hook up our pointer to the sun for each of our planets
+  Planet planets[6] = {&mercury, &venus, &earth, &mars, &jupiter, &saturn};
+  for(int i = 0; i < 6; ++i){
+    planets[i].sun = &sun;
+  }
 
-  //
-  //TODO: Implement planets
-  //
-  //Planets
-  // Planet[0] = Venus(this);
-  // Planet[1] = Mars(this);
-  // Planet[2] = Jupiter(this);
-  // Planet[3] = Saturn(this);
+  //And hook up our earth to each of our observable planets
+  OtherPlanet otherPlanets[5] = {&mercury, &venus, &mars, &jupiter, &saturn};
+  for(int i = 0; i < 5; ++i){
+    otherPlanets[i].earth = &earth;
+  }
+
+  //For a standard sky we have one sun, one moon and five planets
+  update();
 }
 
 void SkyManager::update(){
@@ -38,9 +42,6 @@ void SkyManager::update(){
   double julianCentury_pow2 = julianCentury * julianCentury;
   double julianCentury_pow3 = julianCentury * julianCentury_pow2;
   double julianCentury_pow4 = julianCentury_pow2 * julianCentury_pow2;
-
-  //NOTE: I could potentially factor out a number in each of the below sets
-  //resulting in one less multiplication per line? I don't know if it's worth it though...
 
   //
   //Lunar constants
@@ -112,4 +113,16 @@ void SkyManager::update(){
   eccentricityOfTheEarth = 0.016708634 - 0.000042037 * julianCentury - 0.0000001267 * julianCentury_pow2;
   sun.equationOfCenter = (1.914602 - 0.004817 * julianCentury - 0.000014 * julianCentury_pow2) * sin(sunsMeanAnomolyInRads) + (0.019993 - 0.000101 * julianCentury) * sin(2 * sunsMeanAnomolyInRads) + 0.000289 * sin(3 * sunsMeanAnomolyInRads);
   sun.setTrueLongitude((sun.meanLongitude + sun.equationOfCenter) * DEG_2_RAD);
+
+  //Update the state of our sky from this information
+  sun.eccentricityOfTheEarth = &eccentricityOfTheEarth;
+  sun.meanObliquityOfTheEclipitic = &meanObliquityOfTheEclipitic;
+  moon.trueObliquityOfEclipticInRads = &trueObliquityOfEclipticInRads;
+  sun.updatePosition();
+  moon.updatePosition();
+  earth.updatePosition();
+  OtherPlanet otherPlanets[5] = {&mercury, &venus, &mars, &jupiter, &saturn};
+  for(int i = 0; i < 5; ++i){
+    otherPlanets[i].updatePosition();
+  }
 }

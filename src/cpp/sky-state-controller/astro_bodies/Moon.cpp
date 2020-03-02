@@ -145,15 +145,15 @@ void Moon::updatePosition(){
   sum_b += -2235.0 * sin(meanLongitudeInRads) + 382.0 * sin(a_3) + 175.0 * sin(a_1 - argumentOfLatitudeInRads) + 175.0 * sin(a_1 + argumentOfLatitudeInRads);
   sum_b += 127.0 * sin(meanLongitudeInRads - meanAnomalyInRads) - 115.0 * sin(meanLongitudeInRads + meanAnomalyInRads);
 
-  double lambda = (meanLongitude + (sum_l * 0.000001)) * DEG_2_RAD;
-  double beta = (sum_b * 0.000001) * DEG_2_RAD;
-  double cosBeta = cos(beta);
+  double eclipticalLongitude = (meanLongitude + (sum_l * 0.000001)) * DEG_2_RAD;
+  double eclipticalLatitude = (sum_b * 0.000001) * DEG_2_RAD;
+  double cos_eclipticalLatitude = cos(eclipticalLatitude);
   distanceFromEarthInMeters = 385000560.0 + sum_r;
 
   //From all of the above, we can get our right ascension and declination
-  convertLambdaAndBetaToRaAndDec(lambda, beta, cosBeta);
+  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude);
 
-  double geocentricElongationOfTheMoon = acos(cosBeta * cos((sun->longitude * DEG_2_RAD) - lambda));
+  double geocentricElongationOfTheMoon = acos(cos_eclipticalLatitude * cos((sun->longitude * DEG_2_RAD) - eclipticalLongitude));
 
   //Finally,update our moon brightness
   //From approximation 48.4 in Meeus, page 346
@@ -174,7 +174,7 @@ void Moon::updatePosition(){
   #define IRRADIANCE_OF_SUN 28.8
   double phiOverTwo = 0.5 * lunarPhaseAngleInRads;
   earthShineIntensity = 0.5 * FULL_EARTHSHINE (1.0 - sin(phiMinusPiOverTwo) * tan(phiMinusPiOverTwo) * log(0.5 * phiMinusPiOverTwo));
-  intensity = illuminationOfMoonCoefficient * (earthShineIntensity + sun->intensity * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(0.5 *phiOverTwo)));
+  intensity = illuminationOfMoonCoefficient * (earthShineIntensity + IRRADIANCE_OF_SUN * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(0.5 *phiOverTwo)));
 
   //Update the paralactic angle
   updateParalacticAngle();
