@@ -5,7 +5,7 @@
 
 uniform sampler2D transmittanceTexture;
 //Moon reflects 0.072% of all light
-const float intensity = 8.0;
+const float intensity = 11.0;
 
 $atmosphericFunctions
 

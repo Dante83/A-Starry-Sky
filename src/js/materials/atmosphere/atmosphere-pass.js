@@ -80,7 +80,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, vWorldPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
 
       '//Color Adjustment Pass',
-      'vec3 toneMappedColor = Uncharted2ToneMapping(LinearTosRGB(vec4(solarAtmosphericPass.rgb, 1.0)).rgb);',
+      'vec3 toneMappedColor = Uncharted2ToneMapping(LinearTosRGB(vec4(solarAtmosphericPass, 1.0)).rgb);',
 
       '//Triangular Blue Noise Adjustment Pass',
       'gl_FragColor = vec4(toneMappedColor, 1.0);',
