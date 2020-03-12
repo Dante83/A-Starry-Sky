@@ -20,7 +20,7 @@ extern "C" {
   void updateTimeSpan(double t_0, double t_f);
 }
 
-void EMSCRIPTEN_KEEPALIVE initialize(double latitudes, double& astroPositions_0, double& rotatedAstroPositions, double& linearValues_0, double &linearValues){
+void EMSCRIPTEN_KEEPALIVE initialize(double latitude, double& astroPositions_0, double& rotatedAstroPositions, double& linearValues_0, double &linearValues){
   skyInterpolator.sinOfLatitude = sin(latitude);
   skyInterpolator.cosOfLatitude = cos(latitude);
   skyInterpolator.astroPositions_0 = astroPositions_0;

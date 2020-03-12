@@ -5,17 +5,20 @@ importScripts('starry-sky-module.js');
 //Return of global variables - because this is actually it's own little world
 //and so anarcho-communism still works perfectly fine... for now.
 //
+const EVENT_INITIALIZE = 0;
+const EVENT_INITIALIZATION_RESPONSE = 1;
+const EVENT_UPDATE_LATEST = 2;
+const EVENT_RETURN_LATEST = 3;
+const FIVE_MINUTES = 60.0 * 5.0 * 1000.0;
+const MINUTES_BETWEEN_UPDATES = 5.0;
+var date;
+var updateLoop;
 var wasmModule;
 var initialize;
 var skyState;
 var wasmIsReady = false;
 var skyStateIsReady = false;
 var update;
-var starrySkyCanvas;
-var ctx;
-var timeSinceLastUpdate = 1 / 12; //Assume we start off with 1/60 time times 5 frames per update
-var ticksUntilUpdate = 5;
-var updatesUntilInterpolateRAandDec = 100;
 var requests = [];
 
 //
@@ -29,18 +32,11 @@ Module['onRuntimeInitialized'] = function() {
   attemptInitializiation();
 };
 
-updateAllSides = function(){
-
-}
-
-updateSide = function(side){
-
-}
-
-let attemptInitializiation = function(){
+var updateSkyState(arrayReference){
   if(wasmIsReady && skyStateIsReady){
-    //Fire up the sky
-    let julianDay = Module._initializeStarrySky(
+    //Update our sky state from the data provided
+    Module.HEAPF32.set(arrayReference, skyState.memoryPtr / arrayReference.BYTES_PER_ELEMENT);
+    let julianDay = Module._updateStarrySkyState(
       skyState.latitude,
       skyState.longitude,
       skyState.year,
@@ -49,74 +45,83 @@ let attemptInitializiation = function(){
       skyState.hour,
       skyState.minute,
       skyState.second,
-      skyState.utcOffset,
-      5,
-      5,
-      0.73
+      skyState.utcOffset
     );
 
-    //Grab all values associated with our current sky state.
-
-
-    //Respond to the main thread with the current data.
-
- }
-};
+    //Copy the data from our starry sky web assembly heap to the transfferable memory
+    arrayReference.set(Module.HEAPF32.buffer, skyState.memoryPtr, arrayReference.length);
+    return arrayReference;
+  }
+  return false;
+}
 
 onmessage = function(e){
   let postObject = e.data;
-  if(postObject.tick){
-    ticksUntilUpdate--;
+  if(postObject.eventType === EVENT_UPDATE_LATEST){
+    skyState.date = skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_UPDATES);
+    skyState.year = date.getFullYear();
+    skyState.month = date.getMonth() + 1;
+    skyState.day = date.getDate();
+    skyState.hour = date.getHours();
+    skyState.minute = date.getMinutes();
+    skyState.second = date.getSeconds() + (date.getMilliseconds() * 0.001);
+    let finalStateBuffer = postObject.transferrableFinalStateBuffer;
+    finalStateBuffer = updateSkyState(finalStateBuffer, memoryPtr);
 
-    //Request the next image set from web assembly
-
-
-    if(ticksUntilUpdate === 0){
-      timeSinceLastUpdate = timeSinceLastUpdate - runningTime * skyState.timeMultiplier;
-
-      //Send our canvas over for updating.
-      self.postMessage({imageUpdateReady: true, canvas: starrySkyCanvas}, [starrySkyCanvas]);
-    }
+    //Once finished, return these memory objects back to the primary thread to
+    //begin rotating our sky.
+    self.webAssemblyWorker.postMessage({
+      eventType: EVENT_RETURN_LATEST,
+      transferrableFinalStateBuffer: finalStateBuffer
+    }, [finalStateBuffer]);
   }
-  else if(postObject.returnCanvas){
-    //Get our canvas back
-    starrySkyCanvas = postObject.canvas;
-
-    //Now reset our ticks
-    ticksUntilUpdate = 5;
-  }
-  if(postObject.initializeSky){
+  else if(postObject.eventType === EVENT_INITIALIZE){
     //Set the current date time.
-    let dt = new Date(postObject.date);
-    let seconds = dt.getSeconds() + (dt.getMilliseconds() * 0.001);
+    date = new Date(postObject.date);
 
-    //Initialize our 3D environment
-    starrySkyCanvas = postObject.canvas;
-    ctx = starrySkyCanvas.getContext('webgl2');
-
-    console.log(`UTC Offset in worker: ${postObject.utcOffset}`);
-
-    //Construct the state
+    //Construct the initial sky state
     skyState = {
+      date: date,
       latitude: postObject.latitude,
       longitude: postObject.longitude,
-      year: dt.getFullYear(),
-      month: dt.getMonth() + 1,
-      day: dt.getDate(),
-      hour: dt.getHours(),
-      minute: dt.getMinutes(),
-      second: seconds,
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      hour: date.getHours(),
+      minute: date.getMinutes(),
+      second: date.getSeconds() + (date.getMilliseconds() * 0.001),
       utcOffset: postObject.utcOffset,
-      timeMultiplier: postObject.timeMultiplier
+      timeMultiplier: postObject.timeMultiplier,
+      memoryPtr: null,
+      bufferSize: null
     };
     if(isNaN(skyState.minute)){
       throw 'Invalid date object. Perhaps use the date formate year-month-day hour:minute:second?';
     }
-    timeSinceLastUpdate *= skyState.timeMultiplier;
     wasmModule = postObject.WASMModule;
     skyStateIsReady = true;
+    let initialStateBuffer = postObject.transferrableInitialStateBuffer;
+    skyState.memoryPtr = Module._malloc(initialStateBuffer.length * initialStateBuffer.BYTES_PER_ELEMENT);
+    initialStateBuffer = updateSkyState(initialStateBuffer, memoryPtr);
 
-    attemptInitializiation();
+    //Construct the sky state five minutes from now
+    skyState.date = skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_UPDATES);
+    skyState.year = date.getFullYear();
+    skyState.month = date.getMonth() + 1;
+    skyState.day = date.getDate();
+    skyState.hour = date.getHours();
+    skyState.minute = date.getMinutes();
+    skyState.second = date.getSeconds() + (date.getMilliseconds() * 0.001);
+    let finalStateBuffer = postObject.transferrableFinalStateBuffer;
+    finalStateBuffer = updateSkyState(finalStateBuffer, memoryPtr);
+
+    //Once finished, return these memory objects back to the primary thread to
+    //begin rotating our sky.
+    self.webAssemblyWorker.postMessage({
+      eventType: EVENT_INITIALIZATION_RESPONSE,
+      transferrableInitialStateBuffer: initialStateBuffer,
+      transferrableFinalStateBuffer: finalStateBuffer
+    }, [initialStateBuffer, finalStateBuffer]);
   }
 
   return true;
