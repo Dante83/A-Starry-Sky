@@ -16,7 +16,7 @@ Jupiter::Jupiter(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
 //From page 286 of Meeus
 void Jupiter::updateMagnitudeOfPlanet(){
   double phaseAngle = getPhaseAngleInDegrees();
-  magnitudeOfPlanetFromEarth = -9.40 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.005 * phaseAngle;
+  irradianceFromEarth = -9.40 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.005 * phaseAngle;
 }
 
 void Jupiter::updateEclipticalLongitude(){

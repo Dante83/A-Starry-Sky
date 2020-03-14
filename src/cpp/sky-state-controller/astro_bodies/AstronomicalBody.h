@@ -10,8 +10,6 @@ public:
   double* trueObliquityOfEclipticInRads;
   double rightAscension;
   double declination;
-  double angularDiameterMultiplier;
-  double intensity;
   double paralacticAngle;
   void convertLambdaAndBetaToRaAndDec(double lambda, double beta, double cosBeta);
   void convertGeocentricLatitudeAndLongitudeToRaAndDec(double heliocentricLatitude, double heliocentricLongitude);

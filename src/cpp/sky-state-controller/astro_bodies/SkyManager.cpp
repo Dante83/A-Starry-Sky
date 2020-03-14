@@ -124,5 +124,6 @@ void SkyManager::update(){
   OtherPlanet otherPlanets[5] = {&mercury, &venus, &mars, &jupiter, &saturn};
   for(int i = 0; i < 5; ++i){
     otherPlanets[i].updatePosition();
+    otherPlanets[i].updateMagnitudeOfPlanet();
   }
 }

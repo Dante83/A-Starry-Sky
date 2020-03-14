@@ -7,7 +7,7 @@
 //
 //Constructor
 //
-Earth::Earth(AstroTime* astroTimeRef) : Planet(astroTimeRef){
+Earth::Earth(AstroTime* astroTimeRef, Sun* sun) : Planet(astroTimeRef, sun){
   //
   //Default constructor
   //
@@ -23,6 +23,7 @@ void Earth::void updatePosition(){
   heliocentric_y = radiusVector * cos(eclipticalLatitude) * sin(eclipticalLongitude);
   heliocentric_z = radiusVector * sin(eclipticalLatitude);
   distanceFromSun = sqrt(heliocentric_x * heliocentric_x + heliocentric_y * heliocentric_y + heliocentric_z * heliocentric_z);
+
 }
 
 void Earth::updateEclipticalLongitude(){

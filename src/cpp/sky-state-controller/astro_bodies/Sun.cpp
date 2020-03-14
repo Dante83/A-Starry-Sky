@@ -57,3 +57,11 @@ void Sun::setMeanLongitude(double inValue){
   meanLongitude = check4GreaterThan360(inValue);
   meanLongitudeInRads = meanLongitude * DEG_2_RAD;
 }
+
+void Sun::setScaleAndIrradiance(double* distanceFromEarthToSun){
+  #define AVERAGE_SOLAR_DISTANCE 149597870700
+  scale = AVERAGE_SOLAR_DISTANCE / distanceFromSun;
+  //Using 11.0 for now as we do not yet have HDR implemented
+  #define AVERAGE_SOLAR_IRRADIANCE 11.0
+  irradianceFromEarth = AVERAGE_SOLAR_IRRADIANCE * sun.scale * sun.scale;
+}

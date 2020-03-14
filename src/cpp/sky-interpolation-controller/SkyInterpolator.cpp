@@ -13,14 +13,14 @@ SkyInterpolator* skyInterpolator;
 
 extern "C" {
   int main();
-  void initialize(const double latitudes, const double& astroPositions_0, const double& rotatedAstroPositions);
+  void initialize(double latitudes, double* astroPositions_0, double* rotatedAstroPositions);
   void updateAstroRAandHA(double* astroPositions_f);
   void updateTime(double t);
   void updateAstroRAandHA();
   void updateTimeSpan(double t_0, double t_f);
 }
 
-void EMSCRIPTEN_KEEPALIVE initialize(double latitude, double& astroPositions_0, double& rotatedAstroPositions, double& linearValues_0, double &linearValues){
+void EMSCRIPTEN_KEEPALIVE initialize(double latitude, double* astroPositions_0, double* rotatedAstroPositions, double* linearValues_0, double* linearValues){
   skyInterpolator.sinOfLatitude = sin(latitude);
   skyInterpolator.cosOfLatitude = cos(latitude);
   skyInterpolator.astroPositions_0 = astroPositions_0;
@@ -29,7 +29,7 @@ void EMSCRIPTEN_KEEPALIVE initialize(double latitude, double& astroPositions_0, 
   skyInterpolator.linearValues = linearValues;
 }
 
-void EMSCRIPTEN_KEEPALIVE updateFinalValues(double& astroPositions_f, double& linearValues_f){
+void EMSCRIPTEN_KEEPALIVE updateFinalValues(double* astroPositions_f, double* linearValues_f){
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_COORDINATES; ++i){
     skyInterpolator.deltaPositions[i] = astroPositions_f[i] - skyInterpolator.astroPositions_0[i];

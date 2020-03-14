@@ -19,6 +19,8 @@ public:
   double distanceFromEarthInMeters;
   double earthShineIntensity;
   double angularDiameterMultiplier;
+  double irradianceFromEarth;
+  double scale;
   void updatePosition();
   void updatePosition(double secondsTillNextUpdate);
   void setMeanLongitude(double inValue);

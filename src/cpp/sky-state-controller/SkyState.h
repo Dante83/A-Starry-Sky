@@ -10,4 +10,6 @@ public:
   Location* location;
   AstroTime* astroTime;
   SkyManager* skyManager;
+  double* memoryPtr;
+  void updateHeap32Memory();
 };

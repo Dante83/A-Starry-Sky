@@ -8,151 +8,72 @@
 //
 //Constructor
 //
-SkyState::SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* skyManagerPnt){
+SkyState::SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* skyManagerPnt, double* memoryPtr){
   astroTime = astroTimePnt;
   location = locationPnt;
   skyManager = skyManagerPnt;
+  memoryPtr = memoryPtr;
 }
 
 SkyState* skyState;
 
 extern "C" {
   int main();
-  void setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset);
+  void setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset, double* memoryPtr);
+  void updateSky(int year, int month, int day, int hour, int minute, double second, double utcOffset);
+}
 
-  //Sun
-  double getSunRightAscension();
-  double getSunDeclination();
-  double getSunIntensityFromEarth();
+void inline updateHeap32Memory(){
+  //Update the rotational values in our Heap 32
+  memoryPtr[0] = skyState->skyManager->sun.rightAscension;
+  memoryPtr[1] = skyState->skyManager->sun.declination;
+  memoryPtr[15] = skyState->skyManager->sun.irradianceFromEarth;
+  memoryPtr[16] = skyState->skyManager->sun.scale;
 
-  //Moon
-  double getMoonRightAscension();
-  double getMoonDeclination();
-  double getMoonIntensity();
-  double getEarthShineIntensity();
-  double getMoonParalacticAngle();
+  memoryPtr[2] = skyState->skyManager->moon.rightAscension;
+  memoryPtr[3] = skyState->skyManager->moon.declination;
+  memoryPtr[17] = skyState->skyManager->moon.irradianceFromEarth;
+  memoryPtr[18] = skyState->skyManager->moon.scale;
+  memoryPtr[19] = skyState->skyManager->moon.parallacticAngle;
+  memoryPtr[20] = skyState->skyManager->moon.earthShineIntensity;
 
-  //Planet Venus
-  double getVenusRightAscension();
-  double getVenusDeclination();
-  double getVenusIntensity();
+  memoryPtr[4] = skyState->skyManager->mercury.rightAscension;
+  memoryPtr[5] = skyState->skyManager->mercury.declination;
+  memoryPtr[21] = skyState->skyManager->mercury.irradianceFromEarth;
 
-  //Planet Mars
-  double getMarsRightAscension();
-  double getMarsDeclination();
-  double getMarsIntensity();
+  memoryPtr[6] = skyState->skyManager->venus.rightAscension;
+  memoryPtr[7] = skyState->skyManager->venus.declination;
+  memoryPtr[22] = skyState->skyManager->venus.irradianceFromEarth;
 
-  //Planet Jupiter
-  double getJupiterRightAscension();
-  double getJupiterDeclination();
-  double getJupiterIntensity();
+  memoryPtr[8] = skyState->skyManager->mars.rightAscension;
+  memoryPtr[9] = skyState->skyManager->mars.declination;
+  memoryPtr[23] = skyState->skyManager->mars.irradianceFromEarth;
 
-  //Planet Saturn
-  double getSaturnRightAscension();
-  double getSaturnDeclination();
-  double getSaturnIntensity();
+  memoryPtr[10] = skyState->skyManager->jupiter.rightAscension;
+  memoryPtr[11] = skyState->skyManager->jupiter.declination;
+  memoryPtr[24] = skyState->skyManager->jupiter.irradianceFromEarth;
+
+  memoryPtr[12] = skyState->skyManager->saturn.rightAscension;
+  memoryPtr[13] = skyState->skyManager->saturn.declination;
+  memoryPtr[25] = skyState->skyManager->saturn.irradianceFromEarth;
+
+  memoryPtr[14] = skyState->astroTime.localApparentSiderealTime;
 }
 
 //What we use to get all of this rolling.
-void EMSCRIPTEN_KEEPALIVE setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset){
+void EMSCRIPTEN_KEEPALIVE setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset, double* memoryPtr){
+  //Set up our sky to the current time
   AstroTime *astroTime = new AstroTime(year, month, day, hour, minute, second, utcOffset);
   Location *location = new Location(latitude, longitude);
   SkyManager *skyManager = new SkyManager(astroTime, location);
-  skyState = new SkyState(astroTime, location, skyManager);
+  skyState = new SkyState(astroTime, location, skyManager, memoryPtr);
+  updateHeap32Memory();
 }
 
-//
-//Sun
-//
-double EMSCRIPTEN_KEEPALIVE getSunRightAscension(){
-  return skyState->skyManager->sun.rightAscension;
-}
-
-double EMSCRIPTEN_KEEPALIVE getSunDeclination(){
-  return skyState->skyManager->sun.declination;
-}
-
-double EMSCRIPTEN_KEEPALIVE getSunIntensityFromEarth(){
-  return skyState->skyManager->sun.intensityFromEarthsSurface;
-}
-
-//
-//Moon
-//
-double EMSCRIPTEN_KEEPALIVE getMoonRightAscension(){
-  return skyState->skyManager->moon.rightAscension;
-}
-
-double EMSCRIPTEN_KEEPALIVE getMoonDeclination(){
-  return skyState->skyManager->moon.declination;
-}
-
-double EMSCRIPTEN_KEEPALIVE getMoonIntensity(){
-  return skyState->skyManager->moon.intensity;
-}
-
-double EMSCRIPTEN_KEEPALIVE getMoonParalacticAngle(){
-  return skyState->skyManager->moon.intensity;
-}
-
-//
-//Venus
-//
-double EMSCRIPTEN_KEEPALIVE getVenusRightAscension(){
-  return skyState->skyManager->venus.rightAscension;
-}
-
-double EMSCRIPTEN_KEEPALIVE getVenusDeclination(){
-  return skyState->skyManager->venus.declination;
-}
-
-double EMSCRIPTEN_KEEPALIVE getVenusIntensity(){
-  return skyState->skyManager->venus.intensity;
-}
-
-//
-//Mars
-//
-double EMSCRIPTEN_KEEPALIVE getMarsRightAscension(){
-  return skyState->skyManager->mars.rightAscension;
-}
-
-double EMSCRIPTEN_KEEPALIVE getMarsDeclination(){
-  return skyState->skyManager->mars.declination;
-}
-
-double EMSCRIPTEN_KEEPALIVE getMarsIntensity(){
-  return skyState->skyManager->mars.intensity;
-}
-
-//
-//Jupiter
-//
-double EMSCRIPTEN_KEEPALIVE getJupiterRightAscension(){
-  return skyState->skyManager->jupiter.rightAscension;
-}
-
-double EMSCRIPTEN_KEEPALIVE getJupiterDeclination(){
-  return skyState->skyManager->jupiter.declination;
-}
-
-double EMSCRIPTEN_KEEPALIVE getJupiterIntensity(){
-  return skyState->skyManager->jupiter.intensity;
-}
-
-//
-//Saturn
-//
-double EMSCRIPTEN_KEEPALIVE getSaturnRightAscension(){
-  return skyState->skyManager->saturn.rightAscension;
-}
-
-double EMSCRIPTEN_KEEPALIVE getSaturnDeclination(){
-  return skyState->skyManager->saturn.declination;
-}
-
-double EMSCRIPTEN_KEEPALIVE getSaturnIntensity(){
-  return skyState->skyManager->saturn.intensity;
+void EMSCRIPTEN_KEEPALIVE updateSky(int year, int month, int day, int hour, int minute, double second, double utcOffset){
+  skyState->astroTime.setAstroTimeFromYMDHMSTZ(year, month, day, hour, minute, second, utcOffset);
+  skyState->skyManager.update();
+  updateHeap32Memory();
 }
 
 int main(){

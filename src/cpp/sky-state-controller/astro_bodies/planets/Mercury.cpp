@@ -17,7 +17,7 @@ Mercury::Mercury(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
 void Mercury::updateMagnitudeOfPlanet(){
   double phaseAngle = getPhaseAngleInDegrees();
   double phaseAngleTerms = 0.0380 * phaseAngle - 0.000273 * phaseAngle * phaseAngle + 0.000002 * phaseAngle * phaseAngle * phaseAngle;
-  magnitudeOfPlanetFromEarth = -0.42 + 5.0 * log(distanceFromEarth * distanceFromSun) + phaseAngleTerms;
+  irradianceFromEarth = -0.42 + 5.0 * log(distanceFromEarth * distanceFromSun) + phaseAngleTerms;
 }
 
 void Mercury::updateEclipticalLongitude(){

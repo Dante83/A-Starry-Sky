@@ -2,6 +2,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //
   //TODO: Replace the sky dome with a plane
   //
+  this.skyDirector = skyDirector;
   this.skyGeometry = new THREE.SphereGeometry(5000.0, 64, 64);
 
   //Create our material late
@@ -37,15 +38,24 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //Initialize the position of the sky at the location of the camera
   this.skyMesh.position.set(0.0, 0.0, 0.0);
 
-  //Add this object to the scene
-  skyDirector.scene.add(this.skyMesh);
-}
+  let self = this;
+  this.tick = function(){
+    //Update the uniforms so that we can see where we are on this sky.
+    self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
+  }
 
-StarrySky.Renderers.AtmosphereRenderer.prototype.tick = function(){
-  //Get all the data for our current view to update the view parameters of our component
+  //Upon completion, this method self destructs
+  this.firstTick = function(){
+    //Connect up our reference values
+    self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.sun.position;
 
-  //Update the uniforms so that we can see where we are on this sky.
+    //Proceed with the first tick
+    self.tick();
 
-  //Request an update to our shader
+    //Add this object to the scene
+    skyDirector.scene.add(this.skyMesh);
 
+    //Self destruct this method
+    self.firstTick = self.tick();
+  }
 }

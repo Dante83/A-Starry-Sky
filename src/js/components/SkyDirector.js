@@ -9,16 +9,19 @@ StarrySky.SkyDirector = function(parentComponent){
   this.EVENT_INITIALIZATION_RESPONSE = 1;
   this.EVENT_UPDATE_LATEST = 2;
   this.EVENT_RETURN_LATEST = 3;
-  //7 Astronomical RAs and HAs (14), 7(21) brightnesses, the LSRT(22), Lunar Parallactic Angle(23)
-  //Earthshine Intensity(24), Solar and Lunar Scale Multiplier(26) or 26 variables
+  //7 Astronomical RAs and HAs (14), 7(21) brightnesses, Lunar Parallactic Angle(22)
+  //Earthshine Intensity(23), Solar and Lunar Scale Multiplier(25) or 25 variables
   //14 of these require rotational transformations
   //10 are linear interpolations
   //1 (LSRT) is a rotational interpolation
   const BYTES_PER_32_BIT_FLOAT = 4;
-  const NUMBER_OF_FLOATS = 26;
-  const NUMBER_OF_ROTATIONAL_TRANSFORMATIONS = 14;
+  const NUMBER_OF_FLOATS = 25;
+  const NUMBER_OF_ROTATIONAL_OBJECTS = 7;
+  const NUMBER_OF_ROTATIONAL_TRANSFORMATIONS = NUMBER_OF_ROTATIONAL_OBJECTS * 2;
+  const NUMBER_OF_ROTATION_OUTPUT_VALUES = NUMBER_OF_ROTATIONAL_OBJECTS * 3;
   const NUMBER_OF_LINEAR_INTERPOLATIONS = 11;
-  const NUMBER_OF_ROTATIONAL_INTERPOLATIONS = 1;
+  const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
+  const LINEAR_ARRAY_END = LINEAR_ARRAY_START + NUMBER_OF_LINEAR_INTERPOLATIONS;
   const TOTAL_BYTES_FOR_WORKER_BUFFERS = BYTES_PER_32_BIT_FLOAT * NUMBER_OF_FLOATS;
   const FIVE_MINUTES = 60.0 * 5.0 * 1000.0;
   let transferrableInitialStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
@@ -33,10 +36,11 @@ StarrySky.SkyDirector = function(parentComponent){
   this.linearValues_ptr;
   this.linearValues;
   this.finalLSRT;
+  this.timeMultiplier;
+  this.interpolationT = 0.0;
   this.parentComponent = parentComponent;
   this.renderer = parentComponent.el.sceneEl.renderer;
   this.scene = parentComponent.el.sceneEl.object3D;
-  this.lastUpdateT;
   //
   //TODO: Come back here and grab the camera. This is important for attaching child objects in our sky
   //that will follow this object around.
@@ -50,8 +54,9 @@ StarrySky.SkyDirector = function(parentComponent){
 
   this.initializeRenderers = function(assetManager = false){
     //All systems must be up and running before we are ready to begin
-    if(self.skyDirectorWASMIsReady && self.assetManagerInitialized){
+    if(self.skyDirectorWASMIsReady  && self.assetManagerInitialized){
       //Prepare all of our renderers to display stuff
+      self.timeMultiplier = self.assetManager.data.skyTimeData.timeMultiplier;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
       self.start();
     }
@@ -73,26 +78,19 @@ StarrySky.SkyDirector = function(parentComponent){
     }, [self.transferrableFinalStateBuffer]);
   }
 
-  this.tick = function(t){
+  this.tick = function(time, timeDelta){
+    self.interpolationT += timeDelta * self.timeMultiplier;
+
     //Update our sky state
-    let relativeT = t - self.lastUpdateT;
-    Module._tick(relativeT);
+    Module._tick(timeAcceleratedT);
 
     //Update our astronomical positions
-    self.skyState.sun.azimuth = self.rotatedAstroPositions[0];
-    self.skyState.sun.altitude = self.rotatedAstroPositions[1];
-    self.skyState.moon.azimuth = self.rotatedAstroPositions[2];
-    self.skyState.moon.altitude = self.rotatedAstroPositions[3];
-    self.skyState.mercury.azimuth = self.rotatedAstroPositions[4];
-    self.skyState.mercury.altitude = self.rotatedAstroPositions[5];
-    self.skyState.venus.azimuth = self.rotatedAstroPositions[6];
-    self.skyState.venus.altitude = self.rotatedAstroPositions[7];
-    self.skyState.mars.azimuth = self.rotatedAstroPositions[8];
-    self.skyState.mars.altitude = self.rotatedAstroPositions[9];
-    self.skyState.jupiter.azimuth = self.rotatedAstroPositions[10];
-    self.skyState.jupiter.altitude = self.rotatedAstroPositions[11];
-    self.skyState.saturn.azimuth = self.rotatedAstroPositions[12];
-    self.skyState.saturn.altitude = self.rotatedAstroPositions[13];
+    self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));
+    self.skyState.moon.position.fromArray(self.rotatedAstroPositions.slice(3, 6));
+    self.skyState.mercury.position.fromArray(self.rotatedAstroPositions.slice(9, 12));
+    self.skyState.venus.position.fromArray(self.rotatedAstroPositions.slice(12, 15));
+    self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions.slice(15, 18));
+    self.skyState.saturn.position.fromArray(self.rotatedAstroPositions.slice(18, 21));
 
     //Update our linear values
     self.skyState.sun.intensity = self.linearValues[0];
@@ -100,7 +98,7 @@ StarrySky.SkyDirector = function(parentComponent){
     self.skyState.moon.intensity = self.linearValues[2];
     self.skyState.moon.scale = self.linearValues[3];
     self.skyState.moon.parallacticAngle = self.linearValues[4];
-    self.skyState.moon.earthshine = self.linearValues[5];
+    self.skyState.moon.earthshineIntensity = self.linearValues[5];
     self.skyState.mercury.intensity = self.linearValues[6];
     self.skyState.venus.intensity = self.linearValues[7];
     self.skyState.mars.intensity = self.linearValues[8];
@@ -108,10 +106,10 @@ StarrySky.SkyDirector = function(parentComponent){
     self.skyState.saturn.intensity = self.linearValues[10];
 
     //Check if we need to update our final state again
-    if(relativeT >= FIVE_MINUTES){
+    if(self.interpolationT >= FIVE_MINUTES){
       self.updateFinalSkyState(0.0, FIVE_MINUTES, self.finalLSRT, self.finalStateFloat32Array[0]);
       self.finalLSRT = self.finalStateFloat32Array[0];
-      self.lastUpdateT = t;
+      self.interpolationT = self.interpolationT - FIVE_MINUTES;
     }
   }
 
@@ -132,14 +130,15 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Prepare the heap memory for our interpolation engine
       self.astroPositions_0_ptr = Module._malloc(NUMBER_OF_ROTATIONAL_TRANSFORMATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(initialStateFloat32Array.slice(1, 1 + NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(initialStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.astroPositions_f_ptr = Module._malloc(NUMBER_OF_ROTATIONAL_TRANSFORMATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.finalStateFloat32Array.slice(1, 1 + NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
-      self.rotatedAstroPositions_ptr = Module._malloc(NUMBER_OF_ROTATIONAL_TRANSFORMATIONS * BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.finalStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      self.rotatedAstroPositions_ptr = Module._malloc(NUMBER_OF_ROTATION_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
+
       self.linearValues_0_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(initialStateFloat32Array.slice(1 + NUMBER_OF_ROTATIONAL_TRANSFORMATIONS, NUMBER_OF_FLOATS), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_VALUES), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.linearValues_f_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.finalStateFloat32Array.slice(1 + NUMBER_OF_ROTATIONAL_TRANSFORMATIONS, NUMBER_OF_FLOATS), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_VALUES), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.linearValues_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
 
       //Attach references to our interpolated values
@@ -150,18 +149,31 @@ StarrySky.SkyDirector = function(parentComponent){
       let latitude = assetManager.data.skyLocationData.latitude;
       Module._initialize(latitude, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.linearValues_0_ptr, self.linearValues_ptr);
       Module._updateFinalValues(this.astroPositions_f_ptr, this.linearValues_f_ptr);
-      self.finalLSRT = self.finalStateFloat32Array[0];
-      Module._updateTimeData(0.0, FIVE_MINUTES, initialStateFloat32Array[0], self.finalLSRT);
+      self.finalLSRT = self.finalStateFloat32Array[14];
+      Module._updateTimeData(0.0, FIVE_MINUTES, initialStateFloat32Array[14], self.finalLSRT);
       self.skyState = {
-        sun: {},
-        moon: {},
-        mercury: {},
-        venus: {},
-        mars: {},
-        jupiter: {},
-        saturn: {}
+        sun: {
+          position: new THREE.Vector3()
+        },
+        moon: {
+          position: new THREE.Vector3()
+        },
+        mercury: {
+          position: new THREE.Vector3()
+        },
+        venus: {
+          position: new THREE.Vector3()
+        },
+        mars: {
+          position: new THREE.Vector3()
+        },
+        jupiter: {
+          position: new THREE.Vector3()
+        },
+        saturn: {
+          position: new THREE.Vector3()
+        }
       };
-      self.tick(0.0);
 
       //Return the final state back to the worker thread so it can determine the state five minutes from now
       self.webAssemblyWorker.postMessage({
@@ -170,12 +182,12 @@ StarrySky.SkyDirector = function(parentComponent){
       }, [self.transferrableFinalStateBuffer]);
 
       //Proceed to renderer setup
-      self.initializeRenderers(self.assetManager);
+      self.skyDirectorWASMIsReady = true;
+      self.initializeRenderers();
     }
     return false;
   });
   Module['onRuntimeInitialized'] = function(){
-    self.skyDirectorWASMIsReady = true;
     self.webAssemblyWorker.postMessage({
       eventType: self.EVENT_INITIALIZE,
       latitude: self.latitude,
@@ -191,12 +203,12 @@ StarrySky.SkyDirector = function(parentComponent){
 
   this.start = function(){
     //Update our tick and tock functions
-    parentComponent.tick = function(){
+    parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine
-      self.tick();
+      self.tick(time, timeDelta);
 
       //Update all of our renderers
-      self.renderers.atmosphereRenderer.tick();
+      self.renderers.atmosphereRenderer.firstTick();
     }
     parentComponent.initialized = true;
   }

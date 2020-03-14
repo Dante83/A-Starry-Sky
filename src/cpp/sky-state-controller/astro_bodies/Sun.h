@@ -14,11 +14,12 @@ public:
   double meanLongitude;
   double meanLongitudeInRads;
   double trueLongitude;
-  double intensityFromEarthsSurface;
-  double intensityFromLunarSurface;
+  double irradianceFromEarth;
+  double scale;
   void updatePosition();
   void setLongitude(double inValue);
   void setMeanAnomaly(double inValue);
   void setMeanLongitude(double inValue);
   void setTrueLongitude(double inValue);
+  void setScaleAndIrradiance(double* distanceFromEarthToSun);
 };

@@ -5,7 +5,7 @@
 
 class Earth : public Planet{
 public:
-  Earth(AstroTime* astroTimeRef);
+  Earth(AstroTime* astroTimeRef, Sun* sun);
   void updatePosition();
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();

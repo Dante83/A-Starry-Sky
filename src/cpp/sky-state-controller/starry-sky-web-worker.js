@@ -32,13 +32,11 @@ Module['onRuntimeInitialized'] = function() {
   attemptInitializiation();
 };
 
-var updateSkyState(arrayReference){
+var updateSkyState = function(arrayReference){
   if(wasmIsReady && skyStateIsReady){
     //Update our sky state from the data provided
     Module.HEAPF32.set(arrayReference, skyState.memoryPtr / arrayReference.BYTES_PER_ELEMENT);
-    let julianDay = Module._updateStarrySkyState(
-      skyState.latitude,
-      skyState.longitude,
+    let julianDay = Module._updateSky(
       skyState.year,
       skyState.month,
       skyState.day,
@@ -66,7 +64,7 @@ onmessage = function(e){
     skyState.minute = date.getMinutes();
     skyState.second = date.getSeconds() + (date.getMilliseconds() * 0.001);
     let finalStateBuffer = postObject.transferrableFinalStateBuffer;
-    finalStateBuffer = updateSkyState(finalStateBuffer, memoryPtr);
+    finalStateBuffer = updateSkyState(finalStateBuffer);
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
@@ -102,7 +100,18 @@ onmessage = function(e){
     skyStateIsReady = true;
     let initialStateBuffer = postObject.transferrableInitialStateBuffer;
     skyState.memoryPtr = Module._malloc(initialStateBuffer.length * initialStateBuffer.BYTES_PER_ELEMENT);
-    initialStateBuffer = updateSkyState(initialStateBuffer, memoryPtr);
+    Module._setupSky(
+      skyState.latitude,
+      skyState.longitude,
+      skyState.year,
+      skyState.month,
+      skyState.day,
+      skyState.hour,
+      skyState.minute,
+      skyState.second,
+      skyState.utcOffset
+    );
+    initialStateBuffer.set(Module.HEAPF32.buffer, skyState.memoryPtr, arrayReference.length);
 
     //Construct the sky state five minutes from now
     skyState.date = skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_UPDATES);
@@ -113,7 +122,7 @@ onmessage = function(e){
     skyState.minute = date.getMinutes();
     skyState.second = date.getSeconds() + (date.getMilliseconds() * 0.001);
     let finalStateBuffer = postObject.transferrableFinalStateBuffer;
-    finalStateBuffer = updateSkyState(finalStateBuffer, memoryPtr);
+    finalStateBuffer = updateSkyState(finalStateBuffer);
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.

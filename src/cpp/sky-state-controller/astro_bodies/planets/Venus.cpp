@@ -17,7 +17,7 @@ Venus::Venus(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
 void Venus::updateMagnitudeOfPlanet(){
   double phaseAngle = getPhaseAngleInDegrees();
   double phaseAngleComponent = 0.0009 * phaseAngle + 0.000239 * phaseAngle * phaseAngle - 0.00000065 * phaseAngle * phaseAngle * phaseAngle;
-  magnitudeOfPlanetFromEarth = -4.40 * 5.0 * log(distanceFromEarth * distanceFromSun) + phaseAngleComponent;
+  irradianceFromEarth = -4.40 * 5.0 * log(distanceFromEarth * distanceFromSun) + phaseAngleComponent;
 }
 
 void Venus::updateEclipticalLongitude(){

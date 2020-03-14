@@ -149,6 +149,12 @@ void Moon::updatePosition(){
   double eclipticalLatitude = (sum_b * 0.000001) * DEG_2_RAD;
   double cos_eclipticalLatitude = cos(eclipticalLatitude);
   distanceFromEarthInMeters = 385000560.0 + sum_r;
+  #define MEAN_LUNAR_DISTANCE_FROM_EARTH 384400000.0
+  scale = MEAN_LUNAR_DISTANCE_FROM_EARTH / distanceFromEarthInMeters;
+  //NOTE: We are using a lunar magnitude of 2.0 for now as
+  //we do not yet have HDR implemented.
+  #define LUNAR_MAGNITUDE 2.0
+  irradianceFromEarth = LUNAR_MAGNITUDE * scale * scale;
 
   //From all of the above, we can get our right ascension and declination
   convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude);

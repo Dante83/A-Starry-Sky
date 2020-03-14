@@ -16,7 +16,7 @@ Mars::Mars(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
 //From page 286 of Meeus
 void Mars::updateMagnitudeOfPlanet(){
   double phaseAngle = getPhaseAngleInDegrees();
-  magnitudeOfPlanetFromEarth = -1.52 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.016 * phaseAngle;
+  irradianceFromEarth = -1.52 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.016 * phaseAngle;
 }
 
 void Mars::updateEclipticalLongitude(){

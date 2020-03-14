@@ -33,7 +33,7 @@ void Saturn::updateMagnitudeOfPlanet(){
   double u1 = atan2(sin_i * sin(eclipticalLatitude) + cos_i * cos_eclipticalLatitude * sin(eclipticalLongitude - omega)), (cos_eclipticalLatitude * cos(eclipticalLongitude - omega)));
   double u2 = atan2(sin_i * sin_beta + cos_i * cos_beta * sin_lambda_minus_omega), (cos_beta * cos(lambda - omega)));
   double deltaU = abs(u1 - u2);
-  magnitudeOfPlanetFromEarth = -8.88 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.44 * abs(deltaU) - 2.60 * abs(sinB) + 1.25 * sinB * sinB;
+  irradianceFromEarth = -8.88 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.44 * abs(deltaU) - 2.60 * abs(sinB) + 1.25 * sinB * sinB;
 }
 
 void Saturn::updateEclipticalLongitude(){
