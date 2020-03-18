@@ -162,7 +162,7 @@ void AstroTime::updateJulianDayAndCentury(){
   julianCentury = (julianDay - 2451545.0) * JULIAN_CENTURY_DENOMINATOR;
 }
 
-void AstroTime::updateLocalApparentSiderealTime(double& longitude){
+void AstroTime::updateLocalApparentSiderealTime(double longitude){
   localApparentSiderealTime = check4GreaterThan360(greenwhichApparentSiderealTime + longitude);
 }
 

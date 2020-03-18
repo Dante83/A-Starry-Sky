@@ -76,8 +76,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
       '//Atmosphere',
-      'vec3 sunPosition = normalize(vec3(0.0, 1.0, 0.0));',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, vWorldPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
+      'vec3 normalizedSunPosition = normalize(sunPosition);',
+      'vec3 solarAtmosphericPass = linearAtmosphericPass(normalizedSunPosition, vWorldPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
 
       '//Color Adjustment Pass',
       'vec3 toneMappedColor = Uncharted2ToneMapping(LinearTosRGB(vec4(solarAtmosphericPass, 1.0)).rgb);',

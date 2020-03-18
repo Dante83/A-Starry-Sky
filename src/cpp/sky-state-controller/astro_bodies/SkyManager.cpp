@@ -3,18 +3,19 @@
 #include "SkyManager.h"
 #include "Sun.h"
 #include "Moon.h"
-#include "Earth.h"
-#include "Mercury.h"
-#include "Venus.h"
-#include "Mars.h"
-#include "Jupiter.h"
-#include "Saturn.h"
+#include "planets/Earth.h"
+#include "planets/Mercury.h"
+#include "planets/Venus.h"
+#include "planets/Mars.h"
+#include "planets/Jupiter.h"
+#include "planets/Saturn.h"
 #include "../Constants.h"
 #include <stdbool.h>
 #include <cmath>
 
 SkyManager::SkyManager(AstroTime* astroTimeRef, Location* locationRef): sun(astroTimeRef), moon(astroTimeRef),
-earth(astroTimeRef), mercury(astroTimeRef), venus(astroTimeRef), mars(astroTimeRef), jupiter(astroTimeRef), saturn(astroTimeRef),{
+earth(astroTimeRef), mercury(astroTimeRef), venus(astroTimeRef), mars(astroTimeRef), jupiter(astroTimeRef),
+saturn(astroTimeRef){
   astroTime = astroTimeRef;
   location = locationRef;
 
@@ -22,15 +23,15 @@ earth(astroTimeRef), mercury(astroTimeRef), venus(astroTimeRef), mars(astroTimeR
   moon.sun = &sun;
 
   //We can also hook up our pointer to the sun for each of our planets
-  Planet planets[6] = {&mercury, &venus, &earth, &mars, &jupiter, &saturn};
+  Planet* planets[6] = {&mercury, &venus, &earth, &mars, &jupiter, &saturn};
   for(int i = 0; i < 6; ++i){
-    planets[i].sun = &sun;
+    planets[i]->sun = &sun;
   }
 
   //And hook up our earth to each of our observable planets
-  OtherPlanet otherPlanets[5] = {&mercury, &venus, &mars, &jupiter, &saturn};
+  OtherPlanet* otherPlanets[5] = {&mercury, &venus, &mars, &jupiter, &saturn};
   for(int i = 0; i < 5; ++i){
-    otherPlanets[i].earth = &earth;
+    otherPlanets[i]->earth = &earth;
   }
 
   //For a standard sky we have one sun, one moon and five planets
@@ -121,9 +122,9 @@ void SkyManager::update(){
   sun.updatePosition();
   moon.updatePosition();
   earth.updatePosition();
-  OtherPlanet otherPlanets[5] = {&mercury, &venus, &mars, &jupiter, &saturn};
+  OtherPlanet* otherPlanets[5] = {&mercury, &venus, &mars, &jupiter, &saturn};
   for(int i = 0; i < 5; ++i){
-    otherPlanets[i].updatePosition();
-    otherPlanets[i].updateMagnitudeOfPlanet();
+    otherPlanets[i]->updatePosition();
+    otherPlanets[i]->updateMagnitudeOfPlanet();
   }
 }

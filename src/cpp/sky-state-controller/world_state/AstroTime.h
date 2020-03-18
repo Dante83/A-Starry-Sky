@@ -24,7 +24,7 @@ public:
   double apparentSiderealTime;
 
   //Updaters
-  void updateLocalApparentSiderealTime(double& longitude);
+  void updateLocalApparentSiderealTime(double longitude);
   void setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s, double uOffset);
   void setGreenwhichSiderealTime(double inValue);
 private:

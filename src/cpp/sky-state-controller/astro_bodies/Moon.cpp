@@ -179,8 +179,8 @@ void Moon::updatePosition(){
   #define FULL_EARTHSHINE 0.19
   #define IRRADIANCE_OF_SUN 28.8
   double phiOverTwo = 0.5 * lunarPhaseAngleInRads;
-  earthShineIntensity = 0.5 * FULL_EARTHSHINE (1.0 - sin(phiMinusPiOverTwo) * tan(phiMinusPiOverTwo) * log(0.5 * phiMinusPiOverTwo));
-  intensity = illuminationOfMoonCoefficient * (earthShineIntensity + IRRADIANCE_OF_SUN * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(0.5 *phiOverTwo)));
+  earthShineIntensity = 0.5 * FULL_EARTHSHINE * (1.0 - sin(phiMinusPiOverTwo) * tan(phiMinusPiOverTwo) * log(0.5 * phiMinusPiOverTwo));
+  irradianceFromEarth = illuminationOfMoonCoefficient * (earthShineIntensity + IRRADIANCE_OF_SUN * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(0.5 *phiOverTwo)));
 
   //Update the paralactic angle
   updateParalacticAngle();
@@ -211,4 +211,10 @@ void Moon::setArgumentOfLatitude(double inValue){
 
 void Moon::setLongitudeOfTheAscendingNodeOfOrbit(double inValue){
   longitudeOfTheAscendingNodeOfOrbit = check4GreaterThan360(inValue);
+}
+
+void Moon::updateParalacticAngle(){
+  double hourAngle = (astroTime->greenwhichSiderealTime * DEG_2_RAD) - location->lonInRads - rightAscension;
+  double parallacticAngleDenominator = tan(location->latInRads) * cos(declination) - sin(declination) * cos(hourAngle);
+  parallacticAngle = parallacticAngleDenominator != 0.0 ? sin(hourAngle) / parallacticAngleDenominator : PI_OVER_TWO;
 }

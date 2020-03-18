@@ -1,13 +1,14 @@
-#include "../world_state/AstroTime.h"
-#include "../Constants.h"
-#include "OtherPlanet.h"
+#include "../../world_state/AstroTime.h"
+#include "../../Constants.h"
+#include "../OtherPlanet.h"
+#include "Earth.h"
 #include "Jupiter.h"
 #include <cmath>
 
 //
 //Constructor
 //
-Jupiter::Jupiter(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
+Jupiter::Jupiter(AstroTime* astroTimeRef) : OtherPlanet(astroTimeRef){
   //
   //Default constructor
   //
@@ -17,7 +18,7 @@ Jupiter::Jupiter(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
 void Jupiter::updateMagnitudeOfPlanet(){
   double phaseAngle = getPhaseAngleInDegrees();
   irradianceFromEarth = -9.40 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.005 * phaseAngle;
-}
+};
 
 void Jupiter::updateEclipticalLongitude(){
   const double L_0_A[64] = {59954691.494, 9695898.719, 573610.142, 306389.205,
@@ -54,7 +55,7 @@ void Jupiter::updateEclipticalLongitude(){
 
   double L0 = 0.0;
   for(int i = 0; i < 72; ++i){
-    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTimeRef->julianCentury);
+    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
   const double L_1_A[61] = {52969096508.8, 489503.243, 228917.222, 30099.479, 20720.92,
@@ -90,7 +91,7 @@ void Jupiter::updateEclipticalLongitude(){
 
   double L1 = 0.0;
   for(int i = 0; i < 68; ++i){
-    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTimeRef->julianCentury);
+    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
   const double L_2_A[57] = {47233.601, 30649.436, 14837.605, 3189.359, 2728.901,
@@ -123,7 +124,7 @@ void Jupiter::updateEclipticalLongitude(){
 
   double L2 = 0.0;
   for(int i = 0; i < 63; ++i){
-    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTimeRef->julianCentury);
+    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
   const double L_3_A[39] = {6501.673, 1355.012, 470.691, 416.933, 352.87, 165.699,
@@ -148,7 +149,7 @@ void Jupiter::updateEclipticalLongitude(){
 
   double L3 = 0.0;
   for(int i = 0; i < 43; ++i){
-    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTimeRef->julianCentury);
+    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianCentury);
   }
 
   const double L_4_A[19] = {669.505, 99.965, 50.03, 43.69, 31.794, 14.735, 8.408,
@@ -164,7 +165,7 @@ void Jupiter::updateEclipticalLongitude(){
 
   double L4 = 0.0;
   for(int i = 0; i < 20; ++i){
-    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTimeRef->julianCentury);
+    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTime->julianCentury);
   }
 
   const double L_5_A[5] = {49.639, 15.775, 4.326, 1.573, 0.819};
@@ -175,7 +176,7 @@ void Jupiter::updateEclipticalLongitude(){
 
   double L5 = 0.0;
   for(int i = 0; i < 5; ++i){
-    L5 += L_5_A[i] * cos(L_5_B[i] + L_5_C[i] * astroTimeRef->julianCentury);
+    L5 += L_5_A[i] * cos(L_5_B[i] + L_5_C[i] * astroTime->julianCentury);
   }
 
   double julianCenturyMultiple = 1.0;
@@ -206,7 +207,7 @@ void Jupiter::updateEclipticalLatitude(){
 
   double B0 = 0.0;
   for(int i = 0; i < 29; ++i){
-    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTimeRef->julianCentury);
+    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
   }
 
   const double B_1_A[22] = {78203.446, 7789.905, 2788.602, 2429.728, 1985.777,
@@ -223,7 +224,7 @@ void Jupiter::updateEclipticalLatitude(){
 
   double B1 = 0.0;
   for(int i = 0; i < 24; ++i){
-    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTimeRef->julianCentury);
+    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianCentury);
   }
 
   const double B_2_A[14] = {5498.32, 602.076, 502.174, 453.862, 115.043, 68.911,
@@ -237,7 +238,7 @@ void Jupiter::updateEclipticalLatitude(){
 
   double B2 = 0.0;
   for(int i = 0; i < 15; ++i){
-    B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTimeRef->julianCentury);
+    B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTime->julianCentury);
   }
 
   const double B_3_A[9] = {185.332, 85.668, 56.359, 19.435, 10.858, 14.477, 5.535,
@@ -249,7 +250,7 @@ void Jupiter::updateEclipticalLatitude(){
 
   double B3 = 0.0;
   for(int i = 0; i < 10; ++i){
-    B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTimeRef->julianCentury);
+    B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTime->julianCentury);
   }
 
   const double B_4_A[6] = {8.963, 5.28, 1.161, 1.104, 1.087, 0.818};
@@ -260,13 +261,13 @@ void Jupiter::updateEclipticalLatitude(){
 
   double B4 = 0.0;
   for(int i = 0; i < 6; ++i){
-    B4 += B_4_A[i] * cos(B_4_B[i] + B_4_C[i] * astroTimeRef->julianCentury);
+    B4 += B_4_A[i] * cos(B_4_B[i] + B_4_C[i] * astroTime->julianCentury);
   }
 
   const double B_5_A = 0.662;
   const double B_5_B = 4.10413626462;
-  const double B_5_B = 536.804512095;
-  B5 = B_5_A * cos(B_5_B + B_5_C * astroTimeRef->julianCentury);
+  const double B_5_C = 536.804512095;
+  double B5 = B_5_A * cos(B_5_B + B_5_C * astroTime->julianCentury);
 
   double julianCenturyMultiple = 1.0;
   double BValues[5] = {B0, B1, B2, B3, B4};
@@ -305,7 +306,7 @@ void Jupiter::updateRadiusVector(){
 
   double R0 = 0.0;
   for(int i = 0; i < 52; ++i){
-    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTimeRef->julianCentury);
+    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 
   const double R_1_A[43] = {1271801.52, 61661.816, 53443.713, 31185.171, 41390.269,
@@ -333,7 +334,7 @@ void Jupiter::updateRadiusVector(){
 
   double R1 = 0.0;
   for(int i = 0; i < 48; ++i){
-    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTimeRef->julianCentury);
+    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
   }
 
   const double R_2_A[36] = {79644.957, 8251.645, 7029.94, 5314.031, 1861.184, 836.256,
@@ -358,7 +359,7 @@ void Jupiter::updateRadiusVector(){
 
   double R2 = 0.0;
   for(int i = 0; i < 40; ++i){
-    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTimeRef->julianCentury);
+    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianCentury);
   }
 
   const double R_3_A[28] = {3519.277, 1073.281, 915.63, 341.654, 254.881, 221.477,
@@ -378,7 +379,7 @@ void Jupiter::updateRadiusVector(){
 
   double R3 = 0.0;
   for(int i = 0; i < 31; ++i){
-    R3 += R_3_A[i] * cos(R_3_B[i] + R_3_C[i] * astroTimeRef->julianCentury);
+    R3 += R_3_A[i] * cos(R_3_B[i] + R_3_C[i] * astroTime->julianCentury);
   }
 
   const double R_4_A[15] = {128.623, 113.458, 82.704, 37.897, 26.713, 17.808, 12.564,
@@ -392,7 +393,7 @@ void Jupiter::updateRadiusVector(){
 
   double R4 = 0.0;
   for(int i = 0; i < 16; ++i){
-    R4 += R_4_A[i] * cos(R_4_B[i] + R_4_C[i] * astroTimeRef->julianCentury);
+    R4 += R_4_A[i] * cos(R_4_B[i] + R_4_C[i] * astroTime->julianCentury);
   }
 
   const double R_5_A[7] = {11.193, 4.288, 2.004, 2.118, 1.908, 1.534, 1.596};
@@ -403,7 +404,7 @@ void Jupiter::updateRadiusVector(){
 
   double R5 = 0.0;
   for(int i = 0; i < 7; ++i){
-    R5 += R_5_A[i] * cos(R_5_B[i] + R_5_C[i] * astroTimeRef->julianCentury);
+    R5 += R_5_A[i] * cos(R_5_B[i] + R_5_C[i] * astroTime->julianCentury);
   }
 
   double julianCenturyMultiple = 1.0;

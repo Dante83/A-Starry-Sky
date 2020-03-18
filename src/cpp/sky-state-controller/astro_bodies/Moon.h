@@ -19,7 +19,7 @@ public:
   double distanceFromEarthInMeters;
   double earthShineIntensity;
   double angularDiameterMultiplier;
-  double irradianceFromEarth;
+  double parallacticAngle;
   double scale;
   void updatePosition();
   void updatePosition(double secondsTillNextUpdate);
@@ -28,4 +28,5 @@ public:
   void setMeanAnomaly(double inValue);
   void setArgumentOfLatitude(double inValue);
   void setLongitudeOfTheAscendingNodeOfOrbit(double inValue);
+  void updateParalacticAngle();
 };

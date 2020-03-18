@@ -3,6 +3,12 @@
 #include "../world_state/Location.h"
 #include "Sun.h"
 #include "Moon.h"
+#include "planets/Earth.h"
+#include "planets/Mercury.h"
+#include "planets/Venus.h"
+#include "planets/Mars.h"
+#include "planets/Jupiter.h"
+#include "planets/Saturn.h"
 
 class SkyManager{
 public:
@@ -23,5 +29,5 @@ public:
   double trueObliquityOfEcliptic;
   double trueObliquityOfEclipticInRads;
   double eccentricityOfTheEarth;
-  void update(int updatePlanets);
+  void update();
 };

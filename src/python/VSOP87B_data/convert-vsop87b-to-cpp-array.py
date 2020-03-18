@@ -76,10 +76,10 @@ def createArrayCodeBlock(vsop_data_sets, planets, i, type):
                 code_block = code_block + variable_a + variable_b + variable_c;
                 code_block = code_block + '\ndouble {}{} = 0.0;\n'.format(type, i)
                 code_block = code_block + 'for(int i = 0; i < {}; ++i){{\n'.format(len(a_values))
-                code_block = code_block + '  {0}{1} += {0}_{1}_A[i] * cos({0}_{1}_B[i] + {0}_{1}_C[i] * astroTimeRef->julianCentury);\n}}\n\n'.format(type, i)
+                code_block = code_block + '  {0}{1} += {0}_{1}_A[i] * cos({0}_{1}_B[i] + {0}_{1}_C[i] * astroTime->julianCentury);\n}}\n\n'.format(type, i)
             else:
                 code_block = code_block + variable_a + variable_b + variable_c;
-                code_block = code_block + '{0}{1} = {0}_{1}_A * cos({0}_{1}_B + {0}_{1}_C * astroTimeRef->julianCentury);\n\n'.format(type, i)
+                code_block = code_block + '{0}{1} = {0}_{1}_A * cos({0}_{1}_B + {0}_{1}_C * astroTime->julianCentury);\n\n'.format(type, i)
             num_coeficients += 1
 
     if type == 'L':

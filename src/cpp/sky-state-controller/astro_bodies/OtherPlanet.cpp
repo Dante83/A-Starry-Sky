@@ -1,6 +1,6 @@
 #include "../world_state/AstroTime.h"
 #include "../Constants.h"
-#include "Planet.h"
+#include "planets/Earth.h"
 #include "OtherPlanet.h"
 #include <cmath>
 

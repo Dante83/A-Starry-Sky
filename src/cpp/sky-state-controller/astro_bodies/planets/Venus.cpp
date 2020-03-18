@@ -1,13 +1,14 @@
-#include "../world_state/AstroTime.h"
-#include "../Constants.h"
-#include "OtherPlanet.h"
+#include "../../world_state/AstroTime.h"
+#include "../../Constants.h"
+#include "../OtherPlanet.h"
+#include "Earth.h"
 #include "Venus.h"
 #include <cmath>
 
 //
 //Constructor
 //
-Venus::Venus(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
+Venus::Venus(AstroTime* astroTimeRef) : OtherPlanet(astroTimeRef){
   //
   //Default constructor
   //
@@ -38,7 +39,7 @@ void Venus::updateEclipticalLongitude(){
 
   double L0 = 0.0;
   for(int i = 0; i < 27; ++i){
-    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTimeRef->julianCentury);
+    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
   const double L_1_A[12] = {1.02132855462e+12, 95617.813, 7787.201, 151.666, 141.694,
@@ -52,7 +53,7 @@ void Venus::updateEclipticalLongitude(){
 
   double L1 = 0.0;
   for(int i = 0; i < 13; ++i){
-    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTimeRef->julianCentury);
+    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
   const double L_2_A[8] = {3894.209, 595.403, 287.868, 23.838, 9.964, 7.196, 7.043,
@@ -64,7 +65,7 @@ void Venus::updateEclipticalLongitude(){
 
   double L2 = 0.0;
   for(int i = 0; i < 9; ++i){
-    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTimeRef->julianCentury);
+    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
   const double L_3_A[3] = {136.328, 30.661, 3.041};
@@ -73,7 +74,7 @@ void Venus::updateEclipticalLongitude(){
 
   double L3 = 0.0;
   for(int i = 0; i < 3; ++i){
-    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTimeRef->julianCentury);
+    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianCentury);
   }
 
   const double L_4_A[3] = {1.636, 1.08, 0.018};
@@ -82,13 +83,13 @@ void Venus::updateEclipticalLongitude(){
 
   double L4 = 0.0;
   for(int i = 0; i < 3; ++i){
-    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTimeRef->julianCentury);
+    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTime->julianCentury);
   }
 
   const double L_5_A = 0.122;
   const double L_5_B = 1.8871172463;
-  const double L_5_B = 10213.2855462;
-  L5 = L_5_A * cos(L_5_B + L_5_C * astroTimeRef->julianCentury);
+  const double L_5_C = 10213.2855462;
+  double L5 = L_5_A * cos(L_5_B + L_5_C * astroTime->julianCentury);
 
   double julianCenturyMultiple = 1.0;
   double LValues[5] = {L0, L1, L2, L3, L4};
@@ -110,7 +111,7 @@ void Venus::updateEclipticalLatitude(){
 
   double B0 = 0.0;
   for(int i = 0; i < 10; ++i){
-    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTimeRef->julianCentury);
+    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
   }
 
   const double B_1_A[4] = {287821.243, 3499.578, 1257.844, 96.152};
@@ -119,7 +120,7 @@ void Venus::updateEclipticalLatitude(){
 
   double B1 = 0.0;
   for(int i = 0; i < 4; ++i){
-    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTimeRef->julianCentury);
+    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianCentury);
   }
 
   const double B_2_A[4] = {12657.745, 151.225, 37.476, 10.627};
@@ -128,7 +129,7 @@ void Venus::updateEclipticalLatitude(){
 
   double B2 = 0.0;
   for(int i = 0; i < 4; ++i){
-    B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTimeRef->julianCentury);
+    B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTime->julianCentury);
   }
 
   const double B_3_A[4] = {376.505, 12.587, 4.809, 0.835};
@@ -137,13 +138,13 @@ void Venus::updateEclipticalLatitude(){
 
   double B3 = 0.0;
   for(int i = 0; i < 4; ++i){
-    B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTimeRef->julianCentury);
+    B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTime->julianCentury);
   }
 
   const double B_4_A = 8.558;
   const double B_4_B = 0.17181972054;
-  const double B_4_B = 10213.2855462;
-  B4 = B_4_A * cos(B_4_B + B_4_C * astroTimeRef->julianCentury);
+  const double B_4_C = 10213.2855462;
+  double B4 = B_4_A * cos(B_4_B + B_4_C * astroTime->julianCentury);
 
   double julianCenturyMultiple = 1.0;
   double BValues[4] = {B0, B1, B2, B3};
@@ -167,7 +168,7 @@ void Venus::updateRadiusVector(){
 
   double R0 = 0.0;
   for(int i = 0; i < 13; ++i){
-    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTimeRef->julianCentury);
+    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 
   const double R_1_A[3] = {34551.041, 234.203, 233.998};
@@ -176,7 +177,7 @@ void Venus::updateRadiusVector(){
 
   double R1 = 0.0;
   for(int i = 0; i < 3; ++i){
-    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTimeRef->julianCentury);
+    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
   }
 
   const double R_2_A[3] = {1406.587, 15.529, 13.059};
@@ -185,18 +186,18 @@ void Venus::updateRadiusVector(){
 
   double R2 = 0.0;
   for(int i = 0; i < 3; ++i){
-    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTimeRef->julianCentury);
+    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianCentury);
   }
 
   const double R_3_A = 49.582;
   const double R_3_B = 3.22264415899;
-  const double R_3_B = 10213.2855462;
-  R3 = R_3_A * cos(R_3_B + R_3_C * astroTimeRef->julianCentury);
+  const double R_3_C = 10213.2855462;
+  double R3 = R_3_A * cos(R_3_B + R_3_C * astroTime->julianCentury);
 
   const double R_4_A = 0.573;
   const double R_4_B = 0.92253525592;
-  const double R_4_B = 10213.2855462;
-  R4 = R_4_A * cos(R_4_B + R_4_C * astroTimeRef->julianCentury);
+  const double R_4_C = 10213.2855462;
+  double R4 = R_4_A * cos(R_4_B + R_4_C * astroTime->julianCentury);
 
   double julianCenturyMultiple = 1.0;
   double RValues[4] = {R0, R1, R2, R3};

@@ -28,12 +28,6 @@ void AstronomicalBody::convertEclipticalLongitudeAndLatitudeToRaAndDec(double ec
   declination = checkBetweenMinusPiOver2AndPiOver2(asin(sin_eclipticalLatitude * cosEpsilon + cos_eclipticalLatitude * sinEpsilon * sinEclipticalLongitude));
 }
 
-void AstronomicalBody::updateParalacticAngle(){
-  double hourAngle = (astroTime->greenwhichSiderealTime * DEG_2_RAD) - location->lonInRads - rightAscension;
-  double paralacticAngleDenominator = tan(location->latInRads) * cos(declination) - sin(declination) * cos(hourAngle);
-  paralacticAngle = paralacticAngleDenominator != 0.0 ? sin(hourAngle) / paralacticAngleDenominator : PI_OVER_TWO;
-}
-
 double AstronomicalBody::check4GreaterThan2Pi(double inNum){
   double outRads = fmod(inNum, PI_TIMES_TWO);
   if(outRads < 0.0){

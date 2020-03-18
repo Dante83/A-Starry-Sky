@@ -1,5 +1,4 @@
 #pragma once
-#include "planets/Earth.cpp"
 #include "Sun.h"
 
 class Planet : public AstronomicalBody{
@@ -14,8 +13,8 @@ public:
   double heliocentric_z;
   double distanceFromSun;
 protected:
-  virtual void updatePosition();
-  virtual void updateEclipticalLongitude();
-  virtual void updateEclipticalLatitude();
-  virtual void updateRadiusVector();
+  virtual void updatePosition() = 0;
+  virtual void updateEclipticalLongitude() = 0;
+  virtual void updateEclipticalLatitude() = 0;
+  virtual void updateRadiusVector() = 0;
 };

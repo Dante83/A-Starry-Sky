@@ -1,19 +1,19 @@
-#include "../world_state/AstroTime.h"
-#include "../Constants.h"
-#include "Planet.h"
+#include "../../world_state/AstroTime.h"
+#include "../../Constants.h"
+#include "../Planet.h"
 #include "Earth.h"
 #include <cmath>
 
 //
 //Constructor
 //
-Earth::Earth(AstroTime* astroTimeRef, Sun* sun) : Planet(astroTimeRef, sun){
+Earth::Earth(AstroTime* astroTimeRef) : Planet(astroTimeRef){
   //
   //Default constructor
   //
 };
 
-void Earth::void updatePosition(){
+void Earth::updatePosition(){
   updateEclipticalLongitude();
   updateEclipticalLatitude();
   updateRadiusVector();
@@ -23,7 +23,7 @@ void Earth::void updatePosition(){
   heliocentric_y = radiusVector * cos(eclipticalLatitude) * sin(eclipticalLongitude);
   heliocentric_z = radiusVector * sin(eclipticalLatitude);
   distanceFromSun = sqrt(heliocentric_x * heliocentric_x + heliocentric_y * heliocentric_y + heliocentric_z * heliocentric_z);
-
+  sun->setScaleAndIrradiance(distanceFromSun);
 }
 
 void Earth::updateEclipticalLongitude(){
@@ -60,7 +60,7 @@ void Earth::updateEclipticalLongitude(){
 
   double L0 = 0.0;
   for(int i = 0; i < 71; ++i){
-    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTimeRef->julianCentury);
+    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
   const double L_1_A[34] = {6.28307584999e+11, 206058.863, 4303.419, 425.264, 109.017,
@@ -82,7 +82,7 @@ void Earth::updateEclipticalLongitude(){
 
   double L1 = 0.0;
   for(int i = 0; i < 37; ++i){
-    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTimeRef->julianCentury);
+    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
   const double L_2_A[20] = {8721.859, 990.99, 294.833, 27.338, 16.333, 15.745,
@@ -99,7 +99,7 @@ void Earth::updateEclipticalLongitude(){
 
   double L2 = 0.0;
   for(int i = 0; i < 22; ++i){
-    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTimeRef->julianCentury);
+    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
   const double L_3_A[7] = {289.058, 20.712, 2.962, 2.527, 1.288, 0.635, 0.57};
@@ -110,7 +110,7 @@ void Earth::updateEclipticalLongitude(){
 
   double L3 = 0.0;
   for(int i = 0; i < 7; ++i){
-    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTimeRef->julianCentury);
+    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianCentury);
   }
 
   const double L_4_A[3] = {7.714, 1.016, 0.42};
@@ -119,13 +119,13 @@ void Earth::updateEclipticalLongitude(){
 
   double L4 = 0.0;
   for(int i = 0; i < 3; ++i){
-    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTimeRef->julianCentury);
+    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTime->julianCentury);
   }
 
   const double L_5_A = 0.172;
   const double L_5_B = 2.74854172392;
-  const double L_5_B = 6283.07584999;
-  L5 = L_5_A * cos(L_5_B + L_5_C * astroTimeRef->julianCentury);
+  const double L_5_C = 6283.07584999;
+  double L5 = L_5_A * cos(L_5_B + L_5_C * astroTime->julianCentury);
 
   double julianCenturyMultiple = 1.0;
   double LValues[5] = {L0, L1, L2, L3, L4};
@@ -146,7 +146,7 @@ void Earth::updateEclipticalLatitude(){
 
   double B0 = 0.0;
   for(int i = 0; i < 5; ++i){
-    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTimeRef->julianCentury);
+    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
   }
 
   const double B_1_A[2] = {227777.722, 3805.678};
@@ -155,7 +155,7 @@ void Earth::updateEclipticalLatitude(){
 
   double B1 = 0.0;
   for(int i = 0; i < 2; ++i){
-    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTimeRef->julianCentury);
+    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianCentury);
   }
 
   double julianCenturyMultiple = 1.0;
@@ -191,7 +191,7 @@ void Earth::updateRadiusVector(){
 
   double R0 = 0.0;
   for(int i = 0; i < 44; ++i){
-    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTimeRef->julianCentury);
+    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 
   const double R_1_A[10] = {103018.607, 1721.238, 702.217, 32.345, 30.801, 24.978,
@@ -203,7 +203,7 @@ void Earth::updateRadiusVector(){
 
   double R1 = 0.0;
   for(int i = 0; i < 11; ++i){
-    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTimeRef->julianCentury);
+    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
   }
 
   const double R_2_A[6] = {4359.385, 123.633, 12.342, 8.792, 5.689, 3.302};
@@ -214,7 +214,7 @@ void Earth::updateRadiusVector(){
 
   double R2 = 0.0;
   for(int i = 0; i < 6; ++i){
-    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTimeRef->julianCentury);
+    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianCentury);
   }
 
   const double R_3_A[2] = {144.595, 6.729};
@@ -223,13 +223,13 @@ void Earth::updateRadiusVector(){
 
   double R3 = 0.0;
   for(int i = 0; i < 2; ++i){
-    R3 += R_3_A[i] * cos(R_3_B[i] + R_3_C[i] * astroTimeRef->julianCentury);
+    R3 += R_3_A[i] * cos(R_3_B[i] + R_3_C[i] * astroTime->julianCentury);
   }
 
   const double R_4_A = 3.858;
   const double R_4_B = 2.56389016346;
-  const double R_4_B = 6283.07584999;
-  R4 = R_4_A * cos(R_4_B + R_4_C * astroTimeRef->julianCentury);
+  const double R_4_C = 6283.07584999;
+  double R4 = R_4_A * cos(R_4_B + R_4_C * astroTime->julianCentury);
 
   double julianCenturyMultiple = 1.0;
   double RValues[4] = {R0, R1, R2, R3};

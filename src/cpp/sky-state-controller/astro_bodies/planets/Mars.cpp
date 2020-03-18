@@ -1,13 +1,14 @@
-#include "../world_state/AstroTime.h"
-#include "../Constants.h"
-#include "OtherPlanet.h"
+#include "../../world_state/AstroTime.h"
+#include "../../Constants.h"
+#include "../OtherPlanet.h"
+#include "Earth.h"
 #include "Mars.h"
 #include <cmath>
 
 //
 //Constructor
 //
-Mars::Mars(AstsroTime* astroTime) : OtherPlanet(astroTimeRef){
+Mars::Mars(AstroTime* astroTimeRef) : OtherPlanet(astroTimeRef){
   //
   //Default constructor
   //
@@ -56,7 +57,7 @@ void Mars::updateEclipticalLongitude(){
 
   double L0 = 0.0;
   for(int i = 0; i < 77; ++i){
-    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTimeRef->julianCentury);
+    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
   const double L_1_A[46] = {3.34061242701e+11, 1457554.523, 168414.711, 20622.975,
@@ -84,7 +85,7 @@ void Mars::updateEclipticalLongitude(){
 
   double L1 = 0.0;
   for(int i = 0; i < 51; ++i){
-    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTimeRef->julianCentury);
+    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
   const double L_2_A[33] = {58152.577, 13459.579, 2432.575, 401.065, 451.384, 222.025,
@@ -106,7 +107,7 @@ void Mars::updateEclipticalLongitude(){
 
   double L2 = 0.0;
   for(int i = 0; i < 36; ++i){
-    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTimeRef->julianCentury);
+    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
   const double L_3_A[12] = {1467.867, 692.668, 189.478, 41.615, 22.66, 8.126, 10.455,
@@ -120,7 +121,7 @@ void Mars::updateEclipticalLongitude(){
 
   double L3 = 0.0;
   for(int i = 0; i < 13; ++i){
-    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTimeRef->julianCentury);
+    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianCentury);
   }
 
   const double L_4_A[8] = {27.242, 25.511, 11.147, 3.19, 3.251, 0.79, 0.783, 0.5};
@@ -131,7 +132,7 @@ void Mars::updateEclipticalLongitude(){
 
   double L4 = 0.0;
   for(int i = 0; i < 8; ++i){
-    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTimeRef->julianCentury);
+    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTime->julianCentury);
   }
 
   const double L_5_A[2] = {0.762, 0.511};
@@ -140,7 +141,7 @@ void Mars::updateEclipticalLongitude(){
 
   double L5 = 0.0;
   for(int i = 0; i < 2; ++i){
-    L5 += L_5_A[i] * cos(L_5_B[i] + L_5_C[i] * astroTimeRef->julianCentury);
+    L5 += L_5_A[i] * cos(L_5_B[i] + L_5_C[i] * astroTime->julianCentury);
   }
 
   double julianCenturyMultiple = 1.0;
@@ -166,7 +167,7 @@ void Mars::updateEclipticalLatitude(){
 
   double B0 = 0.0;
   for(int i = 0; i < 18; ++i){
-    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTimeRef->julianCentury);
+    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
   }
 
   const double B_1_A[9] = {217310.991, 20976.948, 12834.709, 3320.981, 627.2,
@@ -178,7 +179,7 @@ void Mars::updateEclipticalLatitude(){
 
   double B1 = 0.0;
   for(int i = 0; i < 10; ++i){
-    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTimeRef->julianCentury);
+    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianCentury);
   }
 
   const double B_2_A[7] = {8888.446, 2595.393, 918.914, 267.883, 66.911, 14.267,
@@ -190,7 +191,7 @@ void Mars::updateEclipticalLatitude(){
 
   double B2 = 0.0;
   for(int i = 0; i < 8; ++i){
-    B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTimeRef->julianCentury);
+    B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTime->julianCentury);
   }
 
   const double B_3_A[4] = {330.418, 93.057, 14.546, 8.731};
@@ -199,7 +200,7 @@ void Mars::updateEclipticalLatitude(){
 
   double B3 = 0.0;
   for(int i = 0; i < 4; ++i){
-    B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTimeRef->julianCentury);
+    B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTime->julianCentury);
   }
 
   const double B_4_A[3] = {6.007, 6.625, 0.464};
@@ -208,7 +209,7 @@ void Mars::updateEclipticalLatitude(){
 
   double B4 = 0.0;
   for(int i = 0; i < 3; ++i){
-    B4 += B_4_A[i] * cos(B_4_B[i] + B_4_C[i] * astroTimeRef->julianCentury);
+    B4 += B_4_A[i] * cos(B_4_B[i] + B_4_C[i] * astroTime->julianCentury);
   }
 
   double julianCenturyMultiple = 1.0;
@@ -247,7 +248,7 @@ void Mars::updateRadiusVector(){
 
   double R0 = 0.0;
   for(int i = 0; i < 50; ++i){
-    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTimeRef->julianCentury);
+    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 
   const double R_1_A[27] = {1107433.345, 103175.887, 12877.2, 10815.88, 1194.55,
@@ -267,7 +268,7 @@ void Mars::updateRadiusVector(){
 
   double R1 = 0.0;
   for(int i = 0; i < 30; ++i){
-    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTimeRef->julianCentury);
+    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
   }
 
   const double R_2_A[11] = {44242.249, 8138.042, 1274.915, 187.388, 40.745, 52.395,
@@ -281,7 +282,7 @@ void Mars::updateRadiusVector(){
 
   double R2 = 0.0;
   for(int i = 0; i < 12; ++i){
-    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTimeRef->julianCentury);
+    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianCentury);
   }
 
   const double R_3_A[6] = {1113.108, 424.447, 100.044, 19.606, 3.478, 4.693};
@@ -292,7 +293,7 @@ void Mars::updateRadiusVector(){
 
   double R3 = 0.0;
   for(int i = 0; i < 6; ++i){
-    R3 += R_3_A[i] * cos(R_3_B[i] + R_3_C[i] * astroTimeRef->julianCentury);
+    R3 += R_3_A[i] * cos(R_3_B[i] + R_3_C[i] * astroTime->julianCentury);
   }
 
   const double R_4_A[4] = {19.551, 16.322, 5.848, 1.533};
@@ -301,7 +302,7 @@ void Mars::updateRadiusVector(){
 
   double R4 = 0.0;
   for(int i = 0; i < 4; ++i){
-    R4 += R_4_A[i] * cos(R_4_B[i] + R_4_C[i] * astroTimeRef->julianCentury);
+    R4 += R_4_A[i] * cos(R_4_B[i] + R_4_C[i] * astroTime->julianCentury);
   }
 
   double julianCenturyMultiple = 1.0;
