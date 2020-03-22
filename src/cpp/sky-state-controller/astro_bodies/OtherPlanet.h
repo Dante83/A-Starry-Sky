@@ -10,10 +10,6 @@ public:
   double averageAlbedo;
   double distanceFromEarth;
   double getPhaseAngleInDegrees();
-  virtual void updatePosition();
-  virtual void updateMagnitudeOfPlanet();
-protected:
-  virtual void updateEclipticalLongitude() = 0;
-  virtual void updateEclipticalLatitude() = 0;
-  virtual void updateRadiusVector() = 0;
+  void updatePosition();
+  virtual void updateMagnitudeOfPlanet() = 0;
 };

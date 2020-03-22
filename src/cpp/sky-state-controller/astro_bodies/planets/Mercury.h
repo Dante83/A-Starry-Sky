@@ -8,8 +8,8 @@
 class Mercury : public OtherPlanet{
 public:
   Mercury(AstroTime* astroTimeRef);
-  virtual void updateEclipticalLongitude();
-  virtual void updateEclipticalLatitude();
-  virtual void updateRadiusVector();
-  virtual void updateMagnitudeOfPlanet();
+  void updateEclipticalLongitude();
+  void updateEclipticalLatitude();
+  void updateRadiusVector();
+  void updateMagnitudeOfPlanet();
 };

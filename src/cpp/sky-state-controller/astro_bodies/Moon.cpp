@@ -148,6 +148,7 @@ void Moon::updatePosition(){
   double eclipticalLongitude = (meanLongitude + (sum_l * 0.000001)) * DEG_2_RAD;
   double eclipticalLatitude = (sum_b * 0.000001) * DEG_2_RAD;
   double cos_eclipticalLatitude = cos(eclipticalLatitude);
+  double sin_eclipticalLongitude = sin(eclipticalLongitude);
   distanceFromEarthInMeters = 385000560.0 + sum_r;
   #define MEAN_LUNAR_DISTANCE_FROM_EARTH 384400000.0
   scale = MEAN_LUNAR_DISTANCE_FROM_EARTH / distanceFromEarthInMeters;
@@ -157,7 +158,7 @@ void Moon::updatePosition(){
   irradianceFromEarth = LUNAR_MAGNITUDE * scale * scale;
 
   //From all of the above, we can get our right ascension and declination
-  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude);
+  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude);
 
   double geocentricElongationOfTheMoon = acos(cos_eclipticalLatitude * cos((sun->longitude * DEG_2_RAD) - eclipticalLongitude));
 

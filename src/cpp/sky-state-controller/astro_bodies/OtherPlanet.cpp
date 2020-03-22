@@ -20,8 +20,10 @@ void OtherPlanet::updatePosition(){
   updateRadiusVector();
 
   //Convert our heliocentric coordinates into latitude and longitude
-  heliocentric_x = radiusVector * cos(eclipticalLatitude) * cos(eclipticalLongitude);
-  heliocentric_y = radiusVector * cos(eclipticalLatitude) * sin(eclipticalLongitude);
+  double cos_eclipiticalLatitude = cos(eclipticalLatitude);
+  double sin_eclipticalLongitude = sin(eclipticalLongitude);
+  heliocentric_x = radiusVector * cos_eclipiticalLatitude * cos(eclipticalLongitude);
+  heliocentric_y = radiusVector * cos_eclipiticalLatitude * sin_eclipticalLongitude;
   heliocentric_z = radiusVector * sin(eclipticalLatitude);
 
   //Values relative to earth
@@ -34,7 +36,7 @@ void OtherPlanet::updatePosition(){
 
   //Convert the latitude and longitude of the planet to right-ascension and decliation
   //Inherited from Astronomical Body
-  convertGeocentricLatitudeAndLongitudeToRaAndDec(heliocentricLatitude, heliocentricLongitude);
+  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipiticalLatitude);
 
   //Use our distance from to the sun and distance from the earth to determine the brightness of the planet
   //as seen from earth

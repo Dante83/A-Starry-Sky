@@ -7,8 +7,8 @@
 class Earth : public Planet{
 public:
   Earth(AstroTime* astroTimeRef);
-  virtual void updatePosition();
-  virtual void updateEclipticalLongitude();
-  virtual void updateEclipticalLatitude();
-  virtual void updateRadiusVector();
+  void updatePosition();
+  void updateEclipticalLongitude();
+  void updateEclipticalLatitude();
+  void updateRadiusVector();
 };

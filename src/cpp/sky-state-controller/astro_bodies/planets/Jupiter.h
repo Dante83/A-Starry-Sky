@@ -8,8 +8,8 @@
 class Jupiter : public OtherPlanet{
 public:
   Jupiter(AstroTime* astroTimeRef);
-  virtual void updateEclipticalLongitude();
-  virtual void updateEclipticalLatitude();
-  virtual void updateRadiusVector();
-  virtual void updateMagnitudeOfPlanet();
+  void updateEclipticalLongitude();
+  void updateEclipticalLatitude();
+  void updateRadiusVector();
+  void updateMagnitudeOfPlanet();
 };

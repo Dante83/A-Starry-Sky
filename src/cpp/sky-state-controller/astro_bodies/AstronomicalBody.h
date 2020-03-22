@@ -11,8 +11,7 @@ public:
   double rightAscension;
   double declination;
   double irradianceFromEarth;
-  void convertEclipticalLongitudeAndLatitudeToRaAndDec(double eclipticalLongitude, double eclipticalLatitude, double cos_eclipticalLatitude);
-  void convertGeocentricLatitudeAndLongitudeToRaAndDec(double heliocentricLatitude, double heliocentricLongitude);
+  void convertEclipticalLongitudeAndLatitudeToRaAndDec(double eclipticalLongitude, double cos_eclipticalLongitude, double eclipticalLatitude, double cos_eclipticalLatitude);
   double check4GreaterThan2Pi(double inNum);
   double check4GreaterThan360(double inNum);
   double checkBetweenMinusPiOver2AndPiOver2(double inNum);
