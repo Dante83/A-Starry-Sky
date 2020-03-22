@@ -1,70 +1,72 @@
 #include "Constants.h"
 #include "SkyInterpolator.h"
 #include <emscripten/emscripten.h>
+#include <cmath>
 
 //
 //Constructor
 //
 SkyInterpolator::SkyInterpolator(){
-  //Create all interpolated quantities
+  //
+  //Empty constructor
+  //
 }
 
 SkyInterpolator* skyInterpolator;
 
 extern "C" {
   int main();
-  void initialize(double latitudes, double* astroPositions_0, double* rotatedAstroPositions);
-  void updateAstroRAandHA(double* astroPositions_f);
-  void updateTime(double t);
-  void updateAstroRAandHA();
-  void updateTimeSpan(double t_0, double t_f);
+  void initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues);
+  void updateFinalValues(float* astroPositions_f, float* linearValues_f);
+  void updateTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
+  void tick(float t);
 }
 
-void EMSCRIPTEN_KEEPALIVE initialize(double latitude, double* astroPositions_0, double* rotatedAstroPositions, double* linearValues_0, double* linearValues){
-  skyInterpolator.sinOfLatitude = sin(latitude);
-  skyInterpolator.cosOfLatitude = cos(latitude);
-  skyInterpolator.astroPositions_0 = astroPositions_0;
-  skyInterpolator.rotatedAstroPositions = rotatedAstroPositions;
-  skyInterpolator.linearValues_0 = linearValues_0;
-  skyInterpolator.linearValues = linearValues;
+void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues){
+  skyInterpolator->sinOfLatitude = sin(latitude);
+  skyInterpolator->cosOfLatitude = cos(latitude);
+  skyInterpolator->astroPositions_0 = astroPositions_0;
+  skyInterpolator->rotatedAstroPositions = rotatedAstroPositions;
+  skyInterpolator->linearValues_0 = linearValues_0;
+  skyInterpolator->linearValues = linearValues;
 }
 
-void EMSCRIPTEN_KEEPALIVE updateFinalValues(double* astroPositions_f, double* linearValues_f){
+void EMSCRIPTEN_KEEPALIVE updateFinalValues(float* astroPositions_f, float* linearValues_f){
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_COORDINATES; ++i){
-    skyInterpolator.deltaPositions[i] = astroPositions_f[i] - skyInterpolator.astroPositions_0[i];
+    skyInterpolator->deltaPositions[i] = astroPositions_f[i] - skyInterpolator->astroPositions_0[i];
   }
 
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_LINEAR_VALUES; ++i){
-    skyInterpolator.deltaLinearValues[i] = linearValues_f[i] - skyInterpolator.linearValues_0[i];
+    skyInterpolator->deltaLinearValues[i] = linearValues_f[i] - skyInterpolator->linearValues_0[i];
   }
 }
 
-void EMSCRIPTEN_KEEPALIVE updateTimeData(double t_0, double t_f, double initialLSRT, double finalLSRT){
-  skyInterpolator.t_0 = t_0;
-  skyInterpolator.oneOverDeltaT = 1.0 / (t_f - t_0);
-  skyInterpolator.initialLSRT = initialLSRT;
-  skyInterpolator.finalLSRT = finalLSRT;
+void EMSCRIPTEN_KEEPALIVE updateTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT){
+  skyInterpolator->t_0 = t_0;
+  skyInterpolator->oneOverDeltaT = 1.0 / (t_f - t_0);
+  skyInterpolator->initialLSRT = initialLSRT;
+  skyInterpolator->finalLSRT = finalLSRT;
 }
 
-void EMSCRIPTEN_KEEPALIVE tick(double t){
-  double tRelativeToT_0 = t - skyInterpolator.t_0;
-  double tFractional = tRelativeToT_0 * skyInterpolator.oneOverDeltaT;
+void EMSCRIPTEN_KEEPALIVE tick(float t){
+  float tRelativeToT_0 = t - skyInterpolator->t_0;
+  float tFractional = tRelativeToT_0 * skyInterpolator->oneOverDeltaT;
 
   //Update our linear interpolations
-  skyInterpolator.updateLinearInterpolations(tFractional);
+  skyInterpolator->updateLinearInterpolations(tFractional);
 
   //Update our LSRT
-  double lsrt = skyInterpolator.interpolateLSRT(tFractional);
+  float lsrt = skyInterpolator->interpolateLSRT(tFractional);
 
   //Update our rotation of our astronomical objects in the sky
-  skyInterpolator.rotateAstroObjects(lsrt, tFractional);
+  skyInterpolator->rotateAstroObjects(lsrt, tFractional);
 }
 
-void SkyInterpolator::rotateAstroObjects(double lsrt, double fractOfFinalPosition){
+void SkyInterpolator::rotateAstroObjects(float lsrt, float fractOfFinalPosition){
   //Interpolate the x, y and z right ascension and hour angle for each of our astronomical objects
-  double interpolatedAstroPositions[NUMBER_OF_ASTRONOMICAL_COORDINATES];
+  float interpolatedAstroPositions[NUMBER_OF_ASTRONOMICAL_COORDINATES];
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_COORDINATES; i += 3){
     interpolatedAstroPositions[i] = astroPositions_0[i] + fractOfFinalPosition * deltaPositions[i];
@@ -73,8 +75,8 @@ void SkyInterpolator::rotateAstroObjects(double lsrt, double fractOfFinalPositio
   }
 
   //Rotate our objects into the x, y, z coordinates of our azimuth and altitude
-  double sinOfLSRT = sin(lsrt);
-  double cosOfLSRT = cos(lsrt);
+  float sinOfLSRT = sin(lsrt);
+  float cosOfLSRT = cos(lsrt);
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_COORDINATES; i += 3){
     rotatedAstroPositions[i] = sinOfLatitude * cosOfLSRT * interpolatedAstroPositions[i] + sinOfLatitude * sinOfLSRT * interpolatedAstroPositions[i + 1] - cosOfLatitude * interpolatedAstroPositions[i + 2];
@@ -83,15 +85,15 @@ void SkyInterpolator::rotateAstroObjects(double lsrt, double fractOfFinalPositio
   }
 }
 
-void SkyInterpolator::updateLinearInterpolations(double fractOfFinalPosition){
+void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_LINEAR_VALUES; i += 1){
     linearValues[i] = linearValues_0[i] + fractOfFinalPosition * deltaLinearValues[i];
   }
 }
 
-double SkyInterpolator::interpolateLSRT(double fractOfFinalPosition){
-  return initialLSRT + fractOfFinalPosition * min(finalLSRT - initialLSRT, abs(PI_TIMES_TWO - finalLSRT + initialLSRT));
+float SkyInterpolator::interpolateLSRT(float fractOfFinalPosition){
+  return initialLSRT + fractOfFinalPosition * fmin(finalLSRT - initialLSRT, abs(PI_TIMES_TWO - finalLSRT + initialLSRT));
 }
 
 int main(){
