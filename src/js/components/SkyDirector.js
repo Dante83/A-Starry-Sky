@@ -1,8 +1,6 @@
-// This loads the wasm generated glue code
-importScripts('../../cpp/sky-interpolation-controller/sky-interpolator-module.js');
-
 StarrySky.SkyDirector = function(parentComponent){
   this.skyDirectorWASMIsReady = false;
+  this.skyInterpolatorWASMIsReady = false;
   this.assetManagerInitialized = false;
   this.skyState;
   this.EVENT_INITIALIZE = 0;
@@ -50,18 +48,38 @@ StarrySky.SkyDirector = function(parentComponent){
   this.LUTLibraries;
   this.renderers;
   this.interpolator = null;
+
+  //Set up our web assembly hooks
+  console.log(Module);
   let self = this;
 
-  this.initializeRenderers = function(assetManager = false){
+  //Called from the asset manager when all of our assets have finished loading
+  //Also colled when our local web assembly has finished loading as both are pre-requisites
+  //for running the responses produced by our web worker
+  this.initializeSkyDirectorWebWorker = function(){
+    //Attach our asset manager if it has been passed over
+    if(self.assetManagerInitialized && self.skyInterpolatorWASMIsReady){
+      //Post our message to the web worker to get the initial state of our sky
+      self.webAssemblyWorker.postMessage({
+        eventType: self.EVENT_INITIALIZE,
+        latitude: self.assetManager.data.skyLocationData.latitude,
+        longitude: self.assetManager.data.skyLocationData.longitude,
+        date: self.assetManager.data.skyTimeData.date,
+        timeMultiplier: self.assetManager.data.skyTimeData.timeMultiplier,
+        utcOffset: self.assetManager.data.skyTimeData.utcOffset,
+        transferrableInitialStateBuffer: transferrableInitialStateBuffer,
+        transferrableFinalStateBuffer: self.transferrableFinalStateBuffer
+      }, [transferrableInitialStateBuffer, self.transferrableFinalStateBuffer]);
+    }
+  }
+
+  this.initializeRenderers = function(){
     //All systems must be up and running before we are ready to begin
-    if(self.skyDirectorWASMIsReady  && self.assetManagerInitialized){
+    if(self.assetManagerInitialized && self.skyDirectorWASMIsReady){
       //Prepare all of our renderers to display stuff
       self.timeMultiplier = self.assetManager.data.skyTimeData.timeMultiplier;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
       self.start();
-    }
-    if(assetManager !== false){
-      self.assetManager = assetManager;
     }
   }
 
@@ -114,15 +132,18 @@ StarrySky.SkyDirector = function(parentComponent){
   }
 
   //Prepare our WASM Modules
-  this.skyStateWebWorker = new Worker("../src/cpp/sky-state-controller/starry-sky-web-worker.js", { type: "module" });
+  this.webAssemblyWorker = new Worker("../src/cpp/sky-state-controller/starry-sky-web-worker.js");
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
-    if(postObject.eventType === this.EVENT_RETURN_LATEST){
+    console.log("Message received");
+    console.log(postObject);
+    if(postObject.eventType === self.EVENT_RETURN_LATEST){
       //Attach our 32 bit float array buffers back to this thread again
       self.transferrableFinalStateBuffer = postObject.transferrableFinalStateBuffer;
       let finalStateFloat32Array = new Float32Array(transferrableFinalStateBuffer);
     }
-    else if(postObject.eventType === this.EVENT_INITIALIZATION_RESPONSE){
+    else if(postObject.eventType === self.EVENT_INITIALIZATION_RESPONSE){
+      console.log(postObject);
       //Attach our 32 bit float array buffers back to this thread again
       transferrableInitialStateBuffer = postObject.transferrableInitialStateBuffer;
       self.transferrableFinalStateBuffer = postObject.transferrableFinalStateBuffer;
@@ -130,23 +151,25 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Prepare the heap memory for our interpolation engine
       self.astroPositions_0_ptr = Module._malloc(NUMBER_OF_ROTATIONAL_TRANSFORMATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(initialStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(transferrableInitialStateBuffer.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.astroPositions_f_ptr = Module._malloc(NUMBER_OF_ROTATIONAL_TRANSFORMATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.finalStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.rotatedAstroPositions_ptr = Module._malloc(NUMBER_OF_ROTATION_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.rotatedAstroPositions_ptr, self.rotatedAstroPositions_ptr / BYTES_PER_32_BIT_FLOAT);
 
       self.linearValues_0_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_VALUES), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(transferrableInitialStateBuffer.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.linearValues_f_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_VALUES), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.linearValues_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.linearValues_ptr, self.linearValues_ptr / BYTES_PER_32_BIT_FLOAT);
 
       //Attach references to our interpolated values
       self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS);
       self.linearValues = new Float32Array(Module.HEAPF32.buffer, self.linearValues_ptr, NUMBER_OF_LINEAR_INTERPOLATIONS);
 
       //Run our sky interpolator to determine our azimuth, altitude and other variables
-      let latitude = assetManager.data.skyLocationData.latitude;
+      let latitude = self.assetManager.data.skyLocationData.latitude;
       Module._initialize(latitude, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.linearValues_0_ptr, self.linearValues_ptr);
       Module._updateFinalValues(this.astroPositions_f_ptr, this.linearValues_f_ptr);
       self.finalLSRT = self.finalStateFloat32Array[14];
@@ -187,18 +210,6 @@ StarrySky.SkyDirector = function(parentComponent){
     }
     return false;
   });
-  Module['onRuntimeInitialized'] = function(){
-    self.webAssemblyWorker.postMessage({
-      eventType: self.EVENT_INITIALIZE,
-      latitude: self.latitude,
-      longitude: self.longitude,
-      date: self.date,
-      timeMultiplier: self.timeMultiplier,
-      utcOffset: self.utcOffset,
-      transferrableInitialStateBuffer: transferrableInitialStateBuffer,
-      transferrableFinalStateBuffer: this.transferrableFinalStateBuffer
-    }, [transferrableInitialStateBuffer, this.transferrableFinalStateBuffer]);
-  };
   this.renderers = {};
 
   this.start = function(){
@@ -217,4 +228,10 @@ StarrySky.SkyDirector = function(parentComponent){
     //Grab all of our assets
     self.assetManager = new StarrySky.AssetManager(self);
   });
+
+  function onRuntimeInitialized() {
+      self.skyInterpolatorWASMIsReady = true;
+      self.initializeSkyDirectorWebWorker();
+  }
+  Module['onRuntimeInitialized'] = onRuntimeInitialized;
 }

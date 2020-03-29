@@ -54,7 +54,8 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Use the assets we have to load all of our asset images and populate the engine
     //TODO: Right now, we do not need any images
-    skyDirector.initializeRenderers(self);
+    skyDirector.assetManagerInitialized = true;
+    skyDirector.initializeSkyDirectorWebWorker();
   };
 
   //This is the function that gets called each time our data loads.
