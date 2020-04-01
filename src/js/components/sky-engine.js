@@ -5,5 +5,7 @@ AFRAME.registerComponent('skyengine', {
   init: function(){
     this.skyDirector = new StarrySky.SkyDirector(this);
   },
-  tick: this.readyToTick ? function(){/*Do nothing*/} : null,
+  tick: function(time, timeDelta){
+    /*Do Nothing*/
+  }
 });

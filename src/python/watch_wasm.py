@@ -1,6 +1,6 @@
 import os, time
 
-cpp_directories = ['../cpp/sky-state-controller/']
+cpp_directories = ['../cpp/sky-state-controller/', '../cpp/sky-interpolation-controller/']
 cpp_files = [['SkyState.cpp',\
  'world_state/AstroTime.cpp',\
  'world_state/Location.cpp',\
@@ -15,9 +15,11 @@ cpp_files = [['SkyState.cpp',\
  'astro_bodies/planets/Venus.cpp',\
  'astro_bodies/planets/Mars.cpp',\
  'astro_bodies/planets/Jupiter.cpp',\
- 'astro_bodies/planets/Saturn.cpp']]
-module_file = ['starry-sky-module.js']
-exported_functions = [['_main', '_setupSky', '_updateSky']]
+ 'astro_bodies/planets/Saturn.cpp'],\
+ ['SkyInterpolator.cpp']]
+module_file = ['starry-sky-module.js', 'sky-interpolation-module.js']
+exported_functions = [['_main', '_setupSky', '_updateSky'],\
+['_main', '_initialize', '_updateFinalValues', '_updateTimeData', '_tick']]
 cpp_update_date = {}
 
 def recursivelyWalkDirectories(absolute_cpp_directory, file_check_callback):

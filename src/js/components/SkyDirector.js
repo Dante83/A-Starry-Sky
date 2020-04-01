@@ -75,10 +75,13 @@ StarrySky.SkyDirector = function(parentComponent){
 
   this.initializeRenderers = function(){
     //All systems must be up and running before we are ready to begin
+    console.log("Renderers initialized");
     if(self.assetManagerInitialized && self.skyDirectorWASMIsReady){
       //Prepare all of our renderers to display stuff
       self.timeMultiplier = self.assetManager.data.skyTimeData.timeMultiplier;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
+
+      console.log("Requesting to start");
       self.start();
     }
   }
@@ -97,10 +100,11 @@ StarrySky.SkyDirector = function(parentComponent){
   }
 
   this.tick = function(time, timeDelta){
+    console.log("Tick function called");
     self.interpolationT += timeDelta * self.timeMultiplier;
 
     //Update our sky state
-    Module._tick(timeAcceleratedT);
+    Module._tick(self.interpolationT);
 
     //Update our astronomical positions
     self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));
@@ -123,6 +127,10 @@ StarrySky.SkyDirector = function(parentComponent){
     self.skyState.jupiter.intensity = self.linearValues[9];
     self.skyState.saturn.intensity = self.linearValues[10];
 
+    console.log("Interpolated Sky State");
+    console.log(self.skyState);
+    debugger;
+
     //Check if we need to update our final state again
     if(self.interpolationT >= FIVE_MINUTES){
       self.updateFinalSkyState(0.0, FIVE_MINUTES, self.finalLSRT, self.finalStateFloat32Array[0]);
@@ -140,7 +148,7 @@ StarrySky.SkyDirector = function(parentComponent){
     if(postObject.eventType === self.EVENT_RETURN_LATEST){
       //Attach our 32 bit float array buffers back to this thread again
       self.transferrableFinalStateBuffer = postObject.transferrableFinalStateBuffer;
-      let finalStateFloat32Array = new Float32Array(transferrableFinalStateBuffer);
+      let finalStateFloat32Array = new Float32Array(self.transferrableFinalStateBuffer);
     }
     else if(postObject.eventType === self.EVENT_INITIALIZATION_RESPONSE){
       console.log(postObject);
@@ -213,8 +221,13 @@ StarrySky.SkyDirector = function(parentComponent){
   this.renderers = {};
 
   this.start = function(){
+    console.log("Starting");
+    console.log(parentComponent);
+
     //Update our tick and tock functions
     parentComponent.tick = function(time, timeDelta){
+      console.log("New tick");
+
       //Run our interpolation engine
       self.tick(time, timeDelta);
 

@@ -96,7 +96,7 @@ function initializeSkyState(self){
     initialStateFloat32Array.set(skyState.astroValuesFloat32Array, 0, NUMBER_OF_FLOATS);
 
     //Construct the sky state five minutes from now
-    skyState.date = skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_UPDATES);
+    skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_UPDATES);
     skyState.year = date.getFullYear();
     skyState.month = date.getMonth() + 1;
     skyState.day = date.getDate();
@@ -119,7 +119,7 @@ function initializeSkyState(self){
 onmessage = function(e){
   let postObject = e.data;
   if(postObject.eventType === EVENT_UPDATE_LATEST){
-    skyState.date = skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_UPDATES);
+    skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_UPDATES);
     skyState.year = date.getFullYear();
     skyState.month = date.getMonth() + 1;
     skyState.day = date.getDate();
@@ -127,11 +127,12 @@ onmessage = function(e){
     skyState.minute = date.getMinutes();
     skyState.second = date.getSeconds() + (date.getMilliseconds() * 0.001);
     let finalStateBuffer = postObject.transferrableFinalStateBuffer;
-    finalStateBuffer = updateSkyState(finalStateBuffer);
+    updateSkyState(finalStateBuffer);
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
-    self.webAssemblyWorker.postMessage({
+    console.log(finalStateBuffer);
+    self.postMessage({
       eventType: EVENT_RETURN_LATEST,
       transferrableFinalStateBuffer: finalStateBuffer
     }, [finalStateBuffer]);

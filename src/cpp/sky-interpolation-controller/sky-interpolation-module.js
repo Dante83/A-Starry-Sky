@@ -1648,7 +1648,7 @@ function isDataURI(filename) {
 
 
 
-var wasmBinaryFile = 'sky-interpolator-module.wasm';
+var wasmBinaryFile = 'sky-interpolation-module.wasm';
 if (!isDataURI(wasmBinaryFile)) {
   wasmBinaryFile = locateFile(wasmBinaryFile);
 }
