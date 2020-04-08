@@ -43,7 +43,7 @@ void Mercury::updateEclipticalLongitude(){
   77204.3274945, 234791.128274, 39609.6545832};
 
   double L0 = 0.0;
-  for(int i = 0; i < 42; ++i){
+  for(int i = 0; i < 38; ++i){
     L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
@@ -58,7 +58,7 @@ void Mercury::updateEclipticalLongitude(){
   208703.225133, 5661.33204915, 25028.5212114, 51066.4277311, 955.599741609};
 
   double L1 = 0.0;
-  for(int i = 0; i < 18; ++i){
+  for(int i = 0; i < 16; ++i){
     L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
@@ -70,7 +70,7 @@ void Mercury::updateEclipticalLongitude(){
   0.0, 130439.515708, 156527.418849, 182615.321991, 1109.37855209, 208703.225133};
 
   double L2 = 0.0;
-  for(int i = 0; i < 11; ++i){
+  for(int i = 0; i < 10; ++i){
     L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
@@ -82,7 +82,7 @@ void Mercury::updateEclipticalLongitude(){
   130439.515708, 156527.418849, 0.0, 182615.321991};
 
   double L3 = 0.0;
-  for(int i = 0; i < 9; ++i){
+  for(int i = 0; i < 8; ++i){
     L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianCentury);
   }
 
@@ -124,7 +124,7 @@ void Mercury::updateEclipticalLatitude(){
   234791.128274, 20426.5710924, 53285.1848352};
 
   double B0 = 0.0;
-  for(int i = 0; i < 16; ++i){
+  for(int i = 0; i < 14; ++i){
     B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
   }
 
@@ -137,7 +137,7 @@ void Mercury::updateEclipticalLatitude(){
   130439.515708, 156527.418849, 182615.321991, 208703.225133, 234791.128274, 27197.2816937};
 
   double B1 = 0.0;
-  for(int i = 0; i < 12; ++i){
+  for(int i = 0; i < 11; ++i){
     B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianCentury);
   }
 
@@ -149,7 +149,7 @@ void Mercury::updateEclipticalLatitude(){
   130439.515708, 156527.418849, 182615.321991, 208703.225133};
 
   double B2 = 0.0;
-  for(int i = 0; i < 10; ++i){
+  for(int i = 0; i < 9; ++i){
     B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTime->julianCentury);
   }
 
@@ -194,7 +194,7 @@ void Mercury::updateRadiusVector(){
   24978.5245895, 21535.9496445};
 
   double R0 = 0.0;
-  for(int i = 0; i < 14; ++i){
+  for(int i = 0; i < 13; ++i){
     R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 
@@ -206,7 +206,7 @@ void Mercury::updateRadiusVector(){
   0.0, 130439.515708, 156527.418849, 182615.321991};
 
   double R1 = 0.0;
-  for(int i = 0; i < 9; ++i){
+  for(int i = 0; i < 8; ++i){
     R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
   }
 
@@ -218,7 +218,7 @@ void Mercury::updateRadiusVector(){
   130439.515708, 0.0, 156527.418849};
 
   double R2 = 0.0;
-  for(int i = 0; i < 8; ++i){
+  for(int i = 0; i < 7; ++i){
     R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianCentury);
   }
 

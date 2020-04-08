@@ -19,6 +19,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   ].join('\n'),
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions){
     let originalGLSL = [
+    'precision highp float;',
+
     'varying vec3 vWorldPosition;',
 
     'uniform vec3 sunPosition;',
@@ -62,6 +64,11 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     'void main(){',
       '//Figure out where we are',
+      'float piOver2 = 1.570796326794896619231321691639751442098584699687552910487;',
+      'float pi = 3.141592653589793238462643383279502884197169399375105820974;',
+      'float altitude = piOver2 - acos(vWorldPosition.y);',
+      'float azimuth = atan(vWorldPosition.z, vWorldPosition.x) + pi;',
+      'vec3 sphericalPosition = vec3(sin(azimuth) * cos(altitude), sin(altitude), cos(azimuth) * cos(altitude));',
 
       '//Initialize our color to zero light',
       'vec3 outColor = vec3(0.0);',
@@ -76,14 +83,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
       '//Atmosphere',
-      'vec3 normalizedSunPosition = normalize(sunPosition);',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(normalizedSunPosition, vWorldPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
+      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, sphericalPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
 
       '//Color Adjustment Pass',
-      'vec3 toneMappedColor = Uncharted2ToneMapping(LinearTosRGB(vec4(solarAtmosphericPass, 1.0)).rgb);',
+      'vec3 toneMappedColor = Uncharted2ToneMapping(solarAtmosphericPass);',
 
       '//Triangular Blue Noise Adjustment Pass',
-      'gl_FragColor = vec4(toneMappedColor, 1.0);',
+      'gl_FragColor = vec4(solarAtmosphericPass, 1.0);',
     '}',
     ];
 

@@ -56,7 +56,7 @@ void SkyState::updateHeap32Memory(){
   skyState->memoryPtr[13] = static_cast<float>(skyState->skyManager->saturn.declination);
   skyState->memoryPtr[25] = static_cast<float>(skyState->skyManager->saturn.irradianceFromEarth);
 
-  skyState->memoryPtr[14] = static_cast<float>(skyState->astroTime->localApparentSiderealTime);
+  skyState->memoryPtr[14] = static_cast<float>(skyState->astroTime->localApparentSiderealTime) * DEG_2_RAD;
 }
 
 //What we use to get all of this rolling.

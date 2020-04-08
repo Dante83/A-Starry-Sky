@@ -84,7 +84,7 @@ void Saturn::updateEclipticalLongitude(){
   956.289155971};
 
   double L0 = 0.0;
-  for(int i = 0; i < 101; ++i){
+  for(int i = 0; i < 90; ++i){
     L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
@@ -128,7 +128,7 @@ void Saturn::updateEclipticalLongitude(){
   52.6901980395, 340.770892045};
 
   double L1 = 0.0;
-  for(int i = 0; i < 88; ++i){
+  for(int i = 0; i < 79; ++i){
     L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
@@ -163,7 +163,7 @@ void Saturn::updateEclipticalLongitude(){
   429.779584614, 284.148540742, 149.563197135, 9.5612275556};
 
   double L2 = 0.0;
-  for(int i = 0; i < 69; ++i){
+  for(int i = 0; i < 63; ++i){
     L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
@@ -193,7 +193,7 @@ void Saturn::updateEclipticalLongitude(){
   429.779584614, 654.124380316};
 
   double L3 = 0.0;
-  for(int i = 0; i < 53; ++i){
+  for(int i = 0; i < 48; ++i){
     L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianCentury);
   }
 
@@ -212,7 +212,7 @@ void Saturn::updateEclipticalLongitude(){
   302.164775655, 234.63973644, 216.480489176, 191.958454436, 210.1177017};
 
   double L4 = 0.0;
-  for(int i = 0; i < 29; ++i){
+  for(int i = 0; i < 27; ++i){
     L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTime->julianCentury);
   }
 
@@ -226,7 +226,7 @@ void Saturn::updateEclipticalLongitude(){
   191.958454436, 302.164775655};
 
   double L5 = 0.0;
-  for(int i = 0; i < 13; ++i){
+  for(int i = 0; i < 12; ++i){
     L5 += L_5_A[i] * cos(L_5_B[i] + L_5_C[i] * astroTime->julianCentury);
   }
 
@@ -260,7 +260,7 @@ void Saturn::updateEclipticalLatitude(){
   490.334089179, 522.577418094, 14.2270940016, 216.480489176, 210.1177017};
 
   double B0 = 0.0;
-  for(int i = 0; i < 38; ++i){
+  for(int i = 0; i < 34; ++i){
     B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
   }
 
@@ -282,7 +282,7 @@ void Saturn::updateEclipticalLatitude(){
   224.344795702, 860.309928753, 846.082834751};
 
   double B1 = 0.0;
-  for(int i = 0; i < 35; ++i){
+  for(int i = 0; i < 32; ++i){
     B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianCentury);
   }
 
@@ -304,7 +304,7 @@ void Saturn::updateEclipticalLatitude(){
   202.253395174};
 
   double B2 = 0.0;
-  for(int i = 0; i < 32; ++i){
+  for(int i = 0; i < 29; ++i){
     B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTime->julianCentury);
   }
 
@@ -321,7 +321,7 @@ void Saturn::updateEclipticalLatitude(){
   632.783739313, 412.371096874, 216.480489176, 103.092774219};
 
   double B3 = 0.0;
-  for(int i = 0; i < 23; ++i){
+  for(int i = 0; i < 21; ++i){
     B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTime->julianCentury);
   }
 
@@ -335,7 +335,7 @@ void Saturn::updateEclipticalLatitude(){
   647.010833315, 7.1135470008};
 
   double B4 = 0.0;
-  for(int i = 0; i < 13; ++i){
+  for(int i = 0; i < 12; ++i){
     B4 += B_4_A[i] * cos(B_4_B[i] + B_4_C[i] * astroTime->julianCentury);
   }
 
@@ -384,7 +384,7 @@ void Saturn::updateRadiusVector(){
   853.196381752, 340.770892045, 11.0457002639};
 
   double R0 = 0.0;
-  for(int i = 0; i < 50; ++i){
+  for(int i = 0; i < 44; ++i){
     R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 
@@ -410,7 +410,7 @@ void Saturn::updateRadiusVector(){
   309.278322656, 742.990060533, 217.231248701, 3.9321532631};
 
   double R1 = 0.0;
-  for(int i = 0; i < 43; ++i){
+  for(int i = 0; i < 38; ++i){
     R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
   }
 
@@ -433,7 +433,7 @@ void Saturn::updateRadiusVector(){
   625.670192312, 302.164775655, 88.865680217, 191.958454436};
 
   double R2 = 0.0;
-  for(int i = 0; i < 36; ++i){
+  for(int i = 0; i < 32; ++i){
     R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianCentury);
   }
 
@@ -453,7 +453,7 @@ void Saturn::updateRadiusVector(){
   209.366942175, 853.196381752, 302.164775655, 88.865680217, 21.3406410024, 522.577418094};
 
   double R3 = 0.0;
-  for(int i = 0; i < 31; ++i){
+  for(int i = 0; i < 28; ++i){
     R3 += R_3_A[i] * cos(R_3_B[i] + R_3_C[i] * astroTime->julianCentury);
   }
 
@@ -472,7 +472,7 @@ void Saturn::updateRadiusVector(){
   853.196381752};
 
   double R4 = 0.0;
-  for(int i = 0; i < 25; ++i){
+  for(int i = 0; i < 23; ++i){
     R4 += R_4_A[i] * cos(R_4_B[i] + R_4_C[i] * astroTime->julianCentury);
   }
 
@@ -488,7 +488,7 @@ void Saturn::updateRadiusVector(){
   95.9792272178, 88.865680217};
 
   double R5 = 0.0;
-  for(int i = 0; i < 19; ++i){
+  for(int i = 0; i < 18; ++i){
     R5 += R_5_A[i] * cos(R_5_B[i] + R_5_C[i] * astroTime->julianCentury);
   }
 

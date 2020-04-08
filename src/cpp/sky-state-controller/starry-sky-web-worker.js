@@ -131,7 +131,6 @@ onmessage = function(e){
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
-    console.log(finalStateBuffer);
     self.postMessage({
       eventType: EVENT_RETURN_LATEST,
       transferrableFinalStateBuffer: finalStateBuffer

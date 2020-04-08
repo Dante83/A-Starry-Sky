@@ -47,15 +47,12 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //Upon completion, this method self destructs
   this.firstTick = function(){
     //Connect up our reference values
-    self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.sun.position;
+    self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
 
     //Proceed with the first tick
     self.tick();
 
     //Add this object to the scene
     skyDirector.scene.add(this.skyMesh);
-
-    //Self destruct this method
-    self.firstTick = self.tick();
   }
 }

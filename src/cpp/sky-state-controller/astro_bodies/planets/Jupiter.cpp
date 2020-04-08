@@ -54,7 +54,7 @@ void Jupiter::updateEclipticalLongitude(){
   74.7815985673, 0.5212648618, 526.509571357, 1045.15483619, 491.557929457};
 
   double L0 = 0.0;
-  for(int i = 0; i < 72; ++i){
+  for(int i = 0; i < 64; ++i){
     L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
@@ -90,7 +90,7 @@ void Jupiter::updateEclipticalLongitude(){
   1272.68102563, 1685.0521225};
 
   double L1 = 0.0;
-  for(int i = 0; i < 68; ++i){
+  for(int i = 0; i < 61; ++i){
     L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
@@ -123,7 +123,7 @@ void Jupiter::updateEclipticalLongitude(){
   1581.95934828, 831.85574075, 949.17560897, 1265.56747863};
 
   double L2 = 0.0;
-  for(int i = 0; i < 63; ++i){
+  for(int i = 0; i < 57; ++i){
     L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
@@ -148,7 +148,7 @@ void Jupiter::updateEclipticalLongitude(){
   213.299095438, 117.31986822, 742.990060533, 838.96928775, 1169.58825141};
 
   double L3 = 0.0;
-  for(int i = 0; i < 43; ++i){
+  for(int i = 0; i < 39; ++i){
     L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianCentury);
   }
 
@@ -164,7 +164,7 @@ void Jupiter::updateEclipticalLongitude(){
   95.9792272178, 1589.07289528, 728.762966531};
 
   double L4 = 0.0;
-  for(int i = 0; i < 20; ++i){
+  for(int i = 0; i < 19; ++i){
     L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTime->julianCentury);
   }
 
@@ -206,7 +206,7 @@ void Jupiter::updateEclipticalLatitude(){
   323.505416657, 1581.95934828, 515.463871093};
 
   double B0 = 0.0;
-  for(int i = 0; i < 29; ++i){
+  for(int i = 0; i < 26; ++i){
     B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
   }
 
@@ -223,7 +223,7 @@ void Jupiter::updateEclipticalLatitude(){
   949.17560897, 543.918059096, 735.876513532, 1162.47470441, 1596.18644228, 323.505416657};
 
   double B1 = 0.0;
-  for(int i = 0; i < 24; ++i){
+  for(int i = 0; i < 22; ++i){
     B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianCentury);
   }
 
@@ -237,7 +237,7 @@ void Jupiter::updateEclipticalLatitude(){
   543.918059096, 1596.18644228, 2118.76386038, 110.206321219};
 
   double B2 = 0.0;
-  for(int i = 0; i < 15; ++i){
+  for(int i = 0; i < 14; ++i){
     B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTime->julianCentury);
   }
 
@@ -249,7 +249,7 @@ void Jupiter::updateEclipticalLatitude(){
   1066.49547719, 0.0, 515.463871093, 543.918059096, 1052.26838319};
 
   double B3 = 0.0;
-  for(int i = 0; i < 10; ++i){
+  for(int i = 0; i < 9; ++i){
     B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTime->julianCentury);
   }
 
@@ -305,7 +305,7 @@ void Jupiter::updateRadiusVector(){
   1692.1656695, 909.818733055, 543.918059096, 525.758811831, 1375.77379985};
 
   double R0 = 0.0;
-  for(int i = 0; i < 52; ++i){
+  for(int i = 0; i < 46; ++i){
     R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 
@@ -333,7 +333,7 @@ void Jupiter::updateRadiusVector(){
   533.623118358, 110.206321219, 525.758811831};
 
   double R1 = 0.0;
-  for(int i = 0; i < 48; ++i){
+  for(int i = 0; i < 43; ++i){
     R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
   }
 
@@ -358,7 +358,7 @@ void Jupiter::updateRadiusVector(){
   508.350324092, 526.509571357};
 
   double R2 = 0.0;
-  for(int i = 0; i < 40; ++i){
+  for(int i = 0; i < 36; ++i){
     R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianCentury);
   }
 
@@ -378,7 +378,7 @@ void Jupiter::updateRadiusVector(){
   735.876513532, 199.072001436, 309.278322656, 956.289155971, 103.092774219, 302.164775655};
 
   double R3 = 0.0;
-  for(int i = 0; i < 31; ++i){
+  for(int i = 0; i < 28; ++i){
     R3 += R_3_A[i] * cos(R_3_B[i] + R_3_C[i] * astroTime->julianCentury);
   }
 
@@ -392,7 +392,7 @@ void Jupiter::updateRadiusVector(){
   412.371096874, 625.670192312, 1052.26838319, 728.762966531, 426.598190876};
 
   double R4 = 0.0;
-  for(int i = 0; i < 16; ++i){
+  for(int i = 0; i < 15; ++i){
     R4 += R_4_A[i] * cos(R_4_B[i] + R_4_C[i] * astroTime->julianCentury);
   }
 

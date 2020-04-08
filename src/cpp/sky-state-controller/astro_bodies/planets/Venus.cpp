@@ -38,7 +38,7 @@ void Venus::updateEclipticalLongitude(){
   801.820931124};
 
   double L0 = 0.0;
-  for(int i = 0; i < 27; ++i){
+  for(int i = 0; i < 24; ++i){
     L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
@@ -52,7 +52,7 @@ void Venus::updateEclipticalLongitude(){
   10404.7338123};
 
   double L1 = 0.0;
-  for(int i = 0; i < 13; ++i){
+  for(int i = 0; i < 12; ++i){
     L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
@@ -64,7 +64,7 @@ void Venus::updateEclipticalLongitude(){
   30639.8566386, 1577.34354245, 191.448266112};
 
   double L2 = 0.0;
-  for(int i = 0; i < 9; ++i){
+  for(int i = 0; i < 8; ++i){
     L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
@@ -110,7 +110,7 @@ void Venus::updateEclipticalLatitude(){
   1577.34354245, 9437.76293489, 2352.86615377, 22003.9146349};
 
   double B0 = 0.0;
-  for(int i = 0; i < 10; ++i){
+  for(int i = 0; i < 9; ++i){
     B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
   }
 
@@ -167,7 +167,7 @@ void Venus::updateRadiusVector(){
   1577.34354245};
 
   double R0 = 0.0;
-  for(int i = 0; i < 13; ++i){
+  for(int i = 0; i < 12; ++i){
     R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 

@@ -59,7 +59,7 @@ void Earth::updateEclipticalLongitude(){
   2352.86615377, 19651.0484811, 1349.86740966, 83996.8473181, 8031.09226306};
 
   double L0 = 0.0;
-  for(int i = 0; i < 71; ++i){
+  for(int i = 0; i < 64; ++i){
     L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
   }
 
@@ -81,7 +81,7 @@ void Earth::updateEclipticalLongitude(){
   951.718406251, 553.569402842, 2352.86615377, 1059.38193019, 9437.76293489};
 
   double L1 = 0.0;
-  for(int i = 0; i < 37; ++i){
+  for(int i = 0; i < 34; ++i){
     L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
   }
 
@@ -98,7 +98,7 @@ void Earth::updateEclipticalLongitude(){
   5223.6939198, 553.569402842, 0.9803210682};
 
   double L2 = 0.0;
-  for(int i = 0; i < 22; ++i){
+  for(int i = 0; i < 20; ++i){
     L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
   }
 
@@ -190,7 +190,7 @@ void Earth::updateRadiusVector(){
   19651.0484811, 12139.5535091, 2942.46342329, 10447.3878396, 8429.24126647};
 
   double R0 = 0.0;
-  for(int i = 0; i < 44; ++i){
+  for(int i = 0; i < 40; ++i){
     R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
   }
 
@@ -202,7 +202,7 @@ void Earth::updateRadiusVector(){
   5223.6939198, 1577.34354245, 10977.0788047, 5486.77784318, 6275.96230299};
 
   double R1 = 0.0;
-  for(int i = 0; i < 11; ++i){
+  for(int i = 0; i < 10; ++i){
     R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
   }
 

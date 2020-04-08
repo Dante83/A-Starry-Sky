@@ -69,20 +69,26 @@ void SkyInterpolator::rotateAstroObjects(float lsrt, float fractOfFinalPosition)
   //Interpolate the x, y and z right ascension and hour angle for each of our astronomical objects
   float interpolatedAstroPositions[NUMBER_OF_ASTRONOMICAL_COORDINATES];
   #pragma unroll
-  for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_COORDINATES; i += 3){
+  for(int i = 0; i < NUMBER_OF_RAS_AND_HAS; ++i){
     interpolatedAstroPositions[i] = astroPositions_0[i] + fractOfFinalPosition * deltaPositions[i];
-    interpolatedAstroPositions[i + 1] = astroPositions_0[i + 1] + fractOfFinalPosition * deltaPositions[i + 1];
-    interpolatedAstroPositions[i + 2] = astroPositions_0[i + 2] + fractOfFinalPosition * deltaPositions[i + 2];
   }
 
   //Rotate our objects into the x, y, z coordinates of our azimuth and altitude
   float sinOfLSRT = sin(lsrt);
   float cosOfLSRT = cos(lsrt);
+  float magnitudeOfAstroVector;
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_COORDINATES; i += 3){
+    //Rotate the object
     rotatedAstroPositions[i] = sinOfLatitude * cosOfLSRT * interpolatedAstroPositions[i] + sinOfLatitude * sinOfLSRT * interpolatedAstroPositions[i + 1] - cosOfLatitude * interpolatedAstroPositions[i + 2];
     rotatedAstroPositions[i + 1] = cosOfLatitude * cosOfLSRT * interpolatedAstroPositions[i] + cosOfLatitude * sinOfLSRT * interpolatedAstroPositions[i + 1] + sinOfLatitude * interpolatedAstroPositions[i + 2];
     rotatedAstroPositions[i + 2] = interpolatedAstroPositions[i + 2];
+
+    //Get the magnitude of the vector
+    magnitudeOfAstroVector = 1.0 / sqrt(rotatedAstroPositions[i] * rotatedAstroPositions[i] + rotatedAstroPositions[i + 1] * rotatedAstroPositions[i + 1] + rotatedAstroPositions[i + 2] * rotatedAstroPositions[i + 2]);
+    rotatedAstroPositions[i] *= magnitudeOfAstroVector;
+    rotatedAstroPositions[i + 1] *= magnitudeOfAstroVector;
+    rotatedAstroPositions[i + 2] *= magnitudeOfAstroVector;
   }
 }
 
