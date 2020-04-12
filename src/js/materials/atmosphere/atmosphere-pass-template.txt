@@ -6,6 +6,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     sunPosition: {type: 'vec3', value: new THREE.Vector3()},
     solarMieInscatteringSum: {type: 't', value: null},
     solarRayleighInscatteringSum: {type: 't', value: null},
+    toneMappingExposure: {type: 'f', value: 1.0}
   },
   vertexShader: [
     {vertex_glsl}

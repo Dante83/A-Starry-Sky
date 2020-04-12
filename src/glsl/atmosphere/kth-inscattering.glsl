@@ -13,6 +13,7 @@ vec3 gatherInscatteredLight(float r, float sunAngleAtP){
   float x;
   float y = parameterizationOfHeightToY(r);
   float z = parameterizationOfCosOfSourceZenithToZ(sunAngleAtP);
+  vec3 uv3 = vec3(x, y, z);
   vec2 inscatteredUV2;
   vec3 gatheredInscatteredIntensity = vec3(0.0);
   vec3 transmittanceFromPToPb;
@@ -22,14 +23,27 @@ vec3 gatherInscatteredLight(float r, float sunAngleAtP){
   float phaseValue;
   float cosAngle;
   float deltaTheta = PI_TIMES_TWO / $numberOfChunks;
+  float depthInPixels = $textureDepth;
 
   #pragma unroll
   for(int i = 1; i < $numberOfChunksInt; i++){
     theta += deltaTheta;
-    x = parameterizationOfCosOfViewZenithToX(cos(theta));
-    inscatteredUV2 = getUV2From3DUV(vec3(x, y, z));
-    inscatteredLight = texture2D(inscatteredLightLUT, inscatteredUV2).rgb;
-    transmittanceFromPToPb = texture2D(transmittanceTexture, vec2(x, y)).rgb;
+    uv3.x = parameterizationOfCosOfViewZenithToX(cos(theta));
+
+    //Get our transmittance value
+    transmittanceFromPToPb = texture2D(transmittanceTexture, uv3.xy).rgb;
+
+    //Interpolate our inscattered light from the 3D texture
+    uv3.y += 1.0/($textureHeight - 1.0);
+    uv3.x -= 1.0/($textureWidth - 1.0);
+    float floorPixelValue = (floor(uv3.z * depthInPixels) + ceil(floor(uv3.z * depthInPixels))) / 2.0;
+    float floorValue = clamp((floorPixelValue + 1.0) / depthInPixels, 0.0, 1.0);
+    float ceilingValue = clamp((floorPixelValue - 1.0) / depthInPixels, 0.0, 1.0);
+    vec2 uv2_0 = getUV2From3DUV(vec3(uv3.xy, floorValue));
+    vec2 uv2_f = getUV2From3DUV(vec3(uv3.xy, ceilingValue));
+    float interpolationFraction = clamp((uv3.z - floorValue) / (ceilingValue - floorValue), 0.0, 1.0);
+    inscatteredLight = mix(texture2D(inscatteredLightLUT, uv2_0).rgb, texture2D(inscatteredLightLUT, uv2_f).rgb, interpolationFraction);
+
     angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;
     cosAngle = cos(angleBetweenCameraAndIncomingRay);
     #if($isRayleigh)
@@ -99,7 +113,7 @@ void main(){
       //Only inscatter if this point is outside of the earth
       //otherwise it contributes nothing to the final result
       if(h > 0.0){
-        sunAngle = initialSunAngle + atan(p.x, p.y);
+        sunAngle = initialSunAngle - atan(p.x, p.y);
 
         //Iterate our progress through the transmittance along P
         mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);

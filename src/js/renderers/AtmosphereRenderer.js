@@ -3,7 +3,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //TODO: Replace the sky dome with a plane
   //
   this.skyDirector = skyDirector;
-  this.skyGeometry = new THREE.SphereGeometry(5000.0, 64, 64);
+  this.skyGeometry = new THREE.OctahedronGeometry(5000.0, 5);
 
   //Create our material late
   let lutLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
@@ -41,6 +41,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   let self = this;
   this.tick = function(){
     //Update the uniforms so that we can see where we are on this sky.
+    self.atmosphereMaterial.uniforms.toneMappingExposure.value = 0.8;
+    self.atmosphereMaterial.uniforms.toneMappingExposure.needsUpdate = true;
     self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
   }
 

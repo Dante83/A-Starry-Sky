@@ -13,6 +13,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
 
     let updatedLines = [];
     let numberOfChunks = numberOfPoints - 1;
+    let textureDepth = packingWidth * packingHeight;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
       updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
@@ -20,6 +21,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, mieGCoefficient.toFixed(16));
 
       //Texture constants
+      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));

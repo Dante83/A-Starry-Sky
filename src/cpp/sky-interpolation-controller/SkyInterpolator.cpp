@@ -100,7 +100,11 @@ void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){
 }
 
 float SkyInterpolator::interpolateLSRT(float fractOfFinalPosition){
-  return initialLSRT + fractOfFinalPosition * fmin(finalLSRT - initialLSRT, abs(PI_TIMES_TWO - finalLSRT + initialLSRT));
+  if(finalLSRT < initialLSRT){
+    return initialLSRT + fractOfFinalPosition * (finalLSRT + (PI_TIMES_TWO - initialLSRT));
+  }
+  float test = fractOfFinalPosition;
+  return initialLSRT + fractOfFinalPosition * (finalLSRT - initialLSRT);
 }
 
 int main(){

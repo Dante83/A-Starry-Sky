@@ -5,6 +5,12 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.moonLUT;
   this.lunarEcclipseLUTs = [];
 
+  //Enable the OES_texture_float_linear extension
+  if(!renderer.extensions.get("OES_texture_float_linear")){
+    console.error("No linear interpolation of OES textures allowed.");
+    return false;
+  }
+
   //
   //NOTE: For now, we will simply run through our sun lut to see it makes the
   //atmosphere correctly. But eventuallly, we will fill up the above LUT collection
@@ -50,6 +56,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   );
   transmittanceRenderer.setVariableDependencies(transmittanceVar, []);
   transmittanceVar.material.uniforms = {};
+  transmittanceVar.minFilter = THREE.LinearFilter;
+  transmittanceVar.magFilter = THREE.LinearFilter;
 
   //Check for any errors in initialization
   let error1 = transmittanceRenderer.init();
@@ -121,6 +129,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   inscatteringRayleighSumVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
   inscatteringRayleighSumVar.material.uniforms.isNotFirstIteration.value = 0;
   inscatteringRayleighSumVar.material.uniforms.inscatteringTexture.value = rayleighScattering;
+  inscatteringRayleighSumVar.minFilter = THREE.LinearFilter;
+  inscatteringRayleighSumVar.magFilter = THREE.LinearFilter;
 
   let inscatteringMieSumTexture = scatteringSumRenderer.createTexture();
   let inscatteringMieSumVar = scatteringSumRenderer.addVariable('inscatteringMieSumTexture',
@@ -131,6 +141,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   inscatteringMieSumVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
   inscatteringMieSumVar.material.uniforms.isNotFirstIteration.value = 0;
   inscatteringMieSumVar.material.uniforms.inscatteringTexture.value = mieScattering;
+  inscatteringMieSumVar.minFilter = THREE.LinearFilter;
+  inscatteringMieSumVar.magFilter = THREE.LinearFilter;
 
   //Check for any errors in initialization
   let error3 = scatteringSumRenderer.init();

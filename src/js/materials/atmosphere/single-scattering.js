@@ -14,7 +14,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
 
     'uniform sampler2D transmittanceTexture;',
     '//Moon reflects 0.072% of all light',
-    'const float intensity = 11.0;',
+    'const float intensity = 20.0;',
 
     '$atmosphericFunctions',
 
@@ -78,7 +78,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
           '//Only inscatter if this point is outside of the earth',
           '//otherwise it contributes nothing to the final result',
           'if(h > 0.0){',
-            'sunAngle = initialSunAngle + atan(p.x, p.y);',
+            'sunAngle = initialSunAngle - atan(p.x, p.y);',
 
             '//Iterate our progress through the transmittance along P',
             '//We do this for both mie and rayleigh as we are reffering to the transmittance here',
