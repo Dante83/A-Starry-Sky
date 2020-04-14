@@ -24,8 +24,8 @@ extern "C" {
 }
 
 void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues){
-  skyInterpolator->sinOfLatitude = sin(latitude);
-  skyInterpolator->cosOfLatitude = cos(latitude);
+  skyInterpolator->sinOfLatitude = -sin(latitude * DEG_2_RAD);
+  skyInterpolator->cosOfLatitude = cos(latitude * DEG_2_RAD);
   skyInterpolator->astroPositions_0 = astroPositions_0;
   skyInterpolator->rotatedAstroPositions = rotatedAstroPositions;
   skyInterpolator->linearValues_0 = linearValues_0;
@@ -34,8 +34,13 @@ void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, fl
 
 void EMSCRIPTEN_KEEPALIVE updateFinalValues(float* astroPositions_f, float* linearValues_f){
   #pragma unroll
-  for(int i = 0; i < NUMBER_OF_RAS_AND_HAS; ++i){
-    skyInterpolator->deltaPositions[i] = astroPositions_f[i] - skyInterpolator->astroPositions_0[i];
+  for(int i = 0; i < NUMBER_OF_RAS_AND_DECS; ++i){
+    if(astroPositions_f[i] < skyInterpolator->astroPositions_0[i]){
+      skyInterpolator->deltaPositions[i] = (PI_TIMES_TWO - astroPositions_f[i]) + skyInterpolator->astroPositions_0[i];
+    }
+    else{
+      skyInterpolator->deltaPositions[i] = astroPositions_f[i] - skyInterpolator->astroPositions_0[i];
+    }
   }
 
   #pragma unroll
@@ -48,7 +53,7 @@ void EMSCRIPTEN_KEEPALIVE updateTimeData(float t_0, float t_f, float initialLSRT
   skyInterpolator->t_0 = t_0;
   skyInterpolator->oneOverDeltaT = 1.0 / (t_f - t_0);
   skyInterpolator->initialLSRT = initialLSRT;
-  skyInterpolator->finalLSRT = finalLSRT;
+  skyInterpolator->deltaLSRT = finalLSRT >= initialLSRT ? finalLSRT - initialLSRT : (PI_TIMES_TWO - finalLSRT) + initialLSRT;
 }
 
 void EMSCRIPTEN_KEEPALIVE tick(float t){
@@ -58,37 +63,49 @@ void EMSCRIPTEN_KEEPALIVE tick(float t){
   //Update our linear interpolations
   skyInterpolator->updateLinearInterpolations(tFractional);
 
-  //Update our LSRT
-  float lsrt = skyInterpolator->interpolateLSRT(tFractional);
-
   //Update our rotation of our astronomical objects in the sky
-  skyInterpolator->rotateAstroObjects(lsrt, tFractional);
+  skyInterpolator->rotateAstroObjects(tFractional);
 }
 
-void SkyInterpolator::rotateAstroObjects(float lsrt, float fractOfFinalPosition){
+void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
   //Interpolate the x, y and z right ascension and hour angle for each of our astronomical objects
   float interpolatedAstroPositions[NUMBER_OF_ASTRONOMICAL_COORDINATES];
   #pragma unroll
-  for(int i = 0; i < NUMBER_OF_RAS_AND_HAS; ++i){
+  for(int i = 0; i < NUMBER_OF_RAS_AND_DECS; ++i){
     interpolatedAstroPositions[i] = astroPositions_0[i] + fractOfFinalPosition * deltaPositions[i];
   }
+  float interpolatedLSRT = skyInterpolator->initialLSRT + fractOfFinalPosition * skyInterpolator->deltaLSRT;
+
+  interpolatedAstroPositions[0] = 0.06050925925 * 360.0 * DEG_2_RAD;
+  interpolatedAstroPositions[1] = 9.13861111111 * DEG_2_RAD;
 
   //Rotate our objects into the x, y, z coordinates of our azimuth and altitude
-  float sinOfLSRT = sin(lsrt);
-  float cosOfLSRT = cos(lsrt);
-  float magnitudeOfAstroVector;
+  float sinLocalSiderealTime = sin(interpolatedLSRT);
+  float cosLocalSiderealTime = cos(interpolatedLSRT);
   #pragma unroll
-  for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_COORDINATES; i += 3){
+  for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_OBJECTS; i += 1){
+    //Convert the right ascension and hour angle to an x, y, z coordinate
+    float interpolatedRA = interpolatedAstroPositions[i * 2];
+    float interpolatedDec = interpolatedAstroPositions[i * 2 + 1];
+    float cosOfDec = cos(interpolatedDec);
+    float equitorialX = cosOfDec * cos(interpolatedRA);
+    float equitorialZ = cosOfDec * sin(interpolatedRA);
+    float equitorialY = sin(interpolatedDec);
+
     //Rotate the object
-    rotatedAstroPositions[i] = sinOfLatitude * cosOfLSRT * interpolatedAstroPositions[i] + sinOfLatitude * sinOfLSRT * interpolatedAstroPositions[i + 1] - cosOfLatitude * interpolatedAstroPositions[i + 2];
-    rotatedAstroPositions[i + 1] = cosOfLatitude * cosOfLSRT * interpolatedAstroPositions[i] + cosOfLatitude * sinOfLSRT * interpolatedAstroPositions[i + 1] + sinOfLatitude * interpolatedAstroPositions[i + 2];
-    rotatedAstroPositions[i + 2] = interpolatedAstroPositions[i + 2];
+    int xIndex = 3 * i;
+    int yIndex = xIndex + 1;
+    int zIndex = yIndex + 2;
+    float term0 = cosLocalSiderealTime * equitorialX + sinLocalSiderealTime * equitorialZ;
+    rotatedAstroPositions[xIndex] = sinOfLatitude * term0 - cosOfLatitude * equitorialY;
+    rotatedAstroPositions[yIndex] = cosOfLatitude * term0 + sinOfLatitude * equitorialY;
+    rotatedAstroPositions[zIndex] = sinLocalSiderealTime * equitorialX - cosLocalSiderealTime * equitorialZ;
 
     //Get the magnitude of the vector
-    magnitudeOfAstroVector = 1.0 / sqrt(rotatedAstroPositions[i] * rotatedAstroPositions[i] + rotatedAstroPositions[i + 1] * rotatedAstroPositions[i + 1] + rotatedAstroPositions[i + 2] * rotatedAstroPositions[i + 2]);
-    rotatedAstroPositions[i] *= magnitudeOfAstroVector;
-    rotatedAstroPositions[i + 1] *= magnitudeOfAstroVector;
-    rotatedAstroPositions[i + 2] *= magnitudeOfAstroVector;
+    float magnitudeOfAstroVector = 1.0 / sqrt(rotatedAstroPositions[xIndex] * rotatedAstroPositions[xIndex] + rotatedAstroPositions[yIndex] * rotatedAstroPositions[yIndex] + rotatedAstroPositions[zIndex] * rotatedAstroPositions[zIndex]);
+    rotatedAstroPositions[xIndex] *= magnitudeOfAstroVector;
+    rotatedAstroPositions[yIndex] *= magnitudeOfAstroVector;
+    rotatedAstroPositions[zIndex] *= magnitudeOfAstroVector;
   }
 }
 
@@ -97,14 +114,6 @@ void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){
   for(int i = 0; i < NUMBER_OF_LINEAR_VALUES; i += 1){
     linearValues[i] = linearValues_0[i] + fractOfFinalPosition * deltaLinearValues[i];
   }
-}
-
-float SkyInterpolator::interpolateLSRT(float fractOfFinalPosition){
-  if(finalLSRT < initialLSRT){
-    return initialLSRT + fractOfFinalPosition * (finalLSRT + (PI_TIMES_TWO - initialLSRT));
-  }
-  float test = fractOfFinalPosition;
-  return initialLSRT + fractOfFinalPosition * (finalLSRT - initialLSRT);
 }
 
 int main(){

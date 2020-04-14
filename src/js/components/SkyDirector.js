@@ -7,7 +7,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.EVENT_INITIALIZATION_RESPONSE = 1;
   this.EVENT_UPDATE_LATEST = 2;
   this.EVENT_RETURN_LATEST = 3;
-  //7 Astronomical RAs and HAs (14), 7(21) brightnesses, Lunar Parallactic Angle(22)
+  //7 Astronomical RAs and Decs (14), 7(21) brightnesses, Lunar Parallactic Angle(22)
   //Earthshine Intensity(23), Solar and Lunar Scale Multiplier(25) or 25 variables
   //14 of these require rotational transformations
   //10 are linear interpolations
@@ -88,17 +88,17 @@ StarrySky.SkyDirector = function(parentComponent){
   this.updateFinalSkyState = function(lsrt_0, lsrt_f){
     //Update the Module Heap and final LSRT
     let intitialLSRT = self.finalLSRT;
-    // Module.HEAPF32.set(Module.HEAPF32.buffer.slice(self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
-    // Module.HEAPF32.set(Module.HEAPF32.buffer.slice(self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
+    Module.HEAPF32.set(Module.HEAPF32.buffer.slice(self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
+    Module.HEAPF32.set(Module.HEAPF32.buffer.slice(self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
     self.finalLSRT = self.finalStateFloat32Array[14];
-    // Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
-    // Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+    Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
+    Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
 
     //Set initial values to final values in module and update our final values to the values
     //returned from our worker.
-    //Module._updateFinalValues(self.astroPositions_f_ptr, self.linearValues_f_ptr);
+    Module._updateFinalValues(self.astroPositions_f_ptr, self.linearValues_f_ptr);
     self.finalT = self.interpolationT + TWENTY_MINUTES;
-    //Module._updateTimeData(self.interpolationT, self.finalT, lsrt_0, self.finalLSRT);
+    Module._updateTimeData(self.interpolationT, self.finalT, lsrt_0, self.finalLSRT);
 
     //Return the final state back to the worker thread so it can determine the state five minutes from now
     self.webAssemblyWorker.postMessage({
@@ -192,7 +192,7 @@ StarrySky.SkyDirector = function(parentComponent){
       Module._updateFinalValues(this.astroPositions_f_ptr, this.linearValues_f_ptr);
       self.finalLSRT = self.finalStateFloat32Array[14];
       console.log(initialStateFloat32Array[14]);
-      console.log(self.finalStateFloat32Array[14] * 10.0);
+      console.log(self.finalStateFloat32Array[14]);
       //debugger;
       Module._updateTimeData(self.interpolationT, self.interpolationT + TWENTY_MINUTES, initialStateFloat32Array[14], self.finalLSRT);
       self.skyState = {

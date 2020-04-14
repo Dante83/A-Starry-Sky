@@ -55,19 +55,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'return miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering;',
     '}',
 
-    '// Filmic ToneMapping http://filmicgames.com/archives/75',
-    'const float A = 0.15;',
-    'const float B = 0.50;',
-    'const float C = 0.10;',
-    'const float D = 0.20;',
-    'const float E = 0.02;',
-    'const float F = 0.30;',
-    'const float W = 1000.0;',
-
-    'vec3 Uncharted2Tonemap(vec3 x){',
-      'return ((x*(A*x+C*B)+D*E)/(x*(A*x+B)+D*F))-E/F;',
-    '}',
-
     'void main(){',
       '//Figure out where we are',
       'float altitude = piOver2 - acos(vWorldPosition.y);',
@@ -84,13 +71,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
       '//Planet Pass',
-      'vec3 sunPosition2 = normalize(vec3(0.0, 1.0, 0.0));',
+      '// vec3 sunPosition2 = normalize(vec3(0.0, 1.0, 0.0));',
 
       '//Atmosphere',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition2, sphericalPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
+      'vec3 solarAtmosphericPass = linearAtmosphericPass(normalize(sunPosition), sphericalPosition, solarMieInscatteringSum, solarRayleighInscatteringSum);',
 
       '//Color Adjustment Pass',
-      'vec3 toneMappedColor = ACESFilmicToneMapping(solarAtmosphericPass);',
+      'vec3 toneMappedColor = OptimizedCineonToneMapping(solarAtmosphericPass);',
 
       '//Triangular Blue Noise Adjustment Pass',
       'gl_FragColor = vec4(toneMappedColor, 1.0);',

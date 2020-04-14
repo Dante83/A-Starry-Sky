@@ -37,7 +37,7 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);',
 
     '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
-    'const float OZONE_PERCENT_OF_RAYLEIGH = 7e-6;',
+    'const float OZONE_PERCENT_OF_RAYLEIGH = 6e-7;',
     'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
 
     '//',
