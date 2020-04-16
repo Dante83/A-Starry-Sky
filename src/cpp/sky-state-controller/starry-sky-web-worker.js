@@ -13,7 +13,7 @@ const EVENT_INITIALIZE = 0;
 const EVENT_INITIALIZATION_RESPONSE = 1;
 const EVENT_UPDATE_LATEST = 2;
 const EVENT_RETURN_LATEST = 3;
-const MINUTES_BETWEEN_UPDATES = 5.0;
+const MINUTES_BETWEEN_UPDATES = 20.0;
 var date;
 var updateLoop;
 var wasmModule;
@@ -65,7 +65,6 @@ function initializeSkyState(self){
       minute: date.getMinutes(),
       second: date.getSeconds() + (date.getMilliseconds() * 0.001),
       utcOffset: initialPostObject.utcOffset,
-      timeMultiplier: initialPostObject.timeMultiplier,
       memoryPtr: null,
       astroValuesFloat32Array: null,
       bufferSize: null
@@ -104,6 +103,10 @@ function initializeSkyState(self){
     skyState.second = date.getSeconds() + (date.getMilliseconds() * 0.001);
     let finalStateBuffer = initialPostObject.transferrableFinalStateBuffer;
     updateSkyState(finalStateBuffer);
+
+    console.log("Sky state");
+    console.log(initialStateFloat32Array);
+    console.log(skyState.astroValuesFloat32Array);
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.

@@ -36,7 +36,7 @@ void EMSCRIPTEN_KEEPALIVE updateFinalValues(float* astroPositions_f, float* line
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_RAS_AND_DECS; ++i){
     if(astroPositions_f[i] < skyInterpolator->astroPositions_0[i]){
-      skyInterpolator->deltaPositions[i] = (PI_TIMES_TWO - astroPositions_f[i]) + skyInterpolator->astroPositions_0[i];
+      skyInterpolator->deltaPositions[i] = (PI_TIMES_TWO - skyInterpolator->astroPositions_0[i]) + astroPositions_f[i];
     }
     else{
       skyInterpolator->deltaPositions[i] = astroPositions_f[i] - skyInterpolator->astroPositions_0[i];
@@ -53,7 +53,7 @@ void EMSCRIPTEN_KEEPALIVE updateTimeData(float t_0, float t_f, float initialLSRT
   skyInterpolator->t_0 = t_0;
   skyInterpolator->oneOverDeltaT = 1.0 / (t_f - t_0);
   skyInterpolator->initialLSRT = initialLSRT;
-  skyInterpolator->deltaLSRT = finalLSRT >= initialLSRT ? finalLSRT - initialLSRT : (PI_TIMES_TWO - finalLSRT) + initialLSRT;
+  skyInterpolator->deltaLSRT = finalLSRT >= initialLSRT ? finalLSRT - initialLSRT : (PI_TIMES_TWO - initialLSRT) + finalLSRT;
 }
 
 void EMSCRIPTEN_KEEPALIVE tick(float t){
@@ -76,9 +76,6 @@ void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
   }
   float interpolatedLSRT = skyInterpolator->initialLSRT + fractOfFinalPosition * skyInterpolator->deltaLSRT;
 
-  interpolatedAstroPositions[0] = 0.06050925925 * 360.0 * DEG_2_RAD;
-  interpolatedAstroPositions[1] = 9.13861111111 * DEG_2_RAD;
-
   //Rotate our objects into the x, y, z coordinates of our azimuth and altitude
   float sinLocalSiderealTime = sin(interpolatedLSRT);
   float cosLocalSiderealTime = cos(interpolatedLSRT);
@@ -95,7 +92,7 @@ void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
     //Rotate the object
     int xIndex = 3 * i;
     int yIndex = xIndex + 1;
-    int zIndex = yIndex + 2;
+    int zIndex = xIndex + 2;
     float term0 = cosLocalSiderealTime * equitorialX + sinLocalSiderealTime * equitorialZ;
     rotatedAstroPositions[xIndex] = sinOfLatitude * term0 - cosOfLatitude * equitorialY;
     rotatedAstroPositions[yIndex] = cosOfLatitude * term0 + sinOfLatitude * equitorialY;

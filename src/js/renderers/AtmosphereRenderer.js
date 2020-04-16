@@ -41,6 +41,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   let self = this;
   this.tick = function(){
     //Update the uniforms so that we can see where we are on this sky.
+    self.atmosphereMaterial.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
+    self.atmosphereMaterial.uniforms.sunHorizonFade.needsUpdate = true;
     self.atmosphereMaterial.uniforms.toneMappingExposure.value = 0.8;
     self.atmosphereMaterial.uniforms.toneMappingExposure.needsUpdate = true;
     self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;

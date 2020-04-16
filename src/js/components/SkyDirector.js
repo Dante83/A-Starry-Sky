@@ -34,7 +34,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.linearValues_ptr;
   this.linearValues;
   this.finalLSRT;
-  this.timeMultiplier;
+  this.speed;
   this.interpolationT = 0.0;
   this.finalT = TWENTY_MINUTES;
   this.ready = false;
@@ -66,7 +66,6 @@ StarrySky.SkyDirector = function(parentComponent){
         latitude: self.assetManager.data.skyLocationData.latitude,
         longitude: self.assetManager.data.skyLocationData.longitude,
         date: self.assetManager.data.skyTimeData.date,
-        timeMultiplier: self.assetManager.data.skyTimeData.timeMultiplier,
         utcOffset: self.assetManager.data.skyTimeData.utcOffset,
         transferrableInitialStateBuffer: transferrableInitialStateBuffer,
         transferrableFinalStateBuffer: self.transferrableFinalStateBuffer
@@ -78,7 +77,7 @@ StarrySky.SkyDirector = function(parentComponent){
     //All systems must be up and running before we are ready to begin
     if(self.assetManagerInitialized && self.skyDirectorWASMIsReady){
       //Prepare all of our renderers to display stuff
-      self.timeMultiplier = self.assetManager.data.skyTimeData.timeMultiplier;
+      self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
 
       self.start();
@@ -111,17 +110,10 @@ StarrySky.SkyDirector = function(parentComponent){
 
   this.tick = function(time, timeDelta){
     if(parentComponent.initialized){
-      self.interpolationT += timeDelta * self.timeMultiplier * 0.001;
+      self.interpolationT += timeDelta * self.speed * 0.001;
 
       //Update our sky state
       Module._tick(self.interpolationT);
-
-      // if(self.i === 10){
-      //   debugger;
-      // }
-      // else{
-      //   self.i += 1;
-      // }
 
       //Update our astronomical positions
       self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));
@@ -133,6 +125,7 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Update our linear values
       self.skyState.sun.intensity = self.linearValues[0];
+      self.skyState.sun.horizonFade = Math.min(Math.max(1.7 * self.skyState.sun.position.y + 1.1, 0.0), 1.0);
       self.skyState.sun.scale = self.linearValues[1];
       self.skyState.moon.intensity = self.linearValues[2];
       self.skyState.moon.scale = self.linearValues[3];
@@ -145,9 +138,9 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.saturn.intensity = self.linearValues[10];
 
       //Check if we need to update our final state again
-      // if(self.interpolationT >= self.finalT){
-      //   self.updateFinalSkyState(self.finalLSRT, self.finalStateFloat32Array[14]);
-      // }
+      if(self.interpolationT >= self.finalT){
+        self.updateFinalSkyState(self.finalLSRT, self.finalStateFloat32Array[14]);
+      }
     }
   }
 
