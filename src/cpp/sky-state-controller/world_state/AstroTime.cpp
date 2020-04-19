@@ -163,7 +163,7 @@ void AstroTime::updateJulianDayAndCentury(){
 }
 
 void AstroTime::updateLocalApparentSiderealTime(double longitude){
-  localApparentSiderealTime = check4GreaterThan360(apparentSiderealTime + longitude);
+  localApparentSiderealTime = check4GreaterThan360(apparentSiderealTime - longitude);
 }
 
 //

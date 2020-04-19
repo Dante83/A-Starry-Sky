@@ -24,7 +24,7 @@ extern "C" {
 }
 
 void SkyState::updateHeap32Memory(){
-  skyState->memoryPtr[0] = skyState->skyManager->sun.rightAscension;
+  skyState->memoryPtr[0] = static_cast<float>(skyState->skyManager->sun.rightAscension);
   skyState->memoryPtr[1] = static_cast<float>(skyState->skyManager->sun.declination);
   skyState->memoryPtr[15] = static_cast<float>(skyState->skyManager->sun.irradianceFromEarth);
   skyState->memoryPtr[16] = static_cast<float>(skyState->skyManager->sun.scale);

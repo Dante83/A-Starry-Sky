@@ -162,18 +162,16 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Prepare the heap memory for our interpolation engine
       self.astroPositions_0_ptr = Module._malloc(NUMBER_OF_ROTATIONAL_TRANSFORMATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(transferrableInitialStateBuffer.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(initialStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.astroPositions_f_ptr = Module._malloc(NUMBER_OF_ROTATIONAL_TRANSFORMATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.finalStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.rotatedAstroPositions_ptr = Module._malloc(NUMBER_OF_ROTATION_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.rotatedAstroPositions_ptr, self.rotatedAstroPositions_ptr / BYTES_PER_32_BIT_FLOAT);
 
       self.linearValues_0_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(transferrableInitialStateBuffer.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.linearValues_f_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.linearValues_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.linearValues_ptr, self.linearValues_ptr / BYTES_PER_32_BIT_FLOAT);
 
       //Attach references to our interpolated values
       self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS);
@@ -184,9 +182,6 @@ StarrySky.SkyDirector = function(parentComponent){
       Module._initialize(latitude, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.linearValues_0_ptr, self.linearValues_ptr);
       Module._updateFinalValues(this.astroPositions_f_ptr, this.linearValues_f_ptr);
       self.finalLSRT = self.finalStateFloat32Array[14];
-      console.log(initialStateFloat32Array[14]);
-      console.log(self.finalStateFloat32Array[14]);
-      //debugger;
       Module._updateTimeData(self.interpolationT, self.interpolationT + TWENTY_MINUTES, initialStateFloat32Array[14], self.finalLSRT);
       self.skyState = {
         sun: {

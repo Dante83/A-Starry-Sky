@@ -12,7 +12,6 @@
 #include "../Constants.h"
 #include <stdbool.h>
 #include <cmath>
-#include <stdio.h>
 
 SkyManager::SkyManager(AstroTime* astroTimeRef, Location* locationRef): sun(astroTimeRef), moon(astroTimeRef),
 earth(astroTimeRef), mercury(astroTimeRef), venus(astroTimeRef), mars(astroTimeRef), jupiter(astroTimeRef),
@@ -108,7 +107,6 @@ void SkyManager::update(){
   double nutationInRightAscensionInDegs = nutationInRightAscensionInSeconds * THREE_SIXTY_OVER_EIGHTY_SIX_THOUSAND_FOUR_HUNDRED;
   astroTime->apparentSiderealTime = astroTime->greenwhichSiderealTime + nutationInRightAscensionInDegs;
   astroTime->updateLocalApparentSiderealTime(location->lng);
-  printf("%f\r\n", astroTime->apparentSiderealTime);
 
   //And back to our sun again
   double sunsMeanAnomolyInRads = sun.meanAnomaly * DEG_2_RAD;

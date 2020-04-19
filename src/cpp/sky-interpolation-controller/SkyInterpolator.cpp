@@ -2,7 +2,7 @@
 #include "SkyInterpolator.h"
 #include <emscripten/emscripten.h>
 #include <cmath>
-#include <stdio.h>
+#include "stdio.h"
 
 //
 //Constructor
@@ -33,6 +33,10 @@ void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, fl
 }
 
 void EMSCRIPTEN_KEEPALIVE updateFinalValues(float* astroPositions_f, float* linearValues_f){
+  // printf("%f %f\r\n", skyInterpolator->astroPositions_0[0], skyInterpolator->astroPositions_0[1]);
+  // printf("%f %f\r\n", astroPositions_f[0], astroPositions_f[1]);
+  // printf("----------------\r\n");
+
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_RAS_AND_DECS; ++i){
     if(astroPositions_f[i] < skyInterpolator->astroPositions_0[i]){
