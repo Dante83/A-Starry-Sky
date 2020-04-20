@@ -19,7 +19,6 @@ StarrySky.SkyDirector = function(parentComponent){
   const NUMBER_OF_ROTATION_OUTPUT_VALUES = NUMBER_OF_ROTATIONAL_OBJECTS * 3;
   const NUMBER_OF_LINEAR_INTERPOLATIONS = 11;
   const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
-  const LINEAR_ARRAY_END = LINEAR_ARRAY_START + NUMBER_OF_LINEAR_INTERPOLATIONS;
   const TOTAL_BYTES_FOR_WORKER_BUFFERS = BYTES_PER_32_BIT_FLOAT * NUMBER_OF_FLOATS;
   const TWENTY_MINUTES = 20.0 * 60.0;
   let transferrableInitialStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
@@ -87,11 +86,18 @@ StarrySky.SkyDirector = function(parentComponent){
   this.updateFinalSkyState = function(lsrt_0, lsrt_f){
     //Update the Module Heap and final LSRT
     let intitialLSRT = self.finalLSRT;
-    Module.HEAPF32.set(Module.HEAPF32.buffer.slice(self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT);
-    Module.HEAPF32.set(Module.HEAPF32.buffer.slice(self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
+    //let strtingPtr2 = self.astroPositions_f_ptr;
+    let insertIndex = self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT;
+    let copyFromIndex = self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT;
+    let copyEndIndex = copyFromIndex + NUMBER_OF_ROTATIONAL_TRANSFORMATIONS;
+    Module.HEAPF32.copyWithin(insertIndex, copyFromIndex, copyEndIndex);
+    insertIndex = self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT;
+    copyFromIndex = self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT;
+    copyEndIndex = copyFromIndex + NUMBER_OF_LINEAR_INTERPOLATIONS;
+    Module.HEAPF32.copyWithin(insertIndex, copyFromIndex, copyEndIndex);
     self.finalLSRT = self.finalStateFloat32Array[14];
-    Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
-    Module.HEAPF32.set(self.transferrableFinalStateBuffer.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+    Module.HEAPF32.set(self.finalStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
+    Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
 
     //Set initial values to final values in module and update our final values to the values
     //returned from our worker.
@@ -168,9 +174,9 @@ StarrySky.SkyDirector = function(parentComponent){
       self.rotatedAstroPositions_ptr = Module._malloc(NUMBER_OF_ROTATION_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
 
       self.linearValues_0_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.linearValues_f_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.linearValues_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
 
       //Attach references to our interpolated values
@@ -180,7 +186,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Run our sky interpolator to determine our azimuth, altitude and other variables
       let latitude = self.assetManager.data.skyLocationData.latitude;
       Module._initialize(latitude, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.linearValues_0_ptr, self.linearValues_ptr);
-      Module._updateFinalValues(this.astroPositions_f_ptr, this.linearValues_f_ptr);
+      Module._updateFinalValues(self.astroPositions_f_ptr, self.linearValues_f_ptr);
       self.finalLSRT = self.finalStateFloat32Array[14];
       Module._updateTimeData(self.interpolationT, self.interpolationT + TWENTY_MINUTES, initialStateFloat32Array[14], self.finalLSRT);
       self.skyState = {

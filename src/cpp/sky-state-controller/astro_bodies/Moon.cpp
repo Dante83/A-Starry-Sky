@@ -3,6 +3,7 @@
 #include "AstronomicalBody.h"
 #include "Moon.h"
 #include <cmath>
+#include "stdio.h"
 
 //
 //Constructor
@@ -150,6 +151,9 @@ void Moon::updatePosition(){
   double cos_eclipticalLatitude = cos(eclipticalLatitude);
   double sin_eclipticalLongitude = sin(eclipticalLongitude);
   distanceFromEarthInMeters = 385000560.0 + sum_r;
+  printf("Distance From Earth: %f\r\n", distanceFromEarthInMeters);
+  printf("Ecliptical Longitude: %f\r\n", eclipticalLongitude);
+  printf("Eclipitical Latitude: %f\r\n", eclipticalLatitude);
   #define MEAN_LUNAR_DISTANCE_FROM_EARTH 384400000.0
   scale = MEAN_LUNAR_DISTANCE_FROM_EARTH / distanceFromEarthInMeters;
   //NOTE: We are using a lunar magnitude of 2.0 for now as
