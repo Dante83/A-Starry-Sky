@@ -38,8 +38,8 @@ int AstroTime::daysInMonthNormalYear[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31
 void AstroTime::addSeconds(double seconds){
   timeOfDayInSeconds += seconds;
   if(timeOfDayInSeconds < 0.0){
-    timeOfDayInSeconds = fmod(timeOfDayInSeconds, SECONDS_IN_A_DAY);
-    double utcIsXDaysAgo = abs(floor(timeOfDayInSeconds * INV_SECONDS_IN_DAY));
+    timeOfDayInSeconds = SECONDS_IN_A_DAY - fmod(abs(timeOfDayInSeconds), SECONDS_IN_A_DAY);
+    double utcIsXDaysAgo = floor(abs(timeOfDayInSeconds * INV_SECONDS_IN_DAY));
     dayOfTheYear -= utcIsXDaysAgo;
     day -= utcIsXDaysAgo;
     if(dayOfTheYear < 0){

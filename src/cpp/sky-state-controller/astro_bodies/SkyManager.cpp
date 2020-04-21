@@ -44,36 +44,12 @@ void SkyManager::update(){
   double julianCentury_pow3 = julianCentury * julianCentury_pow2;
   double julianCentury_pow4 = julianCentury_pow2 * julianCentury_pow2;
 
-  //
-  //Lunar constants
-  // 1.0 / 538841.0
-  #define MML_CONST1 0.000001855835023689734077399455498004049432021690999756885
-  // 1.0 / 65194000.0
-  #define MML_CONST2 0.000000015338834862103874589686167438721354725895021014203
-  moon.setMeanLongitude(218.3164477 + 481267.88123421 * julianCentury - 0.0015786 * julianCentury_pow2 + julianCentury_pow3 * MML_CONST1 - julianCentury_pow4 * MML_CONST2);
-  // 1.0 / 545868.0
-  #define MME_CONST1 0.000100183194471923615232986729392453853312522441322810642
-  // 1.0 / 113065000.0
-  #define MME_CONST2 0.0000000088444699951355415026754521735285013045593242824
-  moon.setMeanElongation(297.8501921 + 445267.1114034 * julianCentury - 0.0018819 * julianCentury_pow2 + julianCentury_pow3 * MME_CONST1  - julianCentury_pow4 * MME_CONST2);
-  // 1.0 / 69699.0
-  #define MMA_CONST1 0.000014347408140719379044175669665274968077016886899381626
-  // 1.0 / 14712000
-  #define MMA_CONST2 0.00000006797172376291462751495377922784121805328983143012
-  moon.setMeanAnomaly(134.9633964 + 477198.8675055 * julianCentury + 0.0087414 * julianCentury_pow2 + julianCentury_pow3 * MMA_CONST1 - julianCentury_pow4 * MMA_CONST2);
-  // 1.0 / 3526000.0
-  #define MAOL_CONST1 0.0000002836074872376630743051616562677254679523539421440
-  // 1.0 / 863310000.0
-  #define MAOL_CONST2 0.0000000011583324645839848953446618248369647056098041259
-  moon.setArgumentOfLatitude(93.2720950 + 483202.0175233 * julianCentury - 0.0036539 * julianCentury_pow2 - julianCentury_pow3 * MAOL_CONST1 + julianCentury_pow4 * MAOL_CONST2);
-  // 1.0 / 450000
-  #define LOTANOTMO_CONST1 0.000002222222222222222222222222222222222222222222222
-  moon.setLongitudeOfTheAscendingNodeOfOrbit(125.04452 - 1934.136261 * julianCentury + 0.0020708 * julianCentury_pow2 + julianCentury_pow3 * LOTANOTMO_CONST1);
-
-  //
-  //Solar Constants
-  #define SMA_CONST1 0.000000040832993058391180073499387505104124132298897509187
-  sun.setMeanAnomaly(357.5291092 + 35999.0502909 * julianCentury - 0.0001536 * julianCentury_pow2 + julianCentury_pow3 * SMA_CONST1);
+  moon.setMeanLongitude(218.3164477 + 481267.88123421 * julianCentury - 0.0015786 * julianCentury_pow2 + (julianCentury_pow3 / 538841.0) - (julianCentury_pow4 / 65194000.0));
+  moon.setMeanElongation(297.8501921 + 445267.1114034 * julianCentury - 0.0018819 * julianCentury_pow2 + (julianCentury_pow3 / 545868.0)  - (julianCentury_pow4 / 113065000.0));
+  moon.setMeanAnomaly(134.9633964 + 477198.8675055 * julianCentury + 0.0087414 * julianCentury_pow2 + (julianCentury_pow3 / 69699.0) - (julianCentury_pow4 / 14712000.0));
+  moon.setArgumentOfLatitude(93.2720950 + 483202.0175233 * julianCentury - 0.0036539 * julianCentury_pow2 - (julianCentury_pow3 / 3526000.0) + (julianCentury_pow4 / 863310000.0));
+  moon.setLongitudeOfTheAscendingNodeOfOrbit(125.04452 - 1934.136261 * julianCentury + 0.0020708 * julianCentury_pow2 + (julianCentury_pow3 / 450000.0));
+  sun.setMeanAnomaly(357.5291092 + 35999.0502909 * julianCentury - 0.0001536 * julianCentury_pow2 + julianCentury_pow3 / 24490000.0);
   sun.setMeanLongitude(280.46646 + 36000.76983 * julianCentury + 0.0003032 * julianCentury_pow2);
 
   double omega = moon.longitudeOfTheAscendingNodeOfOrbit * DEG_2_RAD;
@@ -118,7 +94,8 @@ void SkyManager::update(){
   //Update the state of our sky from this information
   sun.eccentricityOfTheEarth = &eccentricityOfTheEarth;
   sun.meanObliquityOfTheEclipitic = &meanObliquityOfTheEclipitic;
-  moon.trueObliquityOfEclipticInRads = &trueObliquityOfEclipticInRads;
+  moon.trueObliquityOfEclipticInRads = trueObliquityOfEclipticInRads;
+  sun.trueObliquityOfEclipticInRads = trueObliquityOfEclipticInRads;
   sun.updatePosition();
   moon.updatePosition();
   earth.updatePosition();
@@ -126,5 +103,6 @@ void SkyManager::update(){
   for(int i = 0; i < 5; ++i){
     otherPlanets[i]->updatePosition();
     otherPlanets[i]->updateMagnitudeOfPlanet();
+    otherPlanets[i]->trueObliquityOfEclipticInRads = trueObliquityOfEclipticInRads;
   }
 }

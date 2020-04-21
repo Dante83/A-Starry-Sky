@@ -17,7 +17,7 @@ AstronomicalBody::AstronomicalBody(AstroTime* astroTimeRef){
 //Beta is eclipticalLatitude
 //
 void AstronomicalBody::convertEclipticalLongitudeAndLatitudeToRaAndDec(double eclipticalLongitude, double sin_eclipticalLongitude, double eclipticalLatitude, double cos_eclipticalLatitude){
-  double epsilon = *trueObliquityOfEclipticInRads;
+  double epsilon = trueObliquityOfEclipticInRads;
 
   //Use these to acquire the equatorial solarGPUCoordinates
   double sinEpsilon = sin(epsilon);

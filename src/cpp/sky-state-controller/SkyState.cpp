@@ -4,7 +4,6 @@
 #include "world_state/Location.h"
 #include "astro_bodies/SkyManager.h"
 #include <emscripten/emscripten.h>
-#include "stdio.h"
 
 //
 //Constructor

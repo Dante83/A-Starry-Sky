@@ -3,7 +3,6 @@
 #include "AstronomicalBody.h"
 #include "Moon.h"
 #include <cmath>
-#include "stdio.h"
 
 //
 //Constructor
@@ -22,12 +21,8 @@ void Moon::updatePosition(){
   double a_1 = check4GreaterThan360(119.75 + 131.849 * julianCentury) * DEG_2_RAD;
   double a_2 = check4GreaterThan360(53.09 + 479264.290 * julianCentury) * DEG_2_RAD;
   double a_3 = check4GreaterThan360(313.45 + 481266.484 * julianCentury) * DEG_2_RAD;
-  double one = 1.0;
   double e_parameter = 1.0 - 0.002516 * julianCentury - 0.0000074 * julianCentury * julianCentury;
   double e_parameter_squared = e_parameter * e_parameter;
-  double* onePointer = &one;
-  double* e_parameterPointer = &e_parameter;
-  double* e_parameter_squaredPointer = &e_parameter_squared;
 
   //STILL! For the love of cheese why?! BTW, there are 60 of these terms.
   const double D_coeficients[60] = {0.0, 2.0, 2.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0,
@@ -65,15 +60,6 @@ void Moon::updatePosition(){
   14403.0, -7003.0, 0.0, 10056.0, 6322.0, -9884.0, 5751.0, 0.0, -4950.0, 4130.0,
   0.0, -3958.0, 0.0, 3258.0, 2616.0, -1897.0, -2117.0, 2354.0, 0.0, 0.0, -1423.0,
   -1117.0, -1571.0, -1739.0, 0.0, -4421.0, 0.0, 0.0, 0.0, 0.0, 1165.0, 0.0, 0.0, 8752.0};
-  double* e_coeficients[60] = {onePointer, onePointer, onePointer, onePointer, e_parameterPointer, onePointer,
-  onePointer, e_parameterPointer, onePointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer, onePointer,
-  onePointer, onePointer, onePointer, onePointer, onePointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer,
-  e_parameterPointer, onePointer, onePointer, onePointer, e_parameterPointer, onePointer, e_parameterPointer, onePointer,
-  e_parameter_squaredPointer, e_parameterPointer, e_parameter_squaredPointer, e_parameter_squaredPointer,
-  onePointer, onePointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, e_parameterPointer, e_parameter_squaredPointer,
-  e_parameter_squaredPointer, e_parameterPointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, onePointer,
-  e_parameterPointer, onePointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, e_parameter_squaredPointer,
-  e_parameterPointer, onePointer, onePointer};
   double sum_l = 0.0;
   double sum_r = 0.0;
 
@@ -94,8 +80,17 @@ void Moon::updatePosition(){
   double sunsMeanAnomoly = sun->meanAnomaly;
   for(int i=0; i < 60; ++i){
     sumOfTerms = check4GreaterThan360(D_coeficients[i] * meanElongation + M_coeficients[i] * sunsMeanAnomoly + M_prime_coeficients[i] * meanAnomaly + F_coeficients[i] * argumentOfLatitude) * DEG_2_RAD;
-    sum_l += (*e_coeficients[i]) * l_sum_coeficients[i] * sin(sumOfTerms);
-    sum_r += (*e_coeficients[i]) * r_sum_coeficients[i] * cos(sumOfTerms);
+
+    double e_coefficient = 1.0;
+    if(abs(M_coeficients[i]) == 1.0){
+      e_coefficient = e_parameter;
+    }
+    else if(abs(M_coeficients[i]) == 2.0){
+      e_coefficient = e_parameter_squared;
+    }
+
+    sum_l += e_coefficient * l_sum_coeficients[i] * sin(sumOfTerms);
+    sum_r += e_coefficient * r_sum_coeficients[i] * cos(sumOfTerms);
   }
 
   //For B while we're at it :D. As a side note, there are 60 of these, too.
@@ -125,20 +120,18 @@ void Moon::updatePosition(){
     491.0, -451.0, 439.0, 422.0, 421.0, -366.0, -351.0, 331.0, 315.0, 302.0,
     -283.0, -229.0, 223.0, 223.0, -220.0, -220.0, -185.0,  181.0, -177.0, 176.0,
     166.0, -164.0, 132.0, -119.0, 115.0, 107};
-  double* e_coeficients_2[60] = {onePointer, onePointer, onePointer, onePointer, onePointer, onePointer, onePointer,
-    onePointer, onePointer, onePointer, e_parameterPointer, onePointer, onePointer, e_parameterPointer, e_parameterPointer,
-    e_parameterPointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer, onePointer,
-    e_parameterPointer, onePointer, e_parameterPointer, e_parameterPointer, e_parameterPointer, onePointer,
-    onePointer, onePointer, onePointer, onePointer, onePointer, onePointer, onePointer, e_parameterPointer, onePointer, onePointer,
-    onePointer, onePointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer,
-    e_parameter_squaredPointer, onePointer, e_parameterPointer, e_parameterPointer,
-    e_parameterPointer, e_parameterPointer, e_parameterPointer, onePointer, e_parameterPointer, e_parameterPointer,
-    onePointer, e_parameterPointer, onePointer, onePointer, onePointer, e_parameterPointer, e_parameter_squaredPointer};
 
   double sum_b = 0.0;
   for(int i=0; i < 60; ++i){
-    sumOfTerms = check4GreaterThan360(D_coeficients[i] * meanElongation + M_coeficients[i] * sunsMeanAnomoly + M_prime_coeficients[i] * meanAnomaly + F_coeficients[i] * argumentOfLatitude) * DEG_2_RAD;
-    sum_b += (*e_coeficients_2[i]) * b_sum_coeficients[i] * sin(sumOfTerms);
+    sumOfTerms = check4GreaterThan360(D_coeficients_2[i] * meanElongation + M_coeficients_2[i] * sunsMeanAnomoly + M_prime_coeficients_2[i] * meanAnomaly + F_coeficients_2[i] * argumentOfLatitude) * DEG_2_RAD;
+    double e_coefficient = 1.0;
+    if(abs(M_coeficients_2[i]) == 1.0){
+      e_coefficient = e_parameter;
+    }
+    else if(abs(M_coeficients_2[i]) == 2.0){
+      e_coefficient = e_parameter_squared;
+    }
+    sum_b += e_coefficient * b_sum_coeficients[i] * sin(sumOfTerms);
   }
 
   //Additional terms
@@ -151,9 +144,7 @@ void Moon::updatePosition(){
   double cos_eclipticalLatitude = cos(eclipticalLatitude);
   double sin_eclipticalLongitude = sin(eclipticalLongitude);
   distanceFromEarthInMeters = 385000560.0 + sum_r;
-  printf("Distance From Earth: %f\r\n", distanceFromEarthInMeters);
-  printf("Ecliptical Longitude: %f\r\n", eclipticalLongitude);
-  printf("Eclipitical Latitude: %f\r\n", eclipticalLatitude);
+
   #define MEAN_LUNAR_DISTANCE_FROM_EARTH 384400000.0
   scale = MEAN_LUNAR_DISTANCE_FROM_EARTH / distanceFromEarthInMeters;
   //NOTE: We are using a lunar magnitude of 2.0 for now as
@@ -163,7 +154,6 @@ void Moon::updatePosition(){
 
   //From all of the above, we can get our right ascension and declination
   convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude);
-
   double geocentricElongationOfTheMoon = acos(cos_eclipticalLatitude * cos((sun->longitude * DEG_2_RAD) - eclipticalLongitude));
 
   //Finally,update our moon brightness

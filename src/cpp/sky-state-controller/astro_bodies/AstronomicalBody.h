@@ -7,7 +7,7 @@ public:
   AstronomicalBody(AstroTime* astroTimeRef);
   AstroTime* astroTime;
   Location* location;
-  double* trueObliquityOfEclipticInRads;
+  double trueObliquityOfEclipticInRads;
   double rightAscension;
   double declination;
   double irradianceFromEarth;
