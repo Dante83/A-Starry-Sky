@@ -3,10 +3,9 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //TODO: Replace the sky dome with a plane
   //
   this.skyDirector = skyDirector;
-  this.skyGeometry = new THREE.OctahedronGeometry(5000.0, 5);
+  this.geometry = new THREE.OctahedronGeometry(5000.0, 5);
 
   //Create our material late
-  let lutLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
   this.atmosphereMaterial = new THREE.ShaderMaterial({
     uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms)),
     side: THREE.BackSide,
@@ -18,11 +17,11 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
       skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
-      lutLibrary.scatteringTextureWidth,
-      lutLibrary.scatteringTextureHeight,
-      lutLibrary.scatteringTexturePackingWidth,
-      lutLibrary.scatteringTexturePackingHeight,
-      lutLibrary.atmosphereFunctionsString
+      skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
+      skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
+      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
+      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
+      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString
     )
   });
   this.atmosphereMaterial.uniforms.solarRayleighInscatteringSum.value = lutLibrary.rayleighScatteringSum;
@@ -33,7 +32,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //Populate all of uniform values
 
   //Attach the material to our geometry
-  this.skyMesh = new THREE.Mesh(this.skyGeometry, this.atmosphereMaterial);
+  this.skyMesh = new THREE.Mesh(this.geometry, this.atmosphereMaterial);
 
   //Initialize the position of the sky at the location of the camera
   this.skyMesh.position.set(0.0, 0.0, 0.0);
@@ -57,6 +56,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.tick();
 
     //Add this object to the scene
-    skyDirector.scene.add(this.skyMesh);
+    self.skyDirector.scene.add(this.skyMesh);
   }
 }

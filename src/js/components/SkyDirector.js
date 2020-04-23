@@ -44,11 +44,14 @@ StarrySky.SkyDirector = function(parentComponent){
   //TODO: Come back here and grab the camera. This is important for attaching child objects in our sky
   //that will follow this object around.
   //
-  // this.camera = self.el.sceneEl.camera;
+  this.camera = self.el.sceneEl.camera;
   this.assetManager;
   this.LUTLibraries;
   this.renderers;
   this.interpolator = null;
+
+  //Prepare our LUT libraries
+  this.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(this.assetManager.data, this.renderer, this.scene);
 
   //Set up our web assembly hooks
   let self = this;
@@ -78,6 +81,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
+      self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
 
       self.start();
     }
@@ -235,6 +239,7 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Update all of our renderers
       self.renderers.atmosphereRenderer.firstTick();
+      self.renderers.sunRenderer.firstTick();
     }
     parentComponent.initialized = true;
   }

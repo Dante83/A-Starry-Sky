@@ -12,6 +12,7 @@ window.customElements.define('sky-mie-directional-g', class extends HTMLElement{
 window.customElements.define('sky-number-of-ray-steps', class extends HTMLElement{});
 window.customElements.define('sky-number-of-gathering-steps', class extends HTMLElement{});
 window.customElements.define('sky-ozone-enabled', class extends HTMLElement{});
+window.customElements.define('sky-sun-angular-diameter', class extends HTMLElement{});
 
 StarrySky.DefaultData.skyAtmosphericParameters = {
   solarIntensity: 1367.0,
@@ -21,12 +22,12 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
   solarColor: {
     red: 6.5E-7,
     green: 5.1E-7,
-    bluee: 4.75E-7
+    blue: 4.75E-7
   },
   lunarColor: {
     red: 6.5E-7,
     green: 5.1E-7,
-    bluee: 4.75E-7
+    blue: 4.75E-7
   },
   mieBeta: {
     red: 2E-6,
@@ -36,7 +37,8 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
   mieDirectionalG: 0.8,
   numberOfRaySteps: 30,
   numberOfGatheringSteps: 30,
-  ozoneEnabled: true
+  ozoneEnabled: true,
+  sunAngularDiameter: 0.59
 };
 
 //Parent tag
@@ -67,10 +69,11 @@ class SkyAtmosphericParameters extends HTMLElement {
       let numberOfRayStepsTags = self.getElementsByTagName('sky-number-of-ray-steps');
       let numberOfGatheringStepsTags = self.getElementsByTagName('sky-number-of-gathering-steps');
       let ozoneEnabledTags = self.getElementsByTagName('sky-ozone-enabled');
+      let sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
 
       [solarIntensityTags, lunarMaxIntensityTags, rayleighMolecularDensityTags, airIndexOfRefractionTags,
       solarColorTags, lunarColorTags, mieBetaTags, mieDirectionalGTags, numberOfRayStepsTags,
-      numberOfGatheringStepsTags, ozoneEnabledTags].forEach(function(tags){
+      numberOfGatheringStepsTags, ozoneEnabledTags, sunAngularDiameterTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -100,6 +103,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       this.data.numberOfRaySteps = numberOfRayStepsTags.length > 0 ? parseFloat(numberOfRayStepsTags[0].innerHTML) : this.data.numberOfRaySteps;
       this.data.numberOfGatheringSteps = numberOfGatheringStepsTags.length > 0 ? parseFloat(numberOfGatheringStepsTags[0].innerHTML) : this.data.numberOfGatheringSteps;
       this.data.ozoneEnabled = ozoneEnabledTags.length > 0 ? JSON.parse(ozoneEnabledTags[0].innerHTML.toLowerCase()) === true : this.data.ozoneEnabled;
+      this.data.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFlot(sunAngularDiameterTags[0].innerHTML) : this.data.sunAngularDiameter;
 
       let listOfColorBasedTags = [solarColorTags, lunarColorTags, mieBetaTags];
       let listOfDatas = [this.data.solarColor, this.data.lunarColor, this.data.mieBeta]
@@ -139,6 +143,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       this.data.mieDirectionalG = clampAndWarn(this.data.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
       this.data.numberOfRaySteps = clampAndWarn(this.data.numberOfRaySteps, 2, 1000, '<sky-number-of-ray-steps>');
       this.data.numberOfGatheringSteps = clampAndWarn(this.data.numberOfGatheringSteps, 2, 1000, '<sky-number-of-gathering-steps>');
+      this.data.sunAngularDiameter = clampAndWarn(this.data.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
 
       //
       //TODO: Clamp and warn each of our color systems.

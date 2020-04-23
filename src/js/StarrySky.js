@@ -2,7 +2,9 @@
 StarrySky = {
   DefaultData: {},
   Materials: {
-    Atmosphere: {}
+    Atmosphere: {},
+    Sun: {},
+    Moon: {}
   },
   Renderers: {},
   LUTlibraries: {},
