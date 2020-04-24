@@ -1,6 +1,10 @@
 precision highp float;
 
-varying vec3 vWorldPosition;
+#if(!$isSunPass && !$isMoonPass)
+  varying vec3 vWorldPosition;
+#else
+  const vec3 vWorldPosition = vec3(1.0, 0.2, 0.0);
+#endif
 
 uniform vec3 sunPosition;
 uniform float sunHorizonFade;
@@ -12,10 +16,9 @@ const float piOver2 = 1.5707963267948966192313;
 const float pi = 3.141592653589793238462;
 
 #if($isSunPass)
-  $sun_injected_uniforms_and_methods
-#else if($isMoonPass)
-  $sun_injected_uniforms_and_methods
-  $moon_injected_uniforms_and_methods
+  uniform float sunAngularDiameterCos;
+#elif($isMoonPass)
+  //DO NOTHING
 #endif
 
 $atmosphericFunctions

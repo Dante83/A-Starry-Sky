@@ -40,18 +40,12 @@ StarrySky.SkyDirector = function(parentComponent){
   this.parentComponent = parentComponent;
   this.renderer = parentComponent.el.sceneEl.renderer;
   this.scene = parentComponent.el.sceneEl.object3D;
-  //
-  //TODO: Come back here and grab the camera. This is important for attaching child objects in our sky
-  //that will follow this object around.
-  //
-  this.camera = self.el.sceneEl.camera;
   this.assetManager;
   this.LUTLibraries;
   this.renderers;
   this.interpolator = null;
-
-  //Prepare our LUT libraries
-  this.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(this.assetManager.data, this.renderer, this.scene);
+  this.camera;
+  this.atmosphereLUTLibrary;
 
   //Set up our web assembly hooks
   let self = this;
@@ -72,6 +66,9 @@ StarrySky.SkyDirector = function(parentComponent){
         transferrableInitialStateBuffer: transferrableInitialStateBuffer,
         transferrableFinalStateBuffer: self.transferrableFinalStateBuffer
       }, [transferrableInitialStateBuffer, self.transferrableFinalStateBuffer]);
+
+      //Initialize our LUTs
+      self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
     }
   }
 
@@ -81,7 +78,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
-      self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
+      self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self, self.renderer, self.scene);
 
       self.start();
     }
@@ -232,6 +229,9 @@ StarrySky.SkyDirector = function(parentComponent){
   this.renderers = {};
 
   this.start = function(){
+    //Attach our camera, which should be loaded by now.
+    self.camera = self.parentComponent.el.sceneEl.camera;
+
     //Update our tick and tock functions
     parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine

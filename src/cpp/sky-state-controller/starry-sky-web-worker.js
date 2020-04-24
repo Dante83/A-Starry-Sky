@@ -104,10 +104,6 @@ function initializeSkyState(self){
     let finalStateBuffer = initialPostObject.transferrableFinalStateBuffer;
     updateSkyState(finalStateBuffer);
 
-    console.log("Sky state");
-    console.log(initialStateFloat32Array);
-    console.log(skyState.astroValuesFloat32Array);
-
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
     self.postMessage({

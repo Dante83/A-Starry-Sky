@@ -1,10 +1,10 @@
-StarrySky.Renderers.SunRenderer = function(skyDirector, renderer, scene){
-  this.renderer = renderer;
+StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.skyDirector = skyDirector;
   let assetManager = skyDirector.assetManager;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const sunDiameterInRadians = skyDirector.assetManager.sunAngularDiameter * DEG_2_RAD;
+  const sunDiameterInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD;
+  console.log(skyDirector.assetManager.data);
   let diameterOfSunPlane = 2.0 * RADIUS_OF_SKY * Math.sin(sunDiameterInRadians);
   this.geometry = new THREE.PlaneGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
   this.directLight;
@@ -14,37 +14,39 @@ StarrySky.Renderers.SunRenderer = function(skyDirector, renderer, scene){
   //we can use this to render to a square compute shader for the color pass
   //a clamped pass to use for our bloom, several bloom passes and a combination
   //pass to combine these results with our original pass.
-  let sunRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
+  this.sunRenderer = new THREE.GPUComputationRenderer(512, 512, skyDirector.renderer);
   let materials = StarrySky.Materials.Sun;
   let baseSunPartial = materials.baseSunPartial.fragmentShader(sunDiameterInRadians);
 
   //Set up our transmittance texture
-  this.baseSunTexture = transmittanceRenderer.createTexture();
-  this.baseSunVar = transmittanceRenderer.addVariable('baseSunTexture',
+  this.baseSunTexture = this.sunRenderer.createTexture();
+  this.baseSunVar = this.sunRenderer.addVariable('baseSunTexture',
     StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
       skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
       skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
-      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString
+      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
+      baseSunPartial,
+      false,
     ),
     this.baseSunTexture
   );
-  sunRenderer.setVariableDependencies(this.baseSunVar, []);
-  this.baseSunVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.uniforms));
+  this.sunRenderer.setVariableDependencies(this.baseSunVar, []);
+  this.baseSunVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true)));
   this.baseSunVar.minFilter = THREE.LinearFilter;
   this.baseSunVar.magFilter = THREE.LinearFilter;
 
   //Check for any errors in initialization
-  let error1 = sunRenderer.init();
+  let error1 = this.sunRenderer.init();
   if(error1 !== null){
     console.error(`Sun Renderer: ${error1}`);
   }
 
   //Create our base pass
-  sunRenderer.compute();
-  let basePass = sunRenderer.getCurrentRenderTarget(this.baseSunVar).texture;
+  this.sunRenderer.compute();
+  let basePass = this.sunRenderer.getCurrentRenderTarget(this.baseSunVar).texture;
 
   //Create our material late
   this.combinationPassMaterial = new THREE.ShaderMaterial({
@@ -62,17 +64,17 @@ StarrySky.Renderers.SunRenderer = function(skyDirector, renderer, scene){
   this.combinationPassMaterial.uniforms.basePass.needsUpdate = true;
 
   //Attach the material to our geometry
-  this.skyMesh = new THREE.Mesh(this.geometry, this.atmosphereMaterial);
+  this.sunMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
 
   let self = this;
   this.tick = function(){
     //Update the position of our mesh
     let sunPosition = skyDirector.skyState.sun.position;
-    self.geometry.position.set(sunPosition.x, sunPosition.y, sunPosition.z).multiplyScalar(this.sunRadiusFromCamera);
     let cameraPosition = skyDirector.camera.position;
-    self.geometry.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
-    self.geometry.updateMatrix();
-    self.geometry.updateMatrixWorld();
+    self.sunMesh.position.set(sunPosition.x, sunPosition.y, sunPosition.z).multiplyScalar(RADIUS_OF_SKY).add(cameraPosition);
+    self.sunMesh.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
+    self.sunMesh.updateMatrix();
+    self.sunMesh.updateMatrixWorld();
 
     //Update our lights
 
@@ -84,8 +86,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector, renderer, scene){
     self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
 
     //Run our float shaders shaders
-    sunRenderer.compute();
-    let basePass = sunRenderer.getCurrentRenderTarget(this.baseSunVar).texture;
+    self.sunRenderer.compute();
+    let basePass = self.sunRenderer.getCurrentRenderTarget(this.baseSunVar).texture;
 
     //Pass this information into our final texture for display
     this.combinationPassMaterial.uniforms.basePass.value = basePass;
@@ -101,6 +103,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector, renderer, scene){
     self.tick();
 
     //Add this object to the scene
-    self.skyDirector.scene.add(this.geometry);
+    self.skyDirector.scene.add(self.sunMesh);
   }
 }

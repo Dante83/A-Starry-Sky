@@ -6,7 +6,7 @@ StarrySky.Materials.Sun.combinationPass = {
     basePass: {type: 't', 'value': null},
   },
   vertexShader: [
-    {vertex_shader}
+    {vertex_glsl}
   ].join('\n'),
   fragmentShader: [
     {fragment_glsl}

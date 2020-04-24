@@ -32,11 +32,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );',
     '}',
   ].join('\n'),
-  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, isSunShader = false, isMoonShader = false, sunAndMoonCode = {}){
+  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false){
     let originalGLSL = [
     'precision highp float;',
 
-    'varying vec3 vWorldPosition;',
+    '#if(!$isSunPass && !$isMoonPass)',
+      'varying vec3 vWorldPosition;',
+    '#else',
+      'const vec3 vWorldPosition = vec3(1.0, 0.2, 0.0);',
+    '#endif',
 
     'uniform vec3 sunPosition;',
     'uniform float sunHorizonFade;',
@@ -48,10 +52,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'const float pi = 3.141592653589793238462;',
 
     '#if($isSunPass)',
-      '$sun_injected_uniforms_and_methods',
-    '#else if($isMoonPass)',
-      '$sun_injected_uniforms_and_methods',
-      '$moon_injected_uniforms_and_methods',
+      'uniform float sunAngularDiameterCos;',
+    '#elif($isMoonPass)',
+      '//DO NOTHING',
     '#endif',
 
     '$atmosphericFunctions',
@@ -139,27 +142,23 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
 
       //Additional injected code for sun and moon
-      updatedGLSL = updatedGLSL.replace(/\$additional_passes/g, sunAndMoonShader);
-      updatedGLSL = updatedGLSL.replace(/\$injected_uniforms_and_methods/g, injectedUniformsAndMethods);
-
-      if(isSunShader){
-        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, true);
-        updatedGLSL = updatedGLSL.replace(/\$sun_injected_uniforms_and_methods/g, sunAndMoonCode.sunUniformsAndMethods);
-        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, sunAndMoonCode.sunFragmentCode);
+      if(moonCode !== false){
+        updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, '1');
+        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '1');
+        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, sunCode);
+        updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, moonCode);
+      }
+      else if(sunCode !== false){
+        updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, '');
+        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '1');
+        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, sunCode);
       }
       else{
-        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, false);
-      }
-
-      if(isMoonShader){
-        updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, true);
-        updatedGLSL = updatedGLSL.replace(/\$sun_injected_uniforms_and_methods/g, sunAndMoonCode.sunUniformsAndMethods);
-        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, sunAndMoonCode.sunFragmentCode);
-        updatedGLSL = updatedGLSL.replace(/\$moon_injected_uniforms_and_methods/g, sunAndMoonCode.moonUniformsAndMethods);
-        updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, sunAndMoonCode.moonFragmentCode);
-      }
-      else{
-        updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, false);
+        updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, '');
+        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, '');
       }
 
       updatedLines.push(updatedGLSL);

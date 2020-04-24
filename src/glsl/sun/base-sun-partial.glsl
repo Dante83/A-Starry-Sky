@@ -14,8 +14,7 @@ float sundisk = smoothstep($sunAngularDiameter, $sunAngularDiameter+0.00002, pix
 float limbDarkening;
 
 //Apply transmittance to our sun disk direct lighting
-vec4 sunDiskColor = vec3(1.0, sundisk);
-sunDiskColor = sunDiskColor * transmittanceFade;
+vec3 sunPassColor = vec3(sundisk) * transmittanceFade;
 
 //For now, let us just use the intensity of the sun disk to set it's transparency
 float sunPassTransparency = sundisk;

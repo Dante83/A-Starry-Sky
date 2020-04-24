@@ -7,7 +7,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
 
   //Create our material late
   this.atmosphereMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms)),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms())),
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
     transparent: false,
@@ -24,9 +24,9 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString
     )
   });
-  this.atmosphereMaterial.uniforms.solarRayleighInscatteringSum.value = lutLibrary.rayleighScatteringSum;
+  this.atmosphereMaterial.uniforms.solarRayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.atmosphereMaterial.uniforms.solarRayleighInscatteringSum.needsUpdate = true;
-  this.atmosphereMaterial.uniforms.solarMieInscatteringSum.value = lutLibrary.mieScatteringSum;
+  this.atmosphereMaterial.uniforms.solarMieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.atmosphereMaterial.uniforms.solarMieInscatteringSum.needsUpdate = true;
 
   //Populate all of uniform values
@@ -34,11 +34,13 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   //Attach the material to our geometry
   this.skyMesh = new THREE.Mesh(this.geometry, this.atmosphereMaterial);
 
-  //Initialize the position of the sky at the location of the camera
-  this.skyMesh.position.set(0.0, 0.0, 0.0);
-
   let self = this;
   this.tick = function(){
+    let cameraPosition = self.skyDirector.camera.position;
+    self.skyMesh.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
+    self.skyMesh.updateMatrix();
+    self.skyMesh.updateMatrixWorld();
+
     //Update the uniforms so that we can see where we are on this sky.
     self.atmosphereMaterial.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
     self.atmosphereMaterial.uniforms.sunHorizonFade.needsUpdate = true;
@@ -56,6 +58,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.tick();
 
     //Add this object to the scene
-    self.skyDirector.scene.add(this.skyMesh);
+    self.skyDirector.scene.add(self.skyMesh);
   }
 }
