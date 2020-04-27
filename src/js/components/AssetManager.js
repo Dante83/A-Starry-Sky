@@ -13,8 +13,8 @@ StarrySky.AssetManager = function(skyDirector){
   tagLists.push(skyLocationTags);
   let skyTimeTags = starrySkyComponent.el.getElementsByTagName('sky-time');
   tagLists.push(skyTimeTags);
-  let skyParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
-  tagLists.push(skyParametersTags);
+  let skyAtmosphericParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
+  tagLists.push(skyAtmosphericParametersTags);
   let skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
   tagLists.push(skyAssetsTags);
   tagLists.forEach(function(tags){
@@ -90,7 +90,7 @@ StarrySky.AssetManager = function(skyDirector){
     this.hasSkyTimeTag = true;
     activeTags.push(this.skyTimeTag);
   }
-  if(skyParametersTags.length === 1){
+  if(skyAtmosphericParametersTags.length === 1){
     this.skyDataSetsLength += 1;
     this.skyAtmosphericParametersTag = skyAtmosphericParametersTags[0];
     this.hasSkyAtmosphericParametersTag = true;

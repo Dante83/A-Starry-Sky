@@ -15,5 +15,8 @@ StarrySky.Materials.Sun.baseSunPartial = {
     }
 
     return updatedLines.join('\n');
-  }
+  },
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
 }

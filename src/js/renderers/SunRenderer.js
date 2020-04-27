@@ -3,9 +3,13 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   let assetManager = skyDirector.assetManager;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const sunDiameterInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD;
-  console.log(skyDirector.assetManager.data);
-  let diameterOfSunPlane = 2.0 * RADIUS_OF_SKY * Math.sin(sunDiameterInRadians);
+  //NOTE: We might want to pull this out into our interpolator as these rotational matrix
+  //multiplications might be expensive. Instead, we can probably just calculate the numbers
+  //in Web Assembly for better performance.
+  const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+  const sunAngularDiameterInRadians = 2.0 * sunAngularRadiusInRadians;
+  const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(sunAngularRadiusInRadians);
+  const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
   this.geometry = new THREE.PlaneGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
   this.directLight;
 
@@ -16,7 +20,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   //pass to combine these results with our original pass.
   this.sunRenderer = new THREE.GPUComputationRenderer(512, 512, skyDirector.renderer);
   let materials = StarrySky.Materials.Sun;
-  let baseSunPartial = materials.baseSunPartial.fragmentShader(sunDiameterInRadians);
+  let baseSunPartial = materials.baseSunPartial.fragmentShader(sunAngularRadiusInRadians);
 
   //Set up our transmittance texture
   this.baseSunTexture = this.sunRenderer.createTexture();
@@ -34,7 +38,16 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     this.baseSunTexture
   );
   this.sunRenderer.setVariableDependencies(this.baseSunVar, []);
+  this.baseSunVar.material.vertexShader = materials.baseSunPartial.vertexShader;
   this.baseSunVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true)));
+  this.baseSunVar.material.uniforms.scale.value = radiusOfSunPlane;
+  this.baseSunVar.material.uniforms.scale.needsUpdate = true;
+  this.baseSunVar.material.uniforms.solarRayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
+  this.baseSunVar.material.uniforms.solarRayleighInscatteringSum.needsUpdate = true;
+  this.baseSunVar.material.uniforms.solarMieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
+  this.baseSunVar.material.uniforms.solarMieInscatteringSum.needsUpdate = true;
+  this.baseSunVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
+  this.baseSunVar.material.uniforms.transmittance.needsUpdate = true;
   this.baseSunVar.minFilter = THREE.LinearFilter;
   this.baseSunVar.magFilter = THREE.LinearFilter;
 
@@ -44,14 +57,10 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     console.error(`Sun Renderer: ${error1}`);
   }
 
-  //Create our base pass
-  this.sunRenderer.compute();
-  let basePass = this.sunRenderer.getCurrentRenderTarget(this.baseSunVar).texture;
-
   //Create our material late
   this.combinationPassMaterial = new THREE.ShaderMaterial({
     uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Sun.combinationPass.uniforms)),
-    side: THREE.BackSide,
+    side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
     lights: false,
@@ -60,18 +69,21 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     vertexShader: StarrySky.Materials.Sun.combinationPass.vertexShader,
     fragmentShader: StarrySky.Materials.Sun.combinationPass.fragmentShader
   });
-  this.combinationPassMaterial.uniforms.basePass.value = basePass;
-  this.combinationPassMaterial.uniforms.basePass.needsUpdate = true;
 
   //Attach the material to our geometry
   this.sunMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
+  this.baseSunVar.material.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
 
   let self = this;
   this.tick = function(){
-    //Update the position of our mesh
     let sunPosition = skyDirector.skyState.sun.position;
+    let altitude = (Math.PI * 0.5) - Math.acos(sunPosition.y);
+    let azimuth = Math.atan2(sunPosition.z, sunPosition.x) + (Math.PI);
+    let sphericalPosition = [Math.sin(azimuth) * Math.cos(altitude), Math.sin(altitude), Math.cos(azimuth) * Math.cos(altitude)];
+
+    //Update the position of our mesh
     let cameraPosition = skyDirector.camera.position;
-    self.sunMesh.position.set(sunPosition.x, sunPosition.y, sunPosition.z).multiplyScalar(RADIUS_OF_SKY).add(cameraPosition);
+    self.sunMesh.position.set(sphericalPosition[0], sphericalPosition[1], sphericalPosition[2]).multiplyScalar(RADIUS_OF_SKY).add(cameraPosition);
     self.sunMesh.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
     self.sunMesh.updateMatrix();
     self.sunMesh.updateMatrixWorld();
@@ -79,6 +91,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //Update our lights
 
     //Update our shader material
+    self.baseSunVar.material.uniforms.worldMatrix.needsUpdate = true;
     self.baseSunVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
     self.baseSunVar.material.uniforms.sunHorizonFade.needsUpdate = true;
     self.baseSunVar.material.uniforms.toneMappingExposure.value = 0.8;

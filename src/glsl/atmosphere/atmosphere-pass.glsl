@@ -1,10 +1,6 @@
 precision highp float;
 
-#if(!$isSunPass && !$isMoonPass)
-  varying vec3 vWorldPosition;
-#else
-  const vec3 vWorldPosition = vec3(1.0, 0.2, 0.0);
-#endif
+varying vec3 vWorldPosition;
 
 uniform vec3 sunPosition;
 uniform float sunHorizonFade;
@@ -69,7 +65,9 @@ void main(){
   //Sun and Moon layers
   #if($isSunPass)
     $draw_sun_pass
-    gl_FragColor = vec4(solarAtmosphericPass + sunPassColor, sunPassTransparency);
+    //gl_FragColor = vec4(solarAtmosphericPass + sunPassColor, sunPassTransparency);
+
+    gl_FragColor = vec4(solarAtmosphericPass, 1.0);
   #elif($isMoonPass)
     $draw_sun_pass
     $draw_moon_pass

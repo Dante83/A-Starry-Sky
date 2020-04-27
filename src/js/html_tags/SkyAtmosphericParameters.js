@@ -38,7 +38,7 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
   numberOfRaySteps: 30,
   numberOfGatheringSteps: 30,
   ozoneEnabled: true,
-  sunAngularDiameter: 0.59
+  sunAngularDiameter: 3.38
 };
 
 //Parent tag
@@ -95,18 +95,18 @@ class SkyAtmosphericParameters extends HTMLElement {
       });
 
       //Set the params to appropriate values or default
-      this.data.solarIntensity = solarIntensityTags.length > 0 ? parseFloat(solarIntensityTags[0].innerHTML) : this.data.solarIntensity;
-      this.data.lunarMaxIntensity = lunarMaxIntensityTags.length > 0 ? parseFloat(lunarMaxIntensityTags[0].innerHTML) : this.data.lunarMaxIntensity;
-      this.data.rayleighMolecularDensity = rayleighMolecularDensityTags.length > 0 ? parseFloat(rayleighMolecularDensityTags[0].innerHTML) : this.data.rayleighMolecularDensity;
-      this.data.indexOfRefractionofAir = airIndexOfRefractionTags.length > 0 ? parseFloat(airIndexOfRefractionTags[0].innerHTML) : this.data.indexOfRefractionofAir;
-      this.data.mieDirectionalG = mieDirectionalGTags.length > 0 ? parseFloat(mieDirectionalGTags[0].innerHTML) : this.data.mieDirectionalG;
-      this.data.numberOfRaySteps = numberOfRayStepsTags.length > 0 ? parseFloat(numberOfRayStepsTags[0].innerHTML) : this.data.numberOfRaySteps;
-      this.data.numberOfGatheringSteps = numberOfGatheringStepsTags.length > 0 ? parseFloat(numberOfGatheringStepsTags[0].innerHTML) : this.data.numberOfGatheringSteps;
-      this.data.ozoneEnabled = ozoneEnabledTags.length > 0 ? JSON.parse(ozoneEnabledTags[0].innerHTML.toLowerCase()) === true : this.data.ozoneEnabled;
-      this.data.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFlot(sunAngularDiameterTags[0].innerHTML) : this.data.sunAngularDiameter;
+      self.data.solarIntensity = solarIntensityTags.length > 0 ? parseFloat(solarIntensityTags[0].innerHTML) : self.data.solarIntensity;
+      self.data.lunarMaxIntensity = lunarMaxIntensityTags.length > 0 ? parseFloat(lunarMaxIntensityTags[0].innerHTML) : self.data.lunarMaxIntensity;
+      self.data.rayleighMolecularDensity = rayleighMolecularDensityTags.length > 0 ? parseFloat(rayleighMolecularDensityTags[0].innerHTML) : self.data.rayleighMolecularDensity;
+      self.data.indexOfRefractionofAir = airIndexOfRefractionTags.length > 0 ? parseFloat(airIndexOfRefractionTags[0].innerHTML) : self.data.indexOfRefractionofAir;
+      self.data.mieDirectionalG = mieDirectionalGTags.length > 0 ? parseFloat(mieDirectionalGTags[0].innerHTML) : self.data.mieDirectionalG;
+      self.data.numberOfRaySteps = numberOfRayStepsTags.length > 0 ? parseFloat(numberOfRayStepsTags[0].innerHTML) : self.data.numberOfRaySteps;
+      self.data.numberOfGatheringSteps = numberOfGatheringStepsTags.length > 0 ? parseFloat(numberOfGatheringStepsTags[0].innerHTML) : self.data.numberOfGatheringSteps;
+      self.data.ozoneEnabled = ozoneEnabledTags.length > 0 ? JSON.parse(ozoneEnabledTags[0].innerHTML.toLowerCase()) === true : self.data.ozoneEnabled;
+      self.data.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFloat(sunAngularDiameterTags[0].innerHTML) : self.data.sunAngularDiameter;
 
       let listOfColorBasedTags = [solarColorTags, lunarColorTags, mieBetaTags];
-      let listOfDatas = [this.data.solarColor, this.data.lunarColor, this.data.mieBeta]
+      let listOfDatas = [self.data.solarColor, self.data.lunarColor, self.data.mieBeta]
 
       for(let i = 0; i < listOfColorBasedTags.length; ++i){
         let colorBasedTags = listOfColorBasedTags[i];
@@ -136,14 +136,14 @@ class SkyAtmosphericParameters extends HTMLElement {
         return result;
       };
 
-      this.data.solarIntensity = clampAndWarn(this.data.solarIntensity, 0.0, 10000.0, '<sky-solar-intensity>');
-      this.data.lunarMaxIntensity = clampAndWarn(this.data.solarIntensity, 0.0, 10000.0, '<sky-lunar-max-intensity>');
-      this.data.rayleighMolecularDensity = clampAndWarn(this.data.rayleighMolecularDensity, 2.545E21, 2.545E34, '<sky-rayleigh-molecular-density>');
-      this.data.indexOfRefractionofAir = clampAndWarn(this.data.indexOfRefractionofAir, 1.0, 2.5, '<sky-air-index-of-refraction>');
-      this.data.mieDirectionalG = clampAndWarn(this.data.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
-      this.data.numberOfRaySteps = clampAndWarn(this.data.numberOfRaySteps, 2, 1000, '<sky-number-of-ray-steps>');
-      this.data.numberOfGatheringSteps = clampAndWarn(this.data.numberOfGatheringSteps, 2, 1000, '<sky-number-of-gathering-steps>');
-      this.data.sunAngularDiameter = clampAndWarn(this.data.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
+      self.data.solarIntensity = clampAndWarn(self.data.solarIntensity, 0.0, 10000.0, '<sky-solar-intensity>');
+      self.data.lunarMaxIntensity = clampAndWarn(self.data.solarIntensity, 0.0, 10000.0, '<sky-lunar-max-intensity>');
+      self.data.rayleighMolecularDensity = clampAndWarn(self.data.rayleighMolecularDensity, 2.545E21, 2.545E34, '<sky-rayleigh-molecular-density>');
+      self.data.indexOfRefractionofAir = clampAndWarn(self.data.indexOfRefractionofAir, 1.0, 2.5, '<sky-air-index-of-refraction>');
+      self.data.mieDirectionalG = clampAndWarn(self.data.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
+      self.data.numberOfRaySteps = clampAndWarn(self.data.numberOfRaySteps, 2, 1000, '<sky-number-of-ray-steps>');
+      self.data.numberOfGatheringSteps = clampAndWarn(self.data.numberOfGatheringSteps, 2, 1000, '<sky-number-of-gathering-steps>');
+      self.data.sunAngularDiameter = clampAndWarn(self.data.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
 
       //
       //TODO: Clamp and warn each of our color systems.
