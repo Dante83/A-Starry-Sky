@@ -51,6 +51,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     '#if($isSunPass)',
       'uniform float sunAngularDiameterCos;',
+      'varying vec2 vUv;',
+      'const float sunIntensity = 20.0;',
+
+      '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
+      'const float ac1 = 0.46787619;',
+      'const float ac2 = 0.67104811;',
+      'const float ac3 = -0.06948355;',
     '#elif($isMoonPass)',
       '//DO NOTHING',
     '#endif',
@@ -102,10 +109,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
+        'vec3 combinedAtmosphericPass = solarAtmosphericPass;',
         '$draw_sun_pass',
-        '//gl_FragColor = vec4(solarAtmosphericPass + sunPassColor, sunPassTransparency);',
-
-        'gl_FragColor = vec4(solarAtmosphericPass, 1.0);',
+        'gl_FragColor = vec4(sunPassColor, sunPassTransparency);',
       '#elif($isMoonPass)',
         '$draw_sun_pass',
         '$draw_moon_pass',
@@ -114,7 +120,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'vec3 combinedAtmosphericPass = solarAtmosphericPass;',
 
         '//Color Adjustment Pass',
-        'vec3 toneMappedColor = OptimizedCineonToneMapping(combinedAtmosphericPass);',
+        'vec3 toneMappedColor = ACESFilmicToneMapping(combinedAtmosphericPass);',
 
         '//Triangular Blue Noise Adjustment Pass',
 

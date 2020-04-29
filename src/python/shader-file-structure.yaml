@@ -37,8 +37,21 @@ groups:
         vertex: 'base-sun-vertex.glsl'
         template: 'base-sun-partial-template.txt'
         material: 'base-sun-partial.js'
+  -
+    base_glsl_dir: '../glsl/postprocessing'
+    base_js_dir: '../js/materials/postprocessing'
+    shaders:
       -
         fragment: 'combination-pass.glsl'
         vertex: 'combination-pass-vertex.glsl'
         template: 'combination-pass-template.txt'
         material: 'combination-pass.js'
+      -
+        fragment: 'high-pass-filter.glsl'
+        vertex: 'high-pass-filter.glsl'
+        template: 'high-pass-filter-template.txt'
+        material: 'high-pass-filter.js'
+      -
+        fragment: 'seperable-blur-filter.glsl'
+        template: 'seperable-blur-filter-template.txt'
+        material: 'seperable-blur-filter.js'

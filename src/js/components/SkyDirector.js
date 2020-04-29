@@ -78,6 +78,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
+      self.renderers.bloomRenderer = new StarrySky.Renderers.BloomRenderer(self, 'shared', 0.85);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self, self.renderer, self.scene);
 
       self.start();

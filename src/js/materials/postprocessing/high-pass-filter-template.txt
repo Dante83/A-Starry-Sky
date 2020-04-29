@@ -1,13 +1,11 @@
 //This helps
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Sun.combinationPass = {
+StarrySky.Materials.Postprocessing.highPassFilter = {
   uniforms: {
-    basePass: {type: 't', 'value': null},
+    sourceTexture: {type: 't', 'value': null},
+    luminosityThreshold: {type: 'f', 'value': null},
   },
-  vertexShader: [
-    {vertex_glsl}
-  ].join('\n'),
   fragmentShader: [
     {fragment_glsl}
   ].join('\n')

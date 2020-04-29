@@ -11,6 +11,11 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     return false;
   }
 
+  if(!renderer.extensions.get("WEBGL_color_buffer_float")){
+    console.error("No float WEBGL color buffers allowed.");
+    return false;
+  }
+
   //
   //NOTE: For now, we will simply run through our sun lut to see it makes the
   //atmosphere correctly. But eventuallly, we will fill up the above LUT collection

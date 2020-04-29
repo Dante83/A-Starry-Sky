@@ -10,7 +10,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   const sunAngularDiameterInRadians = 2.0 * sunAngularRadiusInRadians;
   const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(sunAngularRadiusInRadians);
   const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
-  this.geometry = new THREE.PlaneGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
+  this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
   this.directLight;
 
   //Unlike the regular sky, we run the sun as a multi-pass shader
@@ -71,14 +71,32 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   });
 
   //Attach the material to our geometry
+
+  self.combinationPassMaterial.uniforms.bloomRadius.value = 5.0;
+  self.combinationPassMaterial.uniforms.bloomRadius.needsUpdate = true;
   this.sunMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
   this.baseSunVar.material.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
 
   let self = this;
+  this.setBloomStrength = function(bloomStrength){
+    self.combinationPassMaterial.uniforms.bloomStrength.value = bloomStrength;
+    self.combinationPassMaterial.uniforms.bloomStrength.needsUpdate = true;
+  }
+
+  this.setBloomRadius = function(bloomRadius){
+    self.combinationPassMaterial.uniforms.bloomRadius.value = bloomRadius;
+    self.combinationPassMaterial.uniforms.bloomRadius.needsUpdate = true;
+  }
+
+  //And update our object with our initial values
+  this.setBloomStrength(1.0);
+  this.setBloomRadius(5.0);
+
   this.tick = function(){
     let sunPosition = skyDirector.skyState.sun.position;
     let altitude = (Math.PI * 0.5) - Math.acos(sunPosition.y);
     let azimuth = Math.atan2(sunPosition.z, sunPosition.x) + (Math.PI);
+    //Don't run if our sun is not visible
     let sphericalPosition = [Math.sin(azimuth) * Math.cos(altitude), Math.sin(altitude), Math.cos(azimuth) * Math.cos(altitude)];
 
     //Update the position of our mesh
@@ -100,11 +118,24 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
     //Run our float shaders shaders
     self.sunRenderer.compute();
-    let basePass = self.sunRenderer.getCurrentRenderTarget(this.baseSunVar).texture;
 
-    //Pass this information into our final texture for display
-    this.combinationPassMaterial.uniforms.basePass.value = basePass;
-    this.combinationPassMaterial.uniforms.basePass.needsUpdate = true;
+    //Drive our bloom shader with our sun disk
+    let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
+    let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
+
+    //Update our final texture that is displayed
+    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
+    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
+    self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
+    self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
+    self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
+    self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
+    self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
+    self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
+    self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
+    self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
+    self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
+    self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
   }
 
   //Upon completion, this method self destructs

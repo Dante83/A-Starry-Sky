@@ -4,7 +4,8 @@ StarrySky = {
   Materials: {
     Atmosphere: {},
     Sun: {},
-    Moon: {}
+    Moon: {},
+    Postprocessing: {}
   },
   Renderers: {},
   LUTlibraries: {},
