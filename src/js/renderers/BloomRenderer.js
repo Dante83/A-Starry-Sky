@@ -5,8 +5,6 @@
 //blooming glow effects. GLOW ALL TEH THINGS!
 //Note, bloom radius is applied at the end, when combining our bloom with the original image
 StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold){
-  this.strength = strength;
-  this.radius = radius;
   this.threshold = threshold;
   this.renderer = skyDirector.renderer
   this.seperableBlurHorizontalRenderers = [];
@@ -19,21 +17,25 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
   const blurDirectionX = new THREE.Vector2(1.0, 0.0);
   const blurDirectionY = new THREE.Vector2(0.0, 1.0);
   const textureSize = 512;
+  const mipSizes = [265, 128, 64, 32, 16];
+  const kernelSizeArray = [3, 5, 7, 9, 11];
 
   this.highPassRenderer = new THREE.GPUComputationRenderer(textureSize, textureSize, this.renderer);
 
   //Set up our transmittance texture
   this.highPassFilterTexture = this.highPassRenderer.createTexture();
   this.highPassFilterVar = this.highPassRenderer.addVariable(`${targetName}.highPassFilter`,
-    materials.Postprocessing.highPassFilter.fragmentShader,
+    materials.highPassFilter.fragmentShader,
     this.highPassFilterTexture
   );
   this.highPassRenderer.setVariableDependencies(this.highPassFilterVar, []);
-  this.highPassFilterVar.material.uniforms = JSON.parse(JSON.stringify(materials.Postprocessing.uniforms));
+  this.highPassFilterVar.material.uniforms = JSON.parse(JSON.stringify(materials.highPassFilter.uniforms));
   this.highPassFilterVar.material.uniforms.luminosityThreshold.value = this.threshold;
   this.highPassFilterVar.material.uniforms.luminosityThreshold.needsUpdate = true;
   this.highPassFilterVar.minFilter = THREE.LinearFilter;
   this.highPassFilterVar.magFilter = THREE.LinearFilter;
+  this.highPassFilterVar.wrapS = THREE.ClampToEdgeWrapping;
+  this.highPassFilterVar.wrapT = THREE.ClampToEdgeWrapping;
 
   //Check for any errors in initialization
   let error1 = this.highPassRenderer.init();
@@ -41,39 +43,44 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     console.error(`High Pass Renderer: ${error1}`);
   }
 
-  let mipSize = textureSize * 0.5;
   let kernalRadius = 3;
   for(let i = 0; i < 5; ++i){
+    let mipSize = mipSizes[i];
+    let kernalSize = kernelSizeArray[i];
     this.seperableBlurHorizontalRenderers.push(new THREE.GPUComputationRenderer(mipSize, mipSize, this.renderer));
-
     this.seperableBlurHorizontalTextures.push(this.seperableBlurHorizontalRenderers[i].createTexture());
     this.seperableBlurHorizontalVars.push(this.seperableBlurHorizontalRenderers[i].addVariable(`${targetName}.seperableHorizontalBlur.${i}`,
-      materials.Postprocessing.highPassFilter.fragmentShader(kernalRadius, mipSize),
+      materials.seperableBlurFilter.fragmentShader(kernalSize, mipSize),
       this.seperableBlurHorizontalTextures[i]
     ));
     this.seperableBlurHorizontalRenderers[i].setVariableDependencies(this.seperableBlurHorizontalVars[i], []);
-    this.seperableBlurHorizontalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.Postprocessing.uniforms));
+    this.seperableBlurHorizontalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.seperableBlurFilter.uniforms));
     this.seperableBlurHorizontalVars[i].material.uniforms.direction.value = blurDirectionX;
     this.seperableBlurHorizontalVars[i].material.uniforms.direction.needsUpdate = true;
     this.seperableBlurHorizontalVars[i].minFilter = THREE.LinearFilter;
     this.seperableBlurHorizontalVars[i].magFilter = THREE.LinearFilter;
+    this.seperableBlurHorizontalVars[i].wrapS = THREE.ClampToEdgeWrapping;
+    this.seperableBlurHorizontalVars[i].wrapT = THREE.ClampToEdgeWrapping;
 
     let error2 = this.seperableBlurHorizontalRenderers[i].init();
     if(error2 !== null){
       console.error(`Blur Horizontal Renderer ${i}: ${error2}`);
     }
 
+    this.seperableBlurVerticalRenderers.push(new THREE.GPUComputationRenderer(mipSize, mipSize, this.renderer));
     this.seperableBlurVerticalTextures.push(this.seperableBlurVerticalRenderers[i].createTexture());
     this.seperableBlurVerticalVars.push(this.seperableBlurVerticalRenderers[i].addVariable(`${targetName}.seperableVerticalBlur.${i}`,
-      materials.Postprocessing.highPassFilter.fragmentShader(kernalRadius, mipSize),
+      materials.seperableBlurFilter.fragmentShader(kernalSize, mipSize),
       this.seperableBlurVerticalTextures[i]
     ));
     this.seperableBlurVerticalRenderers[i].setVariableDependencies(this.seperableBlurVerticalVars[i], []);
-    this.seperableBlurVerticalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.Postprocessing.uniforms));
+    this.seperableBlurVerticalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.seperableBlurFilter.uniforms));
     this.seperableBlurVerticalVars[i].material.uniforms.direction.value = blurDirectionY;
     this.seperableBlurVerticalVars[i].material.uniforms.direction.needsUpdate = true;
     this.seperableBlurVerticalVars[i].minFilter = THREE.LinearFilter;
     this.seperableBlurVerticalVars[i].magFilter = THREE.LinearFilter;
+    this.seperableBlurVerticalVars[i].wrapS = THREE.ClampToEdgeWrapping;
+    this.seperableBlurVerticalVars[i].wrapT = THREE.ClampToEdgeWrapping;
 
     let error3 = this.seperableBlurVerticalRenderers[i].init();
     if(error3 !== null){
@@ -81,7 +88,6 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     }
 
     kernalRadius += 2;
-    mipSize *= 0.5;
   }
 
   let self = this;
@@ -95,12 +101,12 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     self.highPassFilterVar.material.uniforms.sourceTexture.value = inTexture;
     self.highPassFilterVar.material.uniforms.sourceTexture.needsUpdate = true;
     self.highPassRenderer.compute();
-    let highPassTexture = self.highPassRenderer.getCurrentRenderTarget(self.highPassFilterVar).texture;
+    let previousPass = self.highPassRenderer.getCurrentRenderTarget(self.highPassFilterVar).texture;
 
     //Pass this into our blur filter create our various levels of bloom
     let bloomTextures = [];
     for(let i = 0; i < 5; ++i){
-      self.seperableBlurHorizontalVars[i].material.uniforms.sourceTexture.value = highPassTexture;
+      self.seperableBlurHorizontalVars[i].material.uniforms.sourceTexture.value = previousPass;
       self.seperableBlurHorizontalVars[i].material.uniforms.sourceTexture.needsUpdate = true;
       self.seperableBlurHorizontalRenderers[i].compute();
       let horizontalTexture = self.seperableBlurHorizontalRenderers[i].getCurrentRenderTarget(self.seperableBlurHorizontalVars[i]).texture;
@@ -109,6 +115,9 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
       self.seperableBlurVerticalVars[i].material.uniforms.sourceTexture.needsUpdate = true;
       self.seperableBlurVerticalRenderers[i].compute();
       bloomTextures.push(self.seperableBlurVerticalRenderers[i].getCurrentRenderTarget(self.seperableBlurVerticalVars[i]).texture);
+
+      //Use the previous bloom pass to drive the next pass
+      previousPass = bloomTextures[i];
     }
 
     return bloomTextures;

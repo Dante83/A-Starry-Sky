@@ -71,9 +71,9 @@ void main(){
 
   //Sun and Moon layers
   #if($isSunPass)
-    vec3 combinedAtmosphericPass = solarAtmosphericPass;
     $draw_sun_pass
-    gl_FragColor = vec4(sunPassColor, sunPassTransparency);
+    vec3 toneMappedSky = ACESFilmicToneMapping(solarAtmosphericPass);
+    gl_FragColor = vec4(toneMappedSky + sunTexel, 1.0);
   #elif($isMoonPass)
     $draw_sun_pass
     $draw_moon_pass
@@ -86,6 +86,6 @@ void main(){
 
     //Triangular Blue Noise Adjustment Pass
 
-    gl_FragColor = vec4(toneMappedColor, 1.0);
+    gl_FragColor = vec4(clamp(toneMappedColor, 0.0, 1.0), 1.0);
   #endif
 }

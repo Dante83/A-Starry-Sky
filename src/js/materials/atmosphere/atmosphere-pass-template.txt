@@ -15,7 +15,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     //Pass our specific uniforms in here.
     if(isSunShader){
       uniforms.sunAngularDiameterCos = {type: 'f', value: 1.0};
-      uniforms.scale = {type: 'f', value: 1.0};
+      uniforms.radiusOfSunPlane = {type: 'f', value: 1.0};
       uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
     }
     else if(isMoonShader){

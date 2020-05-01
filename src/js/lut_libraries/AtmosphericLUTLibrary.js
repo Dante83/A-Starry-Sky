@@ -63,6 +63,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   transmittanceVar.material.uniforms = {};
   transmittanceVar.minFilter = THREE.LinearFilter;
   transmittanceVar.magFilter = THREE.LinearFilter;
+  transmittanceVar.wrapS = THREE.ClampToEdgeWrapping;
+  transmittanceVar.wrapT = THREE.ClampToEdgeWrapping;
 
   //Check for any errors in initialization
   let error1 = transmittanceRenderer.init();
@@ -94,6 +96,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   singleScatteringRenderer.setVariableDependencies(singleScatteringMieVar, []);
   singleScatteringMieVar.material.uniforms = JSON.parse(JSON.stringify(materials.singleScatteringMaterial.uniforms));
   singleScatteringMieVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
+  singleScatteringMieVar.minFilter = THREE.LinearFilter;
+  singleScatteringMieVar.magFilter = THREE.LinearFilter;
+  singleScatteringMieVar.wrapS = THREE.ClampToEdgeWrapping;
+  singleScatteringMieVar.wrapT = THREE.ClampToEdgeWrapping;
 
   //Rayleigh
   let singleScatteringRayleighTexture = singleScatteringRenderer.createTexture();
@@ -112,6 +118,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   singleScatteringRenderer.setVariableDependencies(singleScatteringRayleighVar, []);
   singleScatteringRayleighVar.material.uniforms = JSON.parse(JSON.stringify(materials.singleScatteringMaterial.uniforms));
   singleScatteringRayleighVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
+  singleScatteringRayleighVar.minFilter = THREE.LinearFilter;
+  singleScatteringRayleighVar.magFilter = THREE.LinearFilter;
+  singleScatteringRayleighVar.wrapS = THREE.ClampToEdgeWrapping;
+  singleScatteringRayleighVar.wrapT = THREE.ClampToEdgeWrapping;
 
   //Check for any errors in initialization
   let error2 = singleScatteringRenderer.init();
@@ -136,6 +146,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   inscatteringRayleighSumVar.material.uniforms.inscatteringTexture.value = rayleighScattering;
   inscatteringRayleighSumVar.minFilter = THREE.LinearFilter;
   inscatteringRayleighSumVar.magFilter = THREE.LinearFilter;
+  inscatteringRayleighSumVar.wrapS = THREE.ClampToEdgeWrapping;
+  inscatteringRayleighSumVar.wrapT = THREE.ClampToEdgeWrapping;
 
   let inscatteringMieSumTexture = scatteringSumRenderer.createTexture();
   let inscatteringMieSumVar = scatteringSumRenderer.addVariable('inscatteringMieSumTexture',
@@ -148,6 +160,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   inscatteringMieSumVar.material.uniforms.inscatteringTexture.value = mieScattering;
   inscatteringMieSumVar.minFilter = THREE.LinearFilter;
   inscatteringMieSumVar.magFilter = THREE.LinearFilter;
+  inscatteringMieSumVar.wrapS = THREE.ClampToEdgeWrapping;
+  inscatteringMieSumVar.wrapT = THREE.ClampToEdgeWrapping;
 
   //Check for any errors in initialization
   let error3 = scatteringSumRenderer.init();
@@ -182,6 +196,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   multipleScatteringMieVar.material.uniforms = JSON.parse(JSON.stringify(materials.kthInscatteringMaterial.uniforms));
   multipleScatteringMieVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
   multipleScatteringMieVar.material.uniforms.inscatteredLightLUT.value = mieScattering;
+  multipleScatteringMieVar.minFilter = THREE.LinearFilter;
+  multipleScatteringMieVar.magFilter = THREE.LinearFilter;
+  multipleScatteringMieVar.wrapS = THREE.ClampToEdgeWrapping;
+  multipleScatteringMieVar.wrapT = THREE.ClampToEdgeWrapping;
 
   //Rayleigh
   let multipleScatteringRayleighTexture = multipleScatteringRenderer.createTexture();
@@ -202,6 +220,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   multipleScatteringRayleighVar.material.uniforms = JSON.parse(JSON.stringify(materials.kthInscatteringMaterial.uniforms));
   multipleScatteringRayleighVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
   multipleScatteringRayleighVar.material.uniforms.inscatteredLightLUT.value = rayleighScattering;
+  multipleScatteringRayleighVar.minFilter = THREE.LinearFilter;
+  multipleScatteringRayleighVar.magFilter = THREE.LinearFilter;
+  multipleScatteringRayleighVar.wrapS = THREE.ClampToEdgeWrapping;
+  multipleScatteringRayleighVar.wrapT = THREE.ClampToEdgeWrapping;
 
   //Check for any errors in initialization
   let error4 = multipleScatteringRenderer.init();

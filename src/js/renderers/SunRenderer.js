@@ -8,7 +8,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   //in Web Assembly for better performance.
   const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
   const sunAngularDiameterInRadians = 2.0 * sunAngularRadiusInRadians;
-  const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(sunAngularRadiusInRadians);
+  const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(sunAngularRadiusInRadians) * 3.0;
   const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
   this.directLight;
@@ -40,8 +40,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.sunRenderer.setVariableDependencies(this.baseSunVar, []);
   this.baseSunVar.material.vertexShader = materials.baseSunPartial.vertexShader;
   this.baseSunVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true)));
-  this.baseSunVar.material.uniforms.scale.value = radiusOfSunPlane;
-  this.baseSunVar.material.uniforms.scale.needsUpdate = true;
+  this.baseSunVar.material.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
+  this.baseSunVar.material.uniforms.radiusOfSunPlane.needsUpdate = true;
   this.baseSunVar.material.uniforms.solarRayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.baseSunVar.material.uniforms.solarRayleighInscatteringSum.needsUpdate = true;
   this.baseSunVar.material.uniforms.solarMieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
@@ -59,21 +59,18 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
   //Create our material late
   this.combinationPassMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Sun.combinationPass.uniforms)),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Postprocessing.combinationPass.uniforms)),
     side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
     lights: false,
     flatShading: true,
     clipping: true,
-    vertexShader: StarrySky.Materials.Sun.combinationPass.vertexShader,
-    fragmentShader: StarrySky.Materials.Sun.combinationPass.fragmentShader
+    vertexShader: StarrySky.Materials.Postprocessing.combinationPass.vertexShader,
+    fragmentShader: StarrySky.Materials.Postprocessing.combinationPass.fragmentShader
   });
 
   //Attach the material to our geometry
-
-  self.combinationPassMaterial.uniforms.bloomRadius.value = 5.0;
-  self.combinationPassMaterial.uniforms.bloomRadius.needsUpdate = true;
   this.sunMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
   this.baseSunVar.material.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
 
@@ -90,7 +87,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
   //And update our object with our initial values
   this.setBloomStrength(1.0);
-  this.setBloomRadius(5.0);
+  this.setBloomRadius(0.1);
 
   this.tick = function(){
     let sunPosition = skyDirector.skyState.sun.position;
@@ -112,9 +109,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.worldMatrix.needsUpdate = true;
     self.baseSunVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
     self.baseSunVar.material.uniforms.sunHorizonFade.needsUpdate = true;
+    self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
     self.baseSunVar.material.uniforms.toneMappingExposure.value = 0.8;
     self.baseSunVar.material.uniforms.toneMappingExposure.needsUpdate = true;
-    self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();

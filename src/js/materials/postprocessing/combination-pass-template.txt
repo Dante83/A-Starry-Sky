@@ -10,7 +10,8 @@ StarrySky.Materials.Postprocessing.combinationPass = {
     blurTexture4: {type: 't', 'value': null},
     blurTexture5: {type: 't', 'value': null},
     bloomStrength: {type: 'f', 'value': null},
-    bloomRadius: {type: 'f', 'value': null}
+    bloomRadius: {type: 'f', 'value': null},
+    toneMappingExposure: {type: 'f', value: 1.0}
   },
   vertexShader: [
     {vertex_glsl}

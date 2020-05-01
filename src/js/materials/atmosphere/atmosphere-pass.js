@@ -15,7 +15,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     //Pass our specific uniforms in here.
     if(isSunShader){
       uniforms.sunAngularDiameterCos = {type: 'f', value: 1.0};
-      uniforms.scale = {type: 'f', value: 1.0};
+      uniforms.radiusOfSunPlane = {type: 'f', value: 1.0};
       uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
     }
     else if(isMoonShader){
@@ -109,9 +109,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
-        'vec3 combinedAtmosphericPass = solarAtmosphericPass;',
         '$draw_sun_pass',
-        'gl_FragColor = vec4(sunPassColor, sunPassTransparency);',
+        'vec3 toneMappedSky = ACESFilmicToneMapping(solarAtmosphericPass);',
+        'gl_FragColor = vec4(toneMappedSky + sunTexel, 1.0);',
       '#elif($isMoonPass)',
         '$draw_sun_pass',
         '$draw_moon_pass',
@@ -124,7 +124,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Triangular Blue Noise Adjustment Pass',
 
-        'gl_FragColor = vec4(toneMappedColor, 1.0);',
+        'gl_FragColor = vec4(clamp(toneMappedColor, 0.0, 1.0), 1.0);',
       '#endif',
     '}',
     ];

@@ -10,7 +10,8 @@ StarrySky.Materials.Postprocessing.combinationPass = {
     blurTexture4: {type: 't', 'value': null},
     blurTexture5: {type: 't', 'value': null},
     bloomStrength: {type: 'f', 'value': null},
-    bloomRadius: {type: 'f', 'value': null}
+    bloomRadius: {type: 'f', 'value': null},
+    toneMappingExposure: {type: 'f', value: 1.0}
   },
   vertexShader: [
     'varying vec3 vWorldPosition;',
@@ -47,22 +48,25 @@ StarrySky.Materials.Postprocessing.combinationPass = {
     '}',
 
     'void main(){',
-      'vec4 directLight = texture2D(baseTexture, vUv);',
-      'vec4 bloomLight = lerpBloomFactor(1.0) * texture2D(bloomTextures[0], vUv));',
-      'bloomLight += lerpBloomFactor(0.8) * texture2D(bloomTextures[1], vUv)) +',
-      'bloomLight += lerpBloomFactor(0.6) * texture2D(bloomTextures[2], vUv)) +',
-      'bloomLight += lerpBloomFactor(0.4) * texture2D(bloomTextures[3], vUv)) +',
-      'bloomLight += lerpBloomFactor(0.2) * texture2D(bloomTextures[4], vUv));',
+      '//Fade this plane out towards the edges to avoid rough edges',
+      'vec2 offsetUV = vUv * 3.0 - vec2(1.0);',
+      'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
+      'float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromSun)));',
 
-      'vec4 combinedLight = directLight + bloomStrength * bloomLight;',
+      '//Determine the bloom effect',
+      'vec3 directLight = texture2D(baseTexture, vUv).rgb;',
+      'vec3 bloomLight = lerpBloomFactor(1.0) * texture2D(blurTexture1, vUv).rgb;',
+      'bloomLight += lerpBloomFactor(0.8) * texture2D(blurTexture2, vUv).rgb;',
+      'bloomLight += lerpBloomFactor(0.6) * texture2D(blurTexture3, vUv).rgb;',
+      'bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;',
+      'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
 
-      '//Color Adjustment Pass',
-      'vec3 toneMappedColor = ACESFilmicToneMapping(combinedLight.rgb);',
+      'vec3 combinedLight = clamp(directLight + bloomStrength * bloomLight, 0.0, 1.0);',
 
       '//Late triangular blue noise',
 
       '//Return our tone mapped color when everything else is done',
-      'gl_FragColor = vec4(toneMappedColor, combinedLight.a);',
+      'gl_FragColor = vec4(combinedLight, falloffDisk);',
     '}',
   ].join('\n')
 };

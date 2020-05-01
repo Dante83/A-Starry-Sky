@@ -4,13 +4,12 @@
 uniform sampler2D sourceTexture;
 uniform vec2 direction;
 
-varying vec2 vUv;
-
 //Based on Luminosity High Pass Shader
 //Originally created by bhouston / http://clara.io/
 void main(){
+  vec2 vUv = gl_FragCoord.xy / resolution.xy;
   float weightedSum = $gaussian_pdf_at_x_0;
-  vec3 diffuseSum = texture2D(sourceTexture, vUv).rgb;
+  vec3 diffuseSum = texture2D(sourceTexture, vUv).rgb * weightedSum;
 
   //Unrolled for loop (completed in material function)
   $unrolled_for_loop
