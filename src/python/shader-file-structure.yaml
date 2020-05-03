@@ -37,15 +37,29 @@ groups:
         vertex: 'base-sun-vertex.glsl'
         template: 'base-sun-partial-template.txt'
         material: 'base-sun-partial.js'
-  -
-    base_glsl_dir: '../glsl/postprocessing'
-    base_js_dir: '../js/materials/postprocessing'
-    shaders:
       -
         fragment: 'combination-pass.glsl'
         vertex: 'combination-pass-vertex.glsl'
         template: 'combination-pass-template.txt'
         material: 'combination-pass.js'
+  -
+    base_glsl_dir: '../glsl/moon'
+    base_js_dir: '../js/materials/moon'
+    shaders:
+      -
+        fragment: 'base-moon-partial.glsl'
+        vertex: 'base-moon-vertex.glsl'
+        template: 'base-moon-partial-template.txt'
+        material: 'base-moon-partial.js'
+      -
+        fragment: 'combination-pass.glsl'
+        vertex: 'combination-pass-vertex.glsl'
+        template: 'combination-pass-template.txt'
+        material: 'combination-pass.js'
+  -
+    base_glsl_dir: '../glsl/postprocessing'
+    base_js_dir: '../js/materials/postprocessing'
+    shaders:
       -
         fragment: 'high-pass-filter.glsl'
         vertex: 'high-pass-filter.glsl'

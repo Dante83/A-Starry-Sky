@@ -17,9 +17,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.sunAngularDiameterCos = {type: 'f', value: 1.0};
       uniforms.radiusOfSunPlane = {type: 'f', value: 1.0};
       uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
+      uniforms.moonOpacityMap = {type: 't', value: null};
     }
     else if(isMoonShader){
-      //DO NOTHING
+      uniforms.moonAngularDiameterCos = {type: 'f', value: 1.0};
+      uniforms.moonDiffuseMap = {type: 't', value: null};
+      uniforms.moonNormalMap = {type: 't', value: null};
+      uniforms.moonAOMap = {type: 't', value: null};
+      uniforms.moonSpecularMap = {type: 't', value: null};
+      uniforms.moonOpacityMap = {type: 't', value: null};
     }
 
     return uniforms;
@@ -42,29 +48,38 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     'uniform vec3 sunPosition;',
     'uniform float sunHorizonFade;',
-    'uniform sampler2D solarMieInscatteringSum;',
-    'uniform sampler2D solarRayleighInscatteringSum;',
+    'uniform sampler2D mieInscatteringSum;',
+    'uniform sampler2D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
 
     'const float piOver2 = 1.5707963267948966192313;',
     'const float pi = 3.141592653589793238462;',
+    'const float scatteringSunIntensity = 20.0;',
+    'const float scatteringMoonIntensity = 0.0144; //Moon reflects 0.072% of all light',
 
     '#if($isSunPass)',
       'uniform float sunAngularDiameterCos;',
       'varying vec2 vUv;',
-      'const float sunIntensity = 20.0;',
+      'const float sunDiskIntensity = 20.0;',
 
       '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
       'const float ac1 = 0.46787619;',
       'const float ac2 = 0.67104811;',
       'const float ac3 = -0.06948355;',
     '#elif($isMoonPass)',
-      '//DO NOTHING',
+      'uniform float moonAngularDiameterCos;',
+      'uniform sampler2D moonDiffuseMap;',
+      'uniform sampler2D moonNormalMap;',
+      'uniform sampler2D moonAOMap;',
+      'uniform sampler2D moonSpecularMap;',
+      'uniform sampler2D moonOpacityMap;',
+      'varying vec2 vUv;',
+      'const float moonDiskIntensity = 0.0144;',
     '#endif',
 
     '$atmosphericFunctions',
 
-    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 vWorldPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
+    'vec3 linearAtmosphericPass(vec3 sourcePosition, float sourceIntensity, vec3 vWorldPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
       'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, vWorldPosition);',
       'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
       'vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
@@ -75,7 +90,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'vec3 interpolatedMieScattering = mix(texture2D(mieLookupTable, solarUVInterpolants.uv0).rgb, texture2D(mieLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
       'vec3 interpolatedRayleighScattering = mix(texture2D(rayleighLookupTable, solarUVInterpolants.uv0).rgb, texture2D(rayleighLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
 
-      'return intensityFader * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
+      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
     '}',
 
     'void main(){',
@@ -89,11 +104,14 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(cosOfViewAngle), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
       'vec3 transmittanceFade = texture2D(transmittance, uv2OfTransmittance).rgb;',
 
-      '//Initialize our color to zero light',
-      'vec3 outColor = vec3(0.0);',
+      '//In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon',
+      '#if($isMoonPass)',
+        '//Get our lunar occlusion texel',
+        'float lunarPixelMask = texture2D(lunarAlphaMask, vUv);',
+      '#endif',
 
-      "//Stuff that gets covered by the sun or moon so it doesn't get added to the original light",
-      '#if(!$isSunPass && !$isMoonPass)',
+      '//This stuff never shows up near our sun, so we can exclude it',
+      '#if(!$isSunPass)',
         '//Milky Way Pass',
 
 
@@ -105,22 +123,23 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#endif',
 
       '//Atmosphere',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, sphericalPosition, solarMieInscatteringSum, solarRayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
+      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
+      'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, lunarHorizonFade, uv2OfTransmittance);',
+      'vec3 combinedPass = solarAtmosphericPass + lunarAtmosphericPass;',
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
         '$draw_sun_pass',
-        'vec3 toneMappedSky = ACESFilmicToneMapping(solarAtmosphericPass);',
+        'vec3 toneMappedSky = ACESFilmicToneMapping(combinedPass);',
         'gl_FragColor = vec4(toneMappedSky + sunTexel, 1.0);',
       '#elif($isMoonPass)',
-        '$draw_sun_pass',
         '$draw_moon_pass',
-        'gl_FragColor = vec4(solarAtmosphericPass + moonPassColor, moonPassTransparency);',
+        'gl_FragColor = vec4(combinedPass, 1.0);',
       '#else',
         'vec3 combinedAtmosphericPass = solarAtmosphericPass;',
 
         '//Color Adjustment Pass',
-        'vec3 toneMappedColor = ACESFilmicToneMapping(combinedAtmosphericPass);',
+        'vec3 toneMappedColor = ACESFilmicToneMapping(combinedPass);',
 
         '//Triangular Blue Noise Adjustment Pass',
 

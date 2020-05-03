@@ -15,6 +15,7 @@
 
     <!-- Three.js extensions -->
     <script src="../src/js/three_js_extensions/GPUComputeRender.js"></script>
+    <script src="../src/js/three_js_extensions/basis-transcoder.js"></script>
 
     <!-- Namespace -->
     <script src="../src/js/StarrySky.js"></script>
@@ -31,8 +32,10 @@
     <script src="../src/js/materials/atmosphere/atmosphere-pass.js"></script>
     <script src="../src/js/materials/postprocessing/high-pass-filter.js"></script>
     <script src="../src/js/materials/postprocessing/seperable-blur-filter.js"></script>
-    <script src="../src/js/materials/postprocessing/combination-pass.js"></script>
+    <script src="../src/js/materials/sun/combination-pass.js"></script>
     <script src="../src/js/materials/sun/base-sun-partial.js"></script>
+    <script src="../src/js/materials/moon/combination-pass.js"></script>
+    <script src="../src/js/materials/moon/base-moon-partial.js"></script>
 
     <!--- Custom HTML Tags -->
     <script src="../src/js/html_tags/SkyAssetsDir.js"></script>
@@ -47,6 +50,7 @@
     <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
     <script src="../src/js/renderers/BloomRenderer.js"></script>
     <script src="../src/js/renderers/SunRenderer.js"></script>
+    <script src="../src/js/renderers/MoonRenderer.js"></script>
 
     <!--Players -->
     <script src="../src/js/components/AssetManager.js"></script>
@@ -71,10 +75,21 @@
           <sky-utc-offset>7</sky-utc-offset>
           <sky-speed>400.0</sky-speed>
         </sky-time>
-        <sky-assets-dir dir="../../assets/">
-          <sky-moon-texture>moon-dif-1024.png</sky-moon-texture>
-          <sky-moon-normal-map>moon-nor-1024.png</sky-moon-normal-map>
-          <sky-stars>star-data.png</sky-stars>
+        <sky-assets-dir dir="/">
+          <sky-assets-dir dir="assets">
+            <sky-assets-dir dir="moon">
+              <sky-moon-diffuse-map>lunar-diffuse-map.basis</sky-moon-diffuse-map>
+              <sky-moon-normal-map>lunar-normal-map.basis</sky-moon-normal-map>
+              <sky-moon-opacity-map>lunar-opacity-map.basis</sky-moon-opacity-map>
+              <sky-moon-specular-map>lunar-specular-map.basis</sky-moon-specular-map>
+              <sky-moon-ao-map>lunar-ao-map.basis</sky-moon-ao-map>
+            </sky-assets-dir>
+          </sky-assets-dir>
+          <sky-assets-dir dir="examples/wasm">
+            <sky-moon-diffuse-map>lunar-diffuse-map.basis</sky-moon-diffuse-map>
+            <sky-moon-normal-map>lunar-normal-map.basis</sky-moon-normal-map>
+            <sky-moon-opacity-map>lunar-opacity-map.basis</sky-moon-opacity-map>
+          </sky-assets-dir>
         </sky-assets-dir>
         <!-- <sky-atmospheric-parameters>
           <sky-sun-angular-diameter>5.0</sky-sun-angular-diameter>

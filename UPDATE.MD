@@ -34,4 +34,5 @@
 * Swapped out property based syntax with XML based value syntax with custom HTML components for a more organized developer experience.
 * Completely updated code to a new architecture to meet the needs of new features.
 * Moved from the analytical model, [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to a Look Up Table (LUT) approach by Oskar Elek, [Oskar Elek's Sky Model](http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf) *Rendering Parametrizable Planetary Atmospheres with Multiple Scattering in Real-Time* for improved visualizations and performance.
-* Converted all astronomical calculations to web assembly on a separate thread through web workers.
+* Converted all astronomical calculations to web assembly on a separate thread through web workers and moved primary calculations on the main thread to web assembly for reduce CPU load.
+* Switched to procedurally generated sun disk with solar limb darkening, using the parameterization from [Joseph Bayley's Solar Limb Darkening](https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf) with a reimplementation of the Unreal Bloom postprocessing effect for a procedurally generated glow effect.

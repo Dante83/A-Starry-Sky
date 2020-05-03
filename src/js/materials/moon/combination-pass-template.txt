@@ -1,0 +1,23 @@
+//This helps
+//--------------------------v
+//https://threejs.org/docs/#api/en/core/Uniform
+StarrySky.Materials.Moon.combinationPass = {
+  uniforms: {
+    baseTexture: {type: 't', 'value': null},
+    bloomEnabled: {type: 'i', 'value': 0},
+    blurTexture1: {type: 't', 'value': null},
+    blurTexture2: {type: 't', 'value': null},
+    blurTexture3: {type: 't', 'value': null},
+    blurTexture4: {type: 't', 'value': null},
+    blurTexture5: {type: 't', 'value': null},
+    bloomStrength: {type: 'f', 'value': null},
+    bloomRadius: {type: 'f', 'value': null},
+    toneMappingExposure: {type: 'f', value: 1.0}
+  },
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+};

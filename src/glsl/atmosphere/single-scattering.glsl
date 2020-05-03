@@ -2,10 +2,7 @@
 //http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf
 //and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
 //by Gustav Bodare and Edvard Sandberg
-
 uniform sampler2D transmittanceTexture;
-//Moon reflects 0.072% of all light
-const float intensity = 20.0;
 
 $atmosphericFunctions
 
@@ -102,9 +99,9 @@ void main(){
 
     //Note that we ignore intensity until the final render as a multiplicative factor
     #if($isRayleigh)
-      totalInscattering *= ONE_OVER_EIGHT_PI * intensity * RAYLEIGH_BETA;
+      totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
     #else
-      totalInscattering *= ONE_OVER_EIGHT_PI * intensity * EARTH_MIE_BETA_EXTINCTION;
+      totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;
     #endif
   }
 
