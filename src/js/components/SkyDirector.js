@@ -2,6 +2,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.skyDirectorWASMIsReady = false;
   this.skyInterpolatorWASMIsReady = false;
   this.assetManagerInitialized = false;
+  this.assetManagerImagesLoaded = false;
   this.skyState;
   this.EVENT_INITIALIZE = 0;
   this.EVENT_INITIALIZATION_RESPONSE = 1;
@@ -79,7 +80,8 @@ StarrySky.SkyDirector = function(parentComponent){
       self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
       self.renderers.bloomRenderer = new StarrySky.Renderers.BloomRenderer(self, 'shared', 0.95);
-      self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self, self.renderer, self.scene);
+      self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
+      self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
 
       self.start();
     }
@@ -136,6 +138,7 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.sun.horizonFade = Math.min(Math.max(1.7 * self.skyState.sun.position.y + 1.1, 0.0), 1.0);
       self.skyState.sun.scale = self.linearValues[1];
       self.skyState.moon.intensity = self.linearValues[2];
+      self.skyState.moon.horizonFade = Math.min(Math.max(1.7 * self.skyState.moon.position.y + 1.1, 0.0), 1.0);
       self.skyState.moon.scale = self.linearValues[3];
       self.skyState.moon.parallacticAngle = self.linearValues[4];
       self.skyState.moon.earthshineIntensity = self.linearValues[5];

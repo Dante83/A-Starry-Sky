@@ -121,17 +121,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
 
     //Update our final texture that is displayed
-    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
     self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
     self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
     self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
     self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
     self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
     self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
   }
 
@@ -139,6 +133,12 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.firstTick = function(){
     //Connect up our reference values
     self.baseSunVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
+    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
+    self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
+    self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
+    self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
+    self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
+    self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
 
     //Proceed with the first tick
     self.tick();

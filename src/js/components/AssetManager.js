@@ -2,6 +2,7 @@ StarrySky.AssetManager = function(skyDirector){
   this.skyDirector = skyDirector;
   this.data = {};
   this.images = {};
+  this.textureLoader;
   let starrySkyComponent = skyDirector.parentComponent;
 
   //------------------------
@@ -35,15 +36,102 @@ StarrySky.AssetManager = function(skyDirector){
   this.hasSkyAtmosphericParametersTag = false;
   this.skyAssetsTag;
   this.hasSkyAssetsTag = false;
+  this.hasLoadedImages = false;
   this.readyForTickTock = false;
   this.tickSinceLastUpdateRequest = 5;
   let self = this;
+
+  //Asynchronously load all of our images
+  this.loadImageAssets = async function(renderer){
+    self.textureLoader = new THREE.BasisTextureLoader();
+    let useBasisTextures = true;
+    textureLoader.setTranscoderPath(StarrySky.AssetPaths.basisTranscoder);
+    try{
+      textureLoader.detectSupport(renderer);
+    }
+    catch(error){
+      //Replace it with a regular texture loader and just load our png files
+      console.warn("BASIS file format not supported. Falling back to PNG files.");
+      useBasisTextures = false;
+      textureLoader.dispose();
+      textureLoader = new THREE.TextureLoader();
+    }
+
+    //Load all of our moon textures
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonSpecularMap', 'moonAOMap'];
+    const formats = [THREE.RGBFormat, THREE.RGBFormat, THREE.RedFormat, THREE.RGBFormat, THREE.RedFormat];
+    const numberOfMoonTextures = moonTextures.length;
+    let totalNumberOfTextures = numberOfMoonTextures + 1; //An impossible task! But, maybe, one day we'll make this possible
+    let numberOfTexturesLoaded = 0;
+    let moonCallbackFunctions = [];
+    let moonCallbackFunction = function(moonTextureProperty){
+      this.moonTextureProperty = moonTextureProperty;
+    };
+    moonCallbackFunction.prototype.callback = function(texture){
+      //Callback when done
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.magFilter = THREE.LinearFilter;
+      texture.minFilter = THREE.LinearFilter;
+      texture.format = formats[this.moonTextureProperty];
+      self.images[this.moonTextureProperty] = texture;
+
+      //If the renderer already exists, go in and update the uniform
+      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+        let textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[this.moonTextureProperty];
+        textureRef.value = texture;
+        textureRef.needsUpdate = true;
+      }
+      numberOfTexturesLoaded++;
+      if(numberOfTexturesLoaded === totalNumberOfTextures){
+        self.hasLoadedImages = true;
+        self.textureLoader.dispose();
+      }
+    }
+    for(let i = 0; i < numberOfMoonTextures; ++i){
+      let textureProperty = moonTextures[i];
+      let textureURI = StarrySky.AssetPaths[textureProperty];
+      if(!useBasisTextures){
+        //Swap out our BASIS texture for a png texture
+        textureURI = textureURI.slice(0, textureURI.length - 7).concat('.png');
+      }
+
+      //We create a new function, that comically can act as an object
+      moonCallbackFunctions.push(
+        new moonCallbackFunction(moonTextureProperty);
+      );
+      textureLoader.load(textureURI, moonCallbackFunctions[i].callback, undefined, function(err){
+        if(useBasisTextures){
+          const errorMsg = `An error occurred while trying to download an image: ${err}. Falling back to PNG loader.`;
+          console.warning(errorMsg);
+          throw new Error(errorMsg);
+        }
+      });
+    };
+
+    totalNumberOfTextures--; //The impossible is possible again!
+    if(numberOfTexturesLoaded === totalNumberOfTextures){
+      self.hasLoadedImages = true;
+
+      //We need to hook into each of our textures and update their uniforms if the renderer exists
+      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+        for(let i = 0; i < moonTextures.length; ++i){
+          let moonTextureProperty = moonTextures[i];
+          let textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextureProperty];
+          textureRef.value = texture;
+          textureRef.needsUpdate = true;
+        }
+      }
+
+      self.textureLoader.dispose();
+    }
+  }
 
   //Internal function for loading our sky data once the DOM is ready
   this.loadSkyData = function(){
     //Remove our event listener for loading sky data from the DOM
     //and attach a new listener for loading all of our visual assets and data
-    self.skyAssetsTag.removeEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
+    self.skyAssetsTags.removeEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
 
     //Now that we have verified our tags, let's grab the first one in each.
     let defaultValues = self.starrySkyComponent.defaultValues;
@@ -52,8 +140,6 @@ StarrySky.AssetManager = function(skyDirector){
     self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
     self.data.skyAssetsData = self.hasSkyAssetsTag ? self.skyAssetsTag.data : defaultValues.assets;
 
-    //Use the assets we have to load all of our asset images and populate the engine
-    //TODO: Right now, we do not need any images
     skyDirector.assetManagerInitialized = true;
     skyDirector.initializeSkyDirectorWebWorker();
   };
@@ -96,11 +182,11 @@ StarrySky.AssetManager = function(skyDirector){
     this.hasSkyAtmosphericParametersTag = true;
     activeTags.push(this.skyAtmosphericParametersTag);
   }
-  if(skyAssetsTags.length === 1){
+  if(skyAssetsTags.length > 0){
     this.skyDataSetsLength += 1;
-    this.skyAssetsTag = skyAssetsTags[0];
+    this.skyAssetsTags = skyAssetsTags;
     this.hasSkyAssetsTag = true;
-    activeTags.push(this.skyAssetsTag);
+    activeTags.push(this.skyAssetsTags);
   }
   for(let i = 0; i < activeTags.length; ++i){
     checkIfAllHTMLDataLoaded(activeTags[i]);
