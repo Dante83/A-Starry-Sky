@@ -3,6 +3,6 @@
 AFRAME.registerPrimitive('a-starry-sky', AFRAME.utils.extendDeep({}, AFRAME.primitives.getMeshMixin(), {
   // Preset default components. These components and component properties will be attached to the entity out-of-the-box.
   defaultComponents: {
-    skyengine: {}
+    starryskywrapper: {}
   }
 }));

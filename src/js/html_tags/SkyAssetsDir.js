@@ -1,7 +1,7 @@
 //Child classes
-window.customElements.define('sky-basis-transcoder-wasm', class extends HTMLElement{});
-window.customElements.define('sky-state-engine-wasm', class extends HTMLElement{});
-window.customElements.define('sky-interpolation-engine-wasm', class extends HTMLElement{});
+window.customElements.define('sky-basis-transcoder-path', class extends HTMLElement{});
+window.customElements.define('sky-state-engine-path', class extends HTMLElement{});
+window.customElements.define('sky-interpolation-engine-path', class extends HTMLElement{});
 window.customElements.define('sky-moon-diffuse-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-normal-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-opacity-map', class extends HTMLElement{});
@@ -9,9 +9,6 @@ window.customElements.define('sky-moon-specular-map', class extends HTMLElement{
 window.customElements.define('sky-moon-ao-map', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
-  basisTranscoder: 'basis-transcoder.wasm',
-  skyStateEngine: 'state-engine.wasm',
-  skyInterpolationEngine: 'interpolation-engine.wasm',
   moonDiffuseMap: 'lunar-diffuse-map.basis',
   moonNormalMap: 'lunar-normal-map.basis',
   moonOpacityMap: 'lunar-opacity-map.basis',
@@ -20,19 +17,19 @@ StarrySky.DefaultData.fileNames = {
 };
 
 StarrySky.DefaultData.skyAssets = {
-  basisTranscoder: '../wasm/' + StarrySky.DefaultData.fileNames.basisTranscoder,
-  skyStateEngine: '../wasm/' + StarrySky.DefaultData.fileNames.skyStateEngine,
-  skyInterpolationEngine: '../wasm/' + StarrySky.DefaultData.fileNames.skyInterpolationEngine,
-  moonDiffuseMap: '../assets/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
-  moonNormalMap: '../assets/' + StarrySky.DefaultData.fileNames.moonNormalMap,
-  moonOpacityMap: '../assets/' + StarrySky.DefaultData.fileNames.moonOpacityMap,
-  moonSpecularMap: '../assets/' + StarrySky.DefaultData.fileNames.moonSpecularMap,
-  moonAOMap: '../assets' + StarrySky.DefaultData.fileNames.moonAOMap,
+  basisTranscoderPath: './wasm/',
+  skyStateEnginePath: './wasm/',
+  skyInterpolationEnginePath: './wasm/',
+  moonDiffuseMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
+  moonNormalMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonNormalMap,
+  moonOpacityMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonOpacityMap,
+  moonSpecularMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonSpecularMap,
+  moonAOMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAOMap,
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
 //replace them.
-StarrySky.AssetPaths = JSON.parse(JSON.stringify(StarrySky.DefaultData));
+StarrySky.assetPaths = JSON.parse(JSON.stringify(StarrySky.DefaultData));
 
 //Parent class
 class SkyAssetsDir extends HTMLElement {
@@ -42,6 +39,7 @@ class SkyAssetsDir extends HTMLElement {
     //Check if there are any child elements. Otherwise set them to the default.
     this.skyDataLoaded = false;
     this.data = StarrySky.DefaultData.skyAssets;
+    this.isRoot = false;
   }
 
   connectedCallback(){
@@ -51,25 +49,33 @@ class SkyAssetsDir extends HTMLElement {
     let self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
       //Check this this has a parent sky-assets-dir
-      let isRoot = self.parentElement.nodeName !== 'sky-assets-dir';
+      self.isRoot = self.parentElement.nodeName.toLowerCase() !== 'sky-assets-dir';
       let path = 'dir' in self.attributes ? self.attributes.dir.value : '/';
       let parentTag = self.parentElement;
 
       //If this isn't root, we should recursively travel up the tree until we have constructed
       //our path.
       let i = 0;
-      while(parentTag.nodeName === 'sky-assets-dir'){
+      while(parentTag.nodeName.toLowerCase() === 'sky-assets-dir'){
         let parentDir;
         if('dir' in parentTag.attributes){
-          parentDir = self.attributes.dir.value;
+          parentDir = parentTag.attributes.dir.value;
         }
         else{
-          parentDir = '/';
-          console.warn("A sky-assets-dir tag was found without a dir path attribute. Paths are constructed recursively, so there is no reason to have this tag without the corresponding attribute.");
+          parentDir = '';
         }
-        parentDir = parentDir.endsWith('/') ? parentDir : parentDir + '/';
-        path = path.beginsWith('/') ? path.slice(1, path.length - 1) : path;
-        path = parentDir + path;
+        if(parentDir.length > 0){
+          //We add the trailing / back in if we are going another level deeper
+          parentDir = parentDir.endsWith('/') ? parentDir : parentDir + '/';
+
+          //Remove the trailing and ending /s for appropriate path construction
+          path = path.startsWith('/') ? path.slice(1, path.length - 1) : path;
+          path = path.endsWith('/') ? path.slice(0, path.length - 2) : path;
+          path = parentDir + path;
+        }
+        else{
+          path = parentDir + path;
+        }
         parentTag = parentTag.parentElement;
         i++;
         if(i > 100){
@@ -79,44 +85,64 @@ class SkyAssetsDir extends HTMLElement {
       }
 
       //Get child tags and acquire their values.
-      let basisTranscoderTags = self.getElementsByTagName('sky-basis-transcoder-wasm');
-      let skyStateEngineTags = self.getElementsByTagName('sky-state-engine-wasm');
-      let skyInterpolationEngineTags = self.getElementsByTagName('sky-interpolation-engine-wasm');
-      let moonDiffuseMapTags = self.getElementsByTagName('sky-moon-diffuse-map');
-      let moonNormalMapTags = self.getElementsByTagName('sky-moon-normal-map');
-      let moonOpacityMapTags = self.getElementsByTagName('sky-moon-opacity-map');
-      let moonSpecularMapTags = self.getElementsByTagName('sky-moon-specular-map');
-      let moonAOMapTags = self.getElementsByTagName('sky-moon-ao-map');
+      let childNodes = Array.from(self.children);
+      let basisTranscoderTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-basis-transcoder-path');
+      let skyStateEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-state-engine-path');
+      let skyInterpolationEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-interpolation-engine-path');
+      let moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
+      let moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
+      let moonOpacityMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-opacity-map');
+      let moonSpecularMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-specular-map');
+      let moonAOMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-ao-map');
 
       const objectProperties = ['basisTranscoder', 'skyStateEngine', 'skyInterpolationEngine',
         'moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonSpecularMap', 'moonAOMap']
       let tagsList = [basisTranscoderTags, skyStateEngineTags, skyInterpolationEngineTags,
         moonDiffuseMapTags, moonNormalMapTags, moonOpacityMapTags, moonSpecularMapTags, moonAOMapTags];
       const numberOfTags = tagsList.length;
-      for(let i = 0; i < numberOfTags; ++i){
-        let tags = tagsList[i];
-        let propertyName = objectProperties[i];
-        if(tags.length > 1){
-          console.error(`The <sky-assets-dir> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+      if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
+        const wasmKeys = ['basisTranscoder', 'skyStateEngine', 'skyInterpolationEngine'];
+        for(let i = 0; i < wasmKeys.length; ++i){
+          //Must end with a / because basis texture loader will just append the file name
+          StarrySky.assetPaths[wasmKeys[i]] = path + '/';
         }
-        else if(tags.length > 0){
-          if(StarrySky.AssetPaths[propertyName] !== StarrySky.DefaultData.skyAssets[propertyName]){
-            //As the above should be copied over from a JSON parse, we must have changed this
-            //someplace else.
-            console.warn(`A page can only have one tag of type <${tags[0].tagName}>. Two were discovered. Switching data to latest url.`);
+      }
+      else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
+        const textureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap',
+        'moonSpecularMap', 'moonAOMap'];
+        for(let i = 0; i < textureKeys.length; ++i){
+          StarrySky.assetPaths[textureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[textureKeys[i]];
+        }
+      }
+      else if(self.hasAttribute('moon-path') && self.getAttribute('moon-path').toLowerCase() !== 'false'){
+        const moonTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap',
+        'moonSpecularMap', 'moonAOMap'];
+        for(let i = 0; i < moonTextureKeys.length; ++i){
+          StarrySky.assetPaths[moonTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[moonTextureKeys[i]];
+        }
+      }
+      else{
+        for(let i = 0; i < numberOfTags; ++i){
+          let tags = tagsList[i];
+          let propertyName = objectProperties[i];
+          if(tags.length > 1){
+            console.error(`The <sky-assets-dir> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
           }
-          //Try the default file name if no html was provided
-          StarrySky.AssetPaths[propertyName] = tags[0].innerHTML !== '' ? path.concat(tags[0].innerHTML) : path.concat(StarrySky.DefaultData.fileNames[propertyName]);
+          else if(tags.length > 0){
+            if(StarrySky.assetPaths[propertyName] &&
+              StarrySky.assetPaths[propertyName] !== StarrySky.DefaultData.skyAssets[propertyName]){
+              //As the above should be copied over from a JSON parse, we must have changed this
+              //someplace else.
+              console.warn(`A page can only have one tag of type <${tags[0].tagName}>. Two were discovered. Switching data to latest url.`);
+            }
+            //Try the default file name if no html was provided
+            StarrySky.assetPaths[propertyName] = tags[0].innerHTML !== '' ? path.concat(tags[0].innerHTML) : path.concat(StarrySky.DefaultData.fileNames[propertyName]);
+          }
         }
       }
 
       self.skyDataLoaded = true;
-
-      if(isRoot){
-        //Only notify the asset manager that all information has been loaded once the root
-        //tag has finished loading all children and filled in their information.
-        self.dispatchEvent(new Event('Sky-Data-Loaded'));
-      }
+      self.dispatchEvent(new Event('Sky-Data-Loaded'));
     });
 
     this.loaded = true;

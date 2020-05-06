@@ -1,8 +1,8 @@
 //This helps
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Moon.baseSunPartial = {
-  fragmentShader: function(sunAngularDiameter){
+StarrySky.Materials.Moon.baseMoonPartial = {
+  fragmentShader: function(moonAngularDiameter){
     let originalGLSL = [
     '//We enter and leave with additionalPassColor, which we add our moon direct',
     '//lighting to, after it has been attenuated by our transmittance.',
@@ -14,8 +14,25 @@ StarrySky.Materials.Moon.baseSunPartial = {
     'vec2 offsetUV = vUv * 3.0 - vec2(1.0);',
     'float pixelDistanceFromMoon = distance(offsetUV, vec2(0.5));',
 
+    '//Get lunar eclipse lightning',
+
+    '//Determine solar brihgtness based on exposed area of the sun',
+
+    '//Get the lunar BRDF from',
+    '//https://graphics.stanford.edu/~henrik/papers/nightsky/nightsky.pdf',
+
+    '//Get stone BRDF for basalt',
+
+    '//Add specular lighting to our basalt map',
+
+    '//Mix these based on the specular map',
+
+    '//Add ambient occlusion lighting',
+
+    '//Apply a the opacity map to hiden our moon at the end.',
+
     '//Apply transmittance to our sun disk direct lighting',
-    'vec3 sunTexel = 1.0 * sundisk * sunIntensity * transmittanceFade * limbDarkening;',
+    'vec3 moonTexel = moonDirectLight * transmittanceFade;',
     ];
 
     let updatedLines = [];

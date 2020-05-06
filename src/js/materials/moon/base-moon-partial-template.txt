@@ -1,8 +1,8 @@
 //This helps
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Moon.baseSunPartial = {
-  fragmentShader: function(sunAngularDiameter){
+StarrySky.Materials.Moon.baseMoonPartial = {
+  fragmentShader: function(moonAngularDiameter){
     let originalGLSL = [
       {fragment_glsl}
     ];

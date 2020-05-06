@@ -18,4 +18,4 @@ float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));
 float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);
 
 //Apply transmittance to our sun disk direct lighting
-vec3 sunTexel = 1.0 * sundisk * sunIntensity * transmittanceFade * limbDarkening;
+vec3 sunTexel = 1.0 * sundisk * sunDiskIntensity * transmittanceFade * limbDarkening;

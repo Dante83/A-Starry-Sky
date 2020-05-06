@@ -3,7 +3,9 @@ precision highp float;
 varying vec3 vWorldPosition;
 
 uniform vec3 sunPosition;
+uniform vec3 moonPosition;
 uniform float sunHorizonFade;
+uniform float lunarHorizonFade;
 uniform sampler2D mieInscatteringSum;
 uniform sampler2D rayleighInscatteringSum;
 uniform sampler2D transmittance;

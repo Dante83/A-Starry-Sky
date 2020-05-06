@@ -16,13 +16,13 @@ StarrySky.AssetManager = function(skyDirector){
   tagLists.push(skyTimeTags);
   let skyAtmosphericParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
   tagLists.push(skyAtmosphericParametersTags);
-  let skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
-  tagLists.push(skyAssetsTags);
   tagLists.forEach(function(tags){
     if(tags.length > 1){
       console.error(`The <a-starry-sky> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
     }
   });
+  //These are excluded from our search above :D
+  let skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
 
   //Now grab each of or our elements and check for events.
   this.starrySkyComponent = starrySkyComponent;
@@ -34,7 +34,7 @@ StarrySky.AssetManager = function(skyDirector){
   this.hasSkyTimeTag = false;
   this.skyAtmosphericParametersTag;
   this.hasSkyAtmosphericParametersTag = false;
-  this.skyAssetsTag;
+  this.skyAssetsTags;
   this.hasSkyAssetsTag = false;
   this.hasLoadedImages = false;
   this.readyForTickTock = false;
@@ -45,16 +45,17 @@ StarrySky.AssetManager = function(skyDirector){
   this.loadImageAssets = async function(renderer){
     self.textureLoader = new THREE.BasisTextureLoader();
     let useBasisTextures = true;
-    textureLoader.setTranscoderPath(StarrySky.AssetPaths.basisTranscoder);
+    self.textureLoader.setTranscoderPath(self.data.skyAssetsData.basisTranscoder);
     try{
-      textureLoader.detectSupport(renderer);
+      self.textureLoader.detectSupport(renderer);
     }
-    catch(error){
+    catch(err){
       //Replace it with a regular texture loader and just load our png files
+      console.warn(err);
       console.warn("BASIS file format not supported. Falling back to PNG files.");
       useBasisTextures = false;
-      textureLoader.dispose();
-      textureLoader = new THREE.TextureLoader();
+      self.textureLoader.dispose();
+      self.textureLoader = new THREE.TextureLoader();
     }
 
     //Load all of our moon textures
@@ -64,10 +65,10 @@ StarrySky.AssetManager = function(skyDirector){
     let totalNumberOfTextures = numberOfMoonTextures + 1; //An impossible task! But, maybe, one day we'll make this possible
     let numberOfTexturesLoaded = 0;
     let moonCallbackFunctions = [];
-    let moonCallbackFunction = function(moonTextureProperty){
+    function MoonCallbackFunction(moonTextureProperty){
       this.moonTextureProperty = moonTextureProperty;
     };
-    moonCallbackFunction.prototype.callback = function(texture){
+    MoonCallbackFunction.prototype.callback = function(texture){
       //Callback when done
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -88,25 +89,29 @@ StarrySky.AssetManager = function(skyDirector){
         self.textureLoader.dispose();
       }
     }
-    for(let i = 0; i < numberOfMoonTextures; ++i){
+    for(let i = 0; i < 2; ++i){
       let textureProperty = moonTextures[i];
-      let textureURI = StarrySky.AssetPaths[textureProperty];
+      let textureURI = StarrySky.assetPaths[textureProperty];
       if(!useBasisTextures){
         //Swap out our BASIS texture for a png texture
         textureURI = textureURI.slice(0, textureURI.length - 7).concat('.png');
       }
 
       //We create a new function, that comically can act as an object
-      moonCallbackFunctions.push(
-        new moonCallbackFunction(moonTextureProperty);
-      );
-      textureLoader.load(textureURI, moonCallbackFunctions[i].callback, undefined, function(err){
+      moonCallbackFunctions.push(new MoonCallbackFunction(textureProperty));
+      try{
+        let load = self.textureLoader.load(textureURI, moonCallbackFunctions[i].callback);
+      }
+      catch(err){
         if(useBasisTextures){
-          const errorMsg = `An error occurred while trying to download an image: ${err}. Falling back to PNG loader.`;
-          console.warning(errorMsg);
-          throw new Error(errorMsg);
+          useBasisTextures = false;
+          self.textureLoader.dispose();
+          self.textureLoader = new THREE.TextureLoader();
         }
-      });
+        self.textureLoader.load(textureURI, moonCallbackFunctions[i].callback, undefined, function(err){
+          console.error(err);
+        });
+      }
     };
 
     totalNumberOfTextures--; //The impossible is possible again!
@@ -129,16 +134,13 @@ StarrySky.AssetManager = function(skyDirector){
 
   //Internal function for loading our sky data once the DOM is ready
   this.loadSkyData = function(){
-    //Remove our event listener for loading sky data from the DOM
-    //and attach a new listener for loading all of our visual assets and data
-    self.skyAssetsTags.removeEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
-
     //Now that we have verified our tags, let's grab the first one in each.
     let defaultValues = self.starrySkyComponent.defaultValues;
     self.data.skyLocationData = self.hasSkyLocationTag ? self.skyLocationTag.data : defaultValues.location;
     self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
     self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
-    self.data.skyAssetsData = self.hasSkyAssetsTag ? self.skyAssetsTag.data : defaultValues.assets;
+    self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
+    self.loadImageAssets(self.skyDirector.renderer);
 
     skyDirector.assetManagerInitialized = true;
     skyDirector.initializeSkyDirectorWebWorker();
@@ -147,10 +149,12 @@ StarrySky.AssetManager = function(skyDirector){
   //This is the function that gets called each time our data loads.
   //In the event that we have loaded everything the number of tags should
   //equal the number of events.
-  let checkIfNeedsToLoadSkyData = function(){
+  let checkIfNeedsToLoadSkyData = function(e = false){
     self.skyDataSetsLoaded += 1;
     if(self.skyDataSetsLoaded >= self.skyDataSetsLength){
-      self.loadSkyData();
+      if(!e || (e.nodeName.toLowerCase() !== "sky-assets-dir" || e.isRoot)){
+        self.loadSkyData();
+      }
     }
   };
 
@@ -183,10 +187,12 @@ StarrySky.AssetManager = function(skyDirector){
     activeTags.push(this.skyAtmosphericParametersTag);
   }
   if(skyAssetsTags.length > 0){
-    this.skyDataSetsLength += 1;
+    this.skyDataSetsLength += skyAssetsTags.length;
     this.skyAssetsTags = skyAssetsTags;
     this.hasSkyAssetsTag = true;
-    activeTags.push(this.skyAssetsTags);
+    for(let i = 0; i < skyAssetsTags.length; ++i){
+      activeTags.push(skyAssetsTags[i]);
+    }
   }
   for(let i = 0; i < activeTags.length; ++i){
     checkIfAllHTMLDataLoaded(activeTags[i]);

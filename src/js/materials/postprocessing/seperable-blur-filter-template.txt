@@ -18,7 +18,6 @@ StarrySky.Materials.Postprocessing.seperableBlurFilter = {
     }
 
     let invSize = 1.0 / textureSize;
-    console.log(textureSize);
     let gaussianPdfAtX0 = 0.39894 * inverseSigma;
     let unrolledForLoop = [];
 

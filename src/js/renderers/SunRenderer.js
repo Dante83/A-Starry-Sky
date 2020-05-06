@@ -59,15 +59,15 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
   //Create our material late
   this.combinationPassMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Postprocessing.combinationPass.uniforms)),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Sun.combinationPass.uniforms)),
     side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
     lights: false,
     flatShading: true,
     clipping: true,
-    vertexShader: StarrySky.Materials.Postprocessing.combinationPass.vertexShader,
-    fragmentShader: StarrySky.Materials.Postprocessing.combinationPass.fragmentShader
+    vertexShader: StarrySky.Materials.Sun.combinationPass.vertexShader,
+    fragmentShader: StarrySky.Materials.Sun.combinationPass.fragmentShader
   });
 
   //Attach the material to our geometry
@@ -118,9 +118,15 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
     //Drive our bloom shader with our sun disk
     let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
+    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
     let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
 
     //Update our final texture that is displayed
+    self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
+    self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
+    self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
+    self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
+    self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
     self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
     self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
     self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
@@ -133,12 +139,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.firstTick = function(){
     //Connect up our reference values
     self.baseSunVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
-    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
-    self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
-    self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
-    self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
-    self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
 
     //Proceed with the first tick
     self.tick();

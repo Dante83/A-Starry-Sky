@@ -24,7 +24,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
     'float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);',
 
     '//Apply transmittance to our sun disk direct lighting',
-    'vec3 sunTexel = 1.0 * sundisk * sunIntensity * transmittanceFade * limbDarkening;',
+    'vec3 sunTexel = 1.0 * sundisk * sunDiskIntensity * transmittanceFade * limbDarkening;',
     ];
 
     let updatedLines = [];

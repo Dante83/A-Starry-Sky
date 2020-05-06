@@ -1,6 +1,6 @@
 import os, time
 
-cpp_directories = ['../cpp/sky-state-controller/', '../cpp/sky-interpolation-controller/']
+cpp_directories = ['../cpp/state-engine/', '../cpp/interpolation-engine/']
 cpp_files = [['SkyState.cpp',\
  'world_state/AstroTime.cpp',\
  'world_state/Location.cpp',\

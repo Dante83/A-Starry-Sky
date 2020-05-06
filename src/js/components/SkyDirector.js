@@ -2,7 +2,6 @@ StarrySky.SkyDirector = function(parentComponent){
   this.skyDirectorWASMIsReady = false;
   this.skyInterpolatorWASMIsReady = false;
   this.assetManagerInitialized = false;
-  this.assetManagerImagesLoaded = false;
   this.skyState;
   this.EVENT_INITIALIZE = 0;
   this.EVENT_INITIALIZATION_RESPONSE = 1;
@@ -156,7 +155,7 @@ StarrySky.SkyDirector = function(parentComponent){
   }
 
   //Prepare our WASM Modules
-  this.webAssemblyWorker = new Worker("../src/cpp/sky-state-controller/starry-sky-web-worker.js");
+  this.webAssemblyWorker = new Worker("../src/cpp/state-engine/starry-sky-web-worker.js");
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
     if(postObject.eventType === self.EVENT_RETURN_LATEST){
