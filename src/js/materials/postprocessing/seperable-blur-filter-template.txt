@@ -14,11 +14,12 @@ StarrySky.Materials.Postprocessing.seperableBlurFilter = {
     let oneOverSigmaSquared = 1.0 / kernalRadius * kernalRadius;
     let inverseSigma = 1.0 / kernalRadius;
     function gaussianPdf(x){
+      //Original Bloom Kernal, we don't use this, it's too weak
       return 0.39894 * Math.exp(-0.5 * x * x * oneOverSigmaSquared) * inverseSigma;
     }
 
     let invSize = 1.0 / textureSize;
-    let gaussianPdfAtX0 = 0.39894 * inverseSigma;
+    let gaussianPdfAtX0 = gaussianPdf(0.0);
     let unrolledForLoop = [];
 
     //loop 0 (defines variables)

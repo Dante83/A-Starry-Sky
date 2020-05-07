@@ -1,5 +1,4 @@
 //Child classes
-window.customElements.define('sky-basis-transcoder-path', class extends HTMLElement{});
 window.customElements.define('sky-state-engine-path', class extends HTMLElement{});
 window.customElements.define('sky-interpolation-engine-path', class extends HTMLElement{});
 window.customElements.define('sky-moon-diffuse-map', class extends HTMLElement{});
@@ -9,15 +8,14 @@ window.customElements.define('sky-moon-specular-map', class extends HTMLElement{
 window.customElements.define('sky-moon-ao-map', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
-  moonDiffuseMap: 'lunar-diffuse-map.basis',
-  moonNormalMap: 'lunar-normal-map.basis',
-  moonOpacityMap: 'lunar-opacity-map.basis',
-  moonSpecularMap: 'lunar-specular-map.basis',
-  moonAOMap: 'lunar-ao-map.basis'
+  moonDiffuseMap: 'lunar-diffuse-map.png',
+  moonNormalMap: 'lunar-normal-map.png',
+  moonOpacityMap: 'lunar-opacity-map.png',
+  moonSpecularMap: 'lunar-specular-map.png',
+  moonAOMap: 'lunar-ao-map.png'
 };
 
 StarrySky.DefaultData.skyAssets = {
-  basisTranscoderPath: './wasm/',
   skyStateEnginePath: './wasm/',
   skyInterpolationEnginePath: './wasm/',
   moonDiffuseMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
@@ -86,7 +84,6 @@ class SkyAssetsDir extends HTMLElement {
 
       //Get child tags and acquire their values.
       let childNodes = Array.from(self.children);
-      let basisTranscoderTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-basis-transcoder-path');
       let skyStateEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-state-engine-path');
       let skyInterpolationEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-interpolation-engine-path');
       let moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
@@ -95,15 +92,17 @@ class SkyAssetsDir extends HTMLElement {
       let moonSpecularMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-specular-map');
       let moonAOMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-ao-map');
 
-      const objectProperties = ['basisTranscoder', 'skyStateEngine', 'skyInterpolationEngine',
+      const objectProperties = ['skyStateEngine', 'skyInterpolationEngine',
         'moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonSpecularMap', 'moonAOMap']
-      let tagsList = [basisTranscoderTags, skyStateEngineTags, skyInterpolationEngineTags,
+      let tagsList = [skyStateEngineTags, skyInterpolationEngineTags,
         moonDiffuseMapTags, moonNormalMapTags, moonOpacityMapTags, moonSpecularMapTags, moonAOMapTags];
       const numberOfTags = tagsList.length;
       if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
-        const wasmKeys = ['basisTranscoder', 'skyStateEngine', 'skyInterpolationEngine'];
+        const wasmKeys = ['skyStateEngine', 'skyInterpolationEngine'];
         for(let i = 0; i < wasmKeys.length; ++i){
-          //Must end with a / because basis texture loader will just append the file name
+          //Must end with a / because basis texture loader will eventually just append the file name
+          //We want to use .BASIS in the future, but right now it lacks the quality desired for our target
+          //platform of medium to high powered desktops.
           StarrySky.assetPaths[wasmKeys[i]] = path + '/';
         }
       }

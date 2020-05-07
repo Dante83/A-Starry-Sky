@@ -116,7 +116,6 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
       self.seperableBlurVerticalRenderers[i].compute();
       bloomTextures.push(self.seperableBlurVerticalRenderers[i].getCurrentRenderTarget(self.seperableBlurVerticalVars[i]).texture);
 
-      //Use the previous bloom pass to drive the next pass
       previousPass = bloomTextures[i];
     }
 

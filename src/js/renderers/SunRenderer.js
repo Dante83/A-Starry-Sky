@@ -42,10 +42,10 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.baseSunVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true)));
   this.baseSunVar.material.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
   this.baseSunVar.material.uniforms.radiusOfSunPlane.needsUpdate = true;
-  this.baseSunVar.material.uniforms.solarRayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseSunVar.material.uniforms.solarRayleighInscatteringSum.needsUpdate = true;
-  this.baseSunVar.material.uniforms.solarMieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseSunVar.material.uniforms.solarMieInscatteringSum.needsUpdate = true;
+  this.baseSunVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
+  this.baseSunVar.material.uniforms.rayleighInscatteringSum.needsUpdate = true;
+  this.baseSunVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
+  this.baseSunVar.material.uniforms.mieInscatteringSum.needsUpdate = true;
   this.baseSunVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
   this.baseSunVar.material.uniforms.transmittance.needsUpdate = true;
   this.baseSunVar.minFilter = THREE.LinearFilter;
@@ -86,8 +86,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   }
 
   //And update our object with our initial values
-  this.setBloomStrength(1.0);
-  this.setBloomRadius(0.1);
+  this.setBloomStrength(5.0);
+  this.setBloomRadius(1.0);
 
   this.tick = function(){
     let sunPosition = skyDirector.skyState.sun.position;
@@ -110,8 +110,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
     self.baseSunVar.material.uniforms.sunHorizonFade.needsUpdate = true;
     self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
-    self.baseSunVar.material.uniforms.toneMappingExposure.value = 0.8;
-    self.baseSunVar.material.uniforms.toneMappingExposure.needsUpdate = true;
+    self.combinationPassMaterial.uniforms.toneMappingExposure.value = 0.8;
+    self.combinationPassMaterial.uniforms.toneMappingExposure.needsUpdate = true;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();

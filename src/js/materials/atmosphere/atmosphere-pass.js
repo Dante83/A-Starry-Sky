@@ -5,8 +5,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false){
     let uniforms = {
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
-      solarMieInscatteringSum: {type: 't', value: null},
-      solarRayleighInscatteringSum: {type: 't', value: null},
+      mieInscatteringSum: {type: 't', value: null},
+      rayleighInscatteringSum: {type: 't', value: null},
       transmittance: {type: 't', value: null},
       toneMappingExposure: {type: 'f', value: 1.0},
       sunHorizonFade: {type: 'f', value: 1.0}
@@ -59,7 +59,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'const float piOver2 = 1.5707963267948966192313;',
     'const float pi = 3.141592653589793238462;',
     'const float scatteringSunIntensity = 20.0;',
-    'const float scatteringMoonIntensity = 0.0144; //Moon reflects 0.072% of all light',
+    '//const float scatteringMoonIntensity = 0.0144; //Moon reflects 0.072% of all light',
+    'const float scatteringMoonIntensity = 10.0;',
 
     '#if($isSunPass)',
       'uniform float sunAngularDiameterCos;',
@@ -129,19 +130,16 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//Atmosphere',
       'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
       'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, lunarHorizonFade, uv2OfTransmittance);',
-      'vec3 combinedPass = solarAtmosphericPass + lunarAtmosphericPass;',
+      'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
         '$draw_sun_pass',
-        'vec3 toneMappedSky = ACESFilmicToneMapping(combinedPass);',
-        'gl_FragColor = vec4(toneMappedSky + sunTexel, 1.0);',
+        'gl_FragColor = vec4(combinedPass + sunTexel, 1.0);',
       '#elif($isMoonPass)',
         '$draw_moon_pass',
         'gl_FragColor = vec4(combinedPass, 1.0);',
       '#else',
-        'vec3 combinedAtmosphericPass = solarAtmosphericPass;',
-
         '//Color Adjustment Pass',
         'vec3 toneMappedColor = ACESFilmicToneMapping(combinedPass);',
 

@@ -5,8 +5,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false){
     let uniforms = {
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
-      solarMieInscatteringSum: {type: 't', value: null},
-      solarRayleighInscatteringSum: {type: 't', value: null},
+      mieInscatteringSum: {type: 't', value: null},
+      rayleighInscatteringSum: {type: 't', value: null},
       transmittance: {type: 't', value: null},
       toneMappingExposure: {type: 'f', value: 1.0},
       sunHorizonFade: {type: 'f', value: 1.0}

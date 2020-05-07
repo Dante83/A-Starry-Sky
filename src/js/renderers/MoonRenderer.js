@@ -39,10 +39,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   this.baseMoonVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true)));
   this.baseMoonVar.material.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
   this.baseMoonVar.material.uniforms.radiusOfMoonPlane.needsUpdate = true;
-  this.baseMoonVar.material.uniforms.solarRayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseMoonVar.material.uniforms.solarRayleighInscatteringSum.needsUpdate = true;
-  this.baseMoonVar.material.uniforms.solarMieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseMoonVar.material.uniforms.solarMieInscatteringSum.needsUpdate = true;
+  this.baseMoonVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
+  this.baseMoonVar.material.uniforms.rayleighInscatteringSum.needsUpdate = true;
+  this.baseMoonVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
+  this.baseMoonVar.material.uniforms.mieInscatteringSum.needsUpdate = true;
   this.baseMoonVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
   this.baseMoonVar.material.uniforms.transmittance.needsUpdate = true;
 

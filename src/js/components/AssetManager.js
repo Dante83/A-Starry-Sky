@@ -2,7 +2,6 @@ StarrySky.AssetManager = function(skyDirector){
   this.skyDirector = skyDirector;
   this.data = {};
   this.images = {};
-  this.textureLoader;
   let starrySkyComponent = skyDirector.parentComponent;
 
   //------------------------
@@ -38,112 +37,79 @@ StarrySky.AssetManager = function(skyDirector){
   this.hasSkyAssetsTag = false;
   this.hasLoadedImages = false;
   this.readyForTickTock = false;
+  this.loadSkyDataHasNotRun = true;
   this.tickSinceLastUpdateRequest = 5;
   let self = this;
 
-  //Asynchronously load all of our images
+  //Asynchronously load all of our images because, we don't care about when these load
   this.loadImageAssets = async function(renderer){
-    self.textureLoader = new THREE.BasisTextureLoader();
-    let useBasisTextures = true;
-    self.textureLoader.setTranscoderPath(self.data.skyAssetsData.basisTranscoder);
-    try{
-      self.textureLoader.detectSupport(renderer);
-    }
-    catch(err){
-      //Replace it with a regular texture loader and just load our png files
-      console.warn(err);
-      console.warn("BASIS file format not supported. Falling back to PNG files.");
-      useBasisTextures = false;
-      self.textureLoader.dispose();
-      self.textureLoader = new THREE.TextureLoader();
-    }
+    //Just use our THREE Texture Loader for now
+    const textureLoader = new THREE.TextureLoader();
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonSpecularMap', 'moonAOMap'];
     const formats = [THREE.RGBFormat, THREE.RGBFormat, THREE.RedFormat, THREE.RGBFormat, THREE.RedFormat];
     const numberOfMoonTextures = moonTextures.length;
-    let totalNumberOfTextures = numberOfMoonTextures + 1; //An impossible task! But, maybe, one day we'll make this possible
+    const totalNumberOfTextures = numberOfMoonTextures;
     let numberOfTexturesLoaded = 0;
-    let moonCallbackFunctions = [];
-    function MoonCallbackFunction(moonTextureProperty){
-      this.moonTextureProperty = moonTextureProperty;
-    };
-    MoonCallbackFunction.prototype.callback = function(texture){
-      //Callback when done
-      texture.wrapS = THREE.ClampToEdgeWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.magFilter = THREE.LinearFilter;
-      texture.minFilter = THREE.LinearFilter;
-      texture.format = formats[this.moonTextureProperty];
-      self.images[this.moonTextureProperty] = texture;
 
-      //If the renderer already exists, go in and update the uniform
-      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-        let textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[this.moonTextureProperty];
-        textureRef.value = texture;
-        textureRef.needsUpdate = true;
-      }
-      numberOfTexturesLoaded++;
-      if(numberOfTexturesLoaded === totalNumberOfTextures){
-        self.hasLoadedImages = true;
-        self.textureLoader.dispose();
-      }
-    }
-    for(let i = 0; i < 2; ++i){
-      let textureProperty = moonTextures[i];
-      let textureURI = StarrySky.assetPaths[textureProperty];
-      if(!useBasisTextures){
-        //Swap out our BASIS texture for a png texture
-        textureURI = textureURI.slice(0, textureURI.length - 7).concat('.png');
+    //Recursive based functional for loop, with asynchronous execution because
+    //Each iteration is not dependent upon the last, but it's just a set of similiar code
+    //that can be run in parallel.
+    (async function createNewTexturePromise(i){
+      const next = i + 1;
+      if(next < totalNumberOfTextures){
+        createNewTexturePromise(next);
       }
 
-      //We create a new function, that comically can act as an object
-      moonCallbackFunctions.push(new MoonCallbackFunction(textureProperty));
-      try{
-        let load = self.textureLoader.load(textureURI, moonCallbackFunctions[i].callback);
-      }
-      catch(err){
-        if(useBasisTextures){
-          useBasisTextures = false;
-          self.textureLoader.dispose();
-          self.textureLoader = new THREE.TextureLoader();
-        }
-        self.textureLoader.load(textureURI, moonCallbackFunctions[i].callback, undefined, function(err){
-          console.error(err);
-        });
-      }
-    };
+      let texturePromise = new Promise(function(resolve, reject){
+        textureLoader.load(StarrySky.assetPaths[moonTextures[i]], function(texture){resolve(texture);});
+      });
+      texturePromise.then(function(texture){
+        //Fill in the details of our texture
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearFilter;
+        texture.format = formats[i];
+        self.images[i] = texture;
 
-    totalNumberOfTextures--; //The impossible is possible again!
-    if(numberOfTexturesLoaded === totalNumberOfTextures){
-      self.hasLoadedImages = true;
-
-      //We need to hook into each of our textures and update their uniforms if the renderer exists
-      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-        for(let i = 0; i < moonTextures.length; ++i){
-          let moonTextureProperty = moonTextures[i];
-          let textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextureProperty];
-          textureRef.value = texture;
+        //If the renderer already exists, go in and update the uniform
+        if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+          let textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextures[i]];
+          textureRef.value = self.images[i];
           textureRef.needsUpdate = true;
         }
-      }
 
-      self.textureLoader.dispose();
-    }
+        numberOfTexturesLoaded += 1;
+        if(numberOfTexturesLoaded === totalNumberOfTextures){
+          self.hasLoadedImages = true;
+        }
+      }, function(err){
+        console.error(err);
+      });
+    })(0);
+
+    //Load any additional textures
   }
 
   //Internal function for loading our sky data once the DOM is ready
   this.loadSkyData = function(){
-    //Now that we have verified our tags, let's grab the first one in each.
-    let defaultValues = self.starrySkyComponent.defaultValues;
-    self.data.skyLocationData = self.hasSkyLocationTag ? self.skyLocationTag.data : defaultValues.location;
-    self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
-    self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
-    self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
-    self.loadImageAssets(self.skyDirector.renderer);
+    if(self.loadSkyDataHasNotRun){
+      //Don't run this twice
+      self.loadSkyDataHasNotRun = false;
 
-    skyDirector.assetManagerInitialized = true;
-    skyDirector.initializeSkyDirectorWebWorker();
+      //Now that we have verified our tags, let's grab the first one in each.
+      let defaultValues = self.starrySkyComponent.defaultValues;
+      self.data.skyLocationData = self.hasSkyLocationTag ? self.skyLocationTag.data : defaultValues.location;
+      self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
+      self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
+      self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
+      self.loadImageAssets(self.skyDirector.renderer);
+
+      skyDirector.assetManagerInitialized = true;
+      skyDirector.initializeSkyDirectorWebWorker();
+    }
   };
 
   //This is the function that gets called each time our data loads.

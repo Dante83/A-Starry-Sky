@@ -24,10 +24,10 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString
     )
   });
-  this.atmosphereMaterial.uniforms.solarRayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.atmosphereMaterial.uniforms.solarRayleighInscatteringSum.needsUpdate = true;
-  this.atmosphereMaterial.uniforms.solarMieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.atmosphereMaterial.uniforms.solarMieInscatteringSum.needsUpdate = true;
+  this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
+  this.atmosphereMaterial.uniforms.rayleighInscatteringSum.needsUpdate = true;
+  this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
+  this.atmosphereMaterial.uniforms.mieInscatteringSum.needsUpdate = true;
 
   //Populate all of uniform values
 

@@ -62,7 +62,7 @@ StarrySky.Materials.Sun.combinationPass = {
       'bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;',
       'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
 
-      'vec3 combinedLight = clamp(directLight + bloomStrength * bloomLight, 0.0, 1.0);',
+      'vec3 combinedLight = ACESFilmicToneMapping(directLight + bloomStrength * bloomLight);',
 
       '//Late triangular blue noise',
 
