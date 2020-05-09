@@ -44,15 +44,19 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     //Update the uniforms so that we can see where we are on this sky.
     self.atmosphereMaterial.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
     self.atmosphereMaterial.uniforms.sunHorizonFade.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.toneMappingExposure.value = 0.8;
+    self.atmosphereMaterial.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
+    self.atmosphereMaterial.uniforms.moonHorizonFade.needsUpdate = true;
+    self.atmosphereMaterial.uniforms.toneMappingExposure.value = 1.0;
     self.atmosphereMaterial.uniforms.toneMappingExposure.needsUpdate = true;
     self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
+    self.atmosphereMaterial.uniforms.moonPosition.needsUpdate = true;
   }
 
   //Upon completion, this method self destructs
   this.firstTick = function(){
     //Connect up our reference values
     self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
+    self.atmosphereMaterial.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
 
     //Proceed with the first tick
     self.tick();

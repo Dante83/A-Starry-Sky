@@ -5,11 +5,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false){
     let uniforms = {
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
+      moonPosition: {type: 'vec3', value: new THREE.Vector3()},
       mieInscatteringSum: {type: 't', value: null},
       rayleighInscatteringSum: {type: 't', value: null},
       transmittance: {type: 't', value: null},
       toneMappingExposure: {type: 'f', value: 1.0},
-      sunHorizonFade: {type: 'f', value: 1.0}
+      sunHorizonFade: {type: 'f', value: 1.0},
+      moonHorizonFade: {type: 'f', value: 1.0}
     }
 
     //Pass our specific uniforms in here.
@@ -61,8 +63,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       //Additional injected code for sun and moon
       if(moonCode !== false){
         updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, '1');
-        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '1');
-        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, sunCode);
+        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, '');
         updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, moonCode);
       }
       else if(sunCode !== false){

@@ -13,6 +13,7 @@ window.customElements.define('sky-number-of-ray-steps', class extends HTMLElemen
 window.customElements.define('sky-number-of-gathering-steps', class extends HTMLElement{});
 window.customElements.define('sky-ozone-enabled', class extends HTMLElement{});
 window.customElements.define('sky-sun-angular-diameter', class extends HTMLElement{});
+window.customElements.define('sky-moon-angular-diameter', class extends HTMLElement{});
 
 StarrySky.DefaultData.skyAtmosphericParameters = {
   solarIntensity: 1367.0,
@@ -38,7 +39,8 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
   numberOfRaySteps: 30,
   numberOfGatheringSteps: 30,
   ozoneEnabled: true,
-  sunAngularDiameter: 3.38
+  sunAngularDiameter: 3.38,
+  moonAngularDiameter: 3.15
 };
 
 //Parent tag
@@ -104,6 +106,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       self.data.numberOfGatheringSteps = numberOfGatheringStepsTags.length > 0 ? parseFloat(numberOfGatheringStepsTags[0].innerHTML) : self.data.numberOfGatheringSteps;
       self.data.ozoneEnabled = ozoneEnabledTags.length > 0 ? JSON.parse(ozoneEnabledTags[0].innerHTML.toLowerCase()) === true : self.data.ozoneEnabled;
       self.data.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFloat(sunAngularDiameterTags[0].innerHTML) : self.data.sunAngularDiameter;
+      self.data.moonAngularDiameter = moonAngularDiameterTags.length > 0 ? parseFloat(moonAngularDiameterTags[0].innerHTML) : self.data.moonAngularDiameter;
 
       let listOfColorBasedTags = [solarColorTags, lunarColorTags, mieBetaTags];
       let listOfDatas = [self.data.solarColor, self.data.lunarColor, self.data.mieBeta]
@@ -144,6 +147,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       self.data.numberOfRaySteps = clampAndWarn(self.data.numberOfRaySteps, 2, 1000, '<sky-number-of-ray-steps>');
       self.data.numberOfGatheringSteps = clampAndWarn(self.data.numberOfGatheringSteps, 2, 1000, '<sky-number-of-gathering-steps>');
       self.data.sunAngularDiameter = clampAndWarn(self.data.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
+      self.data.moonAngularDiameter = clampAndWarn(self.data.moonAngularDiameter, 0.1, 90.0, '<sky-moon-angular-diameter>');
 
       //
       //TODO: Clamp and warn each of our color systems.

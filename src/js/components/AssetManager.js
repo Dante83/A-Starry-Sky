@@ -1,7 +1,9 @@
 StarrySky.AssetManager = function(skyDirector){
   this.skyDirector = skyDirector;
   this.data = {};
-  this.images = {};
+  this.images = {
+    moonImages: {}
+  };
   let starrySkyComponent = skyDirector.parentComponent;
 
   //------------------------
@@ -48,7 +50,7 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonSpecularMap', 'moonAOMap'];
-    const formats = [THREE.RGBFormat, THREE.RGBFormat, THREE.RedFormat, THREE.RGBFormat, THREE.RedFormat];
+    const formats = [THREE.RGBFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.RGBFormat, THREE.LuminanceFormat];
     const numberOfMoonTextures = moonTextures.length;
     const totalNumberOfTextures = numberOfMoonTextures;
     let numberOfTexturesLoaded = 0;
@@ -71,13 +73,14 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.LinearFilter;
         texture.minFilter = THREE.LinearFilter;
+        texture.encoding = THREE.sRGBEncoding;
         texture.format = formats[i];
-        self.images[i] = texture;
+        self.images.moonImages[moonTextures[i]] = texture;
 
         //If the renderer already exists, go in and update the uniform
         if(self.skyDirector?.renderers?.moonRenderer !== undefined){
           let textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextures[i]];
-          textureRef.value = self.images[i];
+          textureRef.value = texture;
           textureRef.needsUpdate = true;
         }
 

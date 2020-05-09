@@ -9,5 +9,5 @@ void main() {
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
   //We offset our sun z-position by 0.01 to avoid Z-Fighting with the back sky plane
-  gl_Position.z -= 0.02;
+  gl_Position.z -= 0.01;
 }

@@ -1,7 +1,7 @@
 //Derivative of Unreal Bloom Pass from Three.JS
 //Thanks spidersharma / http://eduperiment.com/
 uniform sampler2D baseTexture;
-uniform int bloomEnabled;
+uniform bool bloomEnabled;
 uniform sampler2D blurTexture1;
 uniform sampler2D blurTexture2;
 uniform sampler2D blurTexture3;
@@ -23,11 +23,8 @@ void main(){
   float pixelDistanceFromMoon = distance(offsetUV, vec2(0.5));
   float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromMoon)));
 
-  //Get the brightness of the moon
-  vec3 directLight = texture2D(baseTexture, vUv).rgb;
-
   //Add our post processing effects
-  vec3 combinedLight;
+  vec3 combinedLight = abs(texture2D(baseTexture, vUv).rgb);
   if(bloomEnabled){
     //Bloom is only enabled when the sun has set so that we can share the bloom
     //shader betweeen the sun and the moon.
@@ -37,15 +34,12 @@ void main(){
     bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;
     bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;
 
-    combinedLight = clamp(directLight + bloomStrength * bloomLight, 0.0, 1.0);
+    combinedLight += abs(bloomStrength * bloomLight);
   }
-  else{
-    combinedLight = clamp(directLight, 0.0, 1.0);
-  }
+  combinedLight = ACESFilmicToneMapping(combinedLight);
 
   //Late triangular blue noise
 
   //Return our tone mapped color when everything else is done
-  //gl_FragColor = vec4(combinedLight, falloffDisk);
-  gl_FragColor = vec4(vec3(1.0, 0.0, 0.0), 1.0);
+  gl_FragColor = vec4(combinedLight, 1.0);
 }

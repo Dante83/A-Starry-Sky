@@ -16,30 +16,40 @@ SkyInterpolator* skyInterpolator;
 
 extern "C" {
   int main();
-  void initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues);
+  void initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
   void updateFinalValues(float* astroPositions_f, float* linearValues_f);
   void updateTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
   void tick(float t);
 }
 
-void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues){
+void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
   skyInterpolator->sinOfLatitude = -sin(latitude * DEG_2_RAD);
   skyInterpolator->cosOfLatitude = cos(latitude * DEG_2_RAD);
   skyInterpolator->astroPositions_0 = astroPositions_0;
   skyInterpolator->rotatedAstroPositions = rotatedAstroPositions;
   skyInterpolator->linearValues_0 = linearValues_0;
   skyInterpolator->linearValues = linearValues;
+  skyInterpolator->rotationallyDepedentAstroValues = rotationallyDepedentAstroValues;
 }
 
 void EMSCRIPTEN_KEEPALIVE updateFinalValues(float* astroPositions_f, float* linearValues_f){
   #pragma unroll
-  for(int i = 0; i < NUMBER_OF_RAS_AND_DECS; ++i){
-    if(astroPositions_f[i] < skyInterpolator->astroPositions_0[i]){
-      skyInterpolator->deltaPositions[i] = (PI_TIMES_TWO - skyInterpolator->astroPositions_0[i]) + astroPositions_f[i];
+  for(int i = 0; i < NUMBER_OF_RAS_AND_DECS; i += 2){
+    float ra_0 = skyInterpolator->astroPositions_0[i];
+    float ra_f = astroPositions_f[i];
+    float dec_0 = skyInterpolator->astroPositions_0[i + 1];
+    float dec_f = astroPositions_f[i + 1];
+
+    //Huge jumps are an excellent way to see that this is incorrect
+    float deltaPosition = ra_f - ra_0;
+    skyInterpolator->deltaPositions[i] = deltaPosition;
+    if(deltaPosition > PI){
+      skyInterpolator->deltaPositions[i] = (PI_TIMES_TWO - abs(deltaPosition)) * (deltaPosition < 0.0 ? 1.0 : -1.0);
     }
-    else{
-      skyInterpolator->deltaPositions[i] = astroPositions_f[i] - skyInterpolator->astroPositions_0[i];
-    }
+    //Interpolation on dec is always a bit weird, but does not face the same massive rotations
+    //that interpolations on right-ascension has. That and declination never strays towards the polar
+    //limits anyways for our CPU calculated objects, and all GPU objects have a static RA and Dec.
+    skyInterpolator->deltaPositions[i + 1] = dec_f - dec_0;
   }
 
   #pragma unroll
@@ -64,6 +74,12 @@ void EMSCRIPTEN_KEEPALIVE tick(float t){
 
   //Update our rotation of our astronomical objects in the sky
   skyInterpolator->rotateAstroObjects(tFractional);
+
+  //Get offset x, y, z location for sun and moon
+  skyInterpolator->getQuadOffsets();
+
+  //Get the horizon fade of our sun and moon
+  skyInterpolator->getHorizonFades();
 }
 
 void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
@@ -79,7 +95,7 @@ void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
   float sinLocalSiderealTime = sin(interpolatedLSRT);
   float cosLocalSiderealTime = cos(interpolatedLSRT);
   #pragma unroll
-  for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_OBJECTS; i += 1){
+  for(int i = 0; i < NUMBER_OF_ASTRONOMICAL_OBJECTS; ++i){
     //Convert the right ascension and hour angle to an x, y, z coordinate
     float interpolatedRA = interpolatedAstroPositions[i * 2];
     float interpolatedDec = interpolatedAstroPositions[i * 2 + 1];
@@ -89,19 +105,16 @@ void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
     float equitorialY = sin(interpolatedDec);
 
     //Rotate the object
-    int xIndex = 3 * i;
-    int yIndex = xIndex + 1;
-    int zIndex = xIndex + 2;
     float term0 = cosLocalSiderealTime * equitorialX + sinLocalSiderealTime * equitorialZ;
-    rotatedAstroPositions[xIndex] = sinOfLatitude * term0 - cosOfLatitude * equitorialY;
-    rotatedAstroPositions[yIndex] = cosOfLatitude * term0 + sinOfLatitude * equitorialY;
-    rotatedAstroPositions[zIndex] = sinLocalSiderealTime * equitorialX - cosLocalSiderealTime * equitorialZ;
+    float x_term = sinOfLatitude * term0 - cosOfLatitude * equitorialY;
+    float y_term = cosOfLatitude * term0 + sinOfLatitude * equitorialY;
+    float z_term = sinLocalSiderealTime * equitorialX - cosLocalSiderealTime * equitorialZ;
 
     //Get the magnitude of the vector
-    float magnitudeOfAstroVector = 1.0 / sqrt(rotatedAstroPositions[xIndex] * rotatedAstroPositions[xIndex] + rotatedAstroPositions[yIndex] * rotatedAstroPositions[yIndex] + rotatedAstroPositions[zIndex] * rotatedAstroPositions[zIndex]);
-    rotatedAstroPositions[xIndex] *= magnitudeOfAstroVector;
-    rotatedAstroPositions[yIndex] *= magnitudeOfAstroVector;
-    rotatedAstroPositions[zIndex] *= magnitudeOfAstroVector;
+    float magnitudeOfAstroVector = 1.0 / sqrt(x_term * x_term + y_term * y_term + z_term * z_term);
+    rotatedAstroPositions[3 * i] = x_term * magnitudeOfAstroVector;
+    rotatedAstroPositions[3 * i + 1] = y_term * magnitudeOfAstroVector;
+    rotatedAstroPositions[3 * i + 2] = z_term * magnitudeOfAstroVector;
   }
 }
 
@@ -109,6 +122,30 @@ void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_LINEAR_VALUES; i += 1){
     linearValues[i] = linearValues_0[i] + fractOfFinalPosition * deltaLinearValues[i];
+  }
+}
+
+void SkyInterpolator::getQuadOffsets(){
+  #pragma unroll
+  for(int i = 0; i < 6; i += 3){
+    float objectXPosition = rotatedAstroPositions[i];
+    float objectYPosition = rotatedAstroPositions[i + 1];
+    float objectZPosition = rotatedAstroPositions[i + 2];
+    float altitude = PI_OVER_TWO - acos(objectYPosition);
+    float azimuth = atan2(objectZPosition, objectXPosition) + PI;
+    float cos_alt = cos(altitude);
+    rotationallyDepedentAstroValues[i] = sin(azimuth) * cos_alt * RADIUS_OF_SKY;
+    rotationallyDepedentAstroValues[i + 1] = sin(altitude) * RADIUS_OF_SKY;
+    rotationallyDepedentAstroValues[i + 2] = cos(azimuth) * cos_alt * RADIUS_OF_SKY;
+  }
+}
+
+void SkyInterpolator::getHorizonFades(){
+  #pragma unroll
+  for(int i = 0; i < 2; ++i){
+    float objectYPosition = rotatedAstroPositions[i * 3 + 1];
+    float linearFade = 1.7 * objectYPosition + 1.1;
+    rotationallyDepedentAstroValues[START_OF_HORIZON_FADE_INDEX + i] = (linearFade < 0.0) ? 0.0 : (1.0 < linearFade) ? 1.0 : linearFade;
   }
 }
 

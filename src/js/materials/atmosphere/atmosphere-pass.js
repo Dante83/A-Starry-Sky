@@ -5,11 +5,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false){
     let uniforms = {
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
+      moonPosition: {type: 'vec3', value: new THREE.Vector3()},
       mieInscatteringSum: {type: 't', value: null},
       rayleighInscatteringSum: {type: 't', value: null},
       transmittance: {type: 't', value: null},
       toneMappingExposure: {type: 'f', value: 1.0},
-      sunHorizonFade: {type: 'f', value: 1.0}
+      sunHorizonFade: {type: 'f', value: 1.0},
+      moonHorizonFade: {type: 'f', value: 1.0}
     }
 
     //Pass our specific uniforms in here.
@@ -51,7 +53,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform vec3 sunPosition;',
     'uniform vec3 moonPosition;',
     'uniform float sunHorizonFade;',
-    'uniform float lunarHorizonFade;',
+    'uniform float moonHorizonFade;',
     'uniform sampler2D mieInscatteringSum;',
     'uniform sampler2D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
@@ -59,13 +61,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'const float piOver2 = 1.5707963267948966192313;',
     'const float pi = 3.141592653589793238462;',
     'const float scatteringSunIntensity = 20.0;',
-    '//const float scatteringMoonIntensity = 0.0144; //Moon reflects 0.072% of all light',
-    'const float scatteringMoonIntensity = 10.0;',
+    'const float scatteringMoonIntensity = 1.44; //Moon reflects 7.2% of all light',
 
     '#if($isSunPass)',
       'uniform float sunAngularDiameterCos;',
+      'uniform sampler2D moonOpacityMap;',
       'varying vec2 vUv;',
-      'const float sunDiskIntensity = 20.0;',
+      'const float sunDiskIntensity = 30.0;',
 
       '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
       'const float ac1 = 0.46787619;',
@@ -79,7 +81,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform sampler2D moonSpecularMap;',
       'uniform sampler2D moonOpacityMap;',
       'varying vec2 vUv;',
-      'const float moonDiskIntensity = 0.0144;',
     '#endif',
 
     '$atmosphericFunctions',
@@ -112,7 +113,11 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon',
       '#if($isMoonPass)',
         '//Get our lunar occlusion texel',
-        'float lunarPixelMask = texture2D(lunarAlphaMask, vUv);',
+        'vec2 offsetUV = clamp(vUv * 3.0 - vec2(1.0), 0.0, 1.0);',
+        'float lunarMask = texture2D(moonOpacityMap, offsetUV).r;',
+      '#elif($isSunPass)',
+        '//Get our lunar occlusion texel in the frame of the sun',
+        'float lunarMask = texture2D(moonOpacityMap, vUv).r;',
       '#endif',
 
       '//This stuff never shows up near our sun, so we can exclude it',
@@ -129,7 +134,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '//Atmosphere',
       'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
-      'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, lunarHorizonFade, uv2OfTransmittance);',
+      'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
       'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
 
       '//Sun and Moon layers',
@@ -138,7 +143,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'gl_FragColor = vec4(combinedPass + sunTexel, 1.0);',
       '#elif($isMoonPass)',
         '$draw_moon_pass',
-        'gl_FragColor = vec4(combinedPass, 1.0);',
+        'gl_FragColor = vec4(mix(combinedPass, combinedPass + moonTexel, lunarMask), 1.0);',
       '#else',
         '//Color Adjustment Pass',
         'vec3 toneMappedColor = ACESFilmicToneMapping(combinedPass);',
@@ -171,8 +176,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       //Additional injected code for sun and moon
       if(moonCode !== false){
         updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, '1');
-        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '1');
-        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, sunCode);
+        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, '');
         updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, moonCode);
       }
       else if(sunCode !== false){

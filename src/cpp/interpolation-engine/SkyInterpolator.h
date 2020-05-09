@@ -15,6 +15,9 @@ public:
   float* linearValues_0;
   float* rotatedAstroPositions;
   float* linearValues;
+  float* rotationallyDepedentAstroValues;
   void updateLinearInterpolations(float fractOfFinalPosition);
   void rotateAstroObjects(float fractOfFinalPosition);
+  void getQuadOffsets();
+  void getHorizonFades();
 };

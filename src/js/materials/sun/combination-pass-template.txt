@@ -4,6 +4,7 @@
 StarrySky.Materials.Sun.combinationPass = {
   uniforms: {
     baseTexture: {type: 't', 'value': null},
+    bloomEnabled: {type: 'i', 'value': 0},
     blurTexture1: {type: 't', 'value': null},
     blurTexture2: {type: 't', 'value': null},
     blurTexture3: {type: 't', 'value': null},

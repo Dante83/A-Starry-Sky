@@ -3,15 +3,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   let assetManager = skyDirector.assetManager;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  //NOTE: We might want to pull this out into our interpolator as these rotational matrix
-  //multiplications might be expensive. Instead, we can probably just calculate the numbers
-  //in Web Assembly for better performance.
   const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
   const sunAngularDiameterInRadians = 2.0 * sunAngularRadiusInRadians;
   const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(sunAngularRadiusInRadians) * 3.0;
   const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
-  this.directLight;
 
   //Unlike the regular sky, we run the sun as a multi-pass shader
   //in order to allow for bloom shading. As we are using a square plane
@@ -33,7 +29,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
       skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
       baseSunPartial,
-      false,
+      false
     ),
     this.baseSunTexture
   );
@@ -90,55 +86,78 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.setBloomRadius(1.0);
 
   this.tick = function(){
-    let sunPosition = skyDirector.skyState.sun.position;
-    let altitude = (Math.PI * 0.5) - Math.acos(sunPosition.y);
-    let azimuth = Math.atan2(sunPosition.z, sunPosition.x) + (Math.PI);
-    //Don't run if our sun is not visible
-    let sphericalPosition = [Math.sin(azimuth) * Math.cos(altitude), Math.sin(altitude), Math.cos(azimuth) * Math.cos(altitude)];
-
     //Update the position of our mesh
     let cameraPosition = skyDirector.camera.position;
-    self.sunMesh.position.set(sphericalPosition[0], sphericalPosition[1], sphericalPosition[2]).multiplyScalar(RADIUS_OF_SKY).add(cameraPosition);
+    let quadOffset = skyDirector.skyState.sun.quadOffset;
+    self.sunMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.sunMesh.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
     self.sunMesh.updateMatrix();
     self.sunMesh.updateMatrixWorld();
 
-    //Update our lights
-
     //Update our shader material
     self.baseSunVar.material.uniforms.worldMatrix.needsUpdate = true;
+    self.baseSunVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
+    self.baseSunVar.material.uniforms.moonHorizonFade.needsUpdate = true;
     self.baseSunVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
     self.baseSunVar.material.uniforms.sunHorizonFade.needsUpdate = true;
     self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.toneMappingExposure.value = 0.8;
+    self.baseSunVar.material.uniforms.moonPosition.needsUpdate = true;
+    self.combinationPassMaterial.uniforms.toneMappingExposure.value = 1.0;
     self.combinationPassMaterial.uniforms.toneMappingExposure.needsUpdate = true;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();
 
-    //Drive our bloom shader with our sun disk
-    let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
-    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
-
     //Update our final texture that is displayed
-    self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
-    self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
-    self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
-    self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
-    self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
+    //TODO: Drive this with HDR instead of sky fade
+    let bloomTest = self.skyDirector.skyState.sun.horizonFade >= 0.95;
+    let bloomSwapped = this.bloomEnabled !== bloomTest;
+    this.bloomEnabled = bloomSwapped ? bloomTest : this.bloomEnabled;
+    if(this.bloomEnabled){
+      if(bloomSwapped){
+        self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
+        self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
+      }
+
+      //Drive our bloom shader with our sun disk
+      let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
+      self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
+      let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
+
+      self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
+      self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
+      self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
+      self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
+      self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
+      self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
+    }
+    else if(bloomSwapped){
+      self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
+      self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
+    }
   }
 
   //Upon completion, this method self destructs
   this.firstTick = function(){
     //Connect up our reference values
     self.baseSunVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
+    self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade >= 0.95;
+    self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
+
+    //Connect up our images if they don't exist yet
+    if(self.skyDirector.assetManager.hasLoadedImages){
+      //The image of the moon AO for our solar ecclipse
+      self.baseSunVar.material.uniforms.moonOpacityMap.value = self.skyDirector.assetManager.images.moonImages.moonOpacityMap;
+      self.baseSunVar.material.uniforms.moonOpacityMap.needsUpdate = true;
+
+      //Image of the solar corona for our solar ecclipse
+
+    }
 
     //Proceed with the first tick
     self.tick();

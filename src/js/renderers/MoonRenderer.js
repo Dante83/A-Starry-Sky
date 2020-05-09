@@ -8,7 +8,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(moonAngularRadiusInRadians) * 3.0;
   const diameterOfMoonPlane = 2.0 * radiusOfMoonPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
-  this.directLight;
+  this.bloomEnabled = false;
 
   //Unlike the regular sky, we run the moon as a multi-pass shader
   //in order to allow for bloom shading. As we are using a square plane
@@ -29,8 +29,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
       skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
-      baseMoonPartial,
       false,
+      baseMoonPartial,
     ),
     this.baseMoonTexture
   );
@@ -93,59 +93,81 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   }
 
   //And update our object with our initial values
-  this.setBloomStrength(1.0);
-  this.setBloomRadius(0.1);
+  this.setBloomStrength(5.0);
+  this.setBloomRadius(1.0);
 
   this.tick = function(){
-    let moonPosition = skyDirector.skyState.moon.position;
-    let altitude = (Math.PI * 0.5) - Math.acos(moonPosition.y);
-    let azimuth = Math.atan2(moonPosition.z, moonPosition.x) + (Math.PI);
-    //Don't run if our moon is not visible
-    let sphericalPosition = [Math.sin(azimuth) * Math.cos(altitude), Math.sin(altitude), Math.cos(azimuth) * Math.cos(altitude)];
-
     //Update the position of our mesh
     let cameraPosition = skyDirector.camera.position;
-    self.moonMesh.position.set(sphericalPosition[0], sphericalPosition[1], sphericalPosition[2]).multiplyScalar(RADIUS_OF_SKY).add(cameraPosition);
+    let quadOffset = skyDirector.skyState.moon.quadOffset;
+    self.moonMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.moonMesh.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
     self.moonMesh.updateMatrix();
     self.moonMesh.updateMatrixWorld();
-
-    //Update our lights
 
     //Update our shader material
     self.baseMoonVar.material.uniforms.worldMatrix.needsUpdate = true;
     self.baseMoonVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
     self.baseMoonVar.material.uniforms.moonHorizonFade.needsUpdate = true;
+    self.baseMoonVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
+    self.baseMoonVar.material.uniforms.sunHorizonFade.needsUpdate = true;
+    self.baseMoonVar.material.uniforms.sunPosition.needsUpdate = true;
     self.baseMoonVar.material.uniforms.moonPosition.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.toneMappingExposure.value = 0.8;
-    self.baseMoonVar.material.uniforms.toneMappingExposure.needsUpdate = true;
+    self.combinationPassMaterial.uniforms.toneMappingExposure.value = 1.0;
+    self.combinationPassMaterial.uniforms.toneMappingExposure.needsUpdate = true;
 
     //Run our float shaders shaders
     self.moonRenderer.compute();
 
-    //Drive our bloom shader with our moon disk
-    let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
-    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
-
     //Update our final texture that is displayed
-    self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
-    self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
-    self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
-    self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
-    self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
-    self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
+    //TODO: Drive this with HDR instead of sky fade
+    let bloomTest = self.skyDirector.skyState.sun.horizonFade < 0.95;
+    let bloomSwapped = this.bloomEnabled !== bloomTest;
+    this.bloomEnabled = bloomSwapped ? bloomTest : this.bloomEnabled;
+    if(this.bloomEnabled){
+      if(bloomSwapped){
+        self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
+        self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
+      }
+
+      //Drive our bloom shader with our moon disk
+      let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
+      self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
+      let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
+
+      self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
+      self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
+      self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
+      self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
+      self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
+      self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
+      self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
+    }
+    else if(bloomSwapped){
+      self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
+      self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
+    }
   }
 
   //Upon completion, this method self destructs
   this.firstTick = function(){
     //Connect up our reference values
+    self.baseMoonVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.baseMoonVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
+    self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade <= 0.95;
+    self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
+
+    //Connect up our images if they don't exist yet
+    if(self.skyDirector.assetManager.hasLoadedImages){
+      for(let [property, value] of Object.entries(self.skyDirector.assetManager.images.moonImages)){
+        self.baseMoonVar.material.uniforms[property].value = value;
+        self.baseMoonVar.material.uniforms[property].needsUpdate = true;
+      }
+    }
 
     //Proceed with the first tick
     self.tick();

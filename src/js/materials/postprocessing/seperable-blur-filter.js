@@ -24,7 +24,7 @@ StarrySky.Materials.Postprocessing.seperableBlurFilter = {
       '//Unrolled for loop (completed in material function)',
       '$unrolled_for_loop',
 
-      'gl_FragColor = vec4(diffuseSum/weightedSum, 1.0);',
+      'gl_FragColor = vec4(abs(diffuseSum/weightedSum), 1.0);',
     '}',
     ];
 
