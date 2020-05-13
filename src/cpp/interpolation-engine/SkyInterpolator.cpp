@@ -2,6 +2,7 @@
 #include "SkyInterpolator.h"
 #include <emscripten/emscripten.h>
 #include <cmath>
+#include "stdio.h"
 
 //
 //Constructor
@@ -25,6 +26,7 @@ extern "C" {
 void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
   skyInterpolator->sinOfLatitude = -sin(latitude * DEG_2_RAD);
   skyInterpolator->cosOfLatitude = cos(latitude * DEG_2_RAD);
+  skyInterpolator->tanOfLatitude = skyInterpolator->sinOfLatitude / skyInterpolator->cosOfLatitude;
   skyInterpolator->astroPositions_0 = astroPositions_0;
   skyInterpolator->rotatedAstroPositions = rotatedAstroPositions;
   skyInterpolator->linearValues_0 = linearValues_0;
@@ -42,10 +44,8 @@ void EMSCRIPTEN_KEEPALIVE updateFinalValues(float* astroPositions_f, float* line
 
     //Huge jumps are an excellent way to see that this is incorrect
     float deltaPosition = ra_f - ra_0;
-    skyInterpolator->deltaPositions[i] = deltaPosition;
-    if(deltaPosition > PI){
-      skyInterpolator->deltaPositions[i] = (PI_TIMES_TWO - abs(deltaPosition)) * (deltaPosition < 0.0 ? 1.0 : -1.0);
-    }
+    skyInterpolator->deltaPositions[i] = fmod((fmod((ra_f - ra_0), PI_TIMES_TWO) + PI_TIMES_THREE), PI_TIMES_TWO) - PI;
+
     //Interpolation on dec is always a bit weird, but does not face the same massive rotations
     //that interpolations on right-ascension has. That and declination never strays towards the polar
     //limits anyways for our CPU calculated objects, and all GPU objects have a static RA and Dec.
@@ -62,7 +62,7 @@ void EMSCRIPTEN_KEEPALIVE updateTimeData(float t_0, float t_f, float initialLSRT
   skyInterpolator->t_0 = t_0;
   skyInterpolator->oneOverDeltaT = 1.0 / (t_f - t_0);
   skyInterpolator->initialLSRT = initialLSRT;
-  skyInterpolator->deltaLSRT = finalLSRT >= initialLSRT ? finalLSRT - initialLSRT : (PI_TIMES_TWO - initialLSRT) + finalLSRT;
+  skyInterpolator->deltaLSRT = fmod((fmod((finalLSRT - initialLSRT), PI_TIMES_TWO) + PI_TIMES_THREE), PI_TIMES_TWO) - PI;
 }
 
 void EMSCRIPTEN_KEEPALIVE tick(float t){
@@ -116,6 +116,9 @@ void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
     rotatedAstroPositions[3 * i + 1] = y_term * magnitudeOfAstroVector;
     rotatedAstroPositions[3 * i + 2] = z_term * magnitudeOfAstroVector;
   }
+
+  //Get our sun position in equitorial coordinates for the moon
+  getLunarParallacticAngle(interpolatedAstroPositions, interpolatedLSRT);
 }
 
 void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){
@@ -147,6 +150,13 @@ void SkyInterpolator::getHorizonFades(){
     float linearFade = 1.7 * objectYPosition + 1.1;
     rotationallyDepedentAstroValues[START_OF_HORIZON_FADE_INDEX + i] = (linearFade < 0.0) ? 0.0 : (1.0 < linearFade) ? 1.0 : linearFade;
   }
+}
+
+void SkyInterpolator::getLunarParallacticAngle(float* interpolatedAstroPositions, float interpolatedLSRT){
+  float lunarRightAscension = interpolatedAstroPositions[2];
+  float lunarDeclination = interpolatedAstroPositions[3];
+  float hourAngle = interpolatedLSRT - lunarRightAscension;
+  rotationallyDepedentAstroValues[PARALLACTIC_ANGLE_INDEX] = atan2(sin(hourAngle), tanOfLatitude * cos(lunarDeclination) - sin(lunarDeclination) * cos(hourAngle)) + PI_OVER_TWO;
 }
 
 int main(){

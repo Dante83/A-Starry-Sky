@@ -25,13 +25,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   document.body.appendChild(renderer.domElement);
 
   //Create our first renderer, for transmittance
-  let transmittanceRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
+  let transmittanceRenderer = new THREE.StarrySkyComputationRenderer(512, 512, renderer);
 
   //Using a 3D look up table of 256x32x32, I can have 2 256x32 textures per row
   //and 16*32 rows, using this structure allows us to directly compute the 3D texture
   //in one go.
-  let singleScatteringRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
-  let scatteringSumRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
+  let singleScatteringRenderer = new THREE.StarrySkyComputationRenderer(512, 512, renderer);
+  let scatteringSumRenderer = new THREE.StarrySkyComputationRenderer(512, 512, renderer);
 
   let materials = StarrySky.Materials.Atmosphere;
 
@@ -175,7 +175,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   //
   //Set up our multiple scattering textures
   //
-  let multipleScatteringRenderer = new THREE.GPUComputationRenderer(512, 512, renderer);
+  let multipleScatteringRenderer = new THREE.StarrySkyComputationRenderer(512, 512, renderer);
 
   //Mie
   let multipleScatteringMieTexture = multipleScatteringRenderer.createTexture();

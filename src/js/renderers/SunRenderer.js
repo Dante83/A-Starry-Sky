@@ -14,7 +14,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   //we can use this to render to a square compute shader for the color pass
   //a clamped pass to use for our bloom, several bloom passes and a combination
   //pass to combine these results with our original pass.
-  this.sunRenderer = new THREE.GPUComputationRenderer(512, 512, skyDirector.renderer);
+  this.sunRenderer = new THREE.StarrySkyComputationRenderer(512, 512, skyDirector.renderer);
   let materials = StarrySky.Materials.Sun;
   let baseSunPartial = materials.baseSunPartial.fragmentShader(sunAngularRadiusInRadians);
 
@@ -151,7 +151,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager.hasLoadedImages){
-      //The image of the moon AO for our solar ecclipse
+      //The image of the moon opacity for our solar ecclipse
       self.baseSunVar.material.uniforms.moonOpacityMap.value = self.skyDirector.assetManager.images.moonImages.moonOpacityMap;
       self.baseSunVar.material.uniforms.moonOpacityMap.needsUpdate = true;
 

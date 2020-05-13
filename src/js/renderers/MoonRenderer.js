@@ -9,13 +9,14 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const diameterOfMoonPlane = 2.0 * radiusOfMoonPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
   this.bloomEnabled = false;
+  this.parallacticAxis = new THREE.Vector3();
 
   //Unlike the regular sky, we run the moon as a multi-pass shader
   //in order to allow for bloom shading. As we are using a square plane
   //we can use this to render to a square compute shader for the color pass
   //a clamped pass to use for our bloom, several bloom passes and a combination
   //pass to combine these results with our original pass.
-  this.moonRenderer = new THREE.GPUComputationRenderer(512, 512, skyDirector.renderer);
+  this.moonRenderer = new THREE.StarrySkyComputationRenderer(512, 512, skyDirector.renderer, true);
   let materials = StarrySky.Materials.Moon;
   let baseMoonPartial = materials.baseMoonPartial.fragmentShader(moonAngularRadiusInRadians);
 
@@ -48,7 +49,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
   //If our images have finished loading, update our uniforms
   if(this.skyDirector.assetManager.hasLoadedImages){
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonSpecularMap', 'moonAOMap'];
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap'];
     for(let i = 0; i < moonTextures.length; ++i){
       let moonTextureProperty = moonTextures[i];
       this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];
@@ -100,8 +101,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     //Update the position of our mesh
     let cameraPosition = skyDirector.camera.position;
     let quadOffset = skyDirector.skyState.moon.quadOffset;
-    self.moonMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
-    self.moonMesh.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
+    self.parallacticAxis.copy(quadOffset).normalize();
+    self.moonMesh.position.copy(quadOffset).add(cameraPosition);
+    self.moonMesh.lookAt(cameraPosition); //Use the basic look-at function to always have this plane face the camera.
+    self.moonMesh.rotateOnWorldAxis(self.parallacticAxis, -skyDirector.skyState.moon.parallacticAngle); //And rotate the mesh by the parallactic angle.
     self.moonMesh.updateMatrix();
     self.moonMesh.updateMatrixWorld();
 
@@ -113,6 +116,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.sunHorizonFade.needsUpdate = true;
     self.baseMoonVar.material.uniforms.sunPosition.needsUpdate = true;
     self.baseMoonVar.material.uniforms.moonPosition.needsUpdate = true;
+    self.baseMoonVar.material.uniforms.sunLightDirection.needsUpdate = true;
     self.combinationPassMaterial.uniforms.toneMappingExposure.value = 1.0;
     self.combinationPassMaterial.uniforms.toneMappingExposure.needsUpdate = true;
 
@@ -158,6 +162,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     //Connect up our reference values
     self.baseMoonVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.baseMoonVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
+    self.baseMoonVar.material.uniforms.sunLightDirection.value = self.skyDirector.skyState.sun.quadOffset;
     self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade <= 0.95;
     self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
 

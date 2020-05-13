@@ -72,10 +72,11 @@ class SkyAtmosphericParameters extends HTMLElement {
       let numberOfGatheringStepsTags = self.getElementsByTagName('sky-number-of-gathering-steps');
       let ozoneEnabledTags = self.getElementsByTagName('sky-ozone-enabled');
       let sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
+      let moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
 
       [solarIntensityTags, lunarMaxIntensityTags, rayleighMolecularDensityTags, airIndexOfRefractionTags,
       solarColorTags, lunarColorTags, mieBetaTags, mieDirectionalGTags, numberOfRayStepsTags,
-      numberOfGatheringStepsTags, ozoneEnabledTags, sunAngularDiameterTags].forEach(function(tags){
+      numberOfGatheringStepsTags, ozoneEnabledTags, sunAngularDiameterTags, moonAngularDiameterTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }

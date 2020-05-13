@@ -20,7 +20,7 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
   const mipSizes = [265, 128, 64, 32, 16];
   const kernelSizeArray = [3, 5, 7, 9, 11];
 
-  this.highPassRenderer = new THREE.GPUComputationRenderer(textureSize, textureSize, this.renderer);
+  this.highPassRenderer = new THREE.StarrySkyComputationRenderer(textureSize, textureSize, this.renderer);
 
   //Set up our transmittance texture
   this.highPassFilterTexture = this.highPassRenderer.createTexture();
@@ -47,7 +47,7 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
   for(let i = 0; i < 5; ++i){
     let mipSize = mipSizes[i];
     let kernalSize = kernelSizeArray[i];
-    this.seperableBlurHorizontalRenderers.push(new THREE.GPUComputationRenderer(mipSize, mipSize, this.renderer));
+    this.seperableBlurHorizontalRenderers.push(new THREE.StarrySkyComputationRenderer(mipSize, mipSize, this.renderer));
     this.seperableBlurHorizontalTextures.push(this.seperableBlurHorizontalRenderers[i].createTexture());
     this.seperableBlurHorizontalVars.push(this.seperableBlurHorizontalRenderers[i].addVariable(`${targetName}.seperableHorizontalBlur.${i}`,
       materials.seperableBlurFilter.fragmentShader(kernalSize, mipSize),
@@ -67,7 +67,7 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
       console.error(`Blur Horizontal Renderer ${i}: ${error2}`);
     }
 
-    this.seperableBlurVerticalRenderers.push(new THREE.GPUComputationRenderer(mipSize, mipSize, this.renderer));
+    this.seperableBlurVerticalRenderers.push(new THREE.StarrySkyComputationRenderer(mipSize, mipSize, this.renderer));
     this.seperableBlurVerticalTextures.push(this.seperableBlurVerticalRenderers[i].createTexture());
     this.seperableBlurVerticalVars.push(this.seperableBlurVerticalRenderers[i].addVariable(`${targetName}.seperableVerticalBlur.${i}`,
       materials.seperableBlurFilter.fragmentShader(kernalSize, mipSize),

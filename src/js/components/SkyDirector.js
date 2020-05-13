@@ -17,9 +17,10 @@ StarrySky.SkyDirector = function(parentComponent){
   const NUMBER_OF_ROTATIONAL_OBJECTS = 7;
   const NUMBER_OF_HORIZON_FADES = 2;
   const NUMBER_OF_OFFSET_POSITIONS = 2;
+  const NUMBER_OF_PARALLACTIC_ANGLES = 1;
   const NUMBER_OF_ROTATIONAL_TRANSFORMATIONS = NUMBER_OF_ROTATIONAL_OBJECTS * 2;
   const NUMBER_OF_ROTATION_OUTPUT_VALUES = NUMBER_OF_ROTATIONAL_OBJECTS * 3;
-  const NUMBER_OF_ROTATIONALY_DEPENDENT_OUTPUT_VALUES = NUMBER_OF_OFFSET_POSITIONS * 3 + NUMBER_OF_HORIZON_FADES;
+  const NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES = NUMBER_OF_OFFSET_POSITIONS * 3 + NUMBER_OF_HORIZON_FADES + NUMBER_OF_PARALLACTIC_ANGLES;
   const NUMBER_OF_LINEAR_INTERPOLATIONS = 11;
   const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
   const TOTAL_BYTES_FOR_WORKER_BUFFERS = BYTES_PER_32_BIT_FLOAT * NUMBER_OF_FLOATS;
@@ -133,6 +134,7 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.sun.quadOffset.fromArray(self.rotatedAstroDependentValues.slice(0, 3));
       self.skyState.moon.position.fromArray(self.rotatedAstroPositions.slice(3, 6));
       self.skyState.moon.quadOffset.fromArray(self.rotatedAstroDependentValues.slice(3, 6));
+      self.skyState.moon.parallacticAngle = self.rotatedAstroDependentValues[8];
       self.skyState.mercury.position.fromArray(self.rotatedAstroPositions.slice(9, 12));
       self.skyState.venus.position.fromArray(self.rotatedAstroPositions.slice(12, 15));
       self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions.slice(15, 18));
@@ -145,7 +147,6 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.moon.intensity = self.linearValues[2];
       self.skyState.moon.horizonFade = self.rotatedAstroDependentValues[7];
       self.skyState.moon.scale = self.linearValues[3];
-      self.skyState.moon.parallacticAngle = self.linearValues[4];
       self.skyState.moon.earthshineIntensity = self.linearValues[5];
       self.skyState.mercury.intensity = self.linearValues[6];
       self.skyState.venus.intensity = self.linearValues[7];
@@ -182,7 +183,7 @@ StarrySky.SkyDirector = function(parentComponent){
       self.astroPositions_f_ptr = Module._malloc(NUMBER_OF_ROTATIONAL_TRANSFORMATIONS * BYTES_PER_32_BIT_FLOAT);
       Module.HEAPF32.set(self.finalStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.rotatedAstroPositions_ptr = Module._malloc(NUMBER_OF_ROTATION_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
-      self.rotatedAstroDepedentValues_ptr = Module._malloc(NUMBER_OF_ROTATIONALY_DEPENDENT_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
+      self.rotatedAstroDepedentValues_ptr = Module._malloc(NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
 
       self.linearValues_0_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
       Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
@@ -193,7 +194,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Attach references to our interpolated values
       self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS);
       self.linearValues = new Float32Array(Module.HEAPF32.buffer, self.linearValues_ptr, NUMBER_OF_LINEAR_INTERPOLATIONS);
-      self.rotatedAstroDependentValues = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroDepedentValues_ptr, NUMBER_OF_ROTATIONALY_DEPENDENT_OUTPUT_VALUES);
+      self.rotatedAstroDependentValues = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroDepedentValues_ptr, NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES);
 
       //Run our sky interpolator to determine our azimuth, altitude and other variables
       let latitude = self.assetManager.data.skyLocationData.latitude;
@@ -208,7 +209,7 @@ StarrySky.SkyDirector = function(parentComponent){
         },
         moon: {
           position: new THREE.Vector3(),
-          quadOffset: new THREE.Vector3()
+          quadOffset: new THREE.Vector3(),
         },
         mercury: {
           position: new THREE.Vector3()

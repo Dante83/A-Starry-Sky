@@ -5,6 +5,7 @@ public:
   SkyInterpolator();
   float sinOfLatitude;
   float cosOfLatitude;
+  float tanOfLatitude;
   float t_0;
   float oneOverDeltaT;
   float initialLSRT;
@@ -20,4 +21,5 @@ public:
   void rotateAstroObjects(float fractOfFinalPosition);
   void getQuadOffsets();
   void getHorizonFades();
+  void getLunarParallacticAngle(float* interpolatedAstroPositions, float interpolatedLSRT);
 };

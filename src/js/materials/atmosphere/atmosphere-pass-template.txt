@@ -25,10 +25,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonAngularDiameterCos = {type: 'f', value: 1.0};
       uniforms.radiusOfMoonPlane = {type: 'f', value: 1.0};
       uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
+      uniforms.sunLightDirection = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.moonDiffuseMap = {type: 't', value: null};
       uniforms.moonNormalMap = {type: 't', value: null};
-      uniforms.moonAOMap = {type: 't', value: null};
-      uniforms.moonSpecularMap = {type: 't', value: null};
+      uniforms.moonRoughnessMap = {type: 't', value: null};
       uniforms.moonOpacityMap = {type: 't', value: null};
     }
 

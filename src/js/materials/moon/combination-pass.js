@@ -73,7 +73,7 @@ StarrySky.Materials.Moon.combinationPass = {
       '//Late triangular blue noise',
 
       '//Return our tone mapped color when everything else is done',
-      'gl_FragColor = vec4(combinedLight, 1.0);',
+      'gl_FragColor = vec4(combinedLight, falloffDisk);',
     '}',
   ].join('\n')
 };

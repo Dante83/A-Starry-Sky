@@ -4,15 +4,13 @@ window.customElements.define('sky-interpolation-engine-path', class extends HTML
 window.customElements.define('sky-moon-diffuse-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-normal-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-opacity-map', class extends HTMLElement{});
-window.customElements.define('sky-moon-specular-map', class extends HTMLElement{});
-window.customElements.define('sky-moon-ao-map', class extends HTMLElement{});
+window.customElements.define('sky-moon-roughness-map', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.png',
   moonNormalMap: 'lunar-normal-map.png',
   moonOpacityMap: 'lunar-opacity-map.png',
-  moonSpecularMap: 'lunar-specular-map.png',
-  moonAOMap: 'lunar-ao-map.png'
+  moonRoughnessMap: 'lunar-roughness-map.png',
 };
 
 StarrySky.DefaultData.skyAssets = {
@@ -21,8 +19,7 @@ StarrySky.DefaultData.skyAssets = {
   moonDiffuseMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
   moonNormalMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonNormalMap,
   moonOpacityMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonOpacityMap,
-  moonSpecularMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonSpecularMap,
-  moonAOMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAOMap,
+  moonRoughnessMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonRoughnessMap
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
@@ -89,13 +86,12 @@ class SkyAssetsDir extends HTMLElement {
       let moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
       let moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
       let moonOpacityMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-opacity-map');
-      let moonSpecularMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-specular-map');
-      let moonAOMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-ao-map');
+      let moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
 
       const objectProperties = ['skyStateEngine', 'skyInterpolationEngine',
-        'moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonSpecularMap', 'moonAOMap']
+        'moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap']
       let tagsList = [skyStateEngineTags, skyInterpolationEngineTags,
-        moonDiffuseMapTags, moonNormalMapTags, moonOpacityMapTags, moonSpecularMapTags, moonAOMapTags];
+        moonDiffuseMapTags, moonNormalMapTags, moonOpacityMapTags, moonRoughnessMapTags];
       const numberOfTags = tagsList.length;
       if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
         const wasmKeys = ['skyStateEngine', 'skyInterpolationEngine'];
@@ -107,15 +103,13 @@ class SkyAssetsDir extends HTMLElement {
         }
       }
       else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
-        const textureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap',
-        'moonSpecularMap', 'moonAOMap'];
+        const textureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap'];
         for(let i = 0; i < textureKeys.length; ++i){
           StarrySky.assetPaths[textureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[textureKeys[i]];
         }
       }
       else if(self.hasAttribute('moon-path') && self.getAttribute('moon-path').toLowerCase() !== 'false'){
-        const moonTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap',
-        'moonSpecularMap', 'moonAOMap'];
+        const moonTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap'];
         for(let i = 0; i < moonTextureKeys.length; ++i){
           StarrySky.assetPaths[moonTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[moonTextureKeys[i]];
         }

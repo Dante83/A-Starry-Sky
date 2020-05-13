@@ -29,13 +29,32 @@ const float scatteringMoonIntensity = 1.44; //Moon reflects 7.2% of all light
   uniform float moonAngularDiameterCos;
   uniform sampler2D moonDiffuseMap;
   uniform sampler2D moonNormalMap;
-  uniform sampler2D moonAOMap;
-  uniform sampler2D moonSpecularMap;
+  uniform sampler2D moonRoughnessMap;
   uniform sampler2D moonOpacityMap;
   varying vec2 vUv;
+
+  //Tangent space lighting
+  varying vec3 tangentSpaceSunLightDirection;
+  varying vec3 tangentSpaceViewDirection;
 #endif
 
 $atmosphericFunctions
+
+#if($isMoonPass)
+  float OrenNayar(vec3 l, vec3 n, vec3 v, float r)
+  {
+    float r2 = r*r;
+    float a = 1.0 - 0.5*(r2/(r2+0.57));
+    float b = 0.45*(r2/(r2+0.09));
+
+    float nl = dot(n, l);
+    float nv = dot(n, v);
+
+    float ga = dot(v-n*nv,n-n*nl);
+
+  	return max(0.0,nl) * (a + b*max(0.0,ga) * sqrt((1.0-nv*nv)*(1.0-nl*nl)) / max(nl, nv));
+  }
+#endif
 
 vec3 linearAtmosphericPass(vec3 sourcePosition, float sourceIntensity, vec3 vWorldPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){
   float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, vWorldPosition);

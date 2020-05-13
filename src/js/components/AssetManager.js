@@ -49,8 +49,9 @@ StarrySky.AssetManager = function(skyDirector){
     const textureLoader = new THREE.TextureLoader();
 
     //Load all of our moon textures
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonSpecularMap', 'moonAOMap'];
-    const formats = [THREE.RGBFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.RGBFormat, THREE.LuminanceFormat];
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap'];
+    const formats = [THREE.RGBFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat];
+    const encodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding]
     const numberOfMoonTextures = moonTextures.length;
     const totalNumberOfTextures = numberOfMoonTextures;
     let numberOfTexturesLoaded = 0;
@@ -73,7 +74,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.LinearFilter;
         texture.minFilter = THREE.LinearFilter;
-        texture.encoding = THREE.sRGBEncoding;
+        texture.encoding = encodings[i];
         texture.format = formats[i];
         self.images.moonImages[moonTextures[i]] = texture;
 
