@@ -11,7 +11,8 @@ varying vec3 tangentSpaceViewDirection;
 
 void main() {
   vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane, 1.0);
-  vWorldPosition = normalize(worldPosition.xyz);
+  vec3 normalizedWorldPosition = normalize(worldPosition.xyz);
+  vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);
   vUv = uv;
 
   //Other then our bitangent, all of our other values are already normalized
@@ -23,7 +24,7 @@ void main() {
   //There is no matrix transpose, so we will do this ourselves
   mat3 TBNMatrix = mat3(vec3(cameraSpaceTangent.x, b.x, n.x), vec3(cameraSpaceTangent.y, b.y, n.y), vec3(cameraSpaceTangent.z, b.z, n.z));
   tangentSpaceSunLightDirection = normalize(TBNMatrix * sunLightDirection);
-  tangentSpaceViewDirection = normalize(TBNMatrix * vWorldPosition);
+  tangentSpaceViewDirection = normalize(TBNMatrix * -normalizedWorldPosition);
 
   gl_Position = vec4(position, 1.0);
 }

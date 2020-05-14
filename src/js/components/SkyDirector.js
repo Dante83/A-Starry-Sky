@@ -12,15 +12,15 @@ StarrySky.SkyDirector = function(parentComponent){
   //14 of these require rotational transformations
   //10 are linear interpolations
   //1 (LSRT) is a rotational interpolation
+  const RADIUS_OF_SKY = 5000.0;
   const BYTES_PER_32_BIT_FLOAT = 4;
   const NUMBER_OF_FLOATS = 25;
   const NUMBER_OF_ROTATIONAL_OBJECTS = 7;
   const NUMBER_OF_HORIZON_FADES = 2;
-  const NUMBER_OF_OFFSET_POSITIONS = 2;
   const NUMBER_OF_PARALLACTIC_ANGLES = 1;
   const NUMBER_OF_ROTATIONAL_TRANSFORMATIONS = NUMBER_OF_ROTATIONAL_OBJECTS * 2;
   const NUMBER_OF_ROTATION_OUTPUT_VALUES = NUMBER_OF_ROTATIONAL_OBJECTS * 3;
-  const NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES = NUMBER_OF_OFFSET_POSITIONS * 3 + NUMBER_OF_HORIZON_FADES + NUMBER_OF_PARALLACTIC_ANGLES;
+  const NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES = NUMBER_OF_HORIZON_FADES + NUMBER_OF_PARALLACTIC_ANGLES;
   const NUMBER_OF_LINEAR_INTERPOLATIONS = 11;
   const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
   const TOTAL_BYTES_FOR_WORKER_BUFFERS = BYTES_PER_32_BIT_FLOAT * NUMBER_OF_FLOATS;
@@ -131,10 +131,12 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Update our astronomical positions
       self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));
-      self.skyState.sun.quadOffset.fromArray(self.rotatedAstroDependentValues.slice(0, 3));
+      let sp = self.skyState.sun.position;
+      self.skyState.sun.quadOffset.set(-sp.z, sp.y, -sp.x).normalize().multiplyScalar(RADIUS_OF_SKY);
       self.skyState.moon.position.fromArray(self.rotatedAstroPositions.slice(3, 6));
-      self.skyState.moon.quadOffset.fromArray(self.rotatedAstroDependentValues.slice(3, 6));
-      self.skyState.moon.parallacticAngle = self.rotatedAstroDependentValues[8];
+      let mp = self.skyState.moon.position;
+      self.skyState.moon.quadOffset.set(-mp.z, mp.y, -mp.x).normalize().multiplyScalar(RADIUS_OF_SKY);
+      self.skyState.moon.parallacticAngle = self.rotatedAstroDependentValues[2];
       self.skyState.mercury.position.fromArray(self.rotatedAstroPositions.slice(9, 12));
       self.skyState.venus.position.fromArray(self.rotatedAstroPositions.slice(12, 15));
       self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions.slice(15, 18));
@@ -142,10 +144,10 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Update our linear values
       self.skyState.sun.intensity = self.linearValues[0];
-      self.skyState.sun.horizonFade = self.rotatedAstroDependentValues[6];
+      self.skyState.sun.horizonFade = self.rotatedAstroDependentValues[0];
       self.skyState.sun.scale = self.linearValues[1];
       self.skyState.moon.intensity = self.linearValues[2];
-      self.skyState.moon.horizonFade = self.rotatedAstroDependentValues[7];
+      self.skyState.moon.horizonFade = self.rotatedAstroDependentValues[1];
       self.skyState.moon.scale = self.linearValues[3];
       self.skyState.moon.earthshineIntensity = self.linearValues[5];
       self.skyState.mercury.intensity = self.linearValues[6];

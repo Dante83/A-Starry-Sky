@@ -39,7 +39,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-      'vWorldPosition = normalize(worldPosition.xyz);',
+      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
 
       'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
     '}',
@@ -88,24 +88,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     '$atmosphericFunctions',
 
-    '#if($isMoonPass)',
-      'float OrenNayar(vec3 l, vec3 n, vec3 v, float r)',
-      '{',
-        'float r2 = r*r;',
-        'float a = 1.0 - 0.5*(r2/(r2+0.57));',
-        'float b = 0.45*(r2/(r2+0.09));',
-
-        'float nl = dot(n, l);',
-        'float nv = dot(n, v);',
-
-        'float ga = dot(v-n*nv,n-n*nl);',
-
-      '	return max(0.0,nl) * (a + b*max(0.0,ga) * sqrt((1.0-nv*nv)*(1.0-nl*nl)) / max(nl, nv));',
-      '}',
-    '#endif',
-
-    'vec3 linearAtmosphericPass(vec3 sourcePosition, float sourceIntensity, vec3 vWorldPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
-      'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, vWorldPosition);',
+    'vec3 linearAtmosphericPass(vec3 sourcePosition, float sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
+      'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);',
       'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
       'vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
       'float depthInPixels = $textureDepth;',
@@ -119,13 +103,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '}',
 
     'void main(){',
-      '//Figure out where we are',
-      'float altitude = piOver2 - acos(vWorldPosition.y);',
-      'float azimuth = atan(vWorldPosition.z, vWorldPosition.x) + pi;',
-      'vec3 sphericalPosition = vec3(sin(azimuth) * cos(altitude), sin(altitude), cos(azimuth) * cos(altitude));',
+      'vec3 sphericalPosition = normalize(vWorldPosition);',
 
       '//Get our transmittance for this texel',
-      'float cosOfViewAngle = vWorldPosition.y;',
+      'float cosOfViewAngle = sphericalPosition.y;',
       'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(cosOfViewAngle), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
       'vec3 transmittanceFade = texture2D(transmittance, uv2OfTransmittance).rgb;',
 

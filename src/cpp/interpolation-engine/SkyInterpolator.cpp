@@ -75,9 +75,6 @@ void EMSCRIPTEN_KEEPALIVE tick(float t){
   //Update our rotation of our astronomical objects in the sky
   skyInterpolator->rotateAstroObjects(tFractional);
 
-  //Get offset x, y, z location for sun and moon
-  skyInterpolator->getQuadOffsets();
-
   //Get the horizon fade of our sun and moon
   skyInterpolator->getHorizonFades();
 }
@@ -128,21 +125,6 @@ void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){
   }
 }
 
-void SkyInterpolator::getQuadOffsets(){
-  #pragma unroll
-  for(int i = 0; i < 6; i += 3){
-    float objectXPosition = rotatedAstroPositions[i];
-    float objectYPosition = rotatedAstroPositions[i + 1];
-    float objectZPosition = rotatedAstroPositions[i + 2];
-    float altitude = PI_OVER_TWO - acos(objectYPosition);
-    float azimuth = atan2(objectZPosition, objectXPosition) + PI;
-    float cos_alt = cos(altitude);
-    rotationallyDepedentAstroValues[i] = sin(azimuth) * cos_alt * RADIUS_OF_SKY;
-    rotationallyDepedentAstroValues[i + 1] = sin(altitude) * RADIUS_OF_SKY;
-    rotationallyDepedentAstroValues[i + 2] = cos(azimuth) * cos_alt * RADIUS_OF_SKY;
-  }
-}
-
 void SkyInterpolator::getHorizonFades(){
   #pragma unroll
   for(int i = 0; i < 2; ++i){
@@ -156,7 +138,7 @@ void SkyInterpolator::getLunarParallacticAngle(float* interpolatedAstroPositions
   float lunarRightAscension = interpolatedAstroPositions[2];
   float lunarDeclination = interpolatedAstroPositions[3];
   float hourAngle = interpolatedLSRT - lunarRightAscension;
-  rotationallyDepedentAstroValues[PARALLACTIC_ANGLE_INDEX] = atan2(sin(hourAngle), tanOfLatitude * cos(lunarDeclination) - sin(lunarDeclination) * cos(hourAngle)) + PI_OVER_TWO;
+  rotationallyDepedentAstroValues[PARALLACTIC_ANGLE_INDEX] = atan2(sin(hourAngle), tanOfLatitude * cos(lunarDeclination) - sin(lunarDeclination) * cos(hourAngle)) + PI;
 }
 
 int main(){

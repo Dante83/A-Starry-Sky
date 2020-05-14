@@ -15,12 +15,21 @@ vec3 moonDiffuseTexel = texture2D(moonDiffuseMap, offsetUV).rgb;
 vec3 texelNormal = normalize(2.0 * texture2D(moonNormalMap, offsetUV).rgb - 1.0);
 
 //Lunar surface roughness from https://sos.noaa.gov/datasets/moon-surface-roughness/
-vec3 moonRoughnessTexel = 1.0 - texture2D(moonRoughnessMap, offsetUV).rgb;
+float moonRoughnessTexel = piOver2 - (1.0 - texture2D(moonRoughnessMap, offsetUV).r);
 
-//I opt to use the Improved Oren-Nayar model over Hapke-Lommel-Seeliger
+//I opt to use the Oren-Nayar model over Hapke-Lommel-Seeliger
 //As Oren-Nayar lacks a lunar phase component and is more extensible for
-//Additional parameters.
-//https://mimosa-pudica.net/improved-oren-nayar.html
-float NDotL = max(dot(texelNormal, tangentSpaceSunLightDirection), 0.0);
+//Additional parameters, I used the following code as a guide
+//https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4
+float NDotL = max(dot(tangentSpaceSunLightDirection, texelNormal), 0.0);
+float NDotV = max(dot(tangentSpaceViewDirection, texelNormal), 0.0);
+float gamma = dot(tangentSpaceViewDirection - texelNormal * NDotV, tangentSpaceSunLightDirection - texelNormal * NDotL);
+gamma = gamma / (sqrt(clamp(1.0 - NDotV * NDotV, 0.0, 1.0)) * sqrt(clamp(1.0 - NDotL * NDotL, 0.0, 1.0)));
+float roughnessSquared = moonRoughnessTexel * moonRoughnessTexel;
+float A = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));
+float B = 0.45 * (roughnessSquared / (roughnessSquared + 0.09));
+vec2 cos_alpha_beta = NDotV < NDotL ? vec2(NDotV, NDotL) : vec2(NDotL, NDotV);
+vec2 sin_alpha_beta = sqrt(clamp(1.0 - cos_alpha_beta * cos_alpha_beta, 0.0, 1.0));
+float C = sin_alpha_beta.x * sin_alpha_beta.y / (1e-6 + cos_alpha_beta.y);
 
-vec3 moonTexel = NDotL * moonDiffuseTexel * transmittanceFade;
+vec3 moonTexel = NDotL * (A + B * max(0.0, gamma) * C) * moonDiffuseTexel * transmittanceFade;

@@ -19,7 +19,6 @@ public:
   float* rotationallyDepedentAstroValues;
   void updateLinearInterpolations(float fractOfFinalPosition);
   void rotateAstroObjects(float fractOfFinalPosition);
-  void getQuadOffsets();
   void getHorizonFades();
   void getLunarParallacticAngle(float* interpolatedAstroPositions, float interpolatedLSRT);
 };
