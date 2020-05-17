@@ -5,6 +5,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const DEG_2_RAD = 0.017453292519943295769236907684886;
   const moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
   const moonAngularDiameterInRadians = 2.0 * moonAngularRadiusInRadians;
+  const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(moonAngularRadiusInRadians) * 3.0;
   const diameterOfMoonPlane = 2.0 * radiusOfMoonPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
@@ -46,10 +47,12 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   this.baseMoonVar.material.uniforms.mieInscatteringSum.needsUpdate = true;
   this.baseMoonVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
   this.baseMoonVar.material.uniforms.transmittance.needsUpdate = true;
+  this.baseMoonVar.material.uniforms.sunRadius.value = sunAngularRadiusInRadians;
+  this.baseMoonVar.material.uniforms.sunRadius.needsUpdate = true;
 
   //If our images have finished loading, update our uniforms
   if(this.skyDirector.assetManager.hasLoadedImages){
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap'];
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
     for(let i = 0; i < moonTextures.length; ++i){
       let moonTextureProperty = moonTextures[i];
       this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];

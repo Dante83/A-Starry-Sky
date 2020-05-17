@@ -3,14 +3,16 @@ window.customElements.define('sky-state-engine-path', class extends HTMLElement{
 window.customElements.define('sky-interpolation-engine-path', class extends HTMLElement{});
 window.customElements.define('sky-moon-diffuse-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-normal-map', class extends HTMLElement{});
-window.customElements.define('sky-moon-opacity-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-roughness-map', class extends HTMLElement{});
+window.customElements.define('sky-moon-aperature-size-map', class extends HTMLElement{});
+window.customElements.define('sky-moon-aperature-orientation-map', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.png',
   moonNormalMap: 'lunar-normal-map.png',
-  moonOpacityMap: 'lunar-opacity-map.png',
   moonRoughnessMap: 'lunar-roughness-map.png',
+  moonAperatureSizeMap: 'lunar-aperature-size-map.png',
+  moonAperatureOrientationMap: 'lunar-aperature-orientation-map.png'
 };
 
 StarrySky.DefaultData.skyAssets = {
@@ -18,8 +20,9 @@ StarrySky.DefaultData.skyAssets = {
   skyInterpolationEnginePath: './wasm/',
   moonDiffuseMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
   moonNormalMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonNormalMap,
-  moonOpacityMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonOpacityMap,
-  moonRoughnessMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonRoughnessMap
+  moonRoughnessMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
+  moonAperatureSizeMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAperatureSizeMap,
+  moonAperatureOrientationMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAperatureOrientationMap
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
@@ -85,13 +88,14 @@ class SkyAssetsDir extends HTMLElement {
       let skyInterpolationEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-interpolation-engine-path');
       let moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
       let moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
-      let moonOpacityMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-opacity-map');
       let moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
+      let moonAperatureSizeMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-size-map');
+      let moonAperatureOrientationMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-orientation-map');
 
-      const objectProperties = ['skyStateEngine', 'skyInterpolationEngine',
-        'moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap']
-      let tagsList = [skyStateEngineTags, skyInterpolationEngineTags,
-        moonDiffuseMapTags, moonNormalMapTags, moonOpacityMapTags, moonRoughnessMapTags];
+      const objectProperties = ['skyStateEngine', 'skyInterpolationEngine','moonDiffuseMap', 'moonNormalMap',
+        'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap']
+      let tagsList = [skyStateEngineTags, skyInterpolationEngineTags, moonDiffuseMapTags, moonNormalMapTags,
+        moonRoughnessMapTags, moonAperatureSizeMapTags, moonAperatureOrientationMapTags];
       const numberOfTags = tagsList.length;
       if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
         const wasmKeys = ['skyStateEngine', 'skyInterpolationEngine'];
@@ -103,13 +107,15 @@ class SkyAssetsDir extends HTMLElement {
         }
       }
       else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
-        const textureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap'];
+        const textureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
+        'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
         for(let i = 0; i < textureKeys.length; ++i){
           StarrySky.assetPaths[textureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[textureKeys[i]];
         }
       }
       else if(self.hasAttribute('moon-path') && self.getAttribute('moon-path').toLowerCase() !== 'false'){
-        const moonTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap'];
+        const moonTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
+        'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
         for(let i = 0; i < moonTextureKeys.length; ++i){
           StarrySky.assetPaths[moonTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[moonTextureKeys[i]];
         }

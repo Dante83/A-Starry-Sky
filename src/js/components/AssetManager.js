@@ -49,9 +49,9 @@ StarrySky.AssetManager = function(skyDirector){
     const textureLoader = new THREE.TextureLoader();
 
     //Load all of our moon textures
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonOpacityMap', 'moonRoughnessMap'];
-    const formats = [THREE.RGBFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat];
-    const encodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding]
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
+    const formats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
+    const encodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
     const totalNumberOfTextures = numberOfMoonTextures;
     let numberOfTexturesLoaded = 0;
@@ -73,9 +73,11 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.LinearFilter;
-        texture.minFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.encoding = encodings[i];
         texture.format = formats[i];
+        //Swap this tomorrow and implement custom mip-maps
+        texture.generateMipmaps = true;
         self.images.moonImages[moonTextures[i]] = texture;
 
         //If the renderer already exists, go in and update the uniform
@@ -95,6 +97,24 @@ StarrySky.AssetManager = function(skyDirector){
     })(0);
 
     //Load any additional textures
+  }
+
+  this.loadLunarMipMaps = function(texture, textureName){
+    let textureSize = 256;
+    for(let i = 1; i < 9; ++i){
+      let texturePromise = new Promise(function(resolve, reject){
+        let assetPathExplodedOnDots = textureName.split('.');
+        assetPathExplodedOnDots[assetPathExplodedOnDots.length - 2] = `-${textureSize}` + assetPathExplodedOnDots[assetPathExplodedOnDots.length - 2];
+        let mipMapFileName = assetPathExplodedOnDots.join('.');
+        textureLoader.load(mipMapFileName, function(texture){resolve(texture, i);});
+      });
+      texturePromise.then(function(texture, i){
+        texture.mipmaps[i] = texture;
+      });
+
+      //Divide our texture size by a power of two
+      let textureSize = textureSize >> 1;
+    }
   }
 
   //Internal function for loading our sky data once the DOM is ready

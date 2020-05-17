@@ -17,19 +17,39 @@ StarrySky.Materials.Moon.baseMoonPartial = {
     '//transforming our normals really easy, as we just have to transform them by the world matrix.',
     '//and everything should work out. Furthermore, the light direction for the moon should just',
     '//be our sun position in the sky.',
-    'vec3 moonDiffuseTexel = texture2D(moonDiffuseMap, offsetUV).rgb;',
     'vec3 texelNormal = normalize(2.0 * texture2D(moonNormalMap, offsetUV).rgb - 1.0);',
 
     '//Lunar surface roughness from https://sos.noaa.gov/datasets/moon-surface-roughness/',
     'float moonRoughnessTexel = piOver2 - (1.0 - texture2D(moonRoughnessMap, offsetUV).r);',
 
+    '//Implmentatation of the Ambient Appeture Lighting Equation',
+    'float sunArea = pi * sunRadius * sunRadius;',
+    'float aperatureRadius = texture2D(moonAperatureSizeMap, offsetUV).r * piOver2;',
+    'vec3 aperatureOrientation = normalize(2.0 * texture2D(moonAperatureOrientationMap, offsetUV).rgb - 1.0);',
+    'float aperatureToSunHaversineDistance = acos(dot(aperatureOrientation, tangentSpaceSunLightDirection));',
+
+    'float observableSunFraction;',
+    'vec3 test = vec3(0.0);',
+    'if(aperatureToSunHaversineDistance >= (aperatureRadius + sunRadius)){',
+      'observableSunFraction = 0.0;',
+    '}',
+    'else if(aperatureToSunHaversineDistance <= (aperatureRadius - sunRadius)){',
+      'observableSunFraction = 1.0;',
+    '}',
+    'else{',
+      'float absOfRpMinusRl = abs(aperatureRadius - sunRadius);',
+      'observableSunFraction = smoothstep(0.0, 1.0, 1.0 - ((aperatureToSunHaversineDistance - absOfRpMinusRl) / (aperatureRadius + sunRadius - absOfRpMinusRl)));',
+    '}',
+    'float omega = (sunRadius - aperatureRadius + aperatureToSunHaversineDistance) / (2.0 * aperatureToSunHaversineDistance);',
+    'vec3 bentTangentSpaceSunlightDirection = normalize(mix(tangentSpaceSunLightDirection, aperatureOrientation, omega));',
+
     '//I opt to use the Oren-Nayar model over Hapke-Lommel-Seeliger',
     '//As Oren-Nayar lacks a lunar phase component and is more extensible for',
     '//Additional parameters, I used the following code as a guide',
     '//https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4',
-    'float NDotL = max(dot(tangentSpaceSunLightDirection, texelNormal), 0.0);',
+    'float NDotL = max(dot(bentTangentSpaceSunlightDirection, texelNormal), 0.0);',
     'float NDotV = max(dot(tangentSpaceViewDirection, texelNormal), 0.0);',
-    'float gamma = dot(tangentSpaceViewDirection - texelNormal * NDotV, tangentSpaceSunLightDirection - texelNormal * NDotL);',
+    'float gamma = dot(tangentSpaceViewDirection - texelNormal * NDotV, bentTangentSpaceSunlightDirection - texelNormal * NDotL);',
     'gamma = gamma / (sqrt(clamp(1.0 - NDotV * NDotV, 0.0, 1.0)) * sqrt(clamp(1.0 - NDotL * NDotL, 0.0, 1.0)));',
     'float roughnessSquared = moonRoughnessTexel * moonRoughnessTexel;',
     'float A = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));',
@@ -38,7 +58,8 @@ StarrySky.Materials.Moon.baseMoonPartial = {
     'vec2 sin_alpha_beta = sqrt(clamp(1.0 - cos_alpha_beta * cos_alpha_beta, 0.0, 1.0));',
     'float C = sin_alpha_beta.x * sin_alpha_beta.y / (1e-6 + cos_alpha_beta.y);',
 
-    'vec3 moonTexel = NDotL * (A + B * max(0.0, gamma) * C) * moonDiffuseTexel * transmittanceFade;',
+    'vec3 moonTexel = 2.0 * observableSunFraction * NDotL * (A + B * max(0.0, gamma) * C) * lunarDiffuseColor * transmittanceFade;',
+    '//vec3 moonTexel = vec3(observableSunFraction);',
     ];
 
     let updatedLines = [];
@@ -61,6 +82,7 @@ StarrySky.Materials.Moon.baseMoonPartial = {
     'varying vec2 vUv;',
     'varying vec3 tangentSpaceSunLightDirection;',
     'varying vec3 tangentSpaceViewDirection;',
+    'varying mat3 TBNMatrix;',
 
     'void main() {',
       'vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane, 1.0);',
@@ -75,7 +97,7 @@ StarrySky.Materials.Moon.baseMoonPartial = {
       'vec3 n = (worldMatrix * vec4(normal.xyz, 0.0)).xyz;',
 
       '//There is no matrix transpose, so we will do this ourselves',
-      'mat3 TBNMatrix = mat3(vec3(cameraSpaceTangent.x, b.x, n.x), vec3(cameraSpaceTangent.y, b.y, n.y), vec3(cameraSpaceTangent.z, b.z, n.z));',
+      'TBNMatrix = mat3(vec3(cameraSpaceTangent.x, b.x, n.x), vec3(cameraSpaceTangent.y, b.y, n.y), vec3(cameraSpaceTangent.z, b.z, n.z));',
       'tangentSpaceSunLightDirection = normalize(TBNMatrix * sunLightDirection);',
       'tangentSpaceViewDirection = normalize(TBNMatrix * -normalizedWorldPosition);',
 

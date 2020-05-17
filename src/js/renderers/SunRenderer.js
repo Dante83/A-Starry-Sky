@@ -151,9 +151,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager.hasLoadedImages){
-      //The image of the moon opacity for our solar ecclipse
-      self.baseSunVar.material.uniforms.moonOpacityMap.value = self.skyDirector.assetManager.images.moonImages.moonOpacityMap;
-      self.baseSunVar.material.uniforms.moonOpacityMap.needsUpdate = true;
+      //While we only use the alpha channel, we require the lunar map for solar ecclipses
+      self.baseSunVar.material.uniforms.moonDiffuseMap.value = self.skyDirector.assetManager.images.moonImages.moonDiffuseMap;
+      self.baseSunVar.material.uniforms.moonDiffuseMap.needsUpdate = true;
 
       //Image of the solar corona for our solar ecclipse
 
