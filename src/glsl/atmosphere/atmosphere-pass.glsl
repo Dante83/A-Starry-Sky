@@ -69,10 +69,10 @@ void main(){
   //In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon
   #if($isMoonPass)
     //Get our lunar occlusion texel
-    vec2 offsetUV = clamp(vUv * 3.0 - vec2(1.0), 0.0, 1.0);
+    vec2 offsetUV = vUv * 2.0 - vec2(0.5);
     vec4 lunarDiffuseTexel = texture2D(moonDiffuseMap, offsetUV);
-    vec2 uvClamp1 = (1.0 - step(1.0, offsetUV));
-    vec2 uvClamp2 = (1.0 - step(1.0, 1.0 - offsetUV));
+    vec2 uvClamp1 = 1.0 - vec2(step(offsetUV.x, 0.0), step(offsetUV.y, 0.0));
+    vec2 uvClamp2 = 1.0 - vec2(step(1.0 - offsetUV.x, 0.0), step(1.0 - offsetUV.y, 0.0));
     vec3 lunarDiffuseColor = lunarDiffuseTexel.rgb;
     float lunarMask = lunarDiffuseTexel.a * uvClamp1.x * uvClamp1.y * uvClamp2.x * uvClamp2.y;
   #elif($isSunPass)

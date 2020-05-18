@@ -19,12 +19,12 @@ float lerpBloomFactor(float factor){
 
 void main(){
   //Fade this plane out towards the edges to avoid rough edges
-  vec2 offsetUV = vUv * 3.0 - vec2(1.0);
+  vec2 offsetUV = vUv * 2.0 - vec2(0.5);
   float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));
   float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromSun)));
 
   //Determine the bloom effect
-  vec3 combinedLight = abs(texture2D(baseTexture, vUv).rgb);
+  vec3 combinedLight = texture2D(baseTexture, vUv).rgb;
   if(bloomEnabled){
     //Bloom is only enabled when the sun has set so that we can share the bloom
     //shader betweeen the sun and the moon.
@@ -33,7 +33,6 @@ void main(){
     bloomLight += lerpBloomFactor(0.6) * texture2D(blurTexture3, vUv).rgb;
     bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;
     bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;
-
     combinedLight += abs(bloomStrength * bloomLight);
   }
   combinedLight = ACESFilmicToneMapping(combinedLight);

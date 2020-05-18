@@ -16,11 +16,15 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
   let materials = StarrySky.Materials.Postprocessing;
   const blurDirectionX = new THREE.Vector2(1.0, 0.0);
   const blurDirectionY = new THREE.Vector2(0.0, 1.0);
-  const textureSize = 512;
-  const mipSizes = [265, 128, 64, 32, 16];
+  let mipSizes = [265, 128, 64, 32, 16];
+  let baseSize = skyDirector.moonAndSunRendererSize;
+  for(let i = 0; i < 5; ++i){
+    baseSize = baseSize >> 1; //Divide by two
+    mipSizes[i] = baseSize;
+  }
   const kernelSizeArray = [3, 5, 7, 9, 11];
 
-  this.highPassRenderer = new THREE.StarrySkyComputationRenderer(textureSize, textureSize, this.renderer);
+  this.highPassRenderer = new THREE.StarrySkyComputationRenderer(1024, 1024, this.renderer);
 
   //Set up our transmittance texture
   this.highPassFilterTexture = this.highPassRenderer.createTexture();

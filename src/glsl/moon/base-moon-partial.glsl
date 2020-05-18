@@ -1,12 +1,6 @@
 //We enter and leave with additionalPassColor, which we add our moon direct
 //lighting to, after it has been attenuated by our transmittance.
 
-//Our moon is located in the middle square of our quad, so that we give our
-//solar bloom enough room to expand into without clipping the edge.
-//We also fade out our quad towards the edge to reduce the visibility of sharp
-//edges.
-float pixelDistanceFromMoon = distance(vUv, vec2(0.5));
-
 //Calculate the light from the moon. Note that our normal is on a quad, which makes
 //transforming our normals really easy, as we just have to transform them by the world matrix.
 //and everything should work out. Furthermore, the light direction for the moon should just
@@ -18,7 +12,7 @@ float moonRoughnessTexel = piOver2 - (1.0 - texture2D(moonRoughnessMap, offsetUV
 
 //Implmentatation of the Ambient Appeture Lighting Equation
 float sunArea = pi * sunRadius * sunRadius;
-float aperatureRadius = texture2D(moonAperatureSizeMap, offsetUV).r * piOver2;
+float aperatureRadius = acos(1.0 - texture2D(moonAperatureSizeMap, offsetUV).r);
 vec3 aperatureOrientation = normalize(2.0 * texture2D(moonAperatureOrientationMap, offsetUV).rgb - 1.0);
 float aperatureToSunHaversineDistance = acos(dot(aperatureOrientation, tangentSpaceSunLightDirection));
 
@@ -53,4 +47,3 @@ vec2 sin_alpha_beta = sqrt(clamp(1.0 - cos_alpha_beta * cos_alpha_beta, 0.0, 1.0
 float C = sin_alpha_beta.x * sin_alpha_beta.y / (1e-6 + cos_alpha_beta.y);
 
 vec3 moonTexel = 2.0 * observableSunFraction * NDotL * (A + B * max(0.0, gamma) * C) * lunarDiffuseColor * transmittanceFade;
-//vec3 moonTexel = vec3(observableSunFraction);

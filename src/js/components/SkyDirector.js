@@ -50,7 +50,9 @@ StarrySky.SkyDirector = function(parentComponent){
   this.renderers;
   this.interpolator = null;
   this.camera;
+  this.pixelsPerRadian;
   this.atmosphereLUTLibrary;
+  this.moonAndSunRendererSize;
 
   //Set up our web assembly hooks
   let self = this;
@@ -80,6 +82,33 @@ StarrySky.SkyDirector = function(parentComponent){
   this.initializeRenderers = function(){
     //All systems must be up and running before we are ready to begin
     if(self.assetManagerInitialized && self.skyDirectorWASMIsReady){
+      //Attach our camera, which should be loaded by now.
+      const DEG_2_RAD = Math.PI / 180.0;
+      self.camera = self.parentComponent.el.sceneEl.camera;
+      self.pixelsPerRadian = screen.width / (this.camera.fov * DEG_2_RAD);
+
+      //Determine the best texture size for our renderers
+      const sunAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD;
+      const sunRendererTextureSize = Math.floor(self.pixelsPerRadian * sunAngularDiameterInRadians * 2.0);
+      //Floor and ceiling to nearest power of 2, Page 61 of Hacker's Delight
+      const ceilSRTS = Math.min(parseInt(1 << (32 - Math.clz32(sunRendererTextureSize - 1), 10)), 1024);
+      const floorSRTS = ceilSRTS >> 1; //Divide by 2! Without the risk of floating point errors
+      const SRTSToNearestPowerOfTwo = Math.abs(sunRendererTextureSize - floorSRTS) <= Math.abs(sunRendererTextureSize - ceilSRTS) ? floorSRTS : ceilSRTS;
+
+      const moonAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD;
+      const moonRendererTextureSize = Math.floor(self.pixelsPerRadian * moonAngularDiameterInRadians * 2.0);
+      //Floor and ceiling to nearest power of 2, Page 61 of Hacker's Delight
+      const ceilMRTS = Math.min(parseInt(1 << (32 - Math.clz32(moonRendererTextureSize - 1), 10)), 1024);
+      const floorMRTS = ceilMRTS >> 1; //Divide by 2! Without the risk of floating point errors
+      const MRTSToNearestPowerOfTwo = Math.abs(moonRendererTextureSize - floorMRTS) <= Math.abs(moonRendererTextureSize - ceilMRTS) ? floorMRTS : ceilMRTS;
+
+      if(SRTSToNearestPowerOfTwo !== MRTSToNearestPowerOfTwo){
+        console.warn("The moon and sun should be a similiar angular diameters to avoid unwanted texture artifacts.");
+      }
+
+      //Choose the bigger of the two textures
+      self.moonAndSunRendererSize = Math.max(SRTSToNearestPowerOfTwo, MRTSToNearestPowerOfTwo);
+
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
@@ -245,9 +274,6 @@ StarrySky.SkyDirector = function(parentComponent){
   this.renderers = {};
 
   this.start = function(){
-    //Attach our camera, which should be loaded by now.
-    self.camera = self.parentComponent.el.sceneEl.camera;
-
     //Update our tick and tock functions
     parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine

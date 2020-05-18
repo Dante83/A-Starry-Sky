@@ -4,8 +4,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
   const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
-  const sunAngularDiameterInRadians = 2.0 * sunAngularRadiusInRadians;
-  const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(sunAngularRadiusInRadians) * 3.0;
+  const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(sunAngularRadiusInRadians) * 2.0;
   const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
 
@@ -14,7 +13,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   //we can use this to render to a square compute shader for the color pass
   //a clamped pass to use for our bloom, several bloom passes and a combination
   //pass to combine these results with our original pass.
-  this.sunRenderer = new THREE.StarrySkyComputationRenderer(512, 512, skyDirector.renderer);
+  this.sunRenderer = new THREE.StarrySkyComputationRenderer(skyDirector.moonAndSunRendererSize, skyDirector.moonAndSunRendererSize, skyDirector.renderer);
   let materials = StarrySky.Materials.Sun;
   let baseSunPartial = materials.baseSunPartial.fragmentShader(sunAngularRadiusInRadians);
 
@@ -46,6 +45,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.baseSunVar.material.uniforms.transmittance.needsUpdate = true;
   this.baseSunVar.minFilter = THREE.LinearFilter;
   this.baseSunVar.magFilter = THREE.LinearFilter;
+  this.baseSunVar.needsUpdate = true;
 
   //Check for any errors in initialization
   let error1 = this.sunRenderer.init();
@@ -113,6 +113,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     let bloomTest = self.skyDirector.skyState.sun.horizonFade >= 0.95;
     let bloomSwapped = this.bloomEnabled !== bloomTest;
     this.bloomEnabled = bloomSwapped ? bloomTest : this.bloomEnabled;
+
+    //update our base texture, whether we pass it into a bloom shader or not.
+    let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
+    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
+    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
     if(this.bloomEnabled){
       if(bloomSwapped){
         self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
@@ -120,16 +125,12 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       }
 
       //Drive our bloom shader with our sun disk
-      let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
-      self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
       let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
-
       self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
       self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
       self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
       self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
       self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-      self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
       self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
       self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
       self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
@@ -146,6 +147,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.firstTick = function(){
     //Connect up our reference values
     self.baseSunVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
+    self.baseSunVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
     self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade >= 0.95;
     self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
 

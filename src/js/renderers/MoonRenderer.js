@@ -3,10 +3,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   let assetManager = skyDirector.assetManager;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
-  const moonAngularDiameterInRadians = 2.0 * moonAngularRadiusInRadians;
   const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
-  const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(moonAngularRadiusInRadians) * 3.0;
+  const moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(moonAngularRadiusInRadians) * 2.0;
   const diameterOfMoonPlane = 2.0 * radiusOfMoonPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
   this.bloomEnabled = false;
@@ -17,7 +16,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   //we can use this to render to a square compute shader for the color pass
   //a clamped pass to use for our bloom, several bloom passes and a combination
   //pass to combine these results with our original pass.
-  this.moonRenderer = new THREE.StarrySkyComputationRenderer(512, 512, skyDirector.renderer, true);
+  this.moonRenderer = new THREE.StarrySkyComputationRenderer(skyDirector.moonAndSunRendererSize, skyDirector.moonAndSunRendererSize, skyDirector.renderer, true);
   let materials = StarrySky.Materials.Moon;
   let baseMoonPartial = materials.baseMoonPartial.fragmentShader(moonAngularRadiusInRadians);
 
@@ -131,6 +130,11 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     let bloomTest = self.skyDirector.skyState.sun.horizonFade < 0.95;
     let bloomSwapped = this.bloomEnabled !== bloomTest;
     this.bloomEnabled = bloomSwapped ? bloomTest : this.bloomEnabled;
+
+    //Get our moon disk whether we pass it into the bloom shader or not
+    let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
+    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
+    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
     if(this.bloomEnabled){
       if(bloomSwapped){
         self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
@@ -138,16 +142,12 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       }
 
       //Drive our bloom shader with our moon disk
-      let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
-      self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
       let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
-
       self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
       self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
       self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
       self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
       self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-      self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
       self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
       self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
       self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
@@ -166,7 +166,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.baseMoonVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
     self.baseMoonVar.material.uniforms.sunLightDirection.value = self.skyDirector.skyState.sun.quadOffset;
-    self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade <= 0.95;
+    self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade < 0.95;
     self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
 
     //Connect up our images if they don't exist yet
