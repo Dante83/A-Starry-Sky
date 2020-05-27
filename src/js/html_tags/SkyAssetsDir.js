@@ -6,13 +6,15 @@ window.customElements.define('sky-moon-normal-map', class extends HTMLElement{})
 window.customElements.define('sky-moon-roughness-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-aperature-size-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-aperature-orientation-map', class extends HTMLElement{});
+window.customElements.define('sky-stellar-position-data', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
-  moonDiffuseMap: 'lunar-diffuse-map.png',
-  moonNormalMap: 'lunar-normal-map.png',
-  moonRoughnessMap: 'lunar-roughness-map.png',
-  moonAperatureSizeMap: 'lunar-aperature-size-map.png',
-  moonAperatureOrientationMap: 'lunar-aperature-orientation-map.png'
+  moonDiffuseMap: 'lunar-diffuse-map.webp',
+  moonNormalMap: 'lunar-normal-map.webp',
+  moonRoughnessMap: 'lunar-roughness-map.webp',
+  moonAperatureSizeMap: 'lunar-aperature-size-map.webp',
+  moonAperatureOrientationMap: 'lunar-aperature-orientation-map.webp',
+  stellarPositionData: ['stellar-position-data-1.dat.gz', 'stellar-position-data-2.dat.gz']
 };
 
 StarrySky.DefaultData.skyAssets = {
@@ -22,7 +24,9 @@ StarrySky.DefaultData.skyAssets = {
   moonNormalMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonNormalMap,
   moonRoughnessMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
   moonAperatureSizeMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAperatureSizeMap,
-  moonAperatureOrientationMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAperatureOrientationMap
+  moonAperatureOrientationMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAperatureOrientationMap,
+  stellarPositionData: ['./assets/star_data/' + StarrySky.DefaultData.fileNames.stellarPositionData[0],
+    './assets/star_data/' + StarrySky.DefaultData.fileNames.stellarPositionData[1]],
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
@@ -44,16 +48,16 @@ class SkyAssetsDir extends HTMLElement {
     //Hide the element
     this.style.display = "none";
 
-    let self = this;
+    const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
       //Check this this has a parent sky-assets-dir
       self.isRoot = self.parentElement.nodeName.toLowerCase() !== 'sky-assets-dir';
-      let path = 'dir' in self.attributes ? self.attributes.dir.value : '/';
-      let parentTag = self.parentElement;
+      const path = 'dir' in self.attributes ? self.attributes.dir.value : '/';
+      const parentTag = self.parentElement;
 
       //If this isn't root, we should recursively travel up the tree until we have constructed
       //our path.
-      let i = 0;
+      var i = 0;
       while(parentTag.nodeName.toLowerCase() === 'sky-assets-dir'){
         let parentDir;
         if('dir' in parentTag.attributes){
@@ -83,20 +87,21 @@ class SkyAssetsDir extends HTMLElement {
       }
 
       //Get child tags and acquire their values.
-      let childNodes = Array.from(self.children);
-      let skyStateEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-state-engine-path');
-      let skyInterpolationEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-interpolation-engine-path');
-      let moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
-      let moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
-      let moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
-      let moonAperatureSizeMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-size-map');
-      let moonAperatureOrientationMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-orientation-map');
+      const childNodes = Array.from(self.children);
+      const skyStateEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-state-engine-path');
+      const skyInterpolationEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-interpolation-engine-path');
+      const moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
+      const moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
+      const moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
+      const moonAperatureSizeMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-size-map');
+      const moonAperatureOrientationMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-orientation-map');
+      const stellarPositionDataTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-stellar-position-data');
 
       const objectProperties = ['skyStateEngine', 'skyInterpolationEngine','moonDiffuseMap', 'moonNormalMap',
-        'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap']
-      let tagsList = [skyStateEngineTags, skyInterpolationEngineTags, moonDiffuseMapTags, moonNormalMapTags,
-        moonRoughnessMapTags, moonAperatureSizeMapTags, moonAperatureOrientationMapTags];
-      const numberOfTags = tagsList.length;
+        'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'stellarPositionData']
+      const tagsList = [skyStateEngineTags, skyInterpolationEngineTags, moonDiffuseMapTags, moonNormalMapTags,
+        moonRoughnessMapTags, moonAperatureSizeMapTags, moonAperatureOrientationMapTags, stellarPositionDataTags];
+      const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
         const wasmKeys = ['skyStateEngine', 'skyInterpolationEngine'];
         for(let i = 0; i < wasmKeys.length; ++i){
@@ -108,7 +113,7 @@ class SkyAssetsDir extends HTMLElement {
       }
       else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const textureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
-        'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
+        'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'stellarPositionData'];
         for(let i = 0; i < textureKeys.length; ++i){
           StarrySky.assetPaths[textureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[textureKeys[i]];
         }
@@ -120,22 +125,45 @@ class SkyAssetsDir extends HTMLElement {
           StarrySky.assetPaths[moonTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[moonTextureKeys[i]];
         }
       }
+      else if(self.hasAttribute('star-path') && self.getAttribute('star-path').toLowerCase() !== 'false'){
+        const starTextureKeys = ['stellarPositionData'];
+        for(let i = 0; i < starTextureKeys.length; ++i){
+          StarrySky.assetPaths[starTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[starTextureKeys[i]];
+        }
+      }
       else{
-        for(let i = 0; i < numberOfTags; ++i){
-          let tags = tagsList[i];
-          let propertyName = objectProperties[i];
-          if(tags.length > 1){
-            console.error(`The <sky-assets-dir> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
-          }
-          else if(tags.length > 0){
-            if(StarrySky.assetPaths[propertyName] &&
-              StarrySky.assetPaths[propertyName] !== StarrySky.DefaultData.skyAssets[propertyName]){
-              //As the above should be copied over from a JSON parse, we must have changed this
-              //someplace else.
-              console.warn(`A page can only have one tag of type <${tags[0].tagName}>. Two were discovered. Switching data to latest url.`);
+        for(let i = 0; i < numberOfTagTypes; ++i){
+          const tags = tagsList[i];
+          const propertyName = objectProperties[i];
+          const tagName = tags[0].tagName;
+          if(tagName !== 'sky-stellar-position-data'){
+            tag = tags[0]
+            if(tags.length > 1){
+              console.error(`The <sky-assets-dir> tag can only contain 1 tag of type <${tagName}>. ${tags.length} found.`);
             }
-            //Try the default file name if no html was provided
-            StarrySky.assetPaths[propertyName] = tags[0].innerHTML !== '' ? path.concat(tags[0].innerHTML) : path.concat(StarrySky.DefaultData.fileNames[propertyName]);
+            else if(tags.length > 0){
+              if(StarrySky.assetPaths[propertyName] &&
+                StarrySky.assetPaths[propertyName] !== StarrySky.DefaultData.skyAssets[propertyName]){
+                //As the above should be copied over from a JSON parse, we must have changed this
+                //someplace else.
+                console.warn(`A page can only have one tag of type <${tagName}>. Two were discovered. Switching data to latest url.`);
+              }
+              //Try the default file name if no html was provided
+              StarrySky.assetPaths[propertyName] = tag.innerHTML !== '' ? path.concat(tag.innerHTML) : path.concat(StarrySky.DefaultData.fileNames[propertyName]);
+            }
+          }
+          else{
+            if(tags.length !== 2){
+              console.error(`The <sky-assets-dir> must contain exactly 2 tags of type <${tagName}>. ${tags.length} found.`);
+            }
+            else{
+              const tag1 = tags[0];
+              const tag2 = tags[1];
+
+              //Try the default file name if no html was provided
+              StarrySky.assetPaths['stellarPositionData'][0] = tag1.innerHTML !== '' ? path.concat(tag1.innerHTML) : path.concat(StarrySky.DefaultData.fileNames['stellarPositionData'][0]);
+              StarrySky.assetPaths['stellarPositionData'][1] = tag2.innerHTML !== '' ? path.concat(tag2.innerHTML) : path.concat(StarrySky.DefaultData.fileNames['stellarPositionData'][1]);
+            }
           }
         }
       }

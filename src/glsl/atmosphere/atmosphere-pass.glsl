@@ -2,6 +2,7 @@ precision highp float;
 
 varying vec3 vWorldPosition;
 
+uniform float time;
 uniform vec3 sunPosition;
 uniform vec3 moonPosition;
 uniform float sunHorizonFade;
@@ -9,6 +10,11 @@ uniform float moonHorizonFade;
 uniform sampler2D mieInscatteringSum;
 uniform sampler2D rayleighInscatteringSum;
 uniform sampler2D transmittance;
+
+#if(!$isSunPass){
+  uniform sampler2D stellarData1;
+  uniform sampler2D stellarData2;
+}
 
 const float piOver2 = 1.5707963267948966192313;
 const float piTimes2 = 6.283185307179586476925286;
@@ -43,6 +49,39 @@ const float scatteringMoonIntensity = 1.44; //Moon reflects 7.2% of all light
 #endif
 
 $atmosphericFunctions
+
+#if(!$isSunPass)
+  float fastAiry(float r){
+    //Using the Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness
+
+    return intensity;
+  }
+
+  vec3 drawStarLight(vec2 normalizedGalacticCoordinates, sampler2D stellarData, vec2 offset, vec3 vWorldPosition){
+    vec3 starLight = vec3(-1.0);
+    vec4 starData = texture2D(stellarData, normalizedGalacticCoordinates + offset);
+
+    //Grab the last vector component, which will say whether we should continue or not.
+    float magnitude = starData.w;
+
+    if(magnitude < 26.5){
+      //I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.
+      float temperature = distance(starData.xyz);
+      vec3 normalizedStarPosition = starData.xyz / temperature;
+      vec3 pixelToStarDiffVector = vWorldPosition - normalizedStarPosition;
+      float approximateDistance2Star = distance(pixelToStarDiffVector);
+
+      //Modify the intensity and color of this star using approximation of stellar scintillation
+
+      //Pass this brightness into the fast Airy function to make the star glow
+
+      //Clamp our results to zero to avoid a negative response
+
+    }
+
+    return starLight;
+  }
+#endif
 
 vec3 linearAtmosphericPass(vec3 sourcePosition, float sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){
   float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);
@@ -85,8 +124,22 @@ void main(){
     //Milky Way Pass
 
 
-    //Star Pass
-
+    //Star Pass for the nearest four stars
+    //Not sure if statements actually help us
+    //reduce the time in the shader. Will have to try with and without them.
+    vec3 starLight = drawStarLight();
+    vec3 newStarLight;
+    if(starLight.x !== -1.0){
+      newStarLight = drawStarLight();
+      starLight += newStarLight;
+      if(newStarLight !== -1.0){
+        newStarLight = drawStarLight();
+        starLight += newStarLight;
+        if(newStarLight !== -1.0){
+          starLight += drawStarLight();
+        }
+      }
+    }
 
     //Planet Pass
 

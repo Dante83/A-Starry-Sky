@@ -97,7 +97,7 @@ def ParseShader(yaml_structure):
                 try:
                     template_string = f.read()
                 except f.IOError as exc:
-                    print exc
+                    print(exc)
                     return 0
 
         if vertex_file != False:
@@ -105,7 +105,7 @@ def ParseShader(yaml_structure):
                 try:
                     update_vertex_file_code_string = vf.read()
                 except vf.IOError as exc:
-                    print exc
+                    print(exc)
                     return 0
 
         if fragment_file != False:
@@ -113,7 +113,7 @@ def ParseShader(yaml_structure):
                 try:
                     update_fragment_file_code_string = ff.read()
                 except ff.IOError as exc:
-                    print exc
+                    print(exc)
                     return 0
 
         #Clone the template string and modify it with the imported components
@@ -126,8 +126,8 @@ def ParseShader(yaml_structure):
                 js_stringified_fragment_code = ConvertGLSLToStringArray(update_fragment_file_code_string)
                 material_code = re.sub('\s+\{fragment_glsl\}', js_stringified_fragment_code, material_code)
             w.write(material_code)
-            print ("Shader JS File updated at: " + time.strftime('%H:%M %Y-%m-%d'))
-            print "-"*15
+            print("Shader JS File updated at: " + time.strftime('%H:%M %Y-%m-%d'))
+            print("-"*15)
 
 def NextAction(yaml_structure):
     delete_base_glsl_when_done = False

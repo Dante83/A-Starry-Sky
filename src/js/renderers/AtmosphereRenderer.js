@@ -58,6 +58,14 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.atmosphereMaterial.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
 
+    //Connect up our images if they don't exist yet
+    if(self.skyDirector.assetManager.hasLoadedImages){
+      for(let [property, value] of Object.entries(self.skyDirector.assetManager.images.stellarImages)){
+        self.baseMoonVar.material.uniforms[property].value = value;
+        self.baseMoonVar.material.uniforms[property].needsUpdate = true;
+      }
+    }
+
     //Proceed with the first tick
     self.tick();
 

@@ -2,20 +2,21 @@ StarrySky.AssetManager = function(skyDirector){
   this.skyDirector = skyDirector;
   this.data = {};
   this.images = {
-    moonImages: {}
+    moonImages: {},
+    stellarImages: {}
   };
-  let starrySkyComponent = skyDirector.parentComponent;
+  const starrySkyComponent = skyDirector.parentComponent;
 
   //------------------------
   //Capture all the information from our child elements for our usage here.
   //------------------------
   //Get all of our tags
-  let tagLists = [];
-  let skyLocationTags = starrySkyComponent.el.getElementsByTagName('sky-location');
+  var tagLists = [];
+  const skyLocationTags = starrySkyComponent.el.getElementsByTagName('sky-location');
   tagLists.push(skyLocationTags);
-  let skyTimeTags = starrySkyComponent.el.getElementsByTagName('sky-time');
+  const skyTimeTags = starrySkyComponent.el.getElementsByTagName('sky-time');
   tagLists.push(skyTimeTags);
-  let skyAtmosphericParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
+  const skyAtmosphericParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
   tagLists.push(skyAtmosphericParametersTags);
   tagLists.forEach(function(tags){
     if(tags.length > 1){
@@ -23,7 +24,7 @@ StarrySky.AssetManager = function(skyDirector){
     }
   });
   //These are excluded from our search above :D
-  let skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
+  const skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
 
   //Now grab each of or our elements and check for events.
   this.starrySkyComponent = starrySkyComponent;
@@ -41,7 +42,7 @@ StarrySky.AssetManager = function(skyDirector){
   this.readyForTickTock = false;
   this.loadSkyDataHasNotRun = true;
   this.tickSinceLastUpdateRequest = 5;
-  let self = this;
+  const self = this;
 
   //Asynchronously load all of our images because, we don't care about when these load
   this.loadImageAssets = async function(renderer){
@@ -50,17 +51,20 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
-    const formats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
-    const encodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
+    const moonFormats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
+    const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
+    const starTextuers = ['stellarData1', 'stellarData2'];
     const numberOfMoonTextures = moonTextures.length;
-    const totalNumberOfTextures = numberOfMoonTextures;
+    const numberOfStellarDataSets = 2;
+    const numberOfStellarTextures = starTextures.length;
+    const totalNumberOfTextures = numberOfMoonTextures + numberOfStellarDataSets;
     let numberOfTexturesLoaded = 0;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
     //that can be run in parallel.
     (async function createNewTexturePromise(i){
-      const next = i + 1;
+      let next = i + 1;
       if(next < totalNumberOfTextures){
         createNewTexturePromise(next);
       }
@@ -74,15 +78,15 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.LinearFilter;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.encoding = encodings[i];
-        texture.format = formats[i];
+        texture.encoding = moonEncodings[i];
+        texture.format = moonFormats[i];
         //Swap this tomorrow and implement custom mip-maps
         texture.generateMipmaps = true;
         self.images.moonImages[moonTextures[i]] = texture;
 
         //If the renderer already exists, go in and update the uniform
         if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-          let textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextures[i]];
+          const textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextures[i]];
           textureRef.value = texture;
           textureRef.needsUpdate = true;
         }
@@ -96,25 +100,58 @@ StarrySky.AssetManager = function(skyDirector){
       });
     })(0);
 
+    //Load and unzip our star data
+    (async function createNewStarDataLoaderPromise(i){
+      let next = i + 1;
+      const StellarDataSet = i + 1;
+      if(next < numberOfStellarDataSets){
+      createNewStarDataLoaderPromise(next);
+      }
+
+      let httpRequest = new XMLHttpRequest();
+      httpRequest.open("GET", StarrySky.assetPaths.stellarPositionData[i], false);
+      httpRequest.onreadystatechange = function (){
+        if(httpRequest.readyState === 4){
+          if(httpRequest.status === 200 || httpRequest.status == 0){
+            const inflatedBinaryBlob = pako.inflate(httpRequest.responseText);
+            const floatArrayView = new Float32Array(inflatedBinaryBlob);
+
+            //Convert our float array into a data texture
+            let dataTexture = new THREE.DataTexture(
+              floatArrayView,
+              1024,
+              1024,
+              THREE.RGBAFormat,
+              ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) ? THREE.HalfFloatType : THREE.FloatType,
+              THREE.RepeatWrapping,
+              THREE.ClampToEdgeWrapping,
+              THREE.NearestFilter,
+              THREE.NearestFilter
+            );
+            dataTexture.needsUpdate = true;
+            self.images.stellarImages[`stellarData${StarDataSet}`] = texture;
+
+            //If the renderer already exists, go in and update the uniform
+            if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
+              const textureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms[`stellarData${StarDataSet}`];
+              textureRef.value = texture;
+              textureRef.needsUpdate = true;
+            }
+
+            numberOfTexturesLoaded += 1;
+            if(numberOfTexturesLoaded === totalNumberOfTextures){
+              self.hasLoadedImages = true;
+            }
+          }
+          else{
+            console.error(`The request for starry sky data returned an HTTP status of ${httpRequest.status}`);
+          }
+        }
+      }
+      httpRequest.send();
+    })(0);
+
     //Load any additional textures
-  }
-
-  this.loadLunarMipMaps = function(texture, textureName){
-    let textureSize = 256;
-    for(let i = 1; i < 9; ++i){
-      let texturePromise = new Promise(function(resolve, reject){
-        let assetPathExplodedOnDots = textureName.split('.');
-        assetPathExplodedOnDots[assetPathExplodedOnDots.length - 2] = `-${textureSize}` + assetPathExplodedOnDots[assetPathExplodedOnDots.length - 2];
-        let mipMapFileName = assetPathExplodedOnDots.join('.');
-        textureLoader.load(mipMapFileName, function(texture){resolve(texture, i);});
-      });
-      texturePromise.then(function(texture, i){
-        texture.mipmaps[i] = texture;
-      });
-
-      //Divide our texture size by a power of two
-      let textureSize = textureSize >> 1;
-    }
   }
 
   //Internal function for loading our sky data once the DOM is ready
@@ -124,7 +161,7 @@ StarrySky.AssetManager = function(skyDirector){
       self.loadSkyDataHasNotRun = false;
 
       //Now that we have verified our tags, let's grab the first one in each.
-      let defaultValues = self.starrySkyComponent.defaultValues;
+      const defaultValues = self.starrySkyComponent.defaultValues;
       self.data.skyLocationData = self.hasSkyLocationTag ? self.skyLocationTag.data : defaultValues.location;
       self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
       self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
