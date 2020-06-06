@@ -12,8 +12,9 @@ uniform sampler2D rayleighInscatteringSum;
 uniform sampler2D transmittance;
 
 #if(!$isSunPass){
-  uniform sampler2D stellarData1;
-  uniform sampler2D stellarData2;
+  uniform samplerCube starMap;
+  uniform sampler2D starData;
+  uniform sampler2D starColor;
 }
 
 const float piOver2 = 1.5707963267948966192313;
@@ -51,35 +52,34 @@ const float scatteringMoonIntensity = 1.44; //Moon reflects 7.2% of all light
 $atmosphericFunctions
 
 #if(!$isSunPass)
-  float fastAiry(float r){
-    //Using the Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness
-
-    return intensity;
+  vec3 getSpectralColor(){
+    return vec3(1.0);
   }
 
-  vec3 drawStarLight(vec2 normalizedGalacticCoordinates, sampler2D stellarData, vec2 offset, vec3 vWorldPosition){
-    vec3 starLight = vec3(-1.0);
-    vec4 starData = texture2D(stellarData, normalizedGalacticCoordinates + offset);
+  float fastAiry(float r){
+    //Variation of Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness
+    float scaled_r = r;
+    float one_over_r_cubed = 1.0 / r * r * r;
+    float gauss_r_over_1_4 = exp(-0.255102040816326530612 * r * r);
+    return r < 1.88 ? gauss_r_over_1_4 : r > 6.0 ? 1.35 * one_over_r_cubed : (gauss_r_over_1_4 + 2.7 * one_over_r_cubed) * 0.5;
+  }
 
-    //Grab the last vector component, which will say whether we should continue or not.
-    float magnitude = starData.w;
+  vec3 drawStarLight(samplerCube starMap, vec3 vEquitorialCoordinates){
+    vec4 starData = textureCube(starMap, vEquitorialCoordinates);
 
-    if(magnitude < 26.5){
-      //I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.
-      float temperature = distance(starData.xyz);
-      vec3 normalizedStarPosition = starData.xyz / temperature;
-      vec3 pixelToStarDiffVector = vWorldPosition - normalizedStarPosition;
-      float approximateDistance2Star = distance(pixelToStarDiffVector);
+    //I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.
+    float temperature = length(starData.xyz);
+    vec3 normalizedStarPosition = starData.xyz / temperature;
+    float starBrightness = starData.w;
+    float approximateDistance2Star = distance(vWorldPosition, normalizedStarPosition);
 
-      //Modify the intensity and color of this star using approximation of stellar scintillation
+    //Modify the intensity and color of this star using approximation of stellar scintillation
 
-      //Pass this brightness into the fast Airy function to make the star glow
 
-      //Clamp our results to zero to avoid a negative response
+    //Pass this brightness into the fast Airy function to make the star glow
+    vec3 StellarBrightness = fastAiry(approximateDistance2Star);
 
-    }
-
-    return starLight;
+    return StellarBrightness;
   }
 #endif
 
@@ -121,48 +121,47 @@ void main(){
 
   //This stuff never shows up near our sun, so we can exclude it
   #if(!$isSunPass)
+    vec3 galacticLighting = vec3(0.0);
+
     //Milky Way Pass
 
 
     //Star Pass for the nearest four stars
     //Not sure if statements actually help us
     //reduce the time in the shader. Will have to try with and without them.
-    vec3 starLight = drawStarLight();
-    vec3 newStarLight;
-    if(starLight.x !== -1.0){
-      newStarLight = drawStarLight();
-      starLight += newStarLight;
-      if(newStarLight !== -1.0){
-        newStarLight = drawStarLight();
-        starLight += newStarLight;
-        if(newStarLight !== -1.0){
-          starLight += drawStarLight();
-        }
-      }
-    }
+    galacticLighting += drawStarLight();
+    galacticLighting += drawStarLight();
+    galacticLighting += drawStarLight();
+    galacticLighting += drawStarLight();
 
     //Planet Pass
 
+    //Apply the transmittance function to all of our light sources
+    galacticLighting = galacticLighting * transmittanceFade;
   #endif
 
   //Atmosphere
   vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);
   vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);
-  vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;
 
   //Sun and Moon layers
   #if($isSunPass)
+    vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;
     $draw_sun_pass
-    gl_FragColor = vec4(combinedPass + sunTexel, 1.0);
+    combinedPass = combinedPass + sunTexel;
   #elif($isMoonPass)
+    vec3 combinedPass = galacticLighting + lunarAtmosphericPass + solarAtmosphericPass;
     $draw_moon_pass
-    gl_FragColor = vec4(mix(combinedPass, combinedPass + moonTexel, lunarMask), 1.0);
+    combinedPass = mix(combinedPass, combinedPass + moonTexel, lunarMask);
   #else
+    vec3 combinedPass = galacticLighting + lunarAtmosphericPass + solarAtmosphericPass;
+
     //Color Adjustment Pass
-    vec3 toneMappedColor = ACESFilmicToneMapping(combinedPass);
+    combinedPass = ACESFilmicToneMapping(combinedPass);
 
-    //Triangular Blue Noise Adjustment Pass
+    //Triangular Blue Noise Dithering Pass
 
-    gl_FragColor = vec4(clamp(toneMappedColor, 0.0, 1.0), 1.0);
   #endif
+
+  gl_FragColor = vec4(clamp(combinedPass, 0.0, 1.0), 1.0);
 }

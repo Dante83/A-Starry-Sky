@@ -4,6 +4,7 @@ StarrySky = {
   assetPaths: {},
   Materials: {
     Atmosphere: {},
+    Stars: {},
     Sun: {},
     Moon: {},
     Postprocessing: {}
