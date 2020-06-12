@@ -10,7 +10,7 @@ class Cubemap:
         self.ny = self.sides[4]
         self.nz = self.sides[5]
 
-    def getPixelGalacticCoordinates(side, x_in_pixels, y_in_pixels)
+    def getPixelGalacticCoordinates(self, side, x_in_pixels, y_in_pixels):
         #Convert our coordinates in x, y, to cubemap space
         x = x_in_pixels * self.one_over_size
         y = y_in_pixels * self.one_over_size
