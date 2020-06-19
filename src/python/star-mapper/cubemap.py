@@ -1,3 +1,13 @@
+from math import *
+import numpy as np
+
+#Mulitples of PI
+PI = np.pi
+ONE_OVER_PI = 1.0 / PI
+PI_TIMES_TWO = np.pi * 2.0
+ONE_OVER_PI_TIMES_TWO = 1.0 / PI_TIMES_TWO
+PI_OVER_TWO = np.pi * 0.5
+
 class Cubemap:
     def __init__(self, size):
         self.size = size

@@ -1,12 +1,17 @@
+from math import *
+import numpy as np
+
 class VisibleStar:
-    def __init__(self, galactic_coordinates, bv, magnitude, galactic_latitude, galactic_longitude, bucket_id, index_in_potential_stars):\
+    def __init__(self, galactic_coordinates, temperature, magnitude, galactic_latitude, galactic_longitude, index_in_potential_stars):
         self.star_id = index_in_potential_stars
         self.galactic_coordinates = np.array(galactic_coordinates)
-        self.temperature = self.bvToTemp(bv)
+        self.temperature = temperature
         self.magnitude = magnitude
         self.galactic_latitude = galactic_latitude
         self.galactic_longitude = galactic_longitude
-        self.bucket_id = bucket_id
+        self.bucket_id = None
+        self.dim_star_bucket_id = None
+        self.bright_star_bucket_id = None
         self.position_in_dim_star_ordererd_array = None
         self.position_in_bright_star_ordered_array = None
 
@@ -15,9 +20,6 @@ class VisibleStar:
         self.encoded_equitorial_g = self.float2RGBA(galactic_coordinates[1] * self.temperature, 0.0, 17000.0)
         self.encoded_equitorial_b = self.float2RGBA(galactic_coordinates[2] * self.temperature, 0.0, 17000.0)
         self.encoded_equitorial_a = self.float2RGBA(self.magnitude, -2.0, 7.0)
-
-    def bvToTemp(self, bv):
-        return 4600 * ((1.0 / (0.92 * bv + 1.7)) + (1.0 / (0.92 * bv + 0.62)))
 
     def gauss(self, r):
         return exp(-0.5 * (r * r))
