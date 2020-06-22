@@ -8,7 +8,7 @@
 * Implemented  multi-pass bloom effect for the sun and moon.
 * Moved normal mapping from fragment shader to vertex shader with improved diffuse and height maps from the [NASA CGI Moon Kit](https://svs.gsfc.nasa.gov/4720), with direct baking of the lunar normal map in Blender. Switched from a regular Lambertian shader to an [Oren Nayar Material](https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4) driven by roughness data from [LOLA](https://sos.noaa.gov/datasets/moon-surface-roughness/).
 * Added parallactic rotations for the moon.
-* Implemented solar area lighting via [Christopher Oat and Pedro Sanders' Ambient Apeture Lighting](https://www.cse.ust.hk/~psander/docs/aperture.pdf).
+* Implemented solar area lighting via [Christopher Oat and Pedro Sanders'](https://www.cse.ust.hk/~psander/docs/aperture.pdf) *Ambient Aperature Lighting* model for improved smooth shadows on lunar surface.
 * Switched from PNG to WebP format for images files for reduced asset download times.
 
 **Version 0.3.0**

@@ -12,7 +12,7 @@ class Cubemap:
     def __init__(self, size):
         self.size = size
         self.one_over_size = 1.0 / size
-        self.sides = [[[[0, 0] for y in range(size)] for x in range(size)] for i in range(6)]
+        self.sides = [[[[0, 0, 0, 0] for y in range(size)] for x in range(size)] for i in range(6)]
         self.px = self.sides[0]
         self.py = self.sides[1]
         self.pz = self.sides[2]
@@ -42,4 +42,4 @@ class Cubemap:
         galactic_position = np.array(galactic_position) - np.array([0.5, 0.5, 0.5])
 
         #Normalize the coordinate to get the spherical position
-        return galactic_position / sqrt(dot(galactic_position, galactic_position))
+        return galactic_position / sqrt(np.dot(galactic_position, galactic_position))

@@ -12,6 +12,7 @@ class VisibleStar:
         self.bucket_id = None
         self.dim_star_bucket_id = None
         self.bright_star_bucket_id = None
+        self.position_in_orderered_array = None
         self.position_in_dim_star_ordererd_array = None
         self.position_in_bright_star_ordered_array = None
 
@@ -29,22 +30,22 @@ class VisibleStar:
         return abs(r) < 1.88 if gauss(r / 1.4) else (abs(r) > 6.0 if 1.35 / abs(r**3) else (gauss(r / 1.4) + 2.7 / abs(r**3)) / 2.0)
 
     def float2RGBA(self, float_number, min_value, max_value):
-        SCALE_CONSTANT = (2 ** 16)
+        SCALE_CONSTANT = (2 ** 32)
         SCALE_RANGE = max_value - min_value
         scaled_integer = int(floor(((float_number - min_value) / SCALE_RANGE) * SCALE_CONSTANT))
 
         #Let's go with a 31 bit float as it's probably enough accuracy and doesn't
         #risk us hitting an overflow value
-        R_byte = int(bin(scaled_integer & 0xff), 2)
-        G_byte = int(bin(scaled_integer >> 8 & 0xff), 2)
-        B_byte = int(bin(scaled_integer >> 16 & 0xff), 2)
-        A_byte = int(bin(scaled_integer >> 24 & 0xfe), 2)
+        A_byte = int(bin(scaled_integer & 0xff), 2) + 1
+        B_byte = int(bin(scaled_integer >> 8 & 0xff), 2)
+        G_byte = int(bin(scaled_integer >> 16 & 0xff), 2)
+        R_byte = int(bin(scaled_integer >> 24 & 0xff), 2)
 
         #Test this works
-        test_float = R_byte + G_byte * 256.0 + B_byte * 65536.0 + A_byte * 16777216.0
+        test_float = (A_byte - 1) + B_byte * 256.0 + G_byte * 65536.0 + R_byte * 16777216.0
         scaled_test_float = ((float(test_float) * SCALE_RANGE) / SCALE_CONSTANT) + min_value
         diff = abs(scaled_test_float - float_number) / SCALE_RANGE
-        if(diff > 0.0001):
-            raise Exception("Float conversion did not work, {0} became {1}, with RGBA({2}, {3}, {4}, {5})".format(float_number, scaled_test_float, R_byte, G_byte, B_byte, A_byte))
+        if(diff > 0.0000001):
+            raise Exception("Float conversion did not work, {0} became {1}, with RGBA({2}, {3}, {4}, {5})".format(float_number, scaled_test_float, A_byte, B_byte, G_byte, R_byte))
 
         return [R_byte, G_byte, B_byte, A_byte]
