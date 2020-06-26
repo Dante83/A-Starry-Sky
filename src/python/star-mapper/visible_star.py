@@ -17,9 +17,9 @@ class VisibleStar:
         self.position_in_bright_star_ordered_array = None
 
         #Ecode our stellar data from the start into 4 colors that we can use to fill in the texture
-        self.encoded_equitorial_r = self.float2RGBA(galactic_coordinates[0] * self.temperature, 0.0, 17000.0)
-        self.encoded_equitorial_g = self.float2RGBA(galactic_coordinates[1] * self.temperature, 0.0, 17000.0)
-        self.encoded_equitorial_b = self.float2RGBA(galactic_coordinates[2] * self.temperature, 0.0, 17000.0)
+        self.encoded_equitorial_r = self.float2RGBA(galactic_coordinates[0] * self.temperature, -17000.0, 17000.0)
+        self.encoded_equitorial_g = self.float2RGBA(galactic_coordinates[1] * self.temperature, -17000.0, 17000.0)
+        self.encoded_equitorial_b = self.float2RGBA(galactic_coordinates[2] * self.temperature, -17000.0, 17000.0)
         self.encoded_equitorial_a = self.float2RGBA(self.magnitude, -2.0, 7.0)
 
     def gauss(self, r):

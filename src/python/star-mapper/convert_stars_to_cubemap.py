@@ -9,6 +9,9 @@ from nearest_neighbor_map import OrderedGroupOfStars
 from cubemap import Cubemap
 from bucket_grid import BucketGrid
 from PIL import Image
+import pandas as pd
+from matplotlib import pyplot as plt
+from mpl_toolkits import mplot3d
 
 #Plan.
 #1 Organize the stars into two three lists, the top 8545 stars, the top 8065 stars and the top 480 stars
@@ -23,9 +26,10 @@ from PIL import Image
 #9 Determine the density of remaining stars in galaxy using an 8-bit float and store this in the green channel.
 #10 Split our star data into red, green and blue channel textures to be recombined into 32 bits, and simply save
 # the six sides of our cubemap RGB texture.
+NUMBER_OF_REMOVED_BINARY_STARS = 19
 NUMBER_OF_DIM_STARS = 8065
 NUMBER_OF_BRIGHT_STARS = 480
-NUMBER_OF_STARS = NUMBER_OF_DIM_STARS + NUMBER_OF_BRIGHT_STARS
+NUMBER_OF_STARS = NUMBER_OF_DIM_STARS + NUMBER_OF_BRIGHT_STARS + NUMBER_OF_REMOVED_BINARY_STARS
 DIM_TO_BRIGHT_STAR_SCALER = NUMBER_OF_BRIGHT_STARS / NUMBER_OF_DIM_STARS
 BRIGHT_STAR_MAP_WIDTH = 32
 BRIGHT_STAR_MAP_HEIGHT = 16
@@ -39,9 +43,11 @@ ONE_OVER_PI = 1.0 / PI
 PI_TIMES_TWO = np.pi * 2.0
 ONE_OVER_PI_TIMES_TWO = 1.0 / PI_TIMES_TWO
 PI_OVER_TWO = np.pi * 0.5
+DEG_TO_RAD = PI / 180.0
+HOURS_TO_RADS = PI_TIMES_TWO / 24.0
 
-BUCKETS_IN_GALACTIC_LATITUDE = 64
-BUCKETS_IN_GALACTIC_LONGITUDE = 128
+BUCKETS_IN_GALACTIC_LATITUDE = 32
+BUCKETS_IN_GALACTIC_LONGITUDE = 64
 star_bucket_grid = BucketGrid(BUCKETS_IN_GALACTIC_LATITUDE, BUCKETS_IN_GALACTIC_LONGITUDE)
 
 def bvToTemp(bv):
@@ -58,8 +64,10 @@ def initialization():
     hy_csv_path = os.path.abspath("../../csv_files/hygdata_v3.csv")
     with open(hy_csv_path, 'r') as hyg_file:
         stars = csv.DictReader(hyg_file, delimiter=',')
-        sin_of_27_4_degrees = sin(0.4782)
-        cos_of_27_4_degrees = cos(0.4782)
+        north_galactic_pole_ra = ((12 * 3600 + 51.0*60 + 26.0) / (86400.0)) * PI_TIMES_TWO
+        north_galactic_pole_dec = 27.13 * PI / 180.0
+        sin_of_NGP = sin(north_galactic_pole_dec)
+        cos_of_NGP = cos(north_galactic_pole_dec)
         index_in_potential_stars = 0
         for star in stars:
             magnitude = float(star['mag'])
@@ -72,19 +80,19 @@ def initialization():
                 if temperature < min_temperature:
                     min_temperature = temperature
                 equitorial_coordinates = [float(star[axis]) for axis in ['x', 'y', 'z']]
-                sin_star_dec = sin(float(star['dec']))
-                cos_star_dec = cos(float(star['dec']))
-                ra_term = 3.355 - float(star['ra'])
-                cos_ra_term = cos(ra_term)
-                x = atan2(sin(ra_term), (cos_ra_term * sin_of_27_4_degrees - (sin_star_dec / cos_star_dec) * cos_of_27_4_degrees))
-                galactic_longitude = (5.28835 - x)
-                galactic_latitude = asin(sin_star_dec * sin_of_27_4_degrees + cos_star_dec * cos_of_27_4_degrees * cos_ra_term)
-                normalized_galactic_longitude = ((galactic_longitude + PI) % PI_TIMES_TWO) / PI_TIMES_TWO
-                normalized_galactic_latitude = (galactic_latitude + PI_OVER_TWO) / PI
+                star_right_ascension = float(star['ra']) * HOURS_TO_RADS
+                star_declincation = float(star['dec']) * DEG_TO_RAD
+                sin_star_dec = sin(float(star_declincation))
+                cos_star_dec = cos(float(star_declincation))
+                cos_of_star_ra_minus_galactic_ngp_ra = cos(float(star_right_ascension) - north_galactic_pole_ra)
+                galactic_latitude = asin(sin_of_NGP * sin_star_dec + cos_of_NGP * cos_star_dec * cos_of_star_ra_minus_galactic_ngp_ra)#Y-Axis
+                galatic_longitude_numerator = cos_star_dec * sin(float(star_right_ascension) - north_galactic_pole_ra)
+                galactic_longitude_denominator = cos_of_NGP * sin_star_dec - sin_of_NGP * cos_star_dec * cos_of_star_ra_minus_galactic_ngp_ra
+                galactic_longitude = atan2(galatic_longitude_numerator, galactic_longitude_denominator) - 0.5#X-Axis
                 galactic_coordinates = [0.0 for x in range(3)]
-                galactic_coordinates[0] = sin(normalized_galactic_latitude) * cos(normalized_galactic_longitude)
-                galactic_coordinates[1] = cos(normalized_galactic_latitude)
-                galactic_coordinates[2] = sin(normalized_galactic_latitude) * sin(normalized_galactic_longitude)
+                galactic_coordinates[0] = sin(PI - galactic_latitude + PI_OVER_TWO) * cos(galactic_longitude + PI)
+                galactic_coordinates[1] = cos(PI - galactic_latitude + PI_OVER_TWO)
+                galactic_coordinates[2] = sin(PI - galactic_latitude + PI_OVER_TWO) * sin(galactic_longitude + PI)
                 visible_star_obj = VisibleStar(galactic_coordinates, temperature, magnitude, galactic_latitude, galactic_longitude, index_in_potential_stars)
                 potential_stars.append(visible_star_obj)
                 index_in_potential_stars += 1
@@ -96,63 +104,90 @@ def initialization():
     print("Max Temperature: {}".format(max_temperature))
     print("Min Temperature: {}".format(min_temperature))
 
+    #Plot all of our stars to see that it all worked out
+    x_coords = [star.galactic_longitude for star in potential_stars]
+    y_coords = [star.galactic_latitude for star in potential_stars]
+    star_dot_sizes = [0.01 for star in potential_stars]
+    plt.scatter(x_coords, y_coords, s=star_dot_sizes, marker='o', alpha=1.0)
+    plt.title("Stars in 2-d planar galactic coordinates")
+    plt.show()
+
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+
+    x_coords = [star.galactic_coordinates[0] for star in potential_stars]
+    z_coords = [star.galactic_coordinates[1] for star in potential_stars]
+    y_coords = [star.galactic_coordinates[2] for star in potential_stars]
+    star_dot_sizes = [0.1 for star in potential_stars]
+    ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, c=None, depthshade=True)
+    plt.title("3D Graph of stars")
+    plt.show()
+
     #Filter our stars so that stars that are really really close together (binary/trianary stars) get removed from the list
-    # print("Reducing binary systems...")
-    # i = 0
-    # with progressbar.ProgressBar(len(potential_stars), redirect_stdout=True) as bar:
-    #     while i < len(potential_stars):
-    #         #Get all potential stars near this star
-    #         star_1 = potential_stars[i]
-    #         stars_in_system = [star_1]
-    #         nearby_stars = star_bucket_grid.getNearbyStars(star_1.galactic_latitude, star_1.galactic_longitude)
-    #         j = 0
-    #         while j < len(nearby_stars):
-    #             star_2 = nearby_stars[j]
-    #             diff = star_1.galactic_coordinates - star_2.galactic_coordinates
-    #             distance = sqrt(np.dot(diff, diff))
-    #
-    #             #Without testin for i !== j, we naturally include the original star in here
-    #             if(distance < 0.0001):
-    #                 stars_in_system.append(star_2)
-    #             j += 1
-    #
-    #         number_stars_in_system = len(stars_in_system)
-    #         original_index_survives = True
-    #         if number_stars_in_system > 1:
-    #             print("Star system with {} stars found".format(number_stars_in_system))
-    #
-    #             brightest_star = stars_in_system[0]
-    #             for star in stars_in_system:
-    #                 if star.magnitude < brightest_star.magnitude:
-    #                     brightest_star = star
-    #
-    #             #Just include the brightest star and leave out the other stars
-    #             #Using Meeus equation from page 393 to get the combined magnitude of all stars
-    #             combined_magnitude = 10.0**(-0.4 * brightest_star.magnitude)
-    #             original_index_survives = False
-    #             for j in range(1, number_stars_in_system):
-    #                 test_star = stars_in_system[j]
-    #                 combined_magnitude += 10.0**(-0.4 * test_star.magnitude)
-    #                 if(test_star.magnitude < brightest_star.magnitude):
-    #                     original_index_survives = True
-    #                     brightest_star = test_star
-    #             combined_magnitude = -2.5 * log10(combined_magnitude)
-    #
-    #             #Reset the magnitude of the star based on the combined magnitudes of all stars in the system
-    #             #We maintain the original stars temperature as combining the spectra is probably not tractable.
-    #             brightest_star.magnitude = combined_magnitude
-    #             stars_in_system.remove(brightest_star)
-    #             for star in stars_in_system:
-    #                 if star in potential_stars:
-    #                     potential_stars.remove(star)
-    #                     star_bucket_grid.star_buckets[star.bucket_id].remove(star)
-    #                     star.bucket_id = None
-    #
-    #         if original_index_survives:
-    #             i += 1
-    #             bar.update(i)
+    print("Reducing binary systems...")
+    total_stars_removed = 0
+    i = 0
+    with progressbar.ProgressBar(len(potential_stars), redirect_stdout=True) as bar:
+        while i < len(potential_stars):
+            #Get all potential stars near this star
+            star_1 = potential_stars[i]
+            stars_in_system = [star_1]
+            nearby_stars = star_bucket_grid.getNearbyStars(star_1.galactic_latitude, star_1.galactic_longitude)
+            j = 0
+            while j < len(nearby_stars):
+                star_2 = nearby_stars[j]
+                if(star_2 is not star_1):
+                    diff = star_1.galactic_coordinates - star_2.galactic_coordinates
+                    distance = sqrt(np.dot(diff, diff))
+
+                    #Without testin for i !== j, we naturally include the original star in here
+                    if(distance < 0.0001):
+                        stars_in_system.append(star_2)
+                j += 1
+
+            number_stars_in_system = len(stars_in_system)
+            original_index_survives = True
+            if number_stars_in_system > 1:
+                print("Star system with {} stars found".format(number_stars_in_system))
+
+                #Just include the brightest star and leave out the other stars
+                #Using Meeus equation from page 393 to get the combined magnitude of all stars
+                #Also only leave the brightest star remaining to use it's spectrum
+                brightest_star = stars_in_system[0]
+                combined_magnitude = 0.0
+                for star in stars_in_system:
+                    combined_magnitude += 10.0**(-0.4 * star.magnitude)
+                    if star.magnitude < brightest_star.magnitude:
+                        brightest_star = star
+                        if brightest_star is star_1:
+                            original_index_survives = True
+                        else:
+                            original_index_survives = False
+                combined_magnitude = -2.5 * log10(combined_magnitude)
+                brightest_star.magnitude = combined_magnitude
+
+                #Remove the other stars
+                for star in stars_in_system:
+                    if (star is not brightest_star) and (star in potential_stars):
+                        potential_stars.remove(star)
+                        star_bucket_grid.star_buckets[star.bucket_id].remove(star)
+                        star.bucket_id = None
+                        total_stars_removed += 1
+
+            if original_index_survives:
+                i += 1
+                bar.update(i)
 
     print("Remaining stars {}".format(len(potential_stars)))
+    print("Total stars removed, {}".format(total_stars_removed))
+
+    #Plot our remaining stars to show that everything is still ok
+    x_coords = [star.galactic_longitude for star in potential_stars]
+    y_coords = [star.galactic_latitude for star in potential_stars]
+    star_dot_sizes = [0.01 for star in potential_stars]
+    plt.scatter(x_coords, y_coords, s=star_dot_sizes, marker='o', alpha=1.0)
+    plt.title("Stars in 2-d planar galactic coordinates")
+    plt.show()
 
     #Sort our stars according to brightness
     potential_stars.sort(key=lambda x: x.magnitude, reverse=True)
@@ -173,25 +208,34 @@ def initialization():
     #Combine all of our star groups until only one star group remains
     print("Combine all of our star groups until only one group remains...")
     ordered_groups_of_stars = [OrderedGroupOfStars([star]) for star in full_stars_list]
-    # previous_i = 0
-    # number_of_ordered_groups_of_stars = len(ordered_groups_of_stars)
-    # initial_number_of_ordered_groups_of_stars = number_of_ordered_groups_of_stars
-    # with progressbar.ProgressBar(100.0, redirect_stdout=True) as bar:
-    #     while(number_of_ordered_groups_of_stars > 1):
-    #         ordered_groups_of_stars[previous_i].findAndCombineWithClosestOtherStarGroup(ordered_groups_of_stars, previous_i)
-    #         number_of_ordered_groups_of_stars = len(ordered_groups_of_stars)
-    #         bar.update((1.0 - number_of_ordered_groups_of_stars / initial_number_of_ordered_groups_of_stars) * 100)
-    #         next_i = (previous_i + 1) % number_of_ordered_groups_of_stars
-    #         if previous_i > next_i:
-    #             #Resort our groups by the brightest edge star every time we scan through our list
-    #             ordered_groups_of_stars.sort(key=lambda x: x.ordererdGroupOfStars[x.brightest_star_on_edge].magnitude, reverse=True)
-    #         previous_i = next_i
+    previous_i = 0
+    number_of_ordered_groups_of_stars = len(ordered_groups_of_stars)
+    initial_number_of_ordered_groups_of_stars = number_of_ordered_groups_of_stars
+    with progressbar.ProgressBar(100.0, redirect_stdout=True) as bar:
+        while(number_of_ordered_groups_of_stars > 1):
+            ordered_groups_of_stars[previous_i].findAndCombineWithClosestOtherStarGroup(ordered_groups_of_stars, previous_i)
+            number_of_ordered_groups_of_stars = len(ordered_groups_of_stars)
+            bar.update((1.0 - number_of_ordered_groups_of_stars / initial_number_of_ordered_groups_of_stars) * 100)
+            next_i = (previous_i + 1) % number_of_ordered_groups_of_stars
+            if previous_i > next_i:
+                #Resort our groups by the brightest edge star every time we scan through our list
+                ordered_groups_of_stars.sort(key=lambda x: x.ordererdGroupOfStars[x.brightest_star_on_edge].magnitude, reverse=True)
+            previous_i = next_i
 
     #Once we've ordered our stars, we just want the list
-    #ordered_groups_of_stars = ordered_groups_of_stars[0].ordererdGroupOfStars
+    ordered_groups_of_stars = ordered_groups_of_stars[0].ordererdGroupOfStars
 
-    #Temporary, delete when we are using the above to organize our stars
-    ordered_groups_of_stars = full_stars_list[:]
+    print("Number of stars after combination {}".format(len(ordered_groups_of_stars)))
+    if len(ordered_groups_of_stars) != len(set(ordered_groups_of_stars)):
+        print("There are {} duplicates in the ordered group of stars".format(abs(len(ordered_groups_of_stars) - len(set(ordered_groups_of_stars)))))
+
+    #Plot our star connections to see how well we are connected to our nearest neighbors
+    x_coords = [star.galactic_coordinates[0] for star in ordered_groups_of_stars]
+    z_coords = [star.galactic_coordinates[1] for star in ordered_groups_of_stars]
+    y_coords = [star.galactic_coordinates[2] for star in ordered_groups_of_stars]
+    ax.plot(x_coords, y_coords, z_coords, '-b')
+    plt.title("Connected Stars in 3D Coordinates")
+    plt.show()
 
     #Provide each star with it's position in the ordered group of stars
     for i, star in enumerate(ordered_groups_of_stars):
@@ -205,6 +249,30 @@ def initialization():
         bright_stars_list[i].position_in_bright_star_ordered_array = i
     for i, star in enumerate(dim_stars_list):
         dim_stars_list[i].position_in_dim_star_ordererd_array = i
+
+    print("Number of bright stars after combination {}".format(len(bright_stars_list)))
+    if len(bright_stars_list) != len(set(bright_stars_list)):
+        print("There are {} duplicates in the bright ordered group of stars".format(abs(len(bright_stars_list) - len(set(bright_stars_list)))))
+
+    #Plot all bright stars too see how they are connected
+    x_coords = [star.galactic_coordinates[0] for star in bright_stars_list]
+    z_coords = [star.galactic_coordinates[1] for star in bright_stars_list]
+    y_coords = [star.galactic_coordinates[2] for star in bright_stars_list]
+    ax.plot(x_coords, y_coords, z_coords, '-b')
+    plt.title("Bright Stars in 3D Coordinates")
+    plt.show()
+
+    print("Number of dim stars after combination {}".format(len(dim_stars_list)))
+    if len(dim_stars_list) != len(set(dim_stars_list)):
+        print("There are {} duplicates in the dim ordered group of stars".format(abs(len(dim_stars_list) - len(set(dim_stars_list)))))
+
+    #Plot all dim stars to see how they are connected
+    x_coords = [star.galactic_coordinates[0] for star in dim_stars_list]
+    z_coords = [star.galactic_coordinates[1] for star in dim_stars_list]
+    y_coords = [star.galactic_coordinates[2] for star in dim_stars_list]
+    ax.plot(x_coords, y_coords, z_coords, '-b')
+    plt.title("Dim Stars in 3D Coordinates")
+    plt.show()
 
     #Convert these stars into two data textures, split between their R, G, B and A channels
     print("Converting linear data into data image")
@@ -263,10 +331,13 @@ def initialization():
     cubemap = Cubemap(CUBEMAP_FACE_SIZE)
 
     sides = ['px', 'py', 'pz', 'nx', 'ny', 'nz']
-    j = 0
+    k = 0
+    number_of_distant_bright_stars = 0
+    number_of_missed_stars_in_bucket = 0
+    number_of_distant_bright_stars = 0
     with progressbar.ProgressBar(6 * CUBEMAP_FACE_SIZE * CUBEMAP_FACE_SIZE, redirect_stdout=True) as bar:
         for i, side in enumerate(cubemap.sides):
-            side = sides[i]
+            side_letter_combo = sides[i]
             for y in range(CUBEMAP_FACE_SIZE):
                 for x in range(CUBEMAP_FACE_SIZE):
                     #Convert the x, y value of this cubemap face to an x, y, z, position
@@ -307,50 +378,54 @@ def initialization():
                             closest_bright_star_index = nearby_bright_stars[j].position_in_bright_star_ordered_array
 
                     #Attempt to reach this point with a 3-bit integer, between +/-4 in the scale of the 448 star data texture
-                    dim_star_index_in_bright_star_scale = int(closest_dim_star_index * DIM_TO_BRIGHT_STAR_SCALER) - int(closest_bright_star_index)
+                    bright_star_offset = int(closest_dim_star_index * DIM_TO_BRIGHT_STAR_SCALER) - int(closest_bright_star_index)
                     # if(dim_star_index_in_bright_star_scale < -4 or dim_star_index_in_bright_star_scale > 4):
                     #     print("Offset out of range, bright star true offset was: {}".format(dim_star_index_in_bright_star_scale))
-                    dim_star_index_in_bright_star_scale += 4
-                    bright_star_offset = max(min(dim_star_index_in_bright_star_scale, 0), 7)
+                    bright_star_offset = min(max(bright_star_offset, -127), 127)
+                    bright_star_offset += 127
 
                     #Combine and split these binary numbers into two 8-bit channels and put them in a texture
-                    sixteen_bit_index = ((closest_dim_star_index & 0x1fff) << 3) | (bright_star_offset & 0x7)
-                    index_a = int(bin(sixteen_bit_index & 0xff), 2) + 1
-                    index_b = int(bin(sixteen_bit_index >> 8 & 0xff), 2)
+                    index_r = int(bin(closest_dim_star_index & 0xff), 2)
+                    index_g = int(bin(closest_dim_star_index >> 8 & 0xff), 2)
+                    index_b = int(bin(bright_star_offset & 0xff), 2)
+                    index_a = 255
+
+                    #Swap it back
+                    bright_star_offset -= 127
 
                     #Add a check in here to see that we can split this back into a 13 bit index and a 3 bit offset
-                    sixteen_bit_integer = (index_a - 1) + index_b * 256
-                    thirteen_bit_position = floor(sixteen_bit_integer / 8)
-                    three_bit_offset = sixteen_bit_integer - (thirteen_bit_position * 8)
-                    estimated_location_of_dim_star = thirteen_bit_position
-                    estimated_location_of_bright_star = floor(estimated_location_of_dim_star * DIM_TO_BRIGHT_STAR_SCALER)  + (three_bit_offset - 4)
+                    estimated_location_of_dim_star = index_r + index_g * 256
+                    estimated_bright_star_offset = index_b - 127
+                    estimated_location_of_bright_star = floor(estimated_location_of_dim_star * DIM_TO_BRIGHT_STAR_SCALER)  + estimated_bright_star_offset
                     if(estimated_location_of_dim_star != closest_dim_star_index):
                         print("Wrong dim star index. Was looking for {}, got {}.".format(closest_dim_star_index, estimated_location_of_dim_star))
-                        print("sixteen_bit_integer: {}".format(sixteen_bit_integer))
-                        print("thirteen_bit_position: {}".format(thirteen_bit_position))
-                        print("three_bit_offset: {}".format(three_bit_offset))
                         print("-"*8)
                         raise Exception("Bit recombination error")
 
-                    if(three_bit_offset != bright_star_offset):
-                        print("Invalid bright star offset. Was looking for {}, got {}".format(bright_star_offset, three_bit_offset))
+                    if(estimated_bright_star_offset != bright_star_offset):
+                        print("Invalid bright star offset. Was looking for {}, got {}".format(bright_star_offset, estimated_bright_star_offset))
 
-                    # if(estimated_location_of_bright_star != closest_bright_star_index):
-                    #     print("Wrong bright star index. Was looking for {}, got {}".format(closest_bright_star_index, estimated_location_of_bright_star))
-                    #     print("Offset: {}".format((three_bit_offset - 4)))
-                    #     print("-"*8)
+                    if(estimated_location_of_bright_star != closest_bright_star_index):
+                        # print("Wrong bright star index. Was looking for {}, got {}".format(closest_bright_star_index, estimated_location_of_bright_star))
+                        if(bright_stars_list[closest_bright_star_index].bucket_id == bright_star_bucket_grid.getBucketID(galactic_latitude, galactic_longitude)):
+                            number_of_missed_stars_in_bucket += 1
+                        number_of_distant_bright_stars += 1
 
-                    cubemap.sides[i][3] = index_a
-                    cubemap.sides[i][2] = index_b
+                    cubemap.sides[i][x][y][0] = index_r
+                    cubemap.sides[i][x][y][1] = index_g
+                    cubemap.sides[i][x][y][2] = index_b
+                    cubemap.sides[i][x][y][3] = index_a
 
-                    j += 1
-                    bar.update(j)
+                    k += 1
+                    bar.update(k)
 
             #Write this into a cube map texture
             imarray = np.asarray(cubemap.sides[i])
             imarray = np.flip(imarray, 0)
             im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
-            im.save('../../../assets/star_data/star-dictionary-cubemap-{}.png'.format(side))
+            im.save('../../../assets/star_data/star-dictionary-cubemap-{}.png'.format(side_letter_combo))
+    print("Number of missed stars in bucket, {}".format(number_of_missed_stars_in_bucket))
+    print("Number of bad offsets for bright stars, {}".format(number_of_distant_bright_stars))
 
 #And now to run the entire application :D
 if __name__ == '__main__':
