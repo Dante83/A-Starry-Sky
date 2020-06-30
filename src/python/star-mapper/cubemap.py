@@ -20,26 +20,47 @@ class Cubemap:
         self.ny = self.sides[4]
         self.nz = self.sides[5]
 
+    def getPix():
+        a = 2.0 * float(i) / faceSize
+        b = 2.0 * float(j) / faceSize
+
+        if faceIdx == 0: # back
+            (x,y,z) = (-1.0, 1.0 - a, 1.0 - b)
+        elif faceIdx == 1: # left
+            (x,y,z) = (a - 1.0, -1.0, 1.0 - b)
+        elif faceIdx == 2: # front
+            (x,y,z) = (1.0, a - 1.0, 1.0 - b)
+        elif faceIdx == 3: # right
+            (x,y,z) = (1.0 - a, 1.0, 1.0 - b)
+        elif faceIdx == 4: # top
+            (x,y,z) = (b - 1.0, a - 1.0, 1.0)
+        elif faceIdx == 5: # bottom
+            (x,y,z) = (1.0 - b, a - 1.0, -1.0)
+
+        return (x, y, z)
+
+    #With help from Benjamin Dobell
+    #https://stackoverflow.com/questions/29678510/convert-21-equirectangular-panorama-to-cube-map
     def getPixelGalacticCoordinates(self, side, x_in_pixels, y_in_pixels):
         #Convert our coordinates in x, y, to cubemap space
-        x = x_in_pixels * self.one_over_size
-        y = y_in_pixels * self.one_over_size
-        galactic_position = None
-        if side == 0:#px
-            galactic_position = [1.0, 1.0 - y, 1.0 - x]
-        elif side == 1:#py
-            galactic_position = [x, 1.0, y]
-        elif side == 2:#pz
-            galactic_position = [x, 1.0 - y, 1.0]
-        elif side == 3:#nx
-            galactic_position = [1.0, 1.0 - y, x]
-        elif side == 4:#ny
-            galactic_position = [x, 1.0, 1.0 - y]
-        elif side == 5:#nz
-            galactic_position = [1.0 - x, 1.0 - y, 1.0]
+        a = 2.0 * float(x_in_pixels) * self.one_over_size
+        b = 2.0 * float(y_in_pixels) * self.one_over_size
+
+        if side == 0: # back
+            galactic_position = [-1.0, 1.0 - a, 1.0 - b]
+        elif side == 1: # left
+            galactic_position = [a - 1.0, -1.0, 1.0 - b]
+        elif side == 2: # front
+            galactic_position = [1.0, a - 1.0, 1.0 - b]
+        elif side == 3: # right
+            galactic_position = [1.0 - a, 1.0, 1.0 - b]
+        elif side == 4: # top
+            galactic_position = [b - 1.0, a - 1.0, 1.0]
+        elif side == 5: # bottom
+            galactic_position = [1.0 - b, a - 1.0, -1.0]
 
         #Convert our coordinates to centered galactic space
-        galactic_position = np.array(galactic_position) - np.array([0.5, 0.5, 0.5])
+        galactic_position = np.array(galactic_position)
 
         #Normalize the coordinate to get the spherical position
         return galactic_position / sqrt(np.dot(galactic_position, galactic_position))

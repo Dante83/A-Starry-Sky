@@ -1,5 +1,7 @@
 from math import *
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import colors
 
 #Mulitples of PI
 PI = np.pi
@@ -9,11 +11,11 @@ ONE_OVER_PI_TIMES_TWO = 1.0 / PI_TIMES_TWO
 PI_OVER_TWO = np.pi * 0.5
 
 class BucketGrid:
-    def __init__(self, buckets_in_galactic_latitude, buckets_in_galactic_longitude):
-        self.buckets_in_galactic_latitude = buckets_in_galactic_latitude
+    def __init__(self):
+        self.buckets_in_galactic_latitude = 32
         self.delta_galactic_latitude = PI / self.buckets_in_galactic_latitude
-        self.buckets_in_galactic_longitude = buckets_in_galactic_longitude
-        self.delta_galactic_longitude = PI_TIMES_TWO / buckets_in_galactic_longitude
+        self.buckets_in_galactic_longitude = 64
+        self.delta_galactic_longitude = PI_TIMES_TWO / self.buckets_in_galactic_longitude
         self.number_of_buckets = self.buckets_in_galactic_longitude * self.buckets_in_galactic_latitude
         self.star_buckets = [[] for x in range(self.number_of_buckets)]
 
@@ -23,11 +25,16 @@ class BucketGrid:
     def getBucketID(self, galactic_latitude, galactic_longitude):
         #Normalize the galactic latitude and longitude
         normalized_galactic_latitude = self.clamp((galactic_latitude + PI_OVER_TWO) * ONE_OVER_PI, 0.0, 1.0)
-        normalized_galactic_longitude = self.clamp(galactic_longitude * ONE_OVER_PI_TIMES_TWO, 0.0, 1.0)
+        normalized_galactic_longitude = self.clamp((galactic_longitude + PI) * ONE_OVER_PI_TIMES_TWO, 0.0, 1.0)
 
         #Get bucket ID
-        y = int(floor(float(floor(normalized_galactic_latitude * self.number_of_buckets)) / float(self.buckets_in_galactic_longitude)))
-        return y + int(floor(normalized_galactic_longitude * self.buckets_in_galactic_longitude))
+        x_coord = floor(normalized_galactic_longitude * self.buckets_in_galactic_longitude)
+        y_coord = floor(normalized_galactic_latitude * self.delta_galactic_latitude)
+
+        return ((x_coord & 0x3f) << 5) | (y_coord & 0x1F)
+
+    def getBucketIdFromXAndYCoord(self, x_coord, y_coord):
+        return ((x_coord & 0x3f) << 5) | (y_coord & 0x1F)
 
     def appendStar(self, star):
         bucket_id = self.getBucketID(star.galactic_latitude, star.galactic_longitude)
@@ -39,55 +46,34 @@ class BucketGrid:
         bucket_id = self.getBucketID(galactic_latitude, galactic_longitude)
         stars_in_nearby_buckets = self.star_buckets[bucket_id][:]
 
-        right_bucket_latitude = (galactic_latitude + self.delta_galactic_latitude) % PI_TIMES_TWO
-        left_bucket_latitude = (galactic_latitude - self.delta_galactic_latitude) % PI_TIMES_TWO
+        #Normalize the galactic latitude and longitude
+        normalized_galactic_latitude = self.clamp((galactic_latitude + PI_OVER_TWO) * ONE_OVER_PI, 0.0, 1.0)
+        normalized_galactic_longitude = self.clamp((galactic_longitude + PI) * ONE_OVER_PI_TIMES_TWO, 0.0, 1.0)
+        x_coord = floor(normalized_galactic_longitude * self.buckets_in_galactic_longitude)
+        y_coord = floor(normalized_galactic_latitude * self.delta_galactic_latitude)
 
-        #Bucket to the right
-        bucket_id = self.getBucketID(right_bucket_latitude, galactic_longitude)
-        stars_in_nearby_buckets += self.star_buckets[bucket_id][:]
+        x_coord_for_right_bucket = (x_coord + 1) % self.buckets_in_galactic_longitude
+        stars_in_nearby_buckets += self.star_buckets[self.getBucketIdFromXAndYCoord(x_coord_for_right_bucket, y_coord)][:]
+        x_coord_for_left_bucket = self.buckets_in_galactic_longitude - 1 if (x_coord - 1) < 0 else (x_coord - 1)
+        stars_in_nearby_buckets += self.star_buckets[self.getBucketIdFromXAndYCoord(x_coord_for_left_bucket, y_coord)][:]
 
-        #Bucket to the left
-        bucket_id = self.getBucketID(left_bucket_latitude, galactic_longitude)
-        stars_in_nearby_buckets += self.star_buckets[bucket_id][:]
+        y_coord_for_upper_bucket = y_coord - 1
+        if(y_coord_for_upper_bucket >= 0):
+            stars_in_nearby_buckets += self.star_buckets[self.getBucketIdFromXAndYCoord(x_coord, y_coord_for_upper_bucket)][:]
 
-        #Bucket position in longitude
-        bucket_position_in_longitude = floor(galactic_longitude / self.delta_galactic_longitude)
+            x_coord_for_right_bucket = (x_coord + 1) % self.buckets_in_galactic_longitude
+            stars_in_nearby_buckets += self.star_buckets[self.getBucketIdFromXAndYCoord(x_coord_for_right_bucket, y_coord_for_upper_bucket)][:]
+            x_coord_for_left_bucket = self.buckets_in_galactic_longitude - 1 if (x_coord - 1) < 0 else (x_coord - 1)
+            stars_in_nearby_buckets += self.star_buckets[self.getBucketIdFromXAndYCoord(x_coord_for_left_bucket, y_coord_for_upper_bucket)][:]
 
-        #Check if we can go down
-        if(bucket_position_in_longitude < self.buckets_in_galactic_longitude):
-            #Bucket below
-            bucket_below_longitude = galactic_longitude + self.delta_galactic_longitude
-            bucket_id = self.getBucketID(galactic_latitude, bucket_below_longitude)
-            stars_in_nearby_buckets += self.star_buckets[bucket_id][:]
+        y_coord_for_lower_bucket = y_coord + 1
+        if(y_coord_for_lower_bucket < self.buckets_in_galactic_latitude):
+            stars_in_nearby_buckets += self.star_buckets[self.getBucketIdFromXAndYCoord(x_coord, y_coord_for_lower_bucket)][:]
 
-            right_bucket_latitude = (galactic_latitude + self.delta_galactic_latitude) % PI_TIMES_TWO
-            left_bucket_latitude = (galactic_latitude - self.delta_galactic_latitude) % PI_TIMES_TWO
-
-            #Bucket to the right
-            bucket_id = self.getBucketID(right_bucket_latitude, bucket_below_longitude)
-            stars_in_nearby_buckets += self.star_buckets[bucket_id][:]
-
-            #Bucket to the left
-            bucket_id = self.getBucketID(left_bucket_latitude, bucket_below_longitude)
-            stars_in_nearby_buckets += self.star_buckets[bucket_id][:]
-
-        #Check if we can go up
-        if(bucket_position_in_longitude > 0):
-            #Bucket above
-            bucket_above_longitude = galactic_longitude - self.delta_galactic_longitude
-            bucket_id = self.getBucketID(galactic_latitude, bucket_above_longitude)
-            stars_in_nearby_buckets += self.star_buckets[bucket_id][:]
-
-            right_bucket_latitude = (galactic_latitude + self.delta_galactic_latitude) % PI_TIMES_TWO
-            left_bucket_latitude = (galactic_latitude - self.delta_galactic_latitude) % PI_TIMES_TWO
-
-            #Bucket to the right
-            bucket_id = self.getBucketID(right_bucket_latitude, bucket_above_longitude)
-            stars_in_nearby_buckets += self.star_buckets[bucket_id][:]
-
-            #Bucket to the left
-            bucket_id = self.getBucketID(left_bucket_latitude, bucket_above_longitude)
-            stars_in_nearby_buckets += self.star_buckets[bucket_id][:]
+            x_coord_for_right_bucket = (x_coord + 1) % self.buckets_in_galactic_longitude
+            stars_in_nearby_buckets += self.star_buckets[self.getBucketIdFromXAndYCoord(x_coord_for_right_bucket, y_coord_for_lower_bucket)][:]
+            x_coord_for_left_bucket = self.buckets_in_galactic_longitude - 1 if (x_coord - 1) < 0 else (x_coord - 1)
+            stars_in_nearby_buckets += self.star_buckets[self.getBucketIdFromXAndYCoord(x_coord_for_left_bucket, y_coord_for_lower_bucket)][:]
 
         #Once we have gathered the stars from all nearby buckets, return them
-        return stars_in_nearby_buckets
+        return list(set(stars_in_nearby_buckets))
