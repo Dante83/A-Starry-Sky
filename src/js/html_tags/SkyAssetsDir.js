@@ -6,7 +6,9 @@ window.customElements.define('sky-moon-normal-map', class extends HTMLElement{})
 window.customElements.define('sky-moon-roughness-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-aperature-size-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-aperature-orientation-map', class extends HTMLElement{});
-window.customElements.define('sky-stellar-position-data', class extends HTMLElement{});
+window.customElements.define('sky-star-cubemap-map', class extends HTMLElement{});
+window.customElements.define('sky-dim-star-map', class extends HTMLElement{});
+window.customElements.define('sky-bright-star-map', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.webp',
@@ -14,19 +16,39 @@ StarrySky.DefaultData.fileNames = {
   moonRoughnessMap: 'lunar-roughness-map.webp',
   moonAperatureSizeMap: 'lunar-aperature-size-map.webp',
   moonAperatureOrientationMap: 'lunar-aperature-orientation-map.webp',
-  stellarPositionData: ['stellar-position-data-1.dat.gz', 'stellar-position-data-2.dat.gz']
+  starHashCubeMap: [
+    'star-dictionary-cubemap-px.webp',
+    'star-dictionary-cubemap-nx.webp',
+    'star-dictionary-cubemap-py.webp',
+    'star-dictionary-cubemap-ny.webp',
+    'star-dictionary-cubemap-pz.webp',
+    'star-dictionary-cubemap-nz.webp',
+  ],
+  dimStarMaps: [
+    'dim-star-data-r-channel.webp',
+    'dim-star-data-g-channel.webp',
+    'dim-star-data-b-channel.webp',
+    'dim-star-data-a-channel.webp'
+  ],
+  brightStarMaps:[
+    'bright-star-data-r-channel.png', //We choose to use PNG for the bright star data as webp is actually twice as big
+    'bright-star-data-g-channel.png',
+    'bright-star-data-b-channel.png',
+    'bright-star-data-a-channel.png'
+  ]
 };
 
 StarrySky.DefaultData.skyAssets = {
   skyStateEnginePath: './wasm/',
   skyInterpolationEnginePath: './wasm/',
-  moonDiffuseMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
-  moonNormalMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonNormalMap,
-  moonRoughnessMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
-  moonAperatureSizeMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAperatureSizeMap,
-  moonAperatureOrientationMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonAperatureOrientationMap,
-  stellarPositionData: ['./assets/star_data/' + StarrySky.DefaultData.fileNames.stellarPositionData[0],
-    './assets/star_data/' + StarrySky.DefaultData.fileNames.stellarPositionData[1]],
+  moonDiffuseMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
+  moonNormalMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonNormalMap,
+  moonRoughnessMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
+  moonAperatureSizeMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonAperatureSizeMap,
+  moonAperatureOrientationMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonAperatureOrientationMap,
+  starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubeMap.map(x => './assets/star_data/webp_files/' + x),
+  dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarMaps.map(x => './assets/star_data/webp_files/' + x),
+  brightStarDataMaps: StarrySky.DefaultData.fileNames.dimStarMaps.map(x => './assets/star_data/png_files/' + x),
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
@@ -95,12 +117,16 @@ class SkyAssetsDir extends HTMLElement {
       const moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
       const moonAperatureSizeMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-size-map');
       const moonAperatureOrientationMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-orientation-map');
-      const stellarPositionDataTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-stellar-position-data');
+      const starCubemapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-cubemap-map');
+      const dimStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-dim-star-map');
+      const brightStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-bright-star-map');
 
       const objectProperties = ['skyStateEngine', 'skyInterpolationEngine','moonDiffuseMap', 'moonNormalMap',
-        'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'stellarPositionData']
+        'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'starHashCubemap',
+        'dimStarMaps', 'brightStarMaps']
       const tagsList = [skyStateEngineTags, skyInterpolationEngineTags, moonDiffuseMapTags, moonNormalMapTags,
-        moonRoughnessMapTags, moonAperatureSizeMapTags, moonAperatureOrientationMapTags, stellarPositionDataTags];
+        moonRoughnessMapTags, moonAperatureSizeMapTags, moonAperatureOrientationMapTags, starCubemapTags,
+        dimStarMapTags, brightStarMapTags];
       const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
         const wasmKeys = ['skyStateEngine', 'skyInterpolationEngine'];
@@ -112,10 +138,21 @@ class SkyAssetsDir extends HTMLElement {
         }
       }
       else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
-        const textureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
-        'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'stellarPositionData'];
-        for(let i = 0; i < textureKeys.length; ++i){
-          StarrySky.assetPaths[textureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[textureKeys[i]];
+        const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
+        'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
+        const multiTextureKeys = ['starHashCubemap','dimStarMaps', 'brightStarMaps'];
+
+        //Process single texture keys
+        for(let i = 0; i < singleTextureKeys.length; ++i){
+          StarrySky.assetPaths[singleTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[singleTextureKeys[i]];
+        }
+
+        //Process multi texture keys
+        for(let i = 0; i < multiTextureKeys.length; ++i){
+          let multiTextureFileNames = multiTextureKeys[i];
+          for(let j = 0; j < multiTextureFileNames.length; ++j){
+            StarrySky.assetPaths[multiTextureFileNames[i]][j] = path + '/' + StarrySky.DefaultData.fileNames[singleTextureKeys[i]][j];
+          }
         }
       }
       else if(self.hasAttribute('moon-path') && self.getAttribute('moon-path').toLowerCase() !== 'false'){
@@ -126,46 +163,16 @@ class SkyAssetsDir extends HTMLElement {
         }
       }
       else if(self.hasAttribute('star-path') && self.getAttribute('star-path').toLowerCase() !== 'false'){
-        const starTextureKeys = ['stellarPositionData'];
+        const starTextureKeys = ['starHashCubemap', 'dimStarMaps', 'brightStarMaps'];
         for(let i = 0; i < starTextureKeys.length; ++i){
-          StarrySky.assetPaths[starTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[starTextureKeys[i]];
+          let starMapFileNames =  StarrySky.DefaultData.fileNames[starTextureKeys[i]];
+          for(let j = 0; j < starMapFileNames.length; ++j){
+            StarrySky.assetPaths[starTextureKeys[i]][j] = path + '/' + starMapFileNames[j];
+          }
         }
       }
       else{
-        for(let i = 0; i < numberOfTagTypes; ++i){
-          const tags = tagsList[i];
-          const propertyName = objectProperties[i];
-          const tagName = tags[0].tagName;
-          if(tagName !== 'sky-stellar-position-data'){
-            tag = tags[0]
-            if(tags.length > 1){
-              console.error(`The <sky-assets-dir> tag can only contain 1 tag of type <${tagName}>. ${tags.length} found.`);
-            }
-            else if(tags.length > 0){
-              if(StarrySky.assetPaths[propertyName] &&
-                StarrySky.assetPaths[propertyName] !== StarrySky.DefaultData.skyAssets[propertyName]){
-                //As the above should be copied over from a JSON parse, we must have changed this
-                //someplace else.
-                console.warn(`A page can only have one tag of type <${tagName}>. Two were discovered. Switching data to latest url.`);
-              }
-              //Try the default file name if no html was provided
-              StarrySky.assetPaths[propertyName] = tag.innerHTML !== '' ? path.concat(tag.innerHTML) : path.concat(StarrySky.DefaultData.fileNames[propertyName]);
-            }
-          }
-          else{
-            if(tags.length !== 2){
-              console.error(`The <sky-assets-dir> must contain exactly 2 tags of type <${tagName}>. ${tags.length} found.`);
-            }
-            else{
-              const tag1 = tags[0];
-              const tag2 = tags[1];
-
-              //Try the default file name if no html was provided
-              StarrySky.assetPaths['stellarPositionData'][0] = tag1.innerHTML !== '' ? path.concat(tag1.innerHTML) : path.concat(StarrySky.DefaultData.fileNames['stellarPositionData'][0]);
-              StarrySky.assetPaths['stellarPositionData'][1] = tag2.innerHTML !== '' ? path.concat(tag2.innerHTML) : path.concat(StarrySky.DefaultData.fileNames['stellarPositionData'][1]);
-            }
-          }
-        }
+        console.warn("Invalid code path detected for the sky assets dirs. This should not happen.");
       }
 
       self.skyDataLoaded = true;

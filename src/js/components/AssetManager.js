@@ -3,7 +3,7 @@ StarrySky.AssetManager = function(skyDirector){
   this.data = {};
   this.images = {
     moonImages: {},
-    stellarImages: {}
+    starImages: {}
   };
   const starrySkyComponent = skyDirector.parentComponent;
 
@@ -42,6 +42,8 @@ StarrySky.AssetManager = function(skyDirector){
   this.readyForTickTock = false;
   this.loadSkyDataHasNotRun = true;
   this.tickSinceLastUpdateRequest = 5;
+  this.numberOfTexturesLoaded = 0;
+  this.totalNumberOfTextures;
   const self = this;
 
   //Asynchronously load all of our images because, we don't care about when these load
@@ -49,24 +51,23 @@ StarrySky.AssetManager = function(skyDirector){
     //Just use our THREE Texture Loader for now
     const textureLoader = new THREE.TextureLoader();
 
+    //The amount of star texture data
+    const numberOfStarTextures = 3;
+
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
     const moonFormats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
     const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
-    const starTextuers = ['stellarData1', 'stellarData2'];
     const numberOfMoonTextures = moonTextures.length;
-    const numberOfStellarDataSets = 2;
-    const numberOfStellarTextures = starTextures.length;
-    const totalNumberOfTextures = numberOfMoonTextures + numberOfStellarDataSets;
-    let numberOfTexturesLoaded = 0;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
     //that can be run in parallel.
-    (async function createNewTexturePromise(i){
+    (async function createNewMoonTexturePromise(i){
       let next = i + 1;
-      if(next < totalNumberOfTextures){
-        createNewTexturePromise(next);
+      if(next < self.totalNumberOfTextures){
+        createNewMoonTexturePromise(next);
       }
 
       let texturePromise = new Promise(function(resolve, reject){
@@ -91,8 +92,8 @@ StarrySky.AssetManager = function(skyDirector){
           textureRef.needsUpdate = true;
         }
 
-        numberOfTexturesLoaded += 1;
-        if(numberOfTexturesLoaded === totalNumberOfTextures){
+        self.numberOfTexturesLoaded += 1;
+        if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
           self.hasLoadedImages = true;
         }
       }, function(err){
@@ -100,55 +101,160 @@ StarrySky.AssetManager = function(skyDirector){
       });
     })(0);
 
-    //Load and unzip our star data
-    (async function createNewStarDataLoaderPromise(i){
-      let next = i + 1;
-      const StellarDataSet = i + 1;
-      if(next < numberOfStellarDataSets){
-      createNewStarDataLoaderPromise(next);
+    //Set up our star hash cube map
+    const cubemapLoader = new THREE.CubeTextureLoader();
+    let cubemapStarHashPromise = new Promise(function(resolve, reject)){
+      starHashCubemap = cubemapLoader.load(StarrySky.assetPaths.starHashCubemap, function(cubemap){resolve(cubemap);});
+    });
+    cubemapStarHashPromise.then(function(cubemap){
+      //Make sure that our cubemap is using the appropriate settings
+      cubemap.magFilter = THREE.NearestFilter;
+      cubemap.minFilter = THREE.NearestFilter;
+      cubemap.format = THREE.RGBFormat;
+      cubemap.encoding = THREE.LinearEncoding;
+      cubemap.generateMipmaps = false;
+
+      //And send it off as a uniform for our atmospheric renderer
+      self.images.starImages.starHashCubemap = cubemap;
+      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+        const cubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
+        cubemapRef.value = cubemap;
+        cubemapRef.needsUpdate = true;
       }
 
-      let httpRequest = new XMLHttpRequest();
-      httpRequest.open("GET", StarrySky.assetPaths.stellarPositionData[i], false);
-      httpRequest.onreadystatechange = function (){
-        if(httpRequest.readyState === 4){
-          if(httpRequest.status === 200 || httpRequest.status == 0){
-            const inflatedBinaryBlob = pako.inflate(httpRequest.responseText);
-            const floatArrayView = new Float32Array(inflatedBinaryBlob);
+      if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
+        const cubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
+        cubemapRef.value = cubemap;
+        cubemapRef.needsUpdate = true;
+      }
 
-            //Convert our float array into a data texture
-            let dataTexture = new THREE.DataTexture(
-              floatArrayView,
-              1024,
-              1024,
-              THREE.RGBAFormat,
-              ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) ? THREE.HalfFloatType : THREE.FloatType,
-              THREE.RepeatWrapping,
-              THREE.ClampToEdgeWrapping,
-              THREE.NearestFilter,
-              THREE.NearestFilter
-            );
-            dataTexture.needsUpdate = true;
-            self.images.stellarImages[`stellarData${StarDataSet}`] = texture;
+      self.numberOfTexturesLoaded += 1;
+      if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+        self.hasLoadedImages = true;
+      }
+    });
 
-            //If the renderer already exists, go in and update the uniform
-            if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
-              const textureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms[`stellarData${StarDataSet}`];
-              textureRef.value = texture;
-              textureRef.needsUpdate = true;
-            }
+    //Load all of our dim star data maps
+    let numberOfDimStarChannelsLoaded = 0;
+    const channels = ['r', 'g', 'b', 'a'];
+    let dimStarChannelImages = {r: None, g: None, b: None, a: None};
+    //Recursive based functional for loop, with asynchronous execution because
+    //Each iteration is not dependent upon the last, but it's just a set of similiar code
+    //that can be run in parallel.
+    (async function createNewDimStarTexturePromise(i){
+      let next = i + 1;
+      if(next < 4){
+        createNewDimStarTexturePromise(next);
+      }
 
-            numberOfTexturesLoaded += 1;
-            if(numberOfTexturesLoaded === totalNumberOfTextures){
-              self.hasLoadedImages = true;
-            }
+      let texturePromise = new Promise(function(resolve, reject){
+        textureLoader.load(StarrySky.assetPaths.dimStarDataMaps[i], function(texture){resolve(texture);});
+      });
+      texturePromise.then(function(texture){
+        //Fill in the details of our texture
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.encoding = THREE.RGBAFormat;
+        texture.format = THREE.LinearEncoding;
+        texture.generateMipmaps = false;
+        dimStarChannelImages[channels[i]] = texture;
+
+        numberOfDimStarChannelsLoaded += 1;
+        if(numberOfDimStarChannelsLoaded === 4){
+          //Create our Star Library LUTs if it does not exists
+          let skyDirector = self.skyDirector;
+          if(skyDirector.stellarLUTLibrary === None){
+            skyDirector.stellarLUTLibrary = new StarrySky.LUTlibraries.StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
           }
-          else{
-            console.error(`The request for starry sky data returned an HTTP status of ${httpRequest.status}`);
+
+          //Create our texture from these four textures
+          let floatingPointTexture = skyDirector.stellarLUTLibrary.starMapPass(128, 64, dimStarChannelImages.r, dimStarChannelImages.g, dimStarChannelImages.b, dimStarChannelImages.a, 'dimStarData');
+
+          //And send it off as a uniform for our atmospheric renderer
+          self.images.starImages.dimStarData = floatingPointTexture;
+          if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+            const textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.dimStarData;
+            textureRef.value = floatingPointTexture;
+            textureRef.needsUpdate = true;
+          }
+
+          if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
+            const textureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.dimStarData;
+            textureRef.value = floatingPointTexture;
+            textureRef.needsUpdate = true;
+          }
+
+          self.numberOfTexturesLoaded += 1;
+          if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+            self.hasLoadedImages = true;
           }
         }
+      }, function(err){
+        console.error(err);
+      });
+    })(0);
+
+    //Load all of our bright star data maps
+    let numberOfBrightStarChannelsLoaded = 0;
+    let brightStarChannelImages = {r: None, g: None, b: None, a: None};
+    //Recursive based functional for loop, with asynchronous execution because
+    //Each iteration is not dependent upon the last, but it's just a set of similiar code
+    //that can be run in parallel.
+    (async function createNewBrightStarTexturePromise(i){
+      let next = i + 1;
+      if(next < 4){
+        createNewBrightStarTexturePromise(next);
       }
-      httpRequest.send();
+
+      let texturePromise = new Promise(function(resolve, reject){
+        textureLoader.load(StarrySky.assetPaths.brightStarDataMaps[i], function(texture){resolve(texture);});
+      });
+      texturePromise.then(function(texture){
+        //Fill in the details of our texture
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.encoding = THREE.RGBAFormat;
+        texture.format = THREE.LinearEncoding;
+        texture.generateMipmaps = false;
+        brightStarChannelImages[channels[i]] = texture;
+
+        numberOfDimStarChannelsLoaded += 1;
+        if(numberOfDimStarChannelsLoaded === 4){
+          //Create our Star Library LUTs if it does not exists
+          let skyDirector = self.skyDirector;
+          if(skyDirector.stellarLUTLibrary === None){
+            skyDirector.stellarLUTLibrary = new StarrySky.LUTlibraries.StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
+          }
+
+          //Create our texture from these four textures
+          let floatingPointTexture = skyDirector.stellarLUTLibrary.starMapPass(64, 32, brightStarChannelImages.r, brightStarChannelImages.g, brightStarChannelImages.b, brightStarChannelImages.a, 'brightStarData');
+
+          //And send it off as a uniform for our atmospheric renderer
+          self.images.starImages.brightStarData = floatingPointTexture;
+          if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+            const textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.brightStarData;
+            textureRef.value = floatingPointTexture;
+            textureRef.needsUpdate = true;
+          }
+
+          if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
+            const textureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.brightStarData;
+            textureRef.value = floatingPointTexture;
+            textureRef.needsUpdate = true;
+          }
+
+          self.numberOfTexturesLoaded += 1;
+          if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+            self.hasLoadedImages = true;
+          }
+        }
+      }, function(err){
+        console.error(err);
+      });
     })(0);
 
     //Load any additional textures

@@ -29,8 +29,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.needsUpdate = true;
 
-  //Populate all of uniform values
-
   //Attach the material to our geometry
   this.skyMesh = new THREE.Mesh(this.geometry, this.atmosphereMaterial);
 
@@ -59,11 +57,14 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
 
     //Connect up our images if they don't exist yet
-    if(self.skyDirector.assetManager.hasLoadedImages){
-      for(let [property, value] of Object.entries(self.skyDirector.assetManager.images.stellarImages)){
-        self.baseMoonVar.material.uniforms[property].value = value;
-        self.baseMoonVar.material.uniforms[property].needsUpdate = true;
-      }
+    if(self.skyDirector.assetManager){
+      //Update our star data
+      self.atmosphereMaterial.uniforms.starHashCubemap = self.skyDirector.assetManager.images.starImages.starHashCubemap;
+      self.atmosphereMaterial.uniforms.starHashCubemap.needsUpdate = true;
+      self.atmosphereMaterial.uniforms.dimStarData = self.skyDirector.assetManager.images.starImages.dimStarData;
+      self.atmosphereMaterial.uniforms.dimStarData.needsUpdate = true;
+      self.atmosphereMaterial.uniforms.brightStarData = self.skyDirector.assetManager.images.starImages.brightStarData;
+      self.atmosphereMaterial.uniforms.brightStarData.needsUpdate = true;
     }
 
     //Proceed with the first tick

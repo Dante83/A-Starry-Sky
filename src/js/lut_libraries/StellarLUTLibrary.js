@@ -1,46 +1,49 @@
 StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   this.renderer = renderer;
-  this.cubemapTextures = [];
+  this.dimStarDataMap;
+  this.brightStarDataMap;
+  this.noiseMap;
 
+  //Enable the OES_texture_float_linear extension
+  if(!renderer.extensions.get("OES_texture_float_linear")){
+    console.error("No linear interpolation of OES textures allowed.");
+    return false;
+  }
+
+  //Enable 32 bit float textures
   if(!renderer.extensions.get("WEBGL_color_buffer_float")){
     console.error("No float WEBGL color buffers allowed.");
     return false;
   }
 
-  //Create our first renderer, for transmittance
-  let floatCubeMapRenderer = new THREE.StarrySkyComputationRenderer(128, 128, renderer);
+  document.body.appendChild(renderer.domElement);
 
-  //Set up our texture
-  let stellarFloatMapTexture = floatCubeMapRenderer.createTexture();
-  let stellarFloatMapVar = floatCubeMapRenderer.addVariable('stellarFloatMapTexture',
-    materials.stellarFloatMapGenerator.fragmentShader(),
-    stellarFloatMapTexture
-  );
-  floatCubeMapRenderer.setVariableDependencies(stellarFloatMapVar, []);
-  stellarFloatMapVar.material.uniforms = {};
-  stellarFloatMapVar.minFilter = THREE.NearestFilter;
-  stellarFloatMapVar.magFilter = THREE.NearestFilter;
-  stellarFloatMapVar.wrapS = THREE.ClampToEdgeWrapping;
-  stellarFloatMapVar.wrapT = THREE.ClampToEdgeWrapping;
+  this.starMapPass(width, height, rImg, gImg, bImg, aImg, target){
+    let renderer = new THREE.StarrySkyComputationRenderer(width, height, this.renderer);
+    let materials = StarrySky.Materials.Atmosphere;
+    let starMapTexture = renderer.createTexture();
+    let starMapVar = renderer.addVariable(`starMapTexture-${target}`,
+      materials.Stars.combineToFloat.fragmentShader,
+      starMapTexture
+    );
+    renderer.setVariableDependencies(starMapVar, []);
+    starMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
+    starMapVar.material.uniforms.textureRChannel = rImg;
+    starMapVar.material.uniforms.textureGChannel = gImg;
+    starMapVar.material.uniforms.textureBChannel = bImg;
+    starMapVar.material.uniforms.textureAChannel = aImg;
+    starMapVar.minFilter = THREE.NearestFilter;
+    starMapVar.magFilter = THREE.NearestFilter;
+    starMapVar.wrapS = THREE.ClampToEdgeWrapping;
+    starMapVar.wrapT = THREE.ClampToEdgeWrapping;
 
-  //Check for any errors in initialization
-  let error1 = floatCubeMapRenderer.init();
-  if(error1 !== null){
-    console.error(`Stellar Cubemap Renderer: ${error1}`);
-  }
-
-  //Generate each of our cubemaps with this.
-  for(let i = 0; i < 4; ++i){
-    //Populate each of our textures
-    for(let i = 0; i < 6; ++i){
-
-
-
+    //Check for any errors in initialization
+    let error1 = renderer.init();
+    if(error1 !== null){
+      console.error(`Star map Renderer: ${error1}`);
     }
-  }
 
-  floatCubeMapRenderer.compute();
-  for(let i = 0; i < 4; ++i){
-
+    renderer.compute();
+    return renderer.getCurrentRenderTarget(starMapVar).texture;
   }
 }

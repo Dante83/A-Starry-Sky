@@ -170,11 +170,20 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
 
     //Connect up our images if they don't exist yet
-    if(self.skyDirector.assetManager.hasLoadedImages){
+    if(self.skyDirector.assetManager){
+      //Moon Textures
       for(let [property, value] of Object.entries(self.skyDirector.assetManager.images.moonImages)){
         self.baseMoonVar.material.uniforms[property].value = value;
         self.baseMoonVar.material.uniforms[property].needsUpdate = true;
       }
+
+      //Update our star data
+      self.baseMoonVar.material.uniforms.starHashCubemap = self.skyDirector.assetManager.images.starImages.starHashCubemap;
+      self.baseMoonVar.material.uniforms.starHashCubemap.needsUpdate = true;
+      self.baseMoonVar.material.uniforms.dimStarData = self.skyDirector.assetManager.images.starImages.dimStarData;
+      self.baseMoonVar.material.uniforms.dimStarData.needsUpdate = true;
+      self.baseMoonVar.material.uniforms.brightStarData = self.skyDirector.assetManager.images.starImages.brightStarData;
+      self.baseMoonVar.material.uniforms.brightStarData.needsUpdate = true;
     }
 
     //Proceed with the first tick

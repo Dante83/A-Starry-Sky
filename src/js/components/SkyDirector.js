@@ -52,6 +52,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.camera;
   this.pixelsPerRadian;
   this.atmosphereLUTLibrary;
+  this.stellarLUTLibrary;
   this.moonAndSunRendererSize;
 
   //Set up our web assembly hooks
