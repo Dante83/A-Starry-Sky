@@ -18,16 +18,16 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
 
   document.body.appendChild(renderer.domElement);
 
-  this.starMapPass(width, height, rImg, gImg, bImg, aImg, target){
+  this.starMapPass = function(width, height, rImg, gImg, bImg, aImg, target){
     let renderer = new THREE.StarrySkyComputationRenderer(width, height, this.renderer);
-    let materials = StarrySky.Materials.Atmosphere;
+    let materials = StarrySky.Materials.Stars;
     let starMapTexture = renderer.createTexture();
     let starMapVar = renderer.addVariable(`starMapTexture-${target}`,
-      materials.Stars.combineToFloat.fragmentShader,
+      materials.starDataMap.fragmentShader,
       starMapTexture
     );
     renderer.setVariableDependencies(starMapVar, []);
-    starMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
+    starMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
     starMapVar.material.uniforms.textureRChannel = rImg;
     starMapVar.material.uniforms.textureGChannel = gImg;
     starMapVar.material.uniforms.textureBChannel = bImg;
@@ -45,5 +45,5 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
 
     renderer.compute();
     return renderer.getCurrentRenderTarget(starMapVar).texture;
-  }
-}
+  };
+};

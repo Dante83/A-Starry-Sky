@@ -1,7 +1,7 @@
 //This helps
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Stars.combineToFloat = {
+StarrySky.Materials.Stars.starDataMap = {
   uniforms: {
     textureRChannel: {type: 't', 'value': null},
     textureGChannel: {type: 't', 'value': null},

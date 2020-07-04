@@ -59,8 +59,10 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager){
       //Update our star data
+      console.log(self.skyDirector.assetManager.images);
       self.atmosphereMaterial.uniforms.starHashCubemap = self.skyDirector.assetManager.images.starImages.starHashCubemap;
       self.atmosphereMaterial.uniforms.starHashCubemap.needsUpdate = true;
+      console.log(self.atmosphereMaterial.uniforms);
       self.atmosphereMaterial.uniforms.dimStarData = self.skyDirector.assetManager.images.starImages.dimStarData;
       self.atmosphereMaterial.uniforms.dimStarData.needsUpdate = true;
       self.atmosphereMaterial.uniforms.brightStarData = self.skyDirector.assetManager.images.starImages.brightStarData;

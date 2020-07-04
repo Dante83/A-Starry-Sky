@@ -6,9 +6,9 @@ window.customElements.define('sky-moon-normal-map', class extends HTMLElement{})
 window.customElements.define('sky-moon-roughness-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-aperature-size-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-aperature-orientation-map', class extends HTMLElement{});
-window.customElements.define('sky-star-cubemap-map', class extends HTMLElement{});
-window.customElements.define('sky-dim-star-map', class extends HTMLElement{});
-window.customElements.define('sky-bright-star-map', class extends HTMLElement{});
+window.customElements.define('sky-star-cubemap-maps', class extends HTMLElement{});
+window.customElements.define('sky-dim-star-maps', class extends HTMLElement{});
+window.customElements.define('sky-bright-star-maps', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.webp',
@@ -16,29 +16,29 @@ StarrySky.DefaultData.fileNames = {
   moonRoughnessMap: 'lunar-roughness-map.webp',
   moonAperatureSizeMap: 'lunar-aperature-size-map.webp',
   moonAperatureOrientationMap: 'lunar-aperature-orientation-map.webp',
-  starHashCubeMap: [
-    'star-dictionary-cubemap-px.webp',
-    'star-dictionary-cubemap-nx.webp',
-    'star-dictionary-cubemap-py.webp',
-    'star-dictionary-cubemap-ny.webp',
-    'star-dictionary-cubemap-pz.webp',
-    'star-dictionary-cubemap-nz.webp',
+  starHashCubemap: [
+    'webp_files/star-dictionary-cubemap-px.webp',
+    'webp_files/star-dictionary-cubemap-nx.webp',
+    'webp_files/star-dictionary-cubemap-py.webp',
+    'webp_files/star-dictionary-cubemap-ny.webp',
+    'webp_files/star-dictionary-cubemap-pz.webp',
+    'webp_files/star-dictionary-cubemap-nz.webp',
   ],
-  dimStarMaps: [
-    'dim-star-data-r-channel.webp',
-    'dim-star-data-g-channel.webp',
-    'dim-star-data-b-channel.webp',
-    'dim-star-data-a-channel.webp'
+  dimStarDataMaps: [
+    'webp_files/dim-star-data-r-channel.webp',
+    'webp_files/dim-star-data-g-channel.webp',
+    'webp_files/dim-star-data-b-channel.webp',
+    'webp_files/dim-star-data-a-channel.webp'
   ],
-  brightStarMaps:[
-    'bright-star-data-r-channel.png', //We choose to use PNG for the bright star data as webp is actually twice as big
-    'bright-star-data-g-channel.png',
-    'bright-star-data-b-channel.png',
-    'bright-star-data-a-channel.png'
+  brightStarDataMaps:[
+    'png_files/bright-star-data-r-channel.png', //We choose to use PNG for the bright star data as webp is actually twice as big
+    'png_files/bright-star-data-g-channel.png',
+    'png_files/bright-star-data-b-channel.png',
+    'png_files/bright-star-data-a-channel.png'
   ]
 };
 
-StarrySky.DefaultData.skyAssets = {
+StarrySky.DefaultData.assetPaths = {
   skyStateEnginePath: './wasm/',
   skyInterpolationEnginePath: './wasm/',
   moonDiffuseMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
@@ -46,14 +46,14 @@ StarrySky.DefaultData.skyAssets = {
   moonRoughnessMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
   moonAperatureSizeMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonAperatureSizeMap,
   moonAperatureOrientationMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonAperatureOrientationMap,
-  starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubeMap.map(x => './assets/star_data/webp_files/' + x),
-  dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarMaps.map(x => './assets/star_data/webp_files/' + x),
-  brightStarDataMaps: StarrySky.DefaultData.fileNames.dimStarMaps.map(x => './assets/star_data/png_files/' + x),
+  starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubemap.map(x => './assets/star_data/webp_files/' + x),
+  dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarDataMaps.map(x => './assets/star_data/webp_files/' + x),
+  brightStarDataMaps: StarrySky.DefaultData.fileNames.brightStarDataMaps.map(x => './assets/star_data/png_files/' + x),
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
 //replace them.
-StarrySky.assetPaths = JSON.parse(JSON.stringify(StarrySky.DefaultData));
+StarrySky.assetPaths = JSON.parse(JSON.stringify(StarrySky.DefaultData.assetPaths));
 
 //Parent class
 class SkyAssetsDir extends HTMLElement {
@@ -62,7 +62,7 @@ class SkyAssetsDir extends HTMLElement {
 
     //Check if there are any child elements. Otherwise set them to the default.
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.skyAssets;
+    this.data = StarrySky.DefaultData.assetPaths;
     this.isRoot = false;
   }
 
@@ -74,8 +74,8 @@ class SkyAssetsDir extends HTMLElement {
     document.addEventListener('DOMContentLoaded', function(evt){
       //Check this this has a parent sky-assets-dir
       self.isRoot = self.parentElement.nodeName.toLowerCase() !== 'sky-assets-dir';
-      const path = 'dir' in self.attributes ? self.attributes.dir.value : '/';
-      const parentTag = self.parentElement;
+      let path = 'dir' in self.attributes ? self.attributes.dir.value : '/';
+      let parentTag = self.parentElement;
 
       //If this isn't root, we should recursively travel up the tree until we have constructed
       //our path.
@@ -140,7 +140,7 @@ class SkyAssetsDir extends HTMLElement {
       else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
         'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
-        const multiTextureKeys = ['starHashCubemap','dimStarMaps', 'brightStarMaps'];
+        const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'brightStarDataMaps'];
 
         //Process single texture keys
         for(let i = 0; i < singleTextureKeys.length; ++i){
@@ -163,7 +163,7 @@ class SkyAssetsDir extends HTMLElement {
         }
       }
       else if(self.hasAttribute('star-path') && self.getAttribute('star-path').toLowerCase() !== 'false'){
-        const starTextureKeys = ['starHashCubemap', 'dimStarMaps', 'brightStarMaps'];
+        const starTextureKeys = ['starHashCubemap', 'dimStarDataMaps', 'brightStarDataMaps'];
         for(let i = 0; i < starTextureKeys.length; ++i){
           let starMapFileNames =  StarrySky.DefaultData.fileNames[starTextureKeys[i]];
           for(let j = 0; j < starMapFileNames.length; ++j){

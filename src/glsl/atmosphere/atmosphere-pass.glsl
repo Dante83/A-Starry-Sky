@@ -11,13 +11,13 @@ uniform sampler2D mieInscatteringSum;
 uniform sampler2D rayleighInscatteringSum;
 uniform sampler2D transmittance;
 
-#if(!$isSunPass){
-  varying vec3 galacticCoordinates;
-  uniform samplerCube starHashCubemap;
+#if(!$isSunPass)
+  //varying vec3 galacticCoordinates;
+  uniform sampler2D starHashCubemap;
   uniform sampler2D dimStarData;
   uniform sampler2D brightStarData;
   uniform sampler2D starColorData;
-}
+#endif
 
 const float piOver2 = 1.5707963267948966192313;
 const float piTimes2 = 6.283185307179586476925286;
@@ -79,7 +79,7 @@ $atmosphericFunctions
 
 
     //Pass this brightness into the fast Airy function to make the star glow
-    vec3 StellarBrightness = fastAiry(approximateDistance2Star);
+    vec3 StellarBrightness = vec3(fastAiry(approximateDistance2Star));
 
     return StellarBrightness;
   }
@@ -126,30 +126,31 @@ void main(){
     vec3 galacticLighting = vec3(0.0);
 
     //Get the stellar starting id data from the galactic cube map
-    vec4 starHashData = textureCube(starHashCubemap, normalize(galacticCoordinates));
-    float originalStarID = dot(starHashData.rg, vec2(255.0, 65280.0));
-    float row = floor(originalStarID  / 126.0);
-    float column = 2.0 + 126.0 - row;
-    galacticLighting += drawStarLight(texture(dimStarData, vec2(column, row)), sphericalPosition);
-    column += 1;
-    galacticLighting += drawStarLight(texture(dimStarData, vec2(column, row)), sphericalPosition);
-
-    //Now move on to the bright stars
-    starID = originalStarID + round(starHashData.b * 255 - 127);
-    row = floor(originalStarID  / 62.0);
-    column = 3.0 + 62.0 - row;
-    galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);
-    column += 1;
-    galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);
-    column -= 2;
-    galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);
+    vec3 galacticCoordinates = sphericalPosition;
+    vec3 starHashData = texture2D(starHashCubemap, normalize(galacticCoordinates).xy).rgb;
+    // float originalStarID = dot(starHashData.rg, vec2(255.0, 65280.0));
+    // float row = floor(originalStarID  / 126.0);
+    // float column = 2.0 + 126.0 - row;
+    // galacticLighting += drawStarLight(texture(dimStarData, vec2(column, row)), sphericalPosition);
+    // column += 1;
+    // galacticLighting += drawStarLight(texture(dimStarData, vec2(column, row)), sphericalPosition);
+    //
+    // //Now move on to the bright stars
+    // starID = originalStarID + round(starHashData.b * 255 - 127);
+    // row = floor(originalStarID  / 62.0);
+    // column = 3.0 + 62.0 - row;
+    // galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);
+    // column += 1;
+    // galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);
+    // column -= 2;
+    // galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);
 
     //Check our distance from each of the four primary planets
 
     //Get the galactic lighting from
 
     //Apply the transmittance function to all of our light sources
-    galacticLighting = galacticLighting * transmittanceFade;
+    //galacticLighting = galacticLighting * transmittanceFade;
   #endif
 
   //Atmosphere
@@ -165,6 +166,8 @@ void main(){
     vec3 combinedPass = galacticLighting + lunarAtmosphericPass + solarAtmosphericPass;
     $draw_moon_pass
     combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);
+
+    combinedPass = starHashData;
   #else
     vec3 combinedPass = galacticLighting + lunarAtmosphericPass + solarAtmosphericPass;
 
@@ -173,6 +176,8 @@ void main(){
 
     //Triangular Blue Noise Dithering Pass
 
+    //Test
+    combinedPass = starHashData;
   #endif
 
   gl_FragColor = vec4(clamp(combinedPass, 0.0, 1.0), 1.0);

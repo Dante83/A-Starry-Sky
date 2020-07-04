@@ -16,10 +16,10 @@ float rgba2Float(vec4 rgbaValue, float minValue, float maxValue){
 void main(){
   vec2 uv = gl_FragCoord.xy / resolution.xy;
 
-  float r = rgba2Float(texture2D(textureRChannel), -17000.0, 17000.0);
-  float g = rgba2Float(texture2D(textureGChannel), -17000.0, 17000.0);
-  float b = rgba2Float(texture2D(textureBChannel), -17000.0, 17000.0);
-  float a = rgba2Float(texture2D(textureAChannel), -2.0, 7.0);
+  float r = rgba2Float(texture2D(textureRChannel, uv), -17000.0, 17000.0);
+  float g = rgba2Float(texture2D(textureGChannel, uv), -17000.0, 17000.0);
+  float b = rgba2Float(texture2D(textureBChannel, uv), -17000.0, 17000.0);
+  float a = rgba2Float(texture2D(textureAChannel, uv), -2.0, 7.0);
 
   gl_FragColor = vec4(r, g, b, a);
 }

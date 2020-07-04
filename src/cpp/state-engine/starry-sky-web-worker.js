@@ -48,7 +48,7 @@ var updateSkyState = function(arrayReference){
   return false;
 }
 
-function initializeSkyState(self){
+function initializeSkyState(){
   if(wasmIsReady && initialSkyDateReceived){
     //Set the current date time.
     date = new Date(initialPostObject.date);
@@ -106,7 +106,7 @@ function initializeSkyState(self){
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
-    self.postMessage({
+    postMessage({
       eventType: EVENT_INITIALIZATION_RESPONSE,
       transferrableInitialStateBuffer: initialStateBuffer,
       transferrableFinalStateBuffer: finalStateBuffer
@@ -129,7 +129,7 @@ onmessage = function(e){
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
-    self.postMessage({
+    postMessage({
       eventType: EVENT_RETURN_LATEST,
       transferrableFinalStateBuffer: finalStateBuffer
     }, [finalStateBuffer]);
@@ -145,6 +145,6 @@ onmessage = function(e){
 
 function onRuntimeInitialized() {
     wasmIsReady = true;
-    initializeSkyState(self);
+    initializeSkyState();
 }
 Module['onRuntimeInitialized'] = onRuntimeInitialized;

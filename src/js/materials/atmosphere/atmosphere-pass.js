@@ -36,8 +36,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
 
     if(!isSunShader){
-      uniforms.stellarData1 = {type: 't', value: null};
-      uniforms.stellarData2 = {type: 't', value: null};
+      uniforms.starHashCubemap = {type: 't', value: null};
+      uniforms.dimStarData = {type: 't', value: null};
+      uniforms.brightStarData = {type: 't', value: null};
     }
 
     return uniforms;
@@ -67,10 +68,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform sampler2D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
 
-    '#if(!$isSunPass){',
-      'uniform sampler2D stellarData1;',
-      'uniform sampler2D stellarData2;',
-    '}',
+    '#if(!$isSunPass)',
+      '//varying vec3 galacticCoordinates;',
+      'uniform sampler2D starHashCubemap;',
+      'uniform sampler2D dimStarData;',
+      'uniform sampler2D brightStarData;',
+      'uniform sampler2D starColorData;',
+    '#endif',
 
     'const float piOver2 = 1.5707963267948966192313;',
     'const float piTimes2 = 6.283185307179586476925286;',
@@ -107,37 +111,34 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '$atmosphericFunctions',
 
     '#if(!$isSunPass)',
-      'float fastAiry(float r){',
-        '//Using the Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness',
-
-
-        'return intensity;',
+      'vec3 getSpectralColor(){',
+        'return vec3(1.0);',
       '}',
 
-      'vec3 drawStarLight(vec2 normalizedGalacticCoordinates, sampler2D stellarData, vec2 offset, vec3 vWorldPosition){',
-        'vec3 starLight = vec3(-1.0);',
-        'vec4 starData = texture2D(stellarData, normalizedGalacticCoordinates + offset);',
+      '//TODO: Replace with faster functions',
 
-        '//Grab the last vector component, which will say whether we should continue or not.',
-        'float magnitude = starData.w;',
+      'float fastAiry(float r){',
+        '//Variation of Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness',
+        'float scaled_r = r;',
+        'float one_over_r_cubed = 1.0 / r * r * r;',
+        'float gauss_r_over_1_4 = exp(-0.255102040816326530612 * r * r);',
+        'return r < 1.88 ? gauss_r_over_1_4 : r > 6.0 ? 1.35 * one_over_r_cubed : (gauss_r_over_1_4 + 2.7 * one_over_r_cubed) * 0.5;',
+      '}',
 
-        'if(magnitude < 26.5){',
-          '//I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.',
-          'float temperature = distance(starData.xyz);',
-          'vec3 normalizedStarPosition = starData.xyz / temperature;',
-          'vec3 pixelToStarDiffVector = vWorldPosition - normalizedStarPosition;',
-          'float approximateDistance2Star = distance(pixelToStarDiffVector);',
+      'vec3 drawStarLight(vec4 starData, vec3 sphericalPosition){',
+        '//I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.',
+        'float temperature = length(starData.xyz);',
+        'vec3 normalizedStarPosition = starData.xyz / temperature;',
+        'float starBrightness = starData.w;',
+        'float approximateDistance2Star = distance(vWorldPosition, normalizedStarPosition);',
 
-          '//Modify the intensity and color of this star using approximation of stellar scintillation',
-
-          '//Pass this brightness into the fast Airy function to make the star glow',
+        '//Modify the intensity and color of this star using approximation of stellar scintillation',
 
 
-          '//Clamp our results to zero to avoid a negative response',
+        '//Pass this brightness into the fast Airy function to make the star glow',
+        'vec3 StellarBrightness = vec3(fastAiry(approximateDistance2Star));',
 
-        '}',
-
-        'return starLight;',
+        'return StellarBrightness;',
       '}',
     '#endif',
 
@@ -179,50 +180,64 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '//This stuff never shows up near our sun, so we can exclude it',
       '#if(!$isSunPass)',
-        '//Milky Way Pass',
+        'vec3 galacticLighting = vec3(0.0);',
 
+        '//Get the stellar starting id data from the galactic cube map',
+        'vec3 galacticCoordinates = sphericalPosition;',
+        'vec3 starHashData = texture2D(starHashCubemap, normalize(galacticCoordinates).xy).rgb;',
+        '// float originalStarID = dot(starHashData.rg, vec2(255.0, 65280.0));',
+        '// float row = floor(originalStarID  / 126.0);',
+        '// float column = 2.0 + 126.0 - row;',
+        '// galacticLighting += drawStarLight(texture(dimStarData, vec2(column, row)), sphericalPosition);',
+        '// column += 1;',
+        '// galacticLighting += drawStarLight(texture(dimStarData, vec2(column, row)), sphericalPosition);',
+        '//',
+        '// //Now move on to the bright stars',
+        '// starID = originalStarID + round(starHashData.b * 255 - 127);',
+        '// row = floor(originalStarID  / 62.0);',
+        '// column = 3.0 + 62.0 - row;',
+        '// galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);',
+        '// column += 1;',
+        '// galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);',
+        '// column -= 2;',
+        '// galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);',
 
-        '//Star Pass for the nearest four stars',
-        '//Not sure if statements actually help us',
-        '//reduce the time in the shader. Will have to try with and without them.',
-        'vec3 starLight = drawStarLight();',
-        'vec3 newStarLight;',
-        'if(starLight.x !== -1.0){',
-          'newStarLight = drawStarLight();',
-          'starLight += newStarLight;',
-          'if(newStarLight !== -1.0){',
-            'newStarLight = drawStarLight();',
-            'starLight += newStarLight;',
-            'if(newStarLight !== -1.0){',
-              'starLight += drawStarLight();',
-            '}',
-          '}',
-        '}',
+        '//Check our distance from each of the four primary planets',
 
-        '//Planet Pass',
+        '//Get the galactic lighting from',
 
+        '//Apply the transmittance function to all of our light sources',
+        '//galacticLighting = galacticLighting * transmittanceFade;',
       '#endif',
 
       '//Atmosphere',
       'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
       'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
-      'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
         '$draw_sun_pass',
-        'gl_FragColor = vec4(combinedPass + sunTexel, 1.0);',
+        'combinedPass = combinedPass + sunTexel;',
       '#elif($isMoonPass)',
+        'vec3 combinedPass = galacticLighting + lunarAtmosphericPass + solarAtmosphericPass;',
         '$draw_moon_pass',
-        'gl_FragColor = vec4(mix(combinedPass, combinedPass + moonTexel, lunarMask), 1.0);',
+        'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);',
+
+        'combinedPass = starHashData;',
       '#else',
+        'vec3 combinedPass = galacticLighting + lunarAtmosphericPass + solarAtmosphericPass;',
+
         '//Color Adjustment Pass',
-        'vec3 toneMappedColor = ACESFilmicToneMapping(combinedPass);',
+        'combinedPass = ACESFilmicToneMapping(combinedPass);',
 
-        '//Triangular Blue Noise Adjustment Pass',
+        '//Triangular Blue Noise Dithering Pass',
 
-        'gl_FragColor = vec4(clamp(toneMappedColor, 0.0, 1.0), 1.0);',
+        '//Test',
+        'combinedPass = starHashData;',
       '#endif',
+
+      'gl_FragColor = vec4(clamp(combinedPass, 0.0, 1.0), 1.0);',
     '}',
     ];
 

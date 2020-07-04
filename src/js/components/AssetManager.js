@@ -102,42 +102,60 @@ StarrySky.AssetManager = function(skyDirector){
     })(0);
 
     //Set up our star hash cube map
-    const cubemapLoader = new THREE.CubeTextureLoader();
-    let cubemapStarHashPromise = new Promise(function(resolve, reject)){
-      starHashCubemap = cubemapLoader.load(StarrySky.assetPaths.starHashCubemap, function(cubemap){resolve(cubemap);});
-    });
-    cubemapStarHashPromise.then(function(cubemap){
-      //Make sure that our cubemap is using the appropriate settings
-      cubemap.magFilter = THREE.NearestFilter;
-      cubemap.minFilter = THREE.NearestFilter;
-      cubemap.format = THREE.RGBFormat;
-      cubemap.encoding = THREE.LinearEncoding;
-      cubemap.generateMipmaps = false;
+    const loader = new THREE.CubeTextureLoader();
+    const starHashCubemap = textureLoader.load('http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-px.png');
 
-      //And send it off as a uniform for our atmospheric renderer
-      self.images.starImages.starHashCubemap = cubemap;
-      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-        const cubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
-        cubemapRef.value = cubemap;
-        cubemapRef.needsUpdate = true;
-      }
+    // let cubemapLoader = new THREE.CubeTextureLoader();
+    //
+    //
+    //
+    // starHashCubemap = cubemapLoader.load([
+    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-px.png',
+    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-nx.png',
+    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-py.png',
+    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-ny.png',
+    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-pz.png',
+    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-nz.png'
+    // ]);
 
-      if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
-        const cubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
-        cubemapRef.value = cubemap;
-        cubemapRef.needsUpdate = true;
-      }
+    self.numberOfTexturesLoaded += 1;
+    self.images.starImages.starHashCubemap = starHashCubemap;
 
-      self.numberOfTexturesLoaded += 1;
-      if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
-        self.hasLoadedImages = true;
-      }
-    });
+    // cubemapStarHashPromise.then(function(cubemap){
+    //   console.log(cubemap);
+    //   console.log("Cubemap loaded");
+    //
+    //   //Make sure that our cubemap is using the appropriate settings
+    //   // cubemap.magFilter = THREE.NearestFilter;
+    //   // cubemap.minFilter = THREE.NearestFilter;
+    //   // cubemap.format = THREE.RGBFormat;
+    //   // cubemap.encoding = THREE.LinearEncoding;
+    //   // cubemap.generateMipmaps = false;
+    //
+    //   //And send it off as a uniform for our atmospheric renderer
+    //   self.images.starImages.starHashCubemap = cubemap;
+    //   if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+    //     const cubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
+    //     cubemapRef.value = cubemap;
+    //     cubemapRef.needsUpdate = true;
+    //   }
+    //
+    //   if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
+    //     const cubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
+    //     cubemapRef.value = cubemap;
+    //     cubemapRef.needsUpdate = true;
+    //   }
+    //
+    //   self.numberOfTexturesLoaded += 1;
+    //   if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+    //     self.hasLoadedImages = true;
+    //   }
+    // });
 
     //Load all of our dim star data maps
     let numberOfDimStarChannelsLoaded = 0;
     const channels = ['r', 'g', 'b', 'a'];
-    let dimStarChannelImages = {r: None, g: None, b: None, a: None};
+    let dimStarChannelImages = {r: null, g: null, b: null, a: null};
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
     //that can be run in parallel.
@@ -165,7 +183,7 @@ StarrySky.AssetManager = function(skyDirector){
         if(numberOfDimStarChannelsLoaded === 4){
           //Create our Star Library LUTs if it does not exists
           let skyDirector = self.skyDirector;
-          if(skyDirector.stellarLUTLibrary === None){
+          if(skyDirector.stellarLUTLibrary === undefined){
             skyDirector.stellarLUTLibrary = new StarrySky.LUTlibraries.StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
           }
 
@@ -198,7 +216,7 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Load all of our bright star data maps
     let numberOfBrightStarChannelsLoaded = 0;
-    let brightStarChannelImages = {r: None, g: None, b: None, a: None};
+    let brightStarChannelImages = {r: null, g: null, b: null, a: null};
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
     //that can be run in parallel.
@@ -222,11 +240,11 @@ StarrySky.AssetManager = function(skyDirector){
         texture.generateMipmaps = false;
         brightStarChannelImages[channels[i]] = texture;
 
-        numberOfDimStarChannelsLoaded += 1;
-        if(numberOfDimStarChannelsLoaded === 4){
+        numberOfBrightStarChannelsLoaded += 1;
+        if(numberOfBrightStarChannelsLoaded === 4){
           //Create our Star Library LUTs if it does not exists
           let skyDirector = self.skyDirector;
-          if(skyDirector.stellarLUTLibrary === None){
+          if(skyDirector.stellarLUTLibrary === undefined){
             skyDirector.stellarLUTLibrary = new StarrySky.LUTlibraries.StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
           }
 
