@@ -20,44 +20,21 @@ class Cubemap:
         self.ny = self.sides[4]
         self.nz = self.sides[5]
 
-    def getPix():
-        a = 2.0 * float(i) / faceSize
-        b = 2.0 * float(j) / faceSize
+    def getPixelGalacticCoordinates(self, faceIdx, x_in_pixels, y_in_pixels):
+        radius_of_cube = self.size * 0.5
 
-        if faceIdx == 0: # back
-            (x,y,z) = (-1.0, 1.0 - a, 1.0 - b)
-        elif faceIdx == 1: # left
-            (x,y,z) = (a - 1.0, -1.0, 1.0 - b)
-        elif faceIdx == 2: # front
-            (x,y,z) = (1.0, a - 1.0, 1.0 - b)
-        elif faceIdx == 3: # right
-            (x,y,z) = (1.0 - a, 1.0, 1.0 - b)
-        elif faceIdx == 4: # top
-            (x,y,z) = (b - 1.0, a - 1.0, 1.0)
-        elif faceIdx == 5: # bottom
-            (x,y,z) = (1.0 - b, a - 1.0, -1.0)
-
-        return (x, y, z)
-
-    #With help from Benjamin Dobell
-    #https://stackoverflow.com/questions/29678510/convert-21-equirectangular-panorama-to-cube-map
-    def getPixelGalacticCoordinates(self, side, x_in_pixels, y_in_pixels):
-        #Convert our coordinates in x, y, to cubemap space
-        a = 2.0 * float(x_in_pixels) * self.one_over_size
-        b = 2.0 * float(y_in_pixels) * self.one_over_size
-
-        if side == 0: # back
-            galactic_position = [-1.0, 1.0 - a, 1.0 - b]
-        elif side == 1: # left
-            galactic_position = [a - 1.0, -1.0, 1.0 - b]
-        elif side == 2: # front
-            galactic_position = [1.0, a - 1.0, 1.0 - b]
-        elif side == 3: # right
-            galactic_position = [1.0 - a, 1.0, 1.0 - b]
-        elif side == 4: # top
-            galactic_position = [b - 1.0, a - 1.0, 1.0]
-        elif side == 5: # bottom
-            galactic_position = [1.0 - b, a - 1.0, -1.0]
+        if faceIdx == 'px': # px
+            galactic_position = [radius_of_cube, y_in_pixels - radius_of_cube, radius_of_cube - x_in_pixels]
+        elif faceIdx == 'nx': # nx
+            galactic_position = [-radius_of_cube, y_in_pixels - radius_of_cube, x_in_pixels - radius_of_cube]
+        elif faceIdx == 'py': # py
+            galactic_position = [x_in_pixels - radius_of_cube, radius_of_cube, radius_of_cube - y_in_pixels]
+        elif faceIdx == 'ny': # ny
+            galactic_position = [x_in_pixels - radius_of_cube, -radius_of_cube, y_in_pixels - radius_of_cube]
+        elif faceIdx == 'pz': # pz
+            galactic_position = [x_in_pixels - radius_of_cube, y_in_pixels - radius_of_cube, radius_of_cube]
+        elif faceIdx == 'nz': # nz
+            galactic_position = [radius_of_cube - x_in_pixels, y_in_pixels - radius_of_cube, -radius_of_cube]
 
         #Convert our coordinates to centered galactic space
         galactic_position = np.array(galactic_position)

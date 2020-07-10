@@ -66,11 +66,12 @@ StarrySky.AssetManager = function(skyDirector){
     //that can be run in parallel.
     (async function createNewMoonTexturePromise(i){
       let next = i + 1;
-      if(next < self.totalNumberOfTextures){
+      if(next < numberOfMoonTextures){
         createNewMoonTexturePromise(next);
       }
 
       let texturePromise = new Promise(function(resolve, reject){
+        console.log(StarrySky.assetPaths[moonTextures[i]]);
         textureLoader.load(StarrySky.assetPaths[moonTextures[i]], function(texture){resolve(texture);});
       });
       texturePromise.then(function(texture){
@@ -103,7 +104,32 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Set up our star hash cube map
     const loader = new THREE.CubeTextureLoader();
-    const starHashCubemap = textureLoader.load('http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-px.png');
+
+    let texturePromise2 = new Promise(function(resolve, reject){
+      loader.load([
+        'assets/star_data/webp_files/star-dictionary-cubemap-px.webp',
+        'assets/star_data/webp_files/star-dictionary-cubemap-nx.webp',
+        'assets/star_data/webp_files/star-dictionary-cubemap-py.webp',
+        'assets/star_data/webp_files/star-dictionary-cubemap-ny.webp',
+        'assets/star_data/webp_files/star-dictionary-cubemap-pz.webp',
+        'assets/star_data/webp_files/star-dictionary-cubemap-nz.webp',
+      ], function(texture){resolve(texture);});
+    });
+    texturePromise2.then(function(texture){
+      self.numberOfTexturesLoaded += 1;
+      self.images.starImages.starHashCubemap = texture;
+
+      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+        console.log("Loaded?");
+          let moonCubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
+          moonCubemapRef.value = cubemap;
+          moonCubemapRef.needsUpdate = true;
+
+          let atmosphereCubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
+          atmosphereCubemapRef.value = cubemap;
+          atmosphereCubemapRef.needsUpdate = true;
+      }
+    });
 
     // let cubemapLoader = new THREE.CubeTextureLoader();
     //
@@ -117,9 +143,6 @@ StarrySky.AssetManager = function(skyDirector){
     //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-pz.png',
     //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-nz.png'
     // ]);
-
-    self.numberOfTexturesLoaded += 1;
-    self.images.starImages.starHashCubemap = starHashCubemap;
 
     // cubemapStarHashPromise.then(function(cubemap){
     //   console.log(cubemap);

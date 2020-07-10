@@ -51,6 +51,14 @@ star_bucket_grid = BucketGrid()
 def bvToTemp(bv):
     return 4600 * ((1.0 / (0.92 * bv + 1.7)) + (1.0 / (0.92 * bv + 0.62)))
 
+def calculateCubemapPixelPosition(side_letter_combo, x, y, cubemap_width, cubemap):
+    p = cubemap.getPixelGalacticCoordinates(side_letter_combo, x, y)
+    r = floor(((p[0] + 0.5 * cubemap_width) / cubemap_width)) * 255
+    g = floor(((p[1] + 0.5 * cubemap_width) / cubemap_width)) * 255
+    b = floor(((p[2] + 0.5 * cubemap_width) / cubemap_width)) * 255
+
+    return (r, g, b, 1.0)
+
 def initialization():
     max_temperature = 0.0 #Absolute zero
     min_temperature = float("inf")
@@ -296,7 +304,6 @@ def initialization():
     for i, data in enumerate(datum):
         channel = channels[i]
         imarray = np.asarray(data)
-        imarray = np.flip(imarray, 0)
         im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
         #python->src->a-sky-forge
         im.save('../../../assets/star_data/dim-star-data-{}-channel.png'.format(channel))
@@ -321,7 +328,6 @@ def initialization():
     for i, data in enumerate(datum):
         channel = channels[i]
         imarray = np.asarray(data)
-        imarray = np.flip(imarray, 0)
         im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
         im.save('../../../assets/star_data/bright-star-data-{}-channel.png'.format(channel))
 
@@ -329,7 +335,7 @@ def initialization():
     print("Creating our cubemap...")
     cubemap = Cubemap(CUBEMAP_FACE_SIZE)
 
-    sides = ['px', 'py', 'pz', 'nx', 'ny', 'nz']
+    sides = ['px', 'nx', 'py', 'ny', 'pz', 'nz']
     k = 0
     number_of_distant_bright_stars = 0
     number_of_missed_stars_in_bucket = 0
@@ -342,12 +348,8 @@ def initialization():
                     for x in range(CUBEMAP_FACE_SIZE):
                         #Convert the x, y value of this cubemap face to an x, y, z, position
                         #Latitude is off, either for our closest star or from the coordinates of the pixel
-                        galactic_coordinates_of_pixel = cubemap.getPixelGalacticCoordinates(i, x, y)
-                        f.write("pixel galactic coordinates: {}, {}, {}\r\n".format(galactic_coordinates_of_pixel[0], galactic_coordinates_of_pixel[1], galactic_coordinates_of_pixel[2]))
-
-                        #Convert this x, y and z value into latitude and longitude
-                        galactic_latitude = acos(galactic_coordinates_of_pixel[1]) - PI_OVER_TWO
-                        galactic_longitude = atan2(galactic_coordinates_of_pixel[2] , galactic_coordinates_of_pixel[0]) - PI
+                        galactic_coordinates_of_pixel = cubemap.getPixelGalacticCoordinates(side_letter_combo, x, y)
+                        #f.write("pixel galactic coordinates: {}, {}, {}\r\n".format(galactic_coordinates_of_pixel[0], galactic_coordinates_of_pixel[1], galactic_coordinates_of_pixel[2]))
 
                         #For each point in the cubemap, determine the closest dim stellar ID, using a 13 bit integer
                         closest_dim_star_index = 0 #Default to zero, because we need a valid value
@@ -362,11 +364,9 @@ def initialization():
                                 closest_dim_star_index = dim_stars_list[j].position_in_dim_star_ordererd_array
 
                         closest_star_galactic_coordinates = dim_stars_list[closest_dim_star_index].galactic_coordinates
-                        f.write("closest star coordinates: {}, {}, {}\r\n".format(closest_star_galactic_coordinates[0], closest_star_galactic_coordinates[1], closest_star_galactic_coordinates[2]))
-                        # f.write("Closest star galactic latitude: {}\r\n".format(dim_stars_list[closest_dim_star_index].galactic_latitude))
-                        # f.write("Closest star galactic longitude: {}\r\n".format(dim_stars_list[closest_dim_star_index].galactic_longitude))
-                        f.write("-"*8)
-                        f.write("\r\n")
+                        # f.write("closest star coordinates: {}, {}, {}\r\n".format(closest_star_galactic_coordinates[0], closest_star_galactic_coordinates[1], closest_star_galactic_coordinates[2]))
+                        # f.write("-"*8)
+                        # f.write("\r\n")
 
                         #Now determine the closest bright star stellar ID in the 448 star data texture
                         closest_bright_star_index = 0
@@ -401,28 +401,35 @@ def initialization():
                         estimated_bright_star_offset = index_b - 127
                         estimated_location_of_bright_star = floor(estimated_location_of_dim_star * DIM_TO_BRIGHT_STAR_SCALAR)  + estimated_bright_star_offset
                         if(estimated_location_of_dim_star != closest_dim_star_index):
-                            f.write("Wrong dim star index. Was looking for {}, got {}.\r\n".format(closest_dim_star_index, estimated_location_of_dim_star))
-                            f.write("-"*8)
+                            # f.write("Wrong dim star index. Was looking for {}, got {}.\r\n".format(closest_dim_star_index, estimated_location_of_dim_star))
+                            # f.write("-"*8)
                             raise Exception("Bit recombination error")
 
-                        if(estimated_bright_star_offset != bright_star_offset):
-                            f.write("Invalid bright star offset. Was looking for {}, got {}\r\n".format(bright_star_offset, estimated_bright_star_offset))
+                        #if(estimated_bright_star_offset != bright_star_offset):
+                            #f.write("Invalid bright star offset. Was looking for {}, got {}\r\n".format(bright_star_offset, estimated_bright_star_offset))
 
                         if(estimated_location_of_bright_star != closest_bright_star_index):
                             # print("Wrong bright star index. Was looking for {}, got {}".format(closest_bright_star_index, estimated_location_of_bright_star))
                             number_of_distant_bright_stars += 1
 
-                        cubemap.sides[i][x][y][0] = index_r
-                        cubemap.sides[i][x][y][1] = index_g
-                        cubemap.sides[i][x][y][2] = index_b
-                        cubemap.sides[i][x][y][3] = index_a
+                        #Normalize the galactic coordinates between 0 and 255
+                        # index_r = min(int(255.0 * galactic_coordinates_of_pixel[0] + 128.0), 255)
+                        # index_g = min(int(255.0 * galactic_coordinates_of_pixel[1] + 128.0), 255)
+                        # index_b = min(int(255.0 * galactic_coordinates_of_pixel[2] + 128.0), 255)
+                        # index_a = 255
+
+                        #Let's swap the x-y axis here with a right rotation. This is not the best way to do this,
+                        #but because the axis are symmetrical, it can work.
+                        cubemap.sides[i][CUBEMAP_FACE_SIZE - y - 1][x][0] = index_r
+                        cubemap.sides[i][CUBEMAP_FACE_SIZE - y - 1][x][1] = index_g
+                        cubemap.sides[i][CUBEMAP_FACE_SIZE - y - 1][x][2] = index_b
+                        cubemap.sides[i][CUBEMAP_FACE_SIZE - y - 1][x][3] = index_a
 
                         k += 1
                         bar.update(k)
 
                 #Write this into a cube map texture
                 imarray = np.asarray(cubemap.sides[i])
-                imarray = np.flip(imarray, 0)
                 im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
                 im.save('../../../assets/star_data/star-dictionary-cubemap-{}.png'.format(side_letter_combo))
     print("Number of bad offsets for bright stars, {}".format(number_of_distant_bright_stars))

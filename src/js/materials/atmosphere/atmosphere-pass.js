@@ -70,7 +70,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     '#if(!$isSunPass)',
       '//varying vec3 galacticCoordinates;',
-      'uniform sampler2D starHashCubemap;',
+      'uniform samplerCube starHashCubemap;',
       'uniform sampler2D dimStarData;',
       'uniform sampler2D brightStarData;',
       'uniform sampler2D starColorData;',
@@ -130,7 +130,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'float temperature = length(starData.xyz);',
         'vec3 normalizedStarPosition = starData.xyz / temperature;',
         'float starBrightness = starData.w;',
-        'float approximateDistance2Star = distance(vWorldPosition, normalizedStarPosition);',
+        'float approximateDistance2Star = distance(sphericalPosition, normalizedStarPosition);',
 
         '//Modify the intensity and color of this star using approximation of stellar scintillation',
 
@@ -184,30 +184,30 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Get the stellar starting id data from the galactic cube map',
         'vec3 galacticCoordinates = sphericalPosition;',
-        'vec3 starHashData = texture2D(starHashCubemap, normalize(galacticCoordinates).xy).rgb;',
+        'vec3 starHashData = textureCube(starHashCubemap, galacticCoordinates).rgb;',
         '// float originalStarID = dot(starHashData.rg, vec2(255.0, 65280.0));',
         '// float row = floor(originalStarID  / 126.0);',
         '// float column = 2.0 + 126.0 - row;',
-        '// galacticLighting += drawStarLight(texture(dimStarData, vec2(column, row)), sphericalPosition);',
-        '// column += 1;',
-        '// galacticLighting += drawStarLight(texture(dimStarData, vec2(column, row)), sphericalPosition);',
+        '// galacticLighting += drawStarLight(texture2D(dimStarData, vec2(column, row)), sphericalPosition);',
+        '// column += 1.0;',
+        '// galacticLighting += drawStarLight(texture2D(dimStarData, vec2(column, row)), sphericalPosition);',
         '//',
         '// //Now move on to the bright stars',
-        '// starID = originalStarID + round(starHashData.b * 255 - 127);',
+        '// float starID = originalStarID + floor(starHashData.b * 255.0 - 127.0);',
         '// row = floor(originalStarID  / 62.0);',
         '// column = 3.0 + 62.0 - row;',
-        '// galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);',
-        '// column += 1;',
-        '// galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);',
-        '// column -= 2;',
-        '// galacticLighting += drawStarLight(texture(brightStarData, vec2(column, row)), sphericalPosition);',
+        '// galacticLighting += drawStarLight(texture2D(brightStarData, vec2(column, row)), sphericalPosition);',
+        '// column += 1.0;',
+        '// galacticLighting += drawStarLight(texture2D(brightStarData, vec2(column, row)), sphericalPosition);',
+        '// column -= 2.0;',
+        '// galacticLighting += drawStarLight(texture2D(brightStarData, vec2(column, row)), sphericalPosition);',
 
         '//Check our distance from each of the four primary planets',
 
         '//Get the galactic lighting from',
 
         '//Apply the transmittance function to all of our light sources',
-        '//galacticLighting = galacticLighting * transmittanceFade;',
+        'galacticLighting = galacticLighting * transmittanceFade;',
       '#endif',
 
       '//Atmosphere',
@@ -224,9 +224,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '$draw_moon_pass',
         'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);',
 
-        'combinedPass = starHashData;',
+        '//combinedPass = starHashData;',
       '#else',
-        'vec3 combinedPass = galacticLighting + lunarAtmosphericPass + solarAtmosphericPass;',
+      '//Regular atmospheric pass',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
 
         '//Color Adjustment Pass',
         'combinedPass = ACESFilmicToneMapping(combinedPass);',
@@ -237,7 +238,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'combinedPass = starHashData;',
       '#endif',
 
-      'gl_FragColor = vec4(clamp(combinedPass, 0.0, 1.0), 1.0);',
+      'gl_FragColor = vec4(combinedPass, 1.0);',
     '}',
     ];
 
