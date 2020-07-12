@@ -76,7 +76,6 @@ function initializeSkyState(){
     skyStateIsReady = true;
     let initialStateBuffer = initialPostObject.transferrableInitialStateBuffer;
     skyState.memoryPtr = Module._malloc(NUMBER_OF_FLOATS * BYTES_PER_32_BIT_FLOAT);
-    Module.HEAPF32.set(skyState.memoryPtr, skyState.memoryPtr / BYTES_PER_32_BIT_FLOAT);
     Module._setupSky(
       skyState.latitude,
       skyState.longitude,

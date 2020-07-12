@@ -106,89 +106,48 @@ StarrySky.AssetManager = function(skyDirector){
     const loader = new THREE.CubeTextureLoader();
 
     let texturePromise2 = new Promise(function(resolve, reject){
-      loader.load([
-        'assets/star_data/webp_files/star-dictionary-cubemap-px.webp',
-        'assets/star_data/webp_files/star-dictionary-cubemap-nx.webp',
-        'assets/star_data/webp_files/star-dictionary-cubemap-py.webp',
-        'assets/star_data/webp_files/star-dictionary-cubemap-ny.webp',
-        'assets/star_data/webp_files/star-dictionary-cubemap-pz.webp',
-        'assets/star_data/webp_files/star-dictionary-cubemap-nz.webp',
-      ], function(texture){resolve(texture);});
+      loader.load(StarrySky.assetPaths.starHashCubemap, function(cubemap){resolve(cubemap);});
     });
-    texturePromise2.then(function(texture){
+    texturePromise2.then(function(cubemap){
+
+      //Make sure that our cubemap is using the appropriate settings
+      cubemap.magFilter = THREE.NearestFilter;
+      cubemap.minFilter = THREE.NearestFilter;
+      cubemap.format = THREE.RGBFormat;
+      //cubemap.encoding = THREE.LinearEncoding;
+      cubemap.generateMipmaps = false;
+
       self.numberOfTexturesLoaded += 1;
-      self.images.starImages.starHashCubemap = texture;
+      if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+        self.hasLoadedImages = true;
+      }
+      self.images.starImages.starHashCubemap = cubemap;
 
       if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-        console.log("Loaded?");
-          let moonCubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
-          moonCubemapRef.value = cubemap;
-          moonCubemapRef.needsUpdate = true;
+        const moonCubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
+        moonCubemapRef.value = cubemap;
+        moonCubemapRef.needsUpdate = true;
 
-          let atmosphereCubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
-          atmosphereCubemapRef.value = cubemap;
-          atmosphereCubemapRef.needsUpdate = true;
+        const atmosphereCubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
+        atmosphereCubemapRef.value = cubemap;
+        atmosphereCubemapRef.needsUpdate = true;
       }
     });
-
-    // let cubemapLoader = new THREE.CubeTextureLoader();
-    //
-    //
-    //
-    // starHashCubemap = cubemapLoader.load([
-    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-px.png',
-    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-nx.png',
-    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-py.png',
-    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-ny.png',
-    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-pz.png',
-    //   'http://localhost:8080/examples/assets/star_data/png_files/star-dictionary-cubemap-nz.png'
-    // ]);
-
-    // cubemapStarHashPromise.then(function(cubemap){
-    //   console.log(cubemap);
-    //   console.log("Cubemap loaded");
-    //
-    //   //Make sure that our cubemap is using the appropriate settings
-    //   // cubemap.magFilter = THREE.NearestFilter;
-    //   // cubemap.minFilter = THREE.NearestFilter;
-    //   // cubemap.format = THREE.RGBFormat;
-    //   // cubemap.encoding = THREE.LinearEncoding;
-    //   // cubemap.generateMipmaps = false;
-    //
-    //   //And send it off as a uniform for our atmospheric renderer
-    //   self.images.starImages.starHashCubemap = cubemap;
-    //   if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-    //     const cubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
-    //     cubemapRef.value = cubemap;
-    //     cubemapRef.needsUpdate = true;
-    //   }
-    //
-    //   if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
-    //     const cubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
-    //     cubemapRef.value = cubemap;
-    //     cubemapRef.needsUpdate = true;
-    //   }
-    //
-    //   self.numberOfTexturesLoaded += 1;
-    //   if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
-    //     self.hasLoadedImages = true;
-    //   }
-    // });
 
     //Load all of our dim star data maps
     let numberOfDimStarChannelsLoaded = 0;
     const channels = ['r', 'g', 'b', 'a'];
-    let dimStarChannelImages = {r: null, g: null, b: null, a: null};
+    const dimStarChannelImages = {r: null, g: null, b: null, a: null};
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
     //that can be run in parallel.
     (async function createNewDimStarTexturePromise(i){
-      let next = i + 1;
+      const next = i + 1;
       if(next < 4){
         createNewDimStarTexturePromise(next);
       }
 
-      let texturePromise = new Promise(function(resolve, reject){
+      const texturePromise = new Promise(function(resolve, reject){
         textureLoader.load(StarrySky.assetPaths.dimStarDataMaps[i], function(texture){resolve(texture);});
       });
       texturePromise.then(function(texture){
@@ -198,7 +157,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.encoding = THREE.RGBAFormat;
-        texture.format = THREE.LinearEncoding;
+        //texture.format = THREE.LinearEncoding;
         texture.generateMipmaps = false;
         dimStarChannelImages[channels[i]] = texture;
 
@@ -211,19 +170,18 @@ StarrySky.AssetManager = function(skyDirector){
           }
 
           //Create our texture from these four textures
-          let floatingPointTexture = skyDirector.stellarLUTLibrary.starMapPass(128, 64, dimStarChannelImages.r, dimStarChannelImages.g, dimStarChannelImages.b, dimStarChannelImages.a, 'dimStarData');
+          skyDirector.stellarLUTLibrary.dimStarMapPass(dimStarChannelImages.r, dimStarChannelImages.g, dimStarChannelImages.b, dimStarChannelImages.a);
 
           //And send it off as a uniform for our atmospheric renderer
-          self.images.starImages.dimStarData = floatingPointTexture;
-          if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-            const textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.dimStarData;
-            textureRef.value = floatingPointTexture;
+          if(skyDirector?.renderers?.moonRenderer !== undefined){
+            const textureRef = skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.dimStarData;
+            textureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
             textureRef.needsUpdate = true;
           }
 
           if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
-            const textureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.dimStarData;
-            textureRef.value = floatingPointTexture;
+            const textureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.dimStarData;
+            textureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
             textureRef.needsUpdate = true;
           }
 
@@ -259,7 +217,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.encoding = THREE.RGBAFormat;
-        texture.format = THREE.LinearEncoding;
+        //texture.format = THREE.LinearEncoding;
         texture.generateMipmaps = false;
         brightStarChannelImages[channels[i]] = texture;
 
@@ -272,19 +230,18 @@ StarrySky.AssetManager = function(skyDirector){
           }
 
           //Create our texture from these four textures
-          let floatingPointTexture = skyDirector.stellarLUTLibrary.starMapPass(64, 32, brightStarChannelImages.r, brightStarChannelImages.g, brightStarChannelImages.b, brightStarChannelImages.a, 'brightStarData');
+          skyDirector.stellarLUTLibrary.brightStarMapPass(brightStarChannelImages.r, brightStarChannelImages.g, brightStarChannelImages.b, brightStarChannelImages.a);
 
           //And send it off as a uniform for our atmospheric renderer
-          self.images.starImages.brightStarData = floatingPointTexture;
-          if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-            const textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.brightStarData;
-            textureRef.value = floatingPointTexture;
+          if(skyDirector?.renderers?.moonRenderer !== undefined){
+            const textureRef = skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.brightStarData;
+            textureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
             textureRef.needsUpdate = true;
           }
 
-          if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
-            const textureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.brightStarData;
-            textureRef.value = floatingPointTexture;
+          if(skyDirector?.renderers?.atmosphereRenderer !== undefined){
+            const textureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.brightStarData;
+            textureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
             textureRef.needsUpdate = true;
           }
 

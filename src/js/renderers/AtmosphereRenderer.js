@@ -60,9 +60,10 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     if(self.skyDirector.assetManager){
       self.atmosphereMaterial.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
       self.atmosphereMaterial.uniforms.starHashCubemap.needsUpdate = true;
-      self.atmosphereMaterial.uniforms.dimStarData.value = self.skyDirector.assetManager.images.starImages.dimStarData;
+      console.log(self.skyDirector.stellarLUTLibrary.dimStarDataMap);
+      self.atmosphereMaterial.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
       self.atmosphereMaterial.uniforms.dimStarData.needsUpdate = true;
-      self.atmosphereMaterial.uniforms.brightStarData.value = self.skyDirector.assetManager.images.starImages.brightStarData;
+      self.atmosphereMaterial.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
       self.atmosphereMaterial.uniforms.brightStarData.needsUpdate = true;
     }
 

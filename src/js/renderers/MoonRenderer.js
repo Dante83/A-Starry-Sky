@@ -180,9 +180,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       //Update our star data
       self.baseMoonVar.material.uniforms.starHashCubemap = self.skyDirector.assetManager.images.starImages.starHashCubemap;
       self.baseMoonVar.material.uniforms.starHashCubemap.needsUpdate = true;
-      self.baseMoonVar.material.uniforms.dimStarData = self.skyDirector.assetManager.images.starImages.dimStarData;
+      self.baseMoonVar.material.uniforms.dimStarData = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
       self.baseMoonVar.material.uniforms.dimStarData.needsUpdate = true;
-      self.baseMoonVar.material.uniforms.brightStarData = self.skyDirector.assetManager.images.starImages.brightStarData;
+      self.baseMoonVar.material.uniforms.brightStarData = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
       self.baseMoonVar.material.uniforms.brightStarData.needsUpdate = true;
     }
 
