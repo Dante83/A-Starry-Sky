@@ -59,12 +59,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager){
       self.atmosphereMaterial.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
-      self.atmosphereMaterial.uniforms.starHashCubemap.needsUpdate = true;
-      console.log(self.skyDirector.stellarLUTLibrary.dimStarDataMap);
       self.atmosphereMaterial.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
-      self.atmosphereMaterial.uniforms.dimStarData.needsUpdate = true;
       self.atmosphereMaterial.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
-      self.atmosphereMaterial.uniforms.brightStarData.needsUpdate = true;
     }
 
     //Proceed with the first tick

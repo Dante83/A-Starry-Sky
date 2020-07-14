@@ -126,11 +126,9 @@ StarrySky.AssetManager = function(skyDirector){
       if(self.skyDirector?.renderers?.moonRenderer !== undefined){
         const moonCubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
         moonCubemapRef.value = cubemap;
-        moonCubemapRef.needsUpdate = true;
 
         const atmosphereCubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
         atmosphereCubemapRef.value = cubemap;
-        atmosphereCubemapRef.needsUpdate = true;
       }
     });
 
@@ -176,13 +174,11 @@ StarrySky.AssetManager = function(skyDirector){
           if(skyDirector?.renderers?.moonRenderer !== undefined){
             const textureRef = skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.dimStarData;
             textureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
-            textureRef.needsUpdate = true;
           }
 
           if(self.skyDirector?.renderers?.atmosphereRenderer !== undefined){
             const textureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.dimStarData;
             textureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
-            textureRef.needsUpdate = true;
           }
 
           self.numberOfTexturesLoaded += 1;
@@ -236,13 +232,11 @@ StarrySky.AssetManager = function(skyDirector){
           if(skyDirector?.renderers?.moonRenderer !== undefined){
             const textureRef = skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.brightStarData;
             textureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
-            textureRef.needsUpdate = true;
           }
 
           if(skyDirector?.renderers?.atmosphereRenderer !== undefined){
             const textureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.brightStarData;
             textureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
-            textureRef.needsUpdate = true;
           }
 
           self.numberOfTexturesLoaded += 1;
