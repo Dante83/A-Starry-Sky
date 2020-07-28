@@ -1,7 +1,4 @@
 StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
-  //
-  //TODO: Replace the sky dome with a plane
-  //
   this.skyDirector = skyDirector;
   this.geometry = new THREE.OctahedronBufferGeometry(5000.0, 5);
 

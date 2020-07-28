@@ -1,6 +1,5 @@
 import csv, os, json
 import numpy as np
-import multiprocessing as mp
 import time
 import progressbar
 from math import *
@@ -27,8 +26,8 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 #9 Determine the density of remaining stars in galaxy using an 8-bit float and store this in the green channel.
 #10 Split our star data into red, green and blue channel textures to be recombined into 32 bits, and simply save
 # the six sides of our cubemap RGB texture.
-NUMBER_OF_DIM_STARS = 8192 - 2 * 64
-NUMBER_OF_BRIGHT_STARS = 2048 - 3 * 32
+NUMBER_OF_DIM_STARS = 8192
+NUMBER_OF_BRIGHT_STARS = 2048
 NUMBER_OF_STARS = NUMBER_OF_DIM_STARS + NUMBER_OF_BRIGHT_STARS
 DIM_TO_BRIGHT_STAR_SCALAR = NUMBER_OF_BRIGHT_STARS / NUMBER_OF_DIM_STARS
 BRIGHT_STAR_MAP_WIDTH = 64
@@ -221,6 +220,7 @@ def initialization():
             previous_i = next_i
 
     #Once we've ordered our stars, we just want the list
+    print("Number of ordered group of stars = {}".format(len(ordered_groups_of_stars)))
     ordered_groups_of_stars = ordered_groups_of_stars[0].ordererdGroupOfStars
 
     print("Number of stars after combination {}".format(len(ordered_groups_of_stars)))
@@ -240,16 +240,16 @@ def initialization():
 
     #Provide each star with it's position in the ordered group of stars
     for i, star in enumerate(ordered_groups_of_stars):
-        ordered_groups_of_stars[i].position_in_orderered_array = i
+        star.position_in_orderered_array = i
 
     #Sort our list of bright and dim stars according to their positions in the above list
     bright_stars_list.sort(key=lambda x: x.position_in_orderered_array, reverse=True)
     dim_stars_list.sort(key=lambda x: x.position_in_orderered_array, reverse=True)
 
     for i, star in enumerate(bright_stars_list):
-        bright_stars_list[i].position_in_bright_star_ordered_array = i
+        star.position_in_bright_star_ordered_array = i
     for i, star in enumerate(dim_stars_list):
-        dim_stars_list[i].position_in_dim_star_ordererd_array = i
+        star.position_in_dim_star_ordererd_array = i
 
     print("Number of bright stars after combination {}".format(len(bright_stars_list)))
     if len(bright_stars_list) != len(set(bright_stars_list)):
@@ -287,23 +287,23 @@ def initialization():
     dim_star_channel_green_data_image = [[[0.0 for c in range(4)] for i in range(DIM_STAR_MAP_WIDTH)] for j in range(DIM_STAR_MAP_HEIGHT)]
     dim_star_channel_blue_data_image = [[[0.0 for c in range(4)] for i in range(DIM_STAR_MAP_WIDTH)] for j in range(DIM_STAR_MAP_HEIGHT)]
     dim_star_channel_alpha_data_image = [[[0.0 for c in range(4)] for i in range(DIM_STAR_MAP_WIDTH)] for j in range(DIM_STAR_MAP_HEIGHT)]
-    cursor = -2
+    cursor = 0;
     for row in range(DIM_STAR_MAP_HEIGHT):
         for column in range(DIM_STAR_MAP_WIDTH):
             star = dim_stars_list[cursor]
             for i in range(4):
-                dim_star_channel_red_data_image[row][column][i] = star.encoded_equitorial_r[i]
-                dim_star_channel_green_data_image[row][column][i] = star.encoded_equitorial_g[i]
-                dim_star_channel_blue_data_image[row][column][i] = star.encoded_equitorial_b[i]
-                dim_star_channel_alpha_data_image[row][column][i] = star.encoded_equitorial_a[i]
+                dim_star_channel_red_data_image[row][column][i] = star.encoded_equitorial_r[i] #Galactic coordinate 1
+                dim_star_channel_green_data_image[row][column][i] = star.encoded_equitorial_g[i] #Galactic coordinate 2
+                dim_star_channel_blue_data_image[row][column][i] = star.encoded_equitorial_b[i] #Galactic coordinate 3
+                dim_star_channel_alpha_data_image[row][column][i] = star.encoded_equitorial_a[i] #Magnitude
             cursor += 1
-        cursor -= 2
 
     datum = [dim_star_channel_red_data_image, dim_star_channel_green_data_image, dim_star_channel_blue_data_image, dim_star_channel_alpha_data_image]
     channels = ['r', 'g', 'b', 'a']
     for i, data in enumerate(datum):
         channel = channels[i]
         imarray = np.asarray(data)
+        imarray = np.flip(imarray, 0)
         im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
         #python->src->a-sky-forge
         im.save('../../../assets/star_data/dim-star-data-{}-channel.png'.format(channel))
@@ -312,7 +312,7 @@ def initialization():
     bright_star_channel_green_data_image = [[[0.0 for c in range(4)] for i in range(BRIGHT_STAR_MAP_WIDTH)] for j in range(BRIGHT_STAR_MAP_HEIGHT)]
     bright_star_channel_blue_data_image = [[[0.0 for c in range(4)] for i in range(BRIGHT_STAR_MAP_WIDTH)] for j in range(BRIGHT_STAR_MAP_HEIGHT)]
     bright_star_channel_alpha_data_image = [[[0.0 for c in range(4)] for i in range(BRIGHT_STAR_MAP_WIDTH)] for j in range(BRIGHT_STAR_MAP_HEIGHT)]
-    cursor = -3
+    cursor = 0;
     for row in range(BRIGHT_STAR_MAP_HEIGHT):
         for column in range(BRIGHT_STAR_MAP_WIDTH):
             star = bright_stars_list[cursor]
@@ -322,12 +322,12 @@ def initialization():
                 bright_star_channel_blue_data_image[row][column][i] = star.encoded_equitorial_b[i]
                 bright_star_channel_alpha_data_image[row][column][i] = star.encoded_equitorial_a[i]
             cursor += 1
-        cursor -= 3
 
     datum = [bright_star_channel_red_data_image, bright_star_channel_green_data_image, bright_star_channel_blue_data_image, bright_star_channel_alpha_data_image]
     for i, data in enumerate(datum):
         channel = channels[i]
         imarray = np.asarray(data)
+        imarray = np.flip(imarray, 0)
         im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
         im.save('../../../assets/star_data/bright-star-data-{}-channel.png'.format(channel))
 
@@ -354,14 +354,14 @@ def initialization():
                         #For each point in the cubemap, determine the closest dim stellar ID, using a 13 bit integer
                         closest_dim_star_index = 0 #Default to zero, because we need a valid value
                         closest_dim_star_distance = float('inf')
-                        for j in range(len(dim_stars_list)):
+                        for star in dim_stars_list:
                             #We're using normal ditance over haversine distance as we presume
                             #that, for small star distances, the surface of the sphere is approximately flat
-                            diff = dim_stars_list[j].galactic_coordinates - galactic_coordinates_of_pixel
+                            diff = star.galactic_coordinates - galactic_coordinates_of_pixel
                             distance_to_star_squared = np.dot(diff, diff)
                             if(distance_to_star_squared < closest_dim_star_distance):
                                 closest_dim_star_distance = distance_to_star_squared
-                                closest_dim_star_index = dim_stars_list[j].position_in_dim_star_ordererd_array
+                                closest_dim_star_index = star.position_in_dim_star_ordererd_array
 
                         closest_star_galactic_coordinates = dim_stars_list[closest_dim_star_index].galactic_coordinates
                         # f.write("closest star coordinates: {}, {}, {}\r\n".format(closest_star_galactic_coordinates[0], closest_star_galactic_coordinates[1], closest_star_galactic_coordinates[2]))
@@ -371,14 +371,19 @@ def initialization():
                         #Now determine the closest bright star stellar ID in the 448 star data texture
                         closest_bright_star_index = 0
                         closest_bright_star_distance = float('inf')
-                        for j in range(len(bright_stars_list)):
+                        for star in bright_stars_list:
                             #We're using normal ditance over haversine distance as we presume
                             #that, for small star distances, the surface of the sphere is approximately flat
-                            diff = bright_stars_list[j].galactic_coordinates - galactic_coordinates_of_pixel
-                            distance_to_star_squared = np.dot(diff, diff)
+                            v0 = star.galactic_coordinates
+                            v1 = galactic_coordinates_of_pixel
+                            delta_v = v0 - v1
+                            mag_v = sqrt(np.dot(delta_v, delta_v))
+                            phi = abs(asin(mag_v / 2))
+                            phi = min(phi, 2.0 * np.pi - phi)
+                            distance_to_star_squared = 2.0 * phi
                             if(distance_to_star_squared < closest_bright_star_distance):
                                 closest_bright_star_distance = distance_to_star_squared
-                                closest_bright_star_index = bright_stars_list[j].position_in_bright_star_ordered_array
+                                closest_bright_star_index = star.position_in_bright_star_ordered_array
 
                         #Attempt to reach this point with a 3-bit integer, between +/-4 in the scale of the 448 star data texture
                         bright_star_offset = int(closest_bright_star_index - floor(closest_dim_star_index * DIM_TO_BRIGHT_STAR_SCALAR))
@@ -389,7 +394,7 @@ def initialization():
 
                         #Combine and split these binary numbers into two 8-bit channels and put them in a texture
                         index_r = int(bin(closest_dim_star_index & 0xff), 2)
-                        index_g = int(bin(closest_dim_star_index >> 8 & 0xff), 2)
+                        index_g = int(bin((closest_dim_star_index >> 8) & 0xff), 2)
                         index_b = int(bin(bright_star_offset & 0xff), 2)
                         index_a = 255
 
@@ -412,24 +417,19 @@ def initialization():
                             # print("Wrong bright star index. Was looking for {}, got {}".format(closest_bright_star_index, estimated_location_of_bright_star))
                             number_of_distant_bright_stars += 1
 
-                        #Normalize the galactic coordinates between 0 and 255
-                        # index_r = min(int(255.0 * galactic_coordinates_of_pixel[0] + 128.0), 255)
-                        # index_g = min(int(255.0 * galactic_coordinates_of_pixel[1] + 128.0), 255)
-                        # index_b = min(int(255.0 * galactic_coordinates_of_pixel[2] + 128.0), 255)
-                        # index_a = 255
-
                         #Let's swap the x-y axis here with a right rotation. This is not the best way to do this,
                         #but because the axis are symmetrical, it can work.
-                        cubemap.sides[i][CUBEMAP_FACE_SIZE - y - 1][x][0] = index_r
-                        cubemap.sides[i][CUBEMAP_FACE_SIZE - y - 1][x][1] = index_g
-                        cubemap.sides[i][CUBEMAP_FACE_SIZE - y - 1][x][2] = index_b
-                        cubemap.sides[i][CUBEMAP_FACE_SIZE - y - 1][x][3] = index_a
+                        cubemap.sides[i][y][x][0] = index_r
+                        cubemap.sides[i][y][x][1] = index_g
+                        cubemap.sides[i][y][x][2] = index_b
+                        cubemap.sides[i][y][x][3] = index_a
 
                         k += 1
                         bar.update(k)
 
                 #Write this into a cube map texture
                 imarray = np.asarray(cubemap.sides[i])
+                imarray = np.flip(imarray, 0)
                 im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
                 im.save('../../../assets/star_data/star-dictionary-cubemap-{}.png'.format(side_letter_combo))
     print("Number of bad offsets for bright stars, {}".format(number_of_distant_bright_stars))
