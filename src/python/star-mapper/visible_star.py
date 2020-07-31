@@ -14,7 +14,11 @@ class VisibleStar:
         self.bright_star_bucket_id = None
         self.position_in_orderered_array = None
         self.position_in_dim_star_ordererd_array = None
+        self.dim_star_array_x = None
+        self.dim_star_array_y = None
         self.position_in_bright_star_ordered_array = None
+        self.bright_star_array_x = None
+        self.bright_star_array_y = None
 
         #Ecode our stellar data from the start into 4 colors that we can use to fill in the texture
         self.encoded_equitorial_r = self.float2RGBA(galactic_coordinates[0], -1.0, 1.0)

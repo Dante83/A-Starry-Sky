@@ -29,9 +29,9 @@ StarrySky.Materials.Stars.starDataMap = {
     'void main(){',
       'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
 
-      'float r = rgba2Float(texture2D(textureRChannel, vUv), -1.0, 1.0);',
-      'float g = rgba2Float(texture2D(textureGChannel, vUv), -1.0, 1.0);',
-      'float b = rgba2Float(texture2D(textureBChannel, vUv), -1.0, 1.0);',
+      'float r = rgba2Float(texture2D(textureRChannel, vUv), -17000.0, 17000.0);',
+      'float g = rgba2Float(texture2D(textureGChannel, vUv), -17000.0, 17000.0);',
+      'float b = rgba2Float(texture2D(textureBChannel, vUv), -17000.0, 17000.0);',
       'float a = rgba2Float(texture2D(textureAChannel, vUv), -2.0, 7.0);',
 
       'gl_FragColor = vec4(r, g, b, a);',

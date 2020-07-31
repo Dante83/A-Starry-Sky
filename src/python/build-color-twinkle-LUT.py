@@ -24,25 +24,27 @@ with progressbar.ProgressBar(64, redirect_stdout=True) as bar:
         for j in range(8):
             dataset = i + j * 8
             mean_temperature = 2000.0 + 15000.0 * (dataset / 63.0)
-            black_body_sd = sd_blackbody(mean_temperature)
+            black_body_sd = sd_blackbody(mean_temperature, SpectralShape(250.0, 750.0, 1.0))
             for x in range(62):
-                spectral_window = 300.00 / float(x + 1.0)
+                #spectral_window = 300.00 / float(x + 1.0)
+                spectral_window = 400.0 - (float(x)/61.0) * 394.0
                 for y in range(62):
                     #Get our spectral window
-                    spetral_f_initial = spectral_window * y + 400.0
-                    if(spetral_f_initial > 700.0):
-                        new_y = floor(299.9/spectral_window)
-                        spetral_f_initial = spectral_window * new_y + 400.0
-                    spetral_f_final = spetral_f_initial + spectral_window
+                    spectral_difference = (400.0 - spectral_window) / 62.0
+                    spetral_f_initial = 300.0
+                    spetral_f_final = 300.0 + spectral_difference * y
 
                     #Chop our spectrum down to this range
                     #Thanks colour for making this a PITA. Just have a stupid array instead of hiding
                     #this like it's something incredibly special.
                     subset_of_blackbody_sd = {}
+                    test = 0
                     for k in black_body_sd._domain:
                         s = black_body_sd[k]
                         if spetral_f_initial <= k and k <= spetral_f_final:
                             subset_of_blackbody_sd[k] = s
+                            test += 1
+                    print(test)
                     subset_of_blackbody_sd = colour.SpectralDistribution(subset_of_blackbody_sd)
 
                     #Convert our spectrum into a color
@@ -54,8 +56,8 @@ with progressbar.ProgressBar(64, redirect_stdout=True) as bar:
                     for c in range(3):
                         output_texture[x_position][y_position][c] = star_rgb_color[c]
 
-                progress_bar_status += 1
-                bar.update(progress_bar_status)
+            progress_bar_status += 1
+            bar.update(progress_bar_status)
 
 #Pad our results
 print("Padding results...")

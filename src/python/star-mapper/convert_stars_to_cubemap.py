@@ -113,20 +113,20 @@ def initialization():
     x_coords = [star.galactic_longitude for star in potential_stars]
     y_coords = [star.galactic_latitude for star in potential_stars]
     star_dot_sizes = [0.01 for star in potential_stars]
-    plt.scatter(x_coords, y_coords, s=star_dot_sizes, marker='o', alpha=1.0)
-    plt.title("Stars in 2-d planar galactic coordinates")
-    plt.show()
-
-    fig = plt.figure()
-    ax = plt.axes(projection='3d')
+    # plt.scatter(x_coords, y_coords, s=star_dot_sizes, marker='o', alpha=1.0)
+    # plt.title("Stars in 2-d planar galactic coordinates")
+    # plt.show()
+    #
+    # fig = plt.figure()
+    # ax = plt.axes(projection='3d')
 
     x_coords = [star.galactic_coordinates[0] for star in potential_stars]
     z_coords = [star.galactic_coordinates[1] for star in potential_stars]
     y_coords = [star.galactic_coordinates[2] for star in potential_stars]
     star_dot_sizes = [0.1 for star in potential_stars]
-    ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, c=None, depthshade=True)
-    plt.title("3D Graph of stars")
-    plt.show()
+    # ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, c=None, depthshade=True)
+    # plt.title("3D Graph of stars")
+    # plt.show()
 
     #Filter our stars so that stars that are really really close together (binary/trianary stars) get removed from the list
     print("Reducing binary systems...")
@@ -190,12 +190,12 @@ def initialization():
     x_coords = [star.galactic_longitude for star in potential_stars]
     y_coords = [star.galactic_latitude for star in potential_stars]
     star_dot_sizes = [0.01 for star in potential_stars]
-    plt.scatter(x_coords, y_coords, s=star_dot_sizes, marker='o', alpha=1.0)
-    plt.title("Stars in 2-d planar galactic coordinates")
-    plt.show()
+    # plt.scatter(x_coords, y_coords, s=star_dot_sizes, marker='o', alpha=1.0)
+    # plt.title("Stars in 2-d planar galactic coordinates")
+    # plt.show()
 
     #Sort our stars according to brightness
-    potential_stars.sort(key=lambda x: x.magnitude, reverse=True)
+    potential_stars.sort(key=lambda x: x.magnitude)
 
     print("Creating sub lists of stars")
     full_stars_list = potential_stars[:NUMBER_OF_STARS]
@@ -228,15 +228,15 @@ def initialization():
         print("There are {} duplicates in the ordered group of stars".format(abs(len(ordered_groups_of_stars) - len(set(ordered_groups_of_stars)))))
 
     #Plot our star connections to see how well we are connected to our nearest neighbors
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    x_coords = [star.galactic_coordinates[0] for star in ordered_groups_of_stars]
-    z_coords = [star.galactic_coordinates[1] for star in ordered_groups_of_stars]
-    y_coords = [star.galactic_coordinates[2] for star in ordered_groups_of_stars]
-    star_dot_sizes = [0.4 for star in ordered_groups_of_stars]
-    ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, depthshade=True)
-    ax.plot(x_coords, y_coords, z_coords, color="red")
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # x_coords = [star.galactic_coordinates[0] for star in ordered_groups_of_stars]
+    # z_coords = [star.galactic_coordinates[1] for star in ordered_groups_of_stars]
+    # y_coords = [star.galactic_coordinates[2] for star in ordered_groups_of_stars]
+    # star_dot_sizes = [0.4 for star in ordered_groups_of_stars]
+    # ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, depthshade=True)
+    # ax.plot(x_coords, y_coords, z_coords, color="red")
+    # plt.show()
 
     #Provide each star with it's position in the ordered group of stars
     for i, star in enumerate(ordered_groups_of_stars):
@@ -256,30 +256,30 @@ def initialization():
         print("There are {} duplicates in the bright ordered group of stars".format(abs(len(bright_stars_list) - len(set(bright_stars_list)))))
 
     #Plot all bright stars too see how they are connected
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    x_coords = [star.galactic_coordinates[0] for star in bright_stars_list]
-    z_coords = [star.galactic_coordinates[1] for star in bright_stars_list]
-    y_coords = [star.galactic_coordinates[2] for star in bright_stars_list]
-    star_dot_sizes = [0.4 for star in bright_stars_list]
-    ax.plot(x_coords, y_coords, z_coords, color="red")
-    ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, depthshade=True)
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # x_coords = [star.galactic_coordinates[0] for star in bright_stars_list]
+    # z_coords = [star.galactic_coordinates[1] for star in bright_stars_list]
+    # y_coords = [star.galactic_coordinates[2] for star in bright_stars_list]
+    # star_dot_sizes = [0.4 for star in bright_stars_list]
+    # ax.plot(x_coords, y_coords, z_coords, color="red")
+    # ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, depthshade=True)
+    # plt.show()
 
     print("Number of dim stars after combination {}".format(len(dim_stars_list)))
     if len(dim_stars_list) != len(set(dim_stars_list)):
         print("There are {} duplicates in the dim ordered group of stars".format(abs(len(dim_stars_list) - len(set(dim_stars_list)))))
 
     #Plot all dim stars to see how they are connected
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    x_coords = [star.galactic_coordinates[0] for star in dim_stars_list]
-    z_coords = [star.galactic_coordinates[1] for star in dim_stars_list]
-    y_coords = [star.galactic_coordinates[2] for star in dim_stars_list]
-    star_dot_sizes = [0.4 for star in dim_stars_list]
-    ax.plot(x_coords, y_coords, z_coords, color="red")
-    ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, depthshade=True)
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # x_coords = [star.galactic_coordinates[0] for star in dim_stars_list]
+    # z_coords = [star.galactic_coordinates[1] for star in dim_stars_list]
+    # y_coords = [star.galactic_coordinates[2] for star in dim_stars_list]
+    # star_dot_sizes = [0.4 for star in dim_stars_list]
+    # ax.plot(x_coords, y_coords, z_coords, color="red")
+    # ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, depthshade=True)
+    # plt.show()
 
     #Convert these stars into two data textures, split between their R, G, B and A channels
     print("Converting linear data into data image")
@@ -296,6 +296,8 @@ def initialization():
                 dim_star_channel_green_data_image[row][column][i] = star.encoded_equitorial_g[i] #Galactic coordinate 2
                 dim_star_channel_blue_data_image[row][column][i] = star.encoded_equitorial_b[i] #Galactic coordinate 3
                 dim_star_channel_alpha_data_image[row][column][i] = star.encoded_equitorial_a[i] #Magnitude
+                dim_stars_list[cursor].dim_star_array_x = column
+                dim_stars_list[cursor].dim_star_array_y = row
             cursor += 1
 
     datum = [dim_star_channel_red_data_image, dim_star_channel_green_data_image, dim_star_channel_blue_data_image, dim_star_channel_alpha_data_image]
@@ -321,6 +323,8 @@ def initialization():
                 bright_star_channel_green_data_image[row][column][i] = star.encoded_equitorial_g[i]
                 bright_star_channel_blue_data_image[row][column][i] = star.encoded_equitorial_b[i]
                 bright_star_channel_alpha_data_image[row][column][i] = star.encoded_equitorial_a[i]
+                bright_stars_list[cursor].bright_star_array_x = column
+                bright_stars_list[cursor].bright_star_array_y = row
             cursor += 1
 
     datum = [bright_star_channel_red_data_image, bright_star_channel_green_data_image, bright_star_channel_blue_data_image, bright_star_channel_alpha_data_image]
@@ -334,6 +338,14 @@ def initialization():
     #Create our cubemap
     print("Creating our cubemap...")
     cubemap = Cubemap(CUBEMAP_FACE_SIZE)
+
+    print('Dim Star 0 data')
+    first_dim_star = dim_stars_list[0]
+    print("{},{},{},{}".format(first_dim_star.encoded_equitorial_r[0], first_dim_star.encoded_equitorial_r[1], first_dim_star.encoded_equitorial_r[2], first_dim_star.encoded_equitorial_r[3] * 100.0/255.0))
+    print("{},{},{},{}".format(first_dim_star.encoded_equitorial_g[0], first_dim_star.encoded_equitorial_g[1], first_dim_star.encoded_equitorial_g[2], first_dim_star.encoded_equitorial_g[3] * 100.0/255.0))
+    print("{},{},{},{}".format(first_dim_star.encoded_equitorial_b[0], first_dim_star.encoded_equitorial_b[1], first_dim_star.encoded_equitorial_b[2], first_dim_star.encoded_equitorial_b[3] * 100.0/255.0))
+    print("{},{},{},{}".format(first_dim_star.encoded_equitorial_a[0], first_dim_star.encoded_equitorial_a[1], first_dim_star.encoded_equitorial_a[2], first_dim_star.encoded_equitorial_a[3] * 100.0/255.0))
+    print("-----------------------")
 
     sides = ['px', 'nx', 'py', 'ny', 'pz', 'nz']
     k = 0
@@ -352,25 +364,29 @@ def initialization():
                         #f.write("pixel galactic coordinates: {}, {}, {}\r\n".format(galactic_coordinates_of_pixel[0], galactic_coordinates_of_pixel[1], galactic_coordinates_of_pixel[2]))
 
                         #For each point in the cubemap, determine the closest dim stellar ID, using a 13 bit integer
-                        closest_dim_star_index = 0 #Default to zero, because we need a valid value
                         closest_dim_star_distance = float('inf')
+                        closest_dim_star_x = 0
+                        closest_dim_star_y = 0
                         for star in dim_stars_list:
                             #We're using normal ditance over haversine distance as we presume
                             #that, for small star distances, the surface of the sphere is approximately flat
                             diff = star.galactic_coordinates - galactic_coordinates_of_pixel
-                            distance_to_star_squared = np.dot(diff, diff)
-                            if(distance_to_star_squared < closest_dim_star_distance):
-                                closest_dim_star_distance = distance_to_star_squared
-                                closest_dim_star_index = star.position_in_dim_star_ordererd_array
+                            v0 = star.galactic_coordinates
+                            v1 = galactic_coordinates_of_pixel
+                            delta_v = v0 - v1
+                            mag_v = sqrt(np.dot(delta_v, delta_v))
+                            phi = abs(asin(mag_v / 2))
+                            phi = min(phi, 2.0 * np.pi - phi)
+                            distance_to_star = 2.0 * phi
+                            if(distance_to_star < closest_dim_star_distance):
+                                closest_dim_star_distance = distance_to_star
+                                closest_dim_star_x = star.dim_star_array_x
+                                closest_dim_star_y = star.dim_star_array_y
 
-                        closest_star_galactic_coordinates = dim_stars_list[closest_dim_star_index].galactic_coordinates
-                        # f.write("closest star coordinates: {}, {}, {}\r\n".format(closest_star_galactic_coordinates[0], closest_star_galactic_coordinates[1], closest_star_galactic_coordinates[2]))
-                        # f.write("-"*8)
-                        # f.write("\r\n")
-
-                        #Now determine the closest bright star stellar ID in the 448 star data texture
-                        closest_bright_star_index = 0
+                        #Now determine the location of the closest bright star
                         closest_bright_star_distance = float('inf')
+                        closest_bright_star_x = 0
+                        closest_bright_star_y = 0
                         for star in bright_stars_list:
                             #We're using normal ditance over haversine distance as we presume
                             #that, for small star distances, the surface of the sphere is approximately flat
@@ -380,45 +396,32 @@ def initialization():
                             mag_v = sqrt(np.dot(delta_v, delta_v))
                             phi = abs(asin(mag_v / 2))
                             phi = min(phi, 2.0 * np.pi - phi)
-                            distance_to_star_squared = 2.0 * phi
-                            if(distance_to_star_squared < closest_bright_star_distance):
-                                closest_bright_star_distance = distance_to_star_squared
-                                closest_bright_star_index = star.position_in_bright_star_ordered_array
-
-                        #Attempt to reach this point with a 3-bit integer, between +/-4 in the scale of the 448 star data texture
-                        bright_star_offset = int(closest_bright_star_index - floor(closest_dim_star_index * DIM_TO_BRIGHT_STAR_SCALAR))
-                        # if(dim_star_index_in_bright_star_scale < -4 or dim_star_index_in_bright_star_scale > 4):
-                        #     f.write("Offset out of range, bright star true offset was: {}".format(dim_star_index_in_bright_star_scale))
-                        bright_star_offset = min(max(bright_star_offset, -127), 127)
-                        bright_star_offset += 127
+                            distance_to_star = 2.0 * phi
+                            if(distance_to_star < closest_bright_star_distance):
+                                closest_bright_star_distance = distance_to_star
+                                closest_bright_star_x = star.bright_star_array_x
+                                closest_bright_star_y = star.bright_star_array_y
 
                         #Combine and split these binary numbers into two 8-bit channels and put them in a texture
-                        index_r = int(bin(closest_dim_star_index & 0xff), 2)
-                        index_g = int(bin((closest_dim_star_index >> 8) & 0xff), 2)
-                        index_b = int(bin(bright_star_offset & 0xff), 2)
+                        #The dim star position is the 7 bits for the x-axis (0-127) and 6 bits for the y-axis (0-63)
+                        #the bright star position is 6 bits for the x-axis (0-63) and 5 bits for the y-axis (0-31).
+                        #This makes a total of 7+6+6+5=24 bits, or exactly the number of bits in the RGB channels.
+                        #Example
+                        #----------------------------------------------------
+                        #int(bin(((21 << 3) & 0b11111000) | (3 & 0b111)), 2) ####171
+                        # bin(171) #### '0b10101011'
+                        # bin(21) #### '0b10101'
+                        # bin(3) #### '0b11'
+                        #Get right bits
+                        # math.floor(171/(2**3)) #### 21
+                        #Get left bits
+                        # 21*(2**3) #### 168
+                        # 171-168 #### 3
+                        index_r = int(bin(((closest_dim_star_x << 1) & 0b11111110) | (closest_dim_star_y & 0b1)), 2)
+                        index_g = int(bin((((closest_dim_star_y >> 1) << 3) & 0b11111000) | (closest_bright_star_x & 0b111)), 2)
+                        index_b = int(bin((((closest_bright_star_x >> 3) << 5) & 0b11100000) | (closest_bright_star_y & 0b11111)), 2)
                         index_a = 255
 
-                        #Swap it back
-                        bright_star_offset -= 127
-
-                        #Add a check in here to see that we can split this back into a 13 bit index and a 3 bit offset
-                        estimated_location_of_dim_star = index_r + index_g * 256
-                        estimated_bright_star_offset = index_b - 127
-                        estimated_location_of_bright_star = floor(estimated_location_of_dim_star * DIM_TO_BRIGHT_STAR_SCALAR)  + estimated_bright_star_offset
-                        if(estimated_location_of_dim_star != closest_dim_star_index):
-                            # f.write("Wrong dim star index. Was looking for {}, got {}.\r\n".format(closest_dim_star_index, estimated_location_of_dim_star))
-                            # f.write("-"*8)
-                            raise Exception("Bit recombination error")
-
-                        #if(estimated_bright_star_offset != bright_star_offset):
-                            #f.write("Invalid bright star offset. Was looking for {}, got {}\r\n".format(bright_star_offset, estimated_bright_star_offset))
-
-                        if(estimated_location_of_bright_star != closest_bright_star_index):
-                            # print("Wrong bright star index. Was looking for {}, got {}".format(closest_bright_star_index, estimated_location_of_bright_star))
-                            number_of_distant_bright_stars += 1
-
-                        #Let's swap the x-y axis here with a right rotation. This is not the best way to do this,
-                        #but because the axis are symmetrical, it can work.
                         cubemap.sides[i][y][x][0] = index_r
                         cubemap.sides[i][y][x][1] = index_g
                         cubemap.sides[i][y][x][2] = index_b
@@ -432,7 +435,6 @@ def initialization():
                 imarray = np.flip(imarray, 0)
                 im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
                 im.save('../../../assets/star_data/star-dictionary-cubemap-{}.png'.format(side_letter_combo))
-    print("Number of bad offsets for bright stars, {}".format(number_of_distant_bright_stars))
 
 #And now to run the entire application :D
 if __name__ == '__main__':
