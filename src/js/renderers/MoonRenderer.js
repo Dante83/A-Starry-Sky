@@ -99,7 +99,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   this.setBloomStrength(5.0);
   this.setBloomRadius(1.0);
 
-  this.tick = function(){
+  this.tick = function(t){
     //Update the position of our mesh
     let cameraPosition = skyDirector.camera.position;
     let quadOffset = skyDirector.skyState.moon.quadOffset;
@@ -119,6 +119,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.sunPosition.needsUpdate = true;
     self.baseMoonVar.material.uniforms.moonPosition.needsUpdate = true;
     self.baseMoonVar.material.uniforms.sunLightDirection.needsUpdate = true;
+    self.baseMoonVar.material.uniforms.uTime.value = t;
     self.combinationPassMaterial.uniforms.toneMappingExposure.value = 1.0;
     self.combinationPassMaterial.uniforms.toneMappingExposure.needsUpdate = true;
 
@@ -161,7 +162,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   }
 
   //Upon completion, this method self destructs
-  this.firstTick = function(){
+  this.firstTick = function(t){
     //Connect up our reference values
     self.baseMoonVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.baseMoonVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
@@ -178,13 +179,13 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       }
 
       //Update our star data
-      self.baseMoonVar.material.uniforms.starHashCubemap = self.skyDirector.assetManager.images.starImages.starHashCubemap;
-      self.baseMoonVar.material.uniforms.dimStarData = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
-      self.baseMoonVar.material.uniforms.brightStarData = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
+      self.baseMoonVar.material.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
+      self.baseMoonVar.material.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
+      self.baseMoonVar.material.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
     }
 
     //Proceed with the first tick
-    self.tick();
+    self.tick(t);
 
     //Add this object to the scene
     self.skyDirector.scene.add(self.moonMesh);

@@ -4,7 +4,7 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false){
     let uniforms = {
-      time: {type: 'f', value: 0.0},
+      uTime: {type: 'f', value: 0.0},
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
       moonPosition: {type: 'vec3', value: new THREE.Vector3()},
       mieInscatteringSum: {type: 't', value: null},
@@ -39,6 +39,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.starHashCubemap = {type: 't', value: null};
       uniforms.dimStarData = {type: 't', value: null};
       uniforms.brightStarData = {type: 't', value: null};
+      uniforms.starColorData = {type: 't', value: null};
     }
 
     return uniforms;

@@ -85,7 +85,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.setBloomStrength(5.0);
   this.setBloomRadius(1.0);
 
-  this.tick = function(){
+  this.tick = function(t){
     //Update the position of our mesh
     let cameraPosition = skyDirector.camera.position;
     let quadOffset = skyDirector.skyState.sun.quadOffset;
@@ -102,6 +102,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.sunHorizonFade.needsUpdate = true;
     self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
     self.baseSunVar.material.uniforms.moonPosition.needsUpdate = true;
+    self.baseSunVar.material.uniforms.uTime.value = t;
     self.combinationPassMaterial.uniforms.toneMappingExposure.value = 1.0;
     self.combinationPassMaterial.uniforms.toneMappingExposure.needsUpdate = true;
 
@@ -144,7 +145,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   }
 
   //Upon completion, this method self destructs
-  this.firstTick = function(){
+  this.firstTick = function(t){
     //Connect up our reference values
     self.baseSunVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.baseSunVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
@@ -162,7 +163,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     }
 
     //Proceed with the first tick
-    self.tick();
+    self.tick(t);
 
     //Add this object to the scene
     self.skyDirector.scene.add(self.sunMesh);

@@ -25,12 +25,14 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.needsUpdate = true;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.needsUpdate = true;
+  this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
+  this.atmosphereMaterial.uniforms.transmittance.needsUpdate = true;
 
   //Attach the material to our geometry
   this.skyMesh = new THREE.Mesh(this.geometry, this.atmosphereMaterial);
 
   let self = this;
-  this.tick = function(){
+  this.tick = function(t){
     let cameraPosition = self.skyDirector.camera.position;
     self.skyMesh.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
     self.skyMesh.updateMatrix();
@@ -45,10 +47,11 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.toneMappingExposure.needsUpdate = true;
     self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
     self.atmosphereMaterial.uniforms.moonPosition.needsUpdate = true;
+    self.atmosphereMaterial.uniforms.uTime.value = t;
   }
 
   //Upon completion, this method self destructs
-  this.firstTick = function(){
+  this.firstTick = function(t){
     //Connect up our reference values
     self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.atmosphereMaterial.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
@@ -61,7 +64,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     }
 
     //Proceed with the first tick
-    self.tick();
+    self.tick(t);
 
     //Add this object to the scene
     self.skyDirector.scene.add(self.skyMesh);

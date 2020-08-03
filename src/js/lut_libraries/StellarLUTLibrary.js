@@ -25,7 +25,6 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.dimStarDataRenderer.setVariableDependencies(this.dimStarMapVar, []);
   this.dimStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
-  console.log(this.dimStarMapVar.material.uniforms);
   this.dimStarMapVar.format = THREE.RGBAFormat;
   this.dimStarMapVar.encoding = THREE.LinearEncoding;
   this.dimStarMapVar.minFilter = THREE.NearestFilter;

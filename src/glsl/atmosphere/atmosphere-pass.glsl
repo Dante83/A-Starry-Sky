@@ -1,8 +1,8 @@
-precision highp float;
+precision mediump float;
 
 varying vec3 vWorldPosition;
 
-uniform float time;
+uniform float uTime;
 uniform vec3 sunPosition;
 uniform vec3 moonPosition;
 uniform float sunHorizonFade;
@@ -58,7 +58,55 @@ $atmosphericFunctions
     return vec3(1.0);
   }
 
-  //TODO: Replace with faster functions
+  //From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
+  float rand(float x){
+    float a = 12.9898;
+    float b = 78.233;
+    float c = 43758.5453;
+    float dt= dot(vec2(x, x) ,vec2(a,b));
+    float sn= mod(dt,3.14);
+    return fract(sin(sn) * c);
+  }
+
+  //From The Book of Shaders :D
+  //https://thebookofshaders.com/11/
+  float noise(float x){
+    float i = floor(x);
+    float f = fract(x);
+    float y = mix(rand(i), rand(i + 1.0), smoothstep(0.0,1.0,f));
+
+    return y;
+  }
+
+  float brownianNoise(float lacunarity, float gain, float initialAmplitude, float initialFrequency, float timeInSeconds){
+    float amplitude = initialAmplitude;
+    float frequency = initialFrequency;
+
+    // Loop of octaves
+    float y = 0.0;
+    float maxAmplitude = initialAmplitude;
+    for (int i = 0; i < 5; i++) {
+    	y += amplitude * noise(frequency * timeInSeconds);
+    	frequency *= lacunarity;
+    	amplitude *= gain;
+    }
+
+    return y;
+  }
+
+  const float twinkleDust = 0.002;
+  float twinkleFactor(vec3 starposition){
+    //Determine brightness
+    float brightnessVariation = 0.99 * pow((1.0 - starposition.y / piOver2), 0.5);
+    float randSeed = uTime * twinkleDust * (1.0 + rand(rand(starposition.x) + rand(starposition.z)));
+
+    // float lacunarity= 0.8;
+    // float gain = 0.55;
+    // float initialAmplitude = 1.0;
+    // float initialFrequency = 2.0;
+    //lacunarity, gain, initialAmplitude, initialFrequency
+    return 1.0 + brightnessVariation * (brownianNoise(0.8, 0.55, 1.0, 2.0, randSeed) - 1.0);
+  }
 
   float fastAiry(float r){
     //Variation of Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness
@@ -71,19 +119,15 @@ $atmosphericFunctions
     //I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.
     float temperature = length(starData.xyz);
     vec3 normalizedStarPosition = starData.xyz / temperature;
-    float starBrightness = starData.a;
-    //float approximateDistance2Star = distance(sphericalPosition, normalizedStarPosition) * 600.0;
-    float approximateDistance2Star = distance(sphericalPosition, normalizedStarPosition);
+    float starBrightness = pow(2.512, (4.0 - starData.a)) * twinkleFactor(normalizedStarPosition);
+    float approximateDistance2Star = distance(sphericalPosition, normalizedStarPosition) * 1400.0;
 
     //Modify the intensity and color of this star using approximation of stellar scintillation
 
 
     //Pass this brightness into the fast Airy function to make the star glow
-    //float stellarBrightness = max(fastAiry(approximateDistance2Star * 10.0), 0.0);
-    float normalizedBrightness = clamp((-starBrightness  + 7.0), 0.0, 9.0) * 0.15;
-    //return vec3((normalizedBrightness * normalizedBrightness) / (approximateDistance2Star * approximateDistance2Star));
-
-    return normalizedStarPosition;
+    float stellarBrightness = starBrightness * max(fastAiry(approximateDistance2Star), 0.0);
+    return vec3(stellarBrightness);
   }
 #endif
 
@@ -130,44 +174,47 @@ void main(){
     vec3 starHashData = textureCube(starHashCubemap, galacticCoordinates).rgb;
 
     //Red
-    float scaledBits = starHashData.x * 255.0;
-    float leftBits = floor(scaledBits * 0.5);
+    float scaledBits = starHashData.r * 255.0;
+    float leftBits = floor(scaledBits / 2.0);
     float rightBits = scaledBits - leftBits * 2.0;
-    float dimStarXCoordinate = leftBits / 127.0;
+    float dimStarXCoordinate = leftBits / 128.0;
 
     //Green
-    scaledBits = starHashData.y * 255.0;
-    leftBits = floor(scaledBits * 0.125);
-    float dimStarYCoordinate = (rightBits + leftBits * 2.0) / 63.0;
+    scaledBits = starHashData.g * 255.0;
+    leftBits = floor(scaledBits / 8.0);
+    float dimStarYCoordinate = (rightBits + leftBits * 2.0) / 64.0;
     rightBits = scaledBits - leftBits * 8.0;
 
     //Blue
-    scaledBits = starHashData.y * 255.0;
-    leftBits = floor(scaledBits / 8.0);
-    float brightStarXCoordinate = (rightBits + leftBits * 8.0) / 63.0;
-    rightBits = scaledBits - leftBits * 8.0;
-    float brightStarYCoordinate = rightBits / 31.0;
+    scaledBits = starHashData.b * 255.0;
+    leftBits = floor(scaledBits / 32.0);
+    float brightStarXCoordinate = (rightBits + leftBits * 8.0) / 64.0;
+    rightBits = scaledBits - leftBits * 32.0;
+    float brightStarYCoordinate = rightBits / 32.0;
 
     vec4 starData = texture2D(dimStarData, vec2(dimStarXCoordinate, dimStarYCoordinate));
-    vec3 galacticLighting = drawStarLight(starData, sphericalPosition);
-    if(distance(galacticCoordinates, galacticLighting) > 0.2){
-      starData = texture2D(dimStarData, vec2(dimStarXCoordinate, dimStarYCoordinate - (0.0/64.0)));
-      galacticLighting = drawStarLight(starData, sphericalPosition);
-    }
-
-
-    // if(dimStarXCoordinate == 1.0){
-    //   galacticLighting= vec3(1.0);
-    // }
-    // starData = texture2D(dimStarData, vec2(brightStarXCoordinate, brightStarYCoordinate));
-    // galacticLighting = drawStarLight(starData, sphericalPosition);
+    vec3 galacticLighting = drawStarLight(starData, galacticCoordinates);
+    starData = texture2D(brightStarData, vec2(brightStarXCoordinate, brightStarYCoordinate));
+    galacticLighting += drawStarLight(starData, galacticCoordinates);
+    float leftBrightStarXCoordinate = brightStarXCoordinate - (1.0 / 64.0);
+    float leftBrightStarYCoordinate = brightStarYCoordinate - (floor(leftBrightStarXCoordinate)/32.0);
+    leftBrightStarXCoordinate = leftBrightStarXCoordinate < 0.0 ? 1.0 : leftBrightStarXCoordinate;
+    starData = texture2D(brightStarData, vec2(leftBrightStarXCoordinate, leftBrightStarYCoordinate));
+    galacticLighting += drawStarLight(starData, galacticCoordinates);
+    float rightBrightStarXCoordinate = brightStarXCoordinate + (1.0 / 64.0);
+    float rightBrightStarYCoordinate = brightStarYCoordinate + (floor(rightBrightStarXCoordinate)/32.0);
+    rightBrightStarXCoordinate = rightBrightStarXCoordinate > 1.0 ? 0.0 : rightBrightStarXCoordinate;
+    starData = texture2D(brightStarData, vec2(rightBrightStarXCoordinate, rightBrightStarYCoordinate));
+    galacticLighting += drawStarLight(starData, galacticCoordinates);
 
     //Check our distance from each of the four primary planets
 
+
     //Get the galactic lighting from
 
+
     //Apply the transmittance function to all of our light sources
-    //galacticLighting = galacticLighting * transmittanceFade;
+    galacticLighting = galacticLighting * transmittanceFade;
   #endif
 
   //Atmosphere
@@ -182,17 +229,16 @@ void main(){
   #elif($isMoonPass)
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;
     $draw_moon_pass
-    combinedPass = mix(combinedPass, combinedPass + moonTexel, lunarMask);
+    combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);
   #else
   //Regular atmospheric pass
-    vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;
+    vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting;
 
     //Color Adjustment Pass
     combinedPass = ACESFilmicToneMapping(combinedPass);
 
     //Triangular Blue Noise Dithering Pass
 
-    combinedPass = galacticLighting;
   #endif
 
   gl_FragColor = vec4(combinedPass, 1.0);

@@ -127,7 +127,7 @@ StarrySky.AssetManager = function(skyDirector){
         const moonCubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
         moonCubemapRef.value = cubemap;
 
-        const atmosphereCubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.starHashCubemap;
+        const atmosphereCubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.starHashCubemap;
         atmosphereCubemapRef.value = cubemap;
       }
     });
@@ -171,8 +171,8 @@ StarrySky.AssetManager = function(skyDirector){
           skyDirector.stellarLUTLibrary.dimStarMapPass(dimStarChannelImages.r, dimStarChannelImages.g, dimStarChannelImages.b, dimStarChannelImages.a);
 
           //And send it off as a uniform for our atmospheric renderer
-          if(skyDirector?.renderers?.moonRenderer !== undefined){
-            const textureRef = skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.dimStarData;
+          if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+            const textureRef = skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.dimStarData;
             textureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
           }
 
@@ -230,7 +230,7 @@ StarrySky.AssetManager = function(skyDirector){
 
           //And send it off as a uniform for our atmospheric renderer
           if(skyDirector?.renderers?.moonRenderer !== undefined){
-            const textureRef = skyDirector.renderers.moonRenderer.baseMoonVar.uniforms.brightStarData;
+            const textureRef = skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.brightStarData;
             textureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
           }
 

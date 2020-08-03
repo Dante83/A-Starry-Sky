@@ -17,24 +17,24 @@ StarrySky.DefaultData.fileNames = {
   moonAperatureSizeMap: 'lunar-aperature-size-map.webp',
   moonAperatureOrientationMap: 'lunar-aperature-orientation-map.webp',
   starHashCubemap: [
-    'webp_files/star-dictionary-cubemap-px.webp',
-    'webp_files/star-dictionary-cubemap-nx.webp',
-    'webp_files/star-dictionary-cubemap-py.webp',
-    'webp_files/star-dictionary-cubemap-ny.webp',
-    'webp_files/star-dictionary-cubemap-pz.webp',
-    'webp_files/star-dictionary-cubemap-nz.webp',
+    'star-dictionary-cubemap-px.png',
+    'star-dictionary-cubemap-nx.png',
+    'star-dictionary-cubemap-py.png',
+    'star-dictionary-cubemap-ny.png',
+    'star-dictionary-cubemap-pz.png',
+    'star-dictionary-cubemap-nz.png',
   ],
   dimStarDataMaps: [
-    'webp_files/dim-star-data-r-channel.webp',
-    'webp_files/dim-star-data-g-channel.webp',
-    'webp_files/dim-star-data-b-channel.webp',
-    'webp_files/dim-star-data-a-channel.webp'
+    'dim-star-data-r-channel.png',
+    'dim-star-data-g-channel.png',
+    'dim-star-data-b-channel.png',
+    'dim-star-data-a-channel.png'
   ],
   brightStarDataMaps:[
-    'png_files/bright-star-data-r-channel.png', //We choose to use PNG for the bright star data as webp is actually twice as big
-    'png_files/bright-star-data-g-channel.png',
-    'png_files/bright-star-data-b-channel.png',
-    'png_files/bright-star-data-a-channel.png'
+    'bright-star-data-r-channel.png', //We choose to use PNG for the bright star data as webp is actually twice as big
+    'bright-star-data-g-channel.png',
+    'bright-star-data-b-channel.png',
+    'bright-star-data-a-channel.png'
   ]
 };
 
@@ -46,9 +46,9 @@ StarrySky.DefaultData.assetPaths = {
   moonRoughnessMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
   moonAperatureSizeMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonAperatureSizeMap,
   moonAperatureOrientationMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonAperatureOrientationMap,
-  starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubemap.map(x => './assets/star_data/webp_files/' + x),
-  dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarDataMaps.map(x => './assets/star_data/webp_files/' + x),
-  brightStarDataMaps: StarrySky.DefaultData.fileNames.brightStarDataMaps.map(x => './assets/star_data/png_files/' + x),
+  starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubemap.map(x => './assets/star_data/' + x),
+  dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarDataMaps.map(x => './assets/star_data/' + x),
+  brightStarDataMaps: StarrySky.DefaultData.fileNames.brightStarDataMaps.map(x => './assets/star_data/' + x),
 };
 
 //Clone the above, in the event that any paths are found to differ, we will

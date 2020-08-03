@@ -295,9 +295,9 @@ StarrySky.SkyDirector = function(parentComponent){
       self.tick(time, timeDelta);
 
       //Update all of our renderers
-      self.renderers.atmosphereRenderer.tick();
-      self.renderers.sunRenderer.tick();
-      self.renderers.moonRenderer.tick();
+      self.renderers.atmosphereRenderer.tick(time);
+      self.renderers.sunRenderer.tick(time);
+      self.renderers.moonRenderer.tick(time);
     }
   }
 
