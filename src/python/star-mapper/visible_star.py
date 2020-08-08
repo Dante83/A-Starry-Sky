@@ -12,7 +12,6 @@ class VisibleStar:
         self.bucket_id = None
         self.dim_star_bucket_id = None
         self.bright_star_bucket_id = None
-        self.position_in_orderered_array = None
         self.position_in_dim_star_ordererd_array = None
         self.dim_star_array_x = None
         self.dim_star_array_y = None

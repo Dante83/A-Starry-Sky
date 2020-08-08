@@ -14,6 +14,8 @@ from mpl_toolkits import mplot3d
 from mpl_toolkits.mplot3d.axes3d import Axes3D
 
 #Plan.
+#TODO: These are outdated and were mainly used for debugging, don't mind if they don't work anymore
+#They can probably be rapidly upgraded if the need comes up.
 #1 Organize the stars into two three lists, the top 8545 stars, the top 8065 stars and the top 480 stars
 #2 Determine the neighbor map for the top 8545 stars
 #3 Break out the top 480 stars from this, leaving a neighbor map for 480 and 8065 stars
@@ -26,15 +28,15 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 #9 Determine the density of remaining stars in galaxy using an 8-bit float and store this in the green channel.
 #10 Split our star data into red, green and blue channel textures to be recombined into 32 bits, and simply save
 # the six sides of our cubemap RGB texture.
-NUMBER_OF_DIM_STARS = 8192
-NUMBER_OF_BRIGHT_STARS = 2048
+NUMBER_OF_DIM_STARS = 8192 #4096 stars
+NUMBER_OF_BRIGHT_STARS = 1024
 NUMBER_OF_STARS = NUMBER_OF_DIM_STARS + NUMBER_OF_BRIGHT_STARS
 DIM_TO_BRIGHT_STAR_SCALAR = NUMBER_OF_BRIGHT_STARS / NUMBER_OF_DIM_STARS
-BRIGHT_STAR_MAP_WIDTH = 64
+BRIGHT_STAR_MAP_WIDTH = 32
 BRIGHT_STAR_MAP_HEIGHT = 32
 DIM_STAR_MAP_WIDTH = 128
 DIM_STAR_MAP_HEIGHT = 64
-CUBEMAP_FACE_SIZE = 256
+CUBEMAP_FACE_SIZE = 512
 
 #Mulitples of PI
 PI = np.pi
@@ -49,14 +51,6 @@ star_bucket_grid = BucketGrid()
 
 def bvToTemp(bv):
     return 4600 * ((1.0 / (0.92 * bv + 1.7)) + (1.0 / (0.92 * bv + 0.62)))
-
-def calculateCubemapPixelPosition(side_letter_combo, x, y, cubemap_width, cubemap):
-    p = cubemap.getPixelGalacticCoordinates(side_letter_combo, x, y)
-    r = floor(((p[0] + 0.5 * cubemap_width) / cubemap_width)) * 255
-    g = floor(((p[1] + 0.5 * cubemap_width) / cubemap_width)) * 255
-    b = floor(((p[2] + 0.5 * cubemap_width) / cubemap_width)) * 255
-
-    return (r, g, b, 1.0)
 
 def initialization():
     max_temperature = 0.0 #Absolute zero
@@ -113,6 +107,8 @@ def initialization():
     x_coords = [star.galactic_longitude for star in potential_stars]
     y_coords = [star.galactic_latitude for star in potential_stars]
     star_dot_sizes = [0.01 for star in potential_stars]
+    #TODO: These are outdated and were mainly used for debugging, don't mind if they don't work anymore
+    #They can probably be rapidly upgraded if the need comes up.
     # plt.scatter(x_coords, y_coords, s=star_dot_sizes, marker='o', alpha=1.0)
     # plt.title("Stars in 2-d planar galactic coordinates")
     # plt.show()
@@ -124,6 +120,8 @@ def initialization():
     z_coords = [star.galactic_coordinates[1] for star in potential_stars]
     y_coords = [star.galactic_coordinates[2] for star in potential_stars]
     star_dot_sizes = [0.1 for star in potential_stars]
+    #TODO: These are outdated and were mainly used for debugging, don't mind if they don't work anymore
+    #They can probably be rapidly upgraded if the need comes up.
     # ax.scatter(x_coords, y_coords, z_coords, s=star_dot_sizes, marker='o', alpha=1.0, c=None, depthshade=True)
     # plt.title("3D Graph of stars")
     # plt.show()
@@ -190,6 +188,8 @@ def initialization():
     x_coords = [star.galactic_longitude for star in potential_stars]
     y_coords = [star.galactic_latitude for star in potential_stars]
     star_dot_sizes = [0.01 for star in potential_stars]
+    #TODO: These are outdated and were mainly used for debugging, don't mind if they don't work anymore
+    #They can probably be rapidly upgraded if the need comes up.
     # plt.scatter(x_coords, y_coords, s=star_dot_sizes, marker='o', alpha=1.0)
     # plt.title("Stars in 2-d planar galactic coordinates")
     # plt.show()
@@ -202,31 +202,53 @@ def initialization():
     bright_stars_list = full_stars_list[:NUMBER_OF_BRIGHT_STARS]
     dim_stars_list = full_stars_list[NUMBER_OF_BRIGHT_STARS:(NUMBER_OF_BRIGHT_STARS + NUMBER_OF_DIM_STARS)]
 
+    print("Number of dim stars: {}".format(len(dim_stars_list)))
+    print("Number of bright stars: {}".format(len(bright_stars_list)))
+
     #Combine all of our star groups until only one star group remains
     print("Combine all of our star groups until only one group remains...")
-    ordered_groups_of_stars = [OrderedGroupOfStars([star]) for star in full_stars_list]
+    dim_ordered_groups_of_stars = [OrderedGroupOfStars([star]) for star in dim_stars_list]
     previous_i = 0
-    number_of_ordered_groups_of_stars = len(ordered_groups_of_stars)
-    initial_number_of_ordered_groups_of_stars = number_of_ordered_groups_of_stars
+    number_of_dim_ordered_groups_of_stars = len(dim_ordered_groups_of_stars)
+    initial_number_of_dim_ordered_groups_of_stars = number_of_dim_ordered_groups_of_stars
     with progressbar.ProgressBar(100.0, redirect_stdout=True) as bar:
-        while(number_of_ordered_groups_of_stars > 1):
-            ordered_groups_of_stars[previous_i].findAndCombineWithClosestOtherStarGroup(ordered_groups_of_stars, previous_i)
-            number_of_ordered_groups_of_stars = len(ordered_groups_of_stars)
-            bar.update((1.0 - number_of_ordered_groups_of_stars / initial_number_of_ordered_groups_of_stars) * 100)
-            next_i = (previous_i + 1) % number_of_ordered_groups_of_stars
+        while(number_of_dim_ordered_groups_of_stars > 1):
+            dim_ordered_groups_of_stars[previous_i].findAndCombineWithClosestOtherStarGroup(dim_ordered_groups_of_stars, previous_i)
+            number_of_dim_ordered_groups_of_stars = len(dim_ordered_groups_of_stars)
+            bar.update((1.0 - number_of_dim_ordered_groups_of_stars / initial_number_of_dim_ordered_groups_of_stars) * 100)
+            next_i = (previous_i + 1) % number_of_dim_ordered_groups_of_stars
             if previous_i > next_i:
                 #Resort our groups by the brightest edge star every time we scan through our list
-                ordered_groups_of_stars.sort(key=lambda x: x.ordererdGroupOfStars[x.brightest_star_on_edge].magnitude, reverse=True)
+                dim_ordered_groups_of_stars.sort(key=lambda x: x.ordererdGroupOfStars[x.brightest_star_on_edge].magnitude, reverse=True)
             previous_i = next_i
+    dim_ordered_groups_of_stars = dim_ordered_groups_of_stars[0].ordererdGroupOfStars
 
-    #Once we've ordered our stars, we just want the list
-    print("Number of ordered group of stars = {}".format(len(ordered_groups_of_stars)))
-    ordered_groups_of_stars = ordered_groups_of_stars[0].ordererdGroupOfStars
+    #Provide each star with it's position in the ordered group of stars
+    for i, star in enumerate(dim_ordered_groups_of_stars):
+        star.position_in_dim_star_ordererd_array = i
 
-    print("Number of stars after combination {}".format(len(ordered_groups_of_stars)))
-    if len(ordered_groups_of_stars) != len(set(ordered_groups_of_stars)):
-        print("There are {} duplicates in the ordered group of stars".format(abs(len(ordered_groups_of_stars) - len(set(ordered_groups_of_stars)))))
+    bright_ordered_groups_of_stars = [OrderedGroupOfStars([star]) for star in bright_stars_list]
+    previous_i = 0
+    number_of_bright_ordered_groups_of_stars = len(bright_ordered_groups_of_stars)
+    initial_number_of_bright_ordered_groups_of_stars = number_of_bright_ordered_groups_of_stars
+    with progressbar.ProgressBar(100.0, redirect_stdout=True) as bar:
+        while(number_of_bright_ordered_groups_of_stars > 1):
+            bright_ordered_groups_of_stars[previous_i].findAndCombineWithClosestOtherStarGroup(bright_ordered_groups_of_stars, previous_i)
+            number_of_bright_ordered_groups_of_stars = len(bright_ordered_groups_of_stars)
+            bar.update((1.0 - number_of_bright_ordered_groups_of_stars / initial_number_of_bright_ordered_groups_of_stars) * 100)
+            next_i = (previous_i + 1) % number_of_bright_ordered_groups_of_stars
+            if previous_i > next_i:
+                #Resort our groups by the brightest edge star every time we scan through our list
+                bright_ordered_groups_of_stars.sort(key=lambda x: x.ordererdGroupOfStars[x.brightest_star_on_edge].magnitude, reverse=True)
+            previous_i = next_i
+    bright_ordered_groups_of_stars = bright_ordered_groups_of_stars[0].ordererdGroupOfStars
 
+    #Provide each star with it's position in the ordered group of stars
+    for i, star in enumerate(bright_ordered_groups_of_stars):
+        star.position_in_bright_star_ordered_array = i
+
+    #TODO: These are outdated and were mainly used for debugging, don't mind if they don't work anymore
+    #They can probably be rapidly upgraded if the need comes up.
     #Plot our star connections to see how well we are connected to our nearest neighbors
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
@@ -238,23 +260,16 @@ def initialization():
     # ax.plot(x_coords, y_coords, z_coords, color="red")
     # plt.show()
 
-    #Provide each star with it's position in the ordered group of stars
-    for i, star in enumerate(ordered_groups_of_stars):
-        star.position_in_orderered_array = i
-
     #Sort our list of bright and dim stars according to their positions in the above list
-    bright_stars_list.sort(key=lambda x: x.position_in_orderered_array, reverse=True)
-    dim_stars_list.sort(key=lambda x: x.position_in_orderered_array, reverse=True)
-
-    for i, star in enumerate(bright_stars_list):
-        star.position_in_bright_star_ordered_array = i
-    for i, star in enumerate(dim_stars_list):
-        star.position_in_dim_star_ordererd_array = i
+    dim_stars_list.sort(key=lambda x: x.position_in_dim_star_ordererd_array, reverse=True)
+    bright_stars_list.sort(key=lambda x: x.position_in_bright_star_ordered_array, reverse=True)
 
     print("Number of bright stars after combination {}".format(len(bright_stars_list)))
     if len(bright_stars_list) != len(set(bright_stars_list)):
         print("There are {} duplicates in the bright ordered group of stars".format(abs(len(bright_stars_list) - len(set(bright_stars_list)))))
 
+    #TODO: These are outdated and were mainly used for debugging, don't mind if they don't work anymore
+    #They can probably be rapidly upgraded if the need comes up.
     #Plot all bright stars too see how they are connected
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
@@ -270,6 +285,8 @@ def initialization():
     if len(dim_stars_list) != len(set(dim_stars_list)):
         print("There are {} duplicates in the dim ordered group of stars".format(abs(len(dim_stars_list) - len(set(dim_stars_list)))))
 
+    #TODO: These are outdated and were mainly used for debugging, don't mind if they don't work anymore
+    #They can probably be rapidly upgraded if the need comes up.
     #Plot all dim stars to see how they are connected
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
@@ -385,6 +402,8 @@ def initialization():
 
                         #Now determine the location of the closest bright star
                         closest_bright_star_distance = float('inf')
+                        previous_closest_bright_star_x = 0
+                        previous_closest_bright_star_y = 0
                         closest_bright_star_x = 0
                         closest_bright_star_y = 0
                         for star in bright_stars_list:
@@ -399,6 +418,8 @@ def initialization():
                             distance_to_star = 2.0 * phi
                             if(distance_to_star < closest_bright_star_distance):
                                 closest_bright_star_distance = distance_to_star
+                                previous_closest_bright_star_x = closest_bright_star_x
+                                previous_closest_bright_star_y = closest_bright_star_y
                                 closest_bright_star_x = star.bright_star_array_x
                                 closest_bright_star_y = star.bright_star_array_y
 
@@ -419,7 +440,7 @@ def initialization():
                         # 171-168 #### 3
                         index_r = int(bin(((closest_dim_star_x << 1) & 0b11111110) | (closest_dim_star_y & 0b1)), 2)
                         index_g = int(bin((((closest_dim_star_y >> 1) << 3) & 0b11111000) | (closest_bright_star_x & 0b111)), 2)
-                        index_b = int(bin((((closest_bright_star_x >> 3) << 5) & 0b11100000) | (closest_bright_star_y & 0b11111)), 2)
+                        index_b = int(bin((((closest_bright_star_x >> 3) << 6) & 0b11000000) | ((closest_bright_star_y << 2) & 0b1111100)), 2)
                         index_a = 255
 
                         cubemap.sides[i][y][x][0] = index_r

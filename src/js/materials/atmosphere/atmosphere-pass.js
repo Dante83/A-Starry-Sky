@@ -234,8 +234,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '//Red',
         'float scaledBits = starHashData.r * 255.0;',
         'float leftBits = floor(scaledBits / 2.0);',
-        'float rightBits = scaledBits - leftBits * 2.0;',
         'float dimStarXCoordinate = leftBits / 128.0;',
+        'float rightBits = scaledBits - leftBits * 2.0;',
 
         '//Green',
         'scaledBits = starHashData.g * 255.0;',
@@ -245,22 +245,24 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Blue',
         'scaledBits = starHashData.b * 255.0;',
-        'leftBits = floor(scaledBits / 32.0);',
-        'float brightStarXCoordinate = (rightBits + leftBits * 8.0) / 64.0;',
-        'rightBits = scaledBits - leftBits * 32.0;',
-        'float brightStarYCoordinate = rightBits / 32.0;',
+        'leftBits = floor(scaledBits / 64.0);',
+        'float brightStarXCoordinate = (rightBits + leftBits * 8.0) / 32.0;',
+        'rightBits = scaledBits - leftBits * 64.0;',
+        'float brightStarYCoordinate = (rightBits  / 64.0); //4.0 * 32.0',
 
         'vec4 starData = texture2D(dimStarData, vec2(dimStarXCoordinate, dimStarYCoordinate));',
         'vec3 galacticLighting = drawStarLight(starData, galacticCoordinates);',
         'starData = texture2D(brightStarData, vec2(brightStarXCoordinate, brightStarYCoordinate));',
         'galacticLighting += drawStarLight(starData, galacticCoordinates);',
-        'float leftBrightStarXCoordinate = brightStarXCoordinate - (1.0 / 64.0);',
-        'float leftBrightStarYCoordinate = brightStarYCoordinate - (floor(leftBrightStarXCoordinate)/32.0);',
+
+        'float leftBrightStarXCoordinate = brightStarXCoordinate - (1.0 / 32.0);',
+        'float leftBrightStarYCoordinate = brightStarYCoordinate + (floor(leftBrightStarXCoordinate)/32.0);',
         'leftBrightStarXCoordinate = leftBrightStarXCoordinate < 0.0 ? 1.0 : leftBrightStarXCoordinate;',
         'starData = texture2D(brightStarData, vec2(leftBrightStarXCoordinate, leftBrightStarYCoordinate));',
         'galacticLighting += drawStarLight(starData, galacticCoordinates);',
-        'float rightBrightStarXCoordinate = brightStarXCoordinate + (1.0 / 64.0);',
-        'float rightBrightStarYCoordinate = brightStarYCoordinate + (floor(rightBrightStarXCoordinate)/32.0);',
+
+        'float rightBrightStarXCoordinate = brightStarXCoordinate + (1.0 / 32.0);',
+        'float rightBrightStarYCoordinate = brightStarYCoordinate - (floor(rightBrightStarXCoordinate)/32.0);',
         'rightBrightStarXCoordinate = rightBrightStarXCoordinate > 1.0 ? 0.0 : rightBrightStarXCoordinate;',
         'starData = texture2D(brightStarData, vec2(rightBrightStarXCoordinate, rightBrightStarYCoordinate));',
         'galacticLighting += drawStarLight(starData, galacticCoordinates);',
@@ -296,7 +298,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'combinedPass = ACESFilmicToneMapping(combinedPass);',
 
         '//Triangular Blue Noise Dithering Pass',
-
       '#endif',
 
       'gl_FragColor = vec4(combinedPass, 1.0);',

@@ -38,7 +38,7 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
     console.error(`Star map Renderer: ${error1}`);
   }
 
-  this.brightStarDataRenderer = new THREE.StarrySkyComputationRenderer(64, 32, renderer);
+  this.brightStarDataRenderer = new THREE.StarrySkyComputationRenderer(32, 32, renderer);
   this.brightStarMapTexture = this.brightStarDataRenderer.createTexture();
   this.brightStarMapVar = this.brightStarDataRenderer.addVariable('brightStarMapTexture',
     materials.starDataMap.fragmentShader,

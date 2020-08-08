@@ -11,11 +11,12 @@ class OrderedGroupOfStars:
 
     def calculateStarGroupCenter(self):
         #Group center is only a running average based on the last eight brightest stars
+        centering_quantity = 1
         number_of_stars_in_group = len(self.ordererdGroupOfStars)
-        if(number_of_stars_in_group > 8):
+        if(number_of_stars_in_group > centering_quantity):
             #Left side
             sum = np.zeros(3)
-            stars_for_centering = self.ordererdGroupOfStars[0:min(number_of_stars_in_group, 8)]
+            stars_for_centering = self.ordererdGroupOfStars[0:min(number_of_stars_in_group, centering_quantity)]
             for star in stars_for_centering:
                 sum = sum + star.galactic_coordinates
             #Normalize
@@ -23,15 +24,15 @@ class OrderedGroupOfStars:
 
             #Right side
             sum = np.zeros(3)
-            stars_for_centering = self.ordererdGroupOfStars[(number_of_stars_in_group - min(number_of_stars_in_group, 8) - 1) : number_of_stars_in_group]
+            stars_for_centering = self.ordererdGroupOfStars[(number_of_stars_in_group - min(number_of_stars_in_group, centering_quantity) - 1) : number_of_stars_in_group]
             for star in stars_for_centering:
                 sum = sum + star.galactic_coordinates
             #Normalize
             self.center_2 = sum / sqrt(np.dot(sum, sum))
-        elif(number_of_stars_in_group <= 8 and number_of_stars_in_group != 1):
+        elif(number_of_stars_in_group <= centering_quantity and number_of_stars_in_group != 1):
             #Left side and right side
             sum = np.zeros(3)
-            stars_for_centering = self.ordererdGroupOfStars[0:min(number_of_stars_in_group, 8)]
+            stars_for_centering = self.ordererdGroupOfStars[0:min(number_of_stars_in_group, centering_quantity)]
             for star in stars_for_centering:
                 sum = sum + star.galactic_coordinates
             #Normalize
