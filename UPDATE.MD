@@ -1,15 +1,17 @@
 **Version 1.0.0**
 * **!Important:** In version 1.0.0 and above, you must use a new XML based syntax to control the state of your sky. Variables have also changed to reflect updates to brand new engine architecture.
 * Swapped out property based syntax with XML based value syntax with custom HTML components for a more organized developer experience.
-* Completely updated code to a new architecture to meet the needs of new features.
+* Completely updated code to a new architecture for better organization, improved rendering pipeline and to support new features like web assembly and compute shader programs.
 * Moved from the analytical model, [A-Sun-Sky Project](https://github.com/ngokevin/kframe/tree/master/components/sun-sky) to a Look Up Table (LUT) approach by Oskar Elek, [Oskar Elek's Sky Model](http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf) *Rendering Parametrizable Planetary Atmospheres with Multiple Scattering in Real-Time* for improved visualizations and performance.
 * Converted all astronomical calculations to web assembly on a separate thread through web workers and moved primary calculations on the main thread to web assembly for reduce CPU load.
 * Switched to procedurally generated sun disk with solar limb darkening, using the parameterization from [Joseph Bayley's Solar Limb Darkening](https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf)
 * Implemented  multi-pass bloom effect for the sun and moon.
 * Moved normal mapping from fragment shader to vertex shader with improved diffuse and height maps from the [NASA CGI Moon Kit](https://svs.gsfc.nasa.gov/4720), with direct baking of the lunar normal map in Blender. Switched from a regular Lambertian shader to an [Oren Nayar Material](https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4) driven by roughness data from [LOLA](https://sos.noaa.gov/datasets/moon-surface-roughness/).
 * Added parallactic rotations for the moon.
-* Implemented solar area lighting via [Christopher Oat and Pedro Sanders'](https://www.cse.ust.hk/~psander/docs/aperture.pdf) *Ambient Aperature Lighting* model for improved smooth shadows on lunar surface.
-* Switched from PNG to WebP format for images files for reduced asset download times.
+* Implemented solar area lighting via [Christopher Oat and Pedro Sanders'](https://www.cse.ust.hk/~psander/docs/aperture.pdf) *Ambient Aperture Lighting* model for improved smooth shadows on lunar surface.
+* Switched from PNG to WebP format where such files reduce file download times.
+* Used nearest neighbor grouping to organize stars into two LUTs with x, y, z coordinates, driven by a bit-packed stellar lookup cubemap dramatically speeding up our stellar lighting calculations, while increasing the number of visible stars.
+* Switched stellar color model from single highest intensity model to a full spectrum model driven by the python [Colour-Science Library](https://www.colour-science.org/).
 
 **Version 0.3.0**
 * **!Important:** In version 0.3.0 and above, you should no longer include the  ```material="shader: sky;"``` attribute as all of our shaders have been internalized.

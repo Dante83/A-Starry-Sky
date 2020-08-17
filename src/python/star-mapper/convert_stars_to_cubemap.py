@@ -29,11 +29,13 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 #10 Split our star data into red, green and blue channel textures to be recombined into 32 bits, and simply save
 # the six sides of our cubemap RGB texture.
 NUMBER_OF_DIM_STARS = 8192 #4096 stars
-NUMBER_OF_BRIGHT_STARS = 1024
-NUMBER_OF_STARS = NUMBER_OF_DIM_STARS + NUMBER_OF_BRIGHT_STARS
-DIM_TO_BRIGHT_STAR_SCALAR = NUMBER_OF_BRIGHT_STARS / NUMBER_OF_DIM_STARS
-BRIGHT_STAR_MAP_WIDTH = 32
-BRIGHT_STAR_MAP_HEIGHT = 32
+NUMBER_OF_MED_STARS = 1024
+NUMBER_OF_BRIGHT_STARS = 64
+NUMBER_OF_STARS = NUMBER_OF_DIM_STARS + NUMBER_OF_MED_STARS + NUMBER_OF_BRIGHT_STARS
+BRIGHT_STAR_MAP_WIDTH = 8
+BRIGHT_STAR_MAP_HEIGHT = 8
+MED_STAR_MAP_WIDTH = 32
+MED_STAR_MAP_HEIGHT = 32
 DIM_STAR_MAP_WIDTH = 128
 DIM_STAR_MAP_HEIGHT = 64
 CUBEMAP_FACE_SIZE = 512
@@ -200,9 +202,11 @@ def initialization():
     print("Creating sub lists of stars")
     full_stars_list = potential_stars[:NUMBER_OF_STARS]
     bright_stars_list = full_stars_list[:NUMBER_OF_BRIGHT_STARS]
-    dim_stars_list = full_stars_list[NUMBER_OF_BRIGHT_STARS:(NUMBER_OF_BRIGHT_STARS + NUMBER_OF_DIM_STARS)]
+    med_stars_list = full_stars_list[NUMBER_OF_BRIGHT_STARS:(NUMBER_OF_MED_STARS + NUMBER_OF_BRIGHT_STARS)]
+    dim_stars_list = full_stars_list[(NUMBER_OF_MED_STARS + NUMBER_OF_BRIGHT_STARS):(NUMBER_OF_MED_STARS + NUMBER_OF_DIM_STARS + NUMBER_OF_BRIGHT_STARS)]
 
     print("Number of dim stars: {}".format(len(dim_stars_list)))
+    print("Number of medium stars: {}".format(len(med_stars_list)))
     print("Number of bright stars: {}".format(len(bright_stars_list)))
 
     #Combine all of our star groups until only one star group remains
@@ -226,6 +230,26 @@ def initialization():
     #Provide each star with it's position in the ordered group of stars
     for i, star in enumerate(dim_ordered_groups_of_stars):
         star.position_in_dim_star_ordererd_array = i
+
+    med_ordered_groups_of_stars = [OrderedGroupOfStars([star]) for star in med_stars_list]
+    previous_i = 0
+    number_of_med_ordered_groups_of_stars = len(med_ordered_groups_of_stars)
+    initial_number_of_med_ordered_groups_of_stars = number_of_med_ordered_groups_of_stars
+    with progressbar.ProgressBar(100.0, redirect_stdout=True) as bar:
+        while(number_of_med_ordered_groups_of_stars > 1):
+            med_ordered_groups_of_stars[previous_i].findAndCombineWithClosestOtherStarGroup(med_ordered_groups_of_stars, previous_i)
+            number_of_med_ordered_groups_of_stars = len(med_ordered_groups_of_stars)
+            bar.update((1.0 - number_of_med_ordered_groups_of_stars / initial_number_of_med_ordered_groups_of_stars) * 100)
+            next_i = (previous_i + 1) % number_of_med_ordered_groups_of_stars
+            if previous_i > next_i:
+                #Resort our groups by the medest edge star every time we scan through our list
+                med_ordered_groups_of_stars.sort(key=lambda x: x.ordererdGroupOfStars[x.brightest_star_on_edge].magnitude, reverse=True)
+            previous_i = next_i
+    med_ordered_groups_of_stars = med_ordered_groups_of_stars[0].ordererdGroupOfStars
+
+    #Provide each star with it's position in the ordered group of stars
+    for i, star in enumerate(med_ordered_groups_of_stars):
+        star.position_in_med_star_ordererd_array = i
 
     bright_ordered_groups_of_stars = [OrderedGroupOfStars([star]) for star in bright_stars_list]
     previous_i = 0
@@ -262,11 +286,16 @@ def initialization():
 
     #Sort our list of bright and dim stars according to their positions in the above list
     dim_stars_list.sort(key=lambda x: x.position_in_dim_star_ordererd_array, reverse=True)
+    med_stars_list.sort(key=lambda x: x.position_in_med_star_ordererd_array, reverse=True)
     bright_stars_list.sort(key=lambda x: x.position_in_bright_star_ordered_array, reverse=True)
 
     print("Number of bright stars after combination {}".format(len(bright_stars_list)))
     if len(bright_stars_list) != len(set(bright_stars_list)):
         print("There are {} duplicates in the bright ordered group of stars".format(abs(len(bright_stars_list) - len(set(bright_stars_list)))))
+
+    print("Number of bright stars after combination {}".format(len(med_stars_list)))
+    if len(med_stars_list) != len(set(med_stars_list)):
+        print("There are {} duplicates in the med ordered group of stars".format(abs(len(med_stars_list) - len(set(med_stars_list)))))
 
     #TODO: These are outdated and were mainly used for debugging, don't mind if they don't work anymore
     #They can probably be rapidly upgraded if the need comes up.
@@ -326,6 +355,31 @@ def initialization():
         im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
         #python->src->a-sky-forge
         im.save('../../../assets/star_data/dim-star-data-{}-channel.png'.format(channel))
+
+    med_star_channel_red_data_image = [[[0.0 for c in range(4)] for i in range(MED_STAR_MAP_WIDTH)] for j in range(MED_STAR_MAP_HEIGHT)]
+    med_star_channel_green_data_image = [[[0.0 for c in range(4)] for i in range(MED_STAR_MAP_WIDTH)] for j in range(MED_STAR_MAP_HEIGHT)]
+    med_star_channel_blue_data_image = [[[0.0 for c in range(4)] for i in range(MED_STAR_MAP_WIDTH)] for j in range(MED_STAR_MAP_HEIGHT)]
+    med_star_channel_alpha_data_image = [[[0.0 for c in range(4)] for i in range(MED_STAR_MAP_WIDTH)] for j in range(MED_STAR_MAP_HEIGHT)]
+    cursor = 0;
+    for row in range(MED_STAR_MAP_HEIGHT):
+        for column in range(MED_STAR_MAP_WIDTH):
+            star = med_stars_list[cursor]
+            for i in range(4):
+                med_star_channel_red_data_image[row][column][i] = star.encoded_equitorial_r[i]
+                med_star_channel_green_data_image[row][column][i] = star.encoded_equitorial_g[i]
+                med_star_channel_blue_data_image[row][column][i] = star.encoded_equitorial_b[i]
+                med_star_channel_alpha_data_image[row][column][i] = star.encoded_equitorial_a[i]
+                med_stars_list[cursor].med_star_array_x = column
+                med_stars_list[cursor].med_star_array_y = row
+            cursor += 1
+
+    datum = [med_star_channel_red_data_image, med_star_channel_green_data_image, med_star_channel_blue_data_image, med_star_channel_alpha_data_image]
+    for i, data in enumerate(datum):
+        channel = channels[i]
+        imarray = np.asarray(data)
+        imarray = np.flip(imarray, 0)
+        im = Image.fromarray(imarray.astype('uint8')).convert('RGBA')
+        im.save('../../../assets/star_data/med-star-data-{}-channel.png'.format(channel))
 
     bright_star_channel_red_data_image = [[[0.0 for c in range(4)] for i in range(BRIGHT_STAR_MAP_WIDTH)] for j in range(BRIGHT_STAR_MAP_HEIGHT)]
     bright_star_channel_green_data_image = [[[0.0 for c in range(4)] for i in range(BRIGHT_STAR_MAP_WIDTH)] for j in range(BRIGHT_STAR_MAP_HEIGHT)]
@@ -400,10 +454,29 @@ def initialization():
                                 closest_dim_star_x = star.dim_star_array_x
                                 closest_dim_star_y = star.dim_star_array_y
 
+                        #For each point in the cubemap, determine the closest dim stellar ID, using a 13 bit integer
+                        closest_med_star_distance = float('inf')
+                        closest_med_star_x = 0
+                        closest_med_star_y = 0
+                        for star in med_stars_list:
+                            #We're using normal ditance over haversine distance as we presume
+                            #that, for small star distances, the surface of the sphere is approximately flat
+                            diff = star.galactic_coordinates - galactic_coordinates_of_pixel
+                            v0 = star.galactic_coordinates
+                            v1 = galactic_coordinates_of_pixel
+                            delta_v = v0 - v1
+                            mag_v = sqrt(np.dot(delta_v, delta_v))
+                            phi = abs(asin(mag_v / 2))
+                            phi = min(phi, 2.0 * np.pi - phi)
+                            distance_to_star = 2.0 * phi
+                            if(distance_to_star < closest_med_star_distance):
+                                closest_med_star_distance = distance_to_star
+                                closest_med_star_x = star.med_star_array_x
+                                closest_med_star_y = star.med_star_array_y
+
                         #Now determine the location of the closest bright star
                         closest_bright_star_distance = float('inf')
-                        previous_closest_bright_star_x = 0
-                        previous_closest_bright_star_y = 0
+                        closest_bright_star_position = 0
                         closest_bright_star_x = 0
                         closest_bright_star_y = 0
                         for star in bright_stars_list:
@@ -418,10 +491,9 @@ def initialization():
                             distance_to_star = 2.0 * phi
                             if(distance_to_star < closest_bright_star_distance):
                                 closest_bright_star_distance = distance_to_star
-                                previous_closest_bright_star_x = closest_bright_star_x
-                                previous_closest_bright_star_y = closest_bright_star_y
                                 closest_bright_star_x = star.bright_star_array_x
                                 closest_bright_star_y = star.bright_star_array_y
+                                closest_bright_star_position = star.position_in_bright_star_ordered_array
 
                         #Combine and split these binary numbers into two 8-bit channels and put them in a texture
                         #The dim star position is the 7 bits for the x-axis (0-127) and 6 bits for the y-axis (0-63)
@@ -439,9 +511,9 @@ def initialization():
                         # 21*(2**3) #### 168
                         # 171-168 #### 3
                         index_r = int(bin(((closest_dim_star_x << 1) & 0b11111110) | (closest_dim_star_y & 0b1)), 2)
-                        index_g = int(bin((((closest_dim_star_y >> 1) << 3) & 0b11111000) | (closest_bright_star_x & 0b111)), 2)
-                        index_b = int(bin((((closest_bright_star_x >> 3) << 6) & 0b11000000) | ((closest_bright_star_y << 2) & 0b1111100)), 2)
-                        index_a = 255
+                        index_g = int(bin((((closest_dim_star_y >> 1) << 3) & 0b11111000) | (closest_med_star_x & 0b111)), 2)
+                        index_b = int(bin((((closest_med_star_x >> 3) << 6) & 0b11000000) | ((closest_med_star_y << 1) & 0b111110) | (1 & 0b1)), 2)
+                        index_a = int(bin(((closest_bright_star_x << 5) & 0b11100000) | ((closest_bright_star_y << 2) & 0b11100) | (3 & 0b11)), 2)
 
                         cubemap.sides[i][y][x][0] = index_r
                         cubemap.sides[i][y][x][1] = index_g

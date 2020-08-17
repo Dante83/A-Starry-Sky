@@ -57,6 +57,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];
       this.baseMoonVar.material.uniforms[moonTextureProperty].needsUpdate = true;
     }
+
+    this.baseMoonVar.material.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
+    console.log(this.skyDirector.assetManager.images.starImages.starColorMap);
   }
   this.baseMoonVar.minFilter = THREE.LinearFilter;
   this.baseMoonVar.magFilter = THREE.LinearFilter;
@@ -181,6 +184,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       //Update our star data
       self.baseMoonVar.material.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
       self.baseMoonVar.material.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
+      self.baseMoonVar.material.uniforms.medStarData.value = self.skyDirector.stellarLUTLibrary.medStarDataMap;
       self.baseMoonVar.material.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
     }
 

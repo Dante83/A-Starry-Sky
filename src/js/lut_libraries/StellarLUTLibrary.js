@@ -1,6 +1,7 @@
 StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   this.renderer = renderer;
   this.dimStarDataMap;
+  this.medStarDataMap;
   this.brightStarDataMap;
   this.noiseMap;
 
@@ -38,7 +39,28 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
     console.error(`Star map Renderer: ${error1}`);
   }
 
-  this.brightStarDataRenderer = new THREE.StarrySkyComputationRenderer(32, 32, renderer);
+  this.medStarDataRenderer = new THREE.StarrySkyComputationRenderer(32, 32, renderer);
+  this.medStarMapTexture = this.medStarDataRenderer.createTexture();
+  this.medStarMapVar = this.medStarDataRenderer.addVariable('medStarMapTexture',
+    materials.starDataMap.fragmentShader,
+    this.medStarMapTexture
+  );
+  this.medStarDataRenderer.setVariableDependencies(this.medStarMapVar, []);
+  this.medStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
+  this.medStarMapVar.format = THREE.RGBAFormat;
+  this.medStarMapVar.encoding = THREE.LinearEncoding;
+  this.medStarMapVar.minFilter = THREE.NearestFilter;
+  this.medStarMapVar.magFilter = THREE.NearestFilter;
+  this.medStarMapVar.wrapS = THREE.ClampToEdgeWrapping;
+  this.medStarMapVar.wrapT = THREE.ClampToEdgeWrapping;
+
+  //Check for any errors in initialization
+  let error2 = this.medStarDataRenderer.init();
+  if(error2 !== null){
+    console.error(`Star map Renderer: ${error2}`);
+  }
+
+  this.brightStarDataRenderer = new THREE.StarrySkyComputationRenderer(8, 8, renderer);
   this.brightStarMapTexture = this.brightStarDataRenderer.createTexture();
   this.brightStarMapVar = this.brightStarDataRenderer.addVariable('brightStarMapTexture',
     materials.starDataMap.fragmentShader,
@@ -54,9 +76,9 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   this.brightStarMapVar.wrapT = THREE.ClampToEdgeWrapping;
 
   //Check for any errors in initialization
-  let error2 = this.brightStarDataRenderer.init();
-  if(error2 !== null){
-    console.error(`Star map Renderer: ${error2}`);
+  let error3 = this.brightStarDataRenderer.init();
+  if(error3 !== null){
+    console.error(`Star map Renderer: ${error3}`);
   }
 
   let self = this;
@@ -73,6 +95,21 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
     self.dimStarDataRenderer.compute();
     self.dimStarDataMap = self.dimStarDataRenderer.getCurrentRenderTarget(self.dimStarMapVar).texture;
     return self.dimStarDataMap;
+  };
+
+  this.medStarMapPass = function(rImg, gImg, bImg, aImg){
+    self.medStarMapVar.material.uniforms.textureRChannel.value = rImg;
+    self.medStarMapVar.material.uniforms.textureRChannel.needsUpdate = true;
+    self.medStarMapVar.material.uniforms.textureGChannel.value = gImg;
+    self.medStarMapVar.material.uniforms.textureGChannel.needsUpdate = true;
+    self.medStarMapVar.material.uniforms.textureBChannel.value = bImg;
+    self.medStarMapVar.material.uniforms.textureBChannel.needsUpdate = true;
+    self.medStarMapVar.material.uniforms.textureAChannel.value = aImg;
+    self.medStarMapVar.material.uniforms.textureAChannel.needsUpdate = true;
+
+    self.medStarDataRenderer.compute();
+    self.medStarDataMap = self.medStarDataRenderer.getCurrentRenderTarget(self.medStarMapVar).texture;
+    return self.medStarDataMap;
   };
 
   this.brightStarMapPass = function(rImg, gImg, bImg, aImg){

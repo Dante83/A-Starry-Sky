@@ -38,8 +38,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     if(!isSunShader){
       uniforms.starHashCubemap = {type: 't', value: null};
       uniforms.dimStarData = {type: 't', value: null};
+      uniforms.medStarData = {type: 't', value: null};
       uniforms.brightStarData = {type: 't', value: null};
-      uniforms.starColorData = {type: 't', value: null};
+      uniforms.starColorMap = {type: 't', value: null};
     }
 
     return uniforms;

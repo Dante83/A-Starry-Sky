@@ -28,6 +28,10 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
   this.atmosphereMaterial.uniforms.transmittance.needsUpdate = true;
 
+  if(this.skyDirector.assetManager.hasLoadedImages){
+    this.atmosphereMaterial.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
+  }
+
   //Attach the material to our geometry
   this.skyMesh = new THREE.Mesh(this.geometry, this.atmosphereMaterial);
 
@@ -60,6 +64,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     if(self.skyDirector.assetManager){
       self.atmosphereMaterial.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
       self.atmosphereMaterial.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
+      self.atmosphereMaterial.uniforms.medStarData.value = self.skyDirector.stellarLUTLibrary.medStarDataMap;
       self.atmosphereMaterial.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
     }
 
