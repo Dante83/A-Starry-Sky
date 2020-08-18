@@ -20,7 +20,7 @@ extern "C" {
   void initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
   void updateFinalValues(float* astroPositions_f, float* linearValues_f);
   void updateTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
-  void tick(float t);
+  float tick(float t);
 }
 
 void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
@@ -65,7 +65,7 @@ void EMSCRIPTEN_KEEPALIVE updateTimeData(float t_0, float t_f, float initialLSRT
   skyInterpolator->deltaLSRT = fmod((fmod((finalLSRT - initialLSRT), PI_TIMES_TWO) + PI_TIMES_THREE), PI_TIMES_TWO) - PI;
 }
 
-void EMSCRIPTEN_KEEPALIVE tick(float t){
+float EMSCRIPTEN_KEEPALIVE tick(float t){
   float tRelativeToT_0 = t - skyInterpolator->t_0;
   float tFractional = tRelativeToT_0 * skyInterpolator->oneOverDeltaT;
 
@@ -73,13 +73,15 @@ void EMSCRIPTEN_KEEPALIVE tick(float t){
   skyInterpolator->updateLinearInterpolations(tFractional);
 
   //Update our rotation of our astronomical objects in the sky
-  skyInterpolator->rotateAstroObjects(tFractional);
+  float interpolatedLSRT = skyInterpolator->rotateAstroObjects(tFractional);
 
   //Get the horizon fade of our sun and moon
   skyInterpolator->getHorizonFades();
+
+  return interpolatedLSRT;
 }
 
-void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
+float SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
   //Interpolate the x, y and z right ascension and hour angle for each of our astronomical objects
   float interpolatedAstroPositions[NUMBER_OF_ASTRONOMICAL_COORDINATES];
   #pragma unroll
@@ -116,6 +118,8 @@ void SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
 
   //Get our sun position in equitorial coordinates for the moon
   getLunarParallacticAngle(interpolatedAstroPositions, interpolatedLSRT);
+
+  return interpolatedLSRT;
 }
 
 void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){

@@ -52,6 +52,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
     self.atmosphereMaterial.uniforms.moonPosition.needsUpdate = true;
     self.atmosphereMaterial.uniforms.uTime.value = t;
+    self.atmosphereMaterial.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
   }
 
   //Upon completion, this method self destructs
@@ -59,6 +60,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     //Connect up our reference values
     self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.atmosphereMaterial.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
+    self.atmosphereMaterial.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
 
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager){

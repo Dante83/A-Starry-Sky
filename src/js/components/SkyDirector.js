@@ -157,7 +157,7 @@ StarrySky.SkyDirector = function(parentComponent){
       self.interpolationT += timeDelta * self.speed * 0.001;
 
       //Update our sky state
-      Module._tick(self.interpolationT);
+      self.skyState.LSRT = Module._tick(self.interpolationT);
 
       //Update our astronomical positions
       self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));

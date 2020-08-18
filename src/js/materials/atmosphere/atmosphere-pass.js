@@ -5,8 +5,14 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false){
     let uniforms = {
       uTime: {type: 'f', value: 0.0},
+      localSiderealTime: {type: 'f', value: 0.0},
+      latitude: {type: 'f', value: 0.0},
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
       moonPosition: {type: 'vec3', value: new THREE.Vector3()},
+      venusPosition: {type: 'vec3', value: new THREE.Vector3()},
+      marsPosition: {type: 'vec3', value: new THREE.Vector3()},
+      jupiterPosition: {type: 'vec3', value: new THREE.Vector3()},
+      saturnPosition: {type: 'vec3', value: new THREE.Vector3()},
       mieInscatteringSum: {type: 't', value: null},
       rayleighInscatteringSum: {type: 't', value: null},
       transmittance: {type: 't', value: null},
@@ -47,10 +53,42 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   },
   vertexShader: [
     'varying vec3 vWorldPosition;',
+    'varying vec3 galacticCoordinates;',
+    'uniform float latitude;',
+    'uniform float localSiderealTime;',
+    'const float northGalaticPoleRightAscension = 3.36601290657539744989;',
+    'const float northGalaticPoleDec = 0.473507826066061614219;',
+    'const float sinOfNGP = 0.456010959101623894601;',
+    'const float cosOfNGP = 0.8899741598379231031239;',
+    'const float piTimes2 = 6.283185307179586476925286;',
+    'const float piOver2 = 1.5707963267948966192313;',
+    'const float threePiOverTwo = 4.712388980384689857693;',
+    'const float pi = 3.141592653589793238462;',
 
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
+      'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
+
+      '//Convert coordinate position to RA and DEC',
+      'float altitude = piOver2 - acos(vWorldPosition.y);',
+      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
+      'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
+      'float hourAngle = atan(sin(azimuth), (cos(azimuth) * sin(latitude) + tan(altitude) * cos(latitude)));',
+
+      '//fmodulo return (a - (b * floor(a / b)));',
+      'float a = localSiderealTime - hourAngle;',
+      'float rightAscension = a - (piTimes2 * floor(a / piTimes2));',
+
+      '//Convert coordinate position to Galactic Coordinates',
+      'float sinOfDec = sin(declination);',
+      'float cosOfDec = cos(declination);',
+      'float cosOfRaMinusGalacticNGPRa = cos(rightAscension - northGalaticPoleRightAscension);',
+      'float galaticLatitude = threePiOverTwo - asin(sinOfNGP * sinOfDec + cosOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa);',
+      'float galaticLongitude = cosOfDec * sin(rightAscension - northGalaticPoleRightAscension);',
+      'galaticLongitude = atan(galaticLongitude, cosOfNGP * sinOfDec - sinOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa) + pi;',
+      'galacticCoordinates.x = sin(galaticLatitude) * cos(galaticLongitude);',
+      'galacticCoordinates.y = cos(galaticLatitude);',
+      'galacticCoordinates.z = sin(galaticLatitude) * sin(galaticLongitude);',
 
       'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
     '}',
@@ -60,10 +98,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'precision mediump float;',
 
     'varying vec3 vWorldPosition;',
+    'varying vec3 galacticCoordinates;',
 
     'uniform float uTime;',
     'uniform vec3 sunPosition;',
     'uniform vec3 moonPosition;',
+    'uniform vec3 venusPosition;',
+    'uniform vec3 marsPosition;',
+    'uniform vec3 jupiterPosition;',
+    'uniform vec3 saturnPosition;',
     'uniform float sunHorizonFade;',
     'uniform float moonHorizonFade;',
     'uniform sampler2D mieInscatteringSum;',
@@ -71,7 +114,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform sampler2D transmittance;',
 
     '#if(!$isSunPass)',
-      '//varying vec3 galacticCoordinates;',
       'uniform samplerCube starHashCubemap;',
       'uniform sampler2D dimStarData;',
       'uniform sampler2D medStarData;',
@@ -159,10 +201,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'float randSeed = uTime * twinkleDust + (starposition.x + starposition.y + starposition.z) * 10000.0;',
 
         '//lacunarity, gain, initialAmplitude, initialFrequency',
-        'return 1.0 + brownianNoise(0.5, 0.2, (1.0 - atmosphericDistance) * starBrightness, 6.0, randSeed);',
+        'return 1.0 + (1.0 - atmosphericDistance) * brownianNoise(0.5, 0.2, starBrightness, 6.0, randSeed);',
       '}',
 
-      'float colorTwinkleFactor(vec3 starposition, float atmosphericDistance){',
+      'float colorTwinkleFactor(vec3 starposition){',
         'float randSeed = uTime * 0.002 + (starposition.x + starposition.y + starposition.z) * 10000.0;',
 
         '//lacunarity, gain, initialAmplitude, initialFrequency',
@@ -200,27 +242,26 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'return texture2D(starColorMap, uv).rgb;',
       '}',
 
-      'vec3 drawStarLight(vec4 starData, vec3 sphericalPosition){',
+      'vec3 drawStarLight(vec4 starData, vec3 galacticSphericalPosition, vec3 skyPosition){',
         '//I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.',
         'float temperature = sqrt(dot(starData.xyz, starData.xyz));',
         'vec3 normalizedStarPosition = starData.xyz / temperature;',
 
         '//Get the distance the light ray travels',
-        'vec2 skyIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), normalize(vec2(length(vec2(normalizedStarPosition.xz)), normalizedStarPosition.y)));',
+        'vec2 skyIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), normalize(vec2(length(vec2(skyPosition.xz)), skyPosition.y)));',
         'vec2 normalizationIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), vec2(1.0, 0.0));',
         'float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);',
 
         "//Use the distance to the star to determine it's perceived twinkling",
         'float starBrightness = pow(2.512, (3.5 - starData.a)) ;',
-        'float approximateDistanceOnSphereStar = distance(sphericalPosition, normalizedStarPosition) * 1400.0;',
+        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1400.0;',
 
         '//Modify the intensity and color of this star using approximation of stellar scintillation',
-        'float distanceToSkySquared = distanceToEdgeOfSky * distanceToEdgeOfSky;',
-        'vec3 starColor = getStarColor(temperature, distanceToSkySquared, colorTwinkleFactor(normalizedStarPosition, distanceToSkySquared));',
+        'vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));',
 
         '//Pass this brightness into the fast Airy function to make the star glow',
         'starBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0) * twinkleFactor(normalizedStarPosition, distanceToEdgeOfSky, sqrt(starBrightness) + 3.0);',
-        'return sqrt(vec3(starBrightness) * starColor);',
+        'return sqrt(vec3(starBrightness)) * starColor;',
       '}',
     '#endif',
 
@@ -263,8 +304,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//This stuff never shows up near our sun, so we can exclude it',
       '#if(!$isSunPass)',
         '//Get the stellar starting id data from the galactic cube map',
-        'vec3 galacticCoordinates = sphericalPosition;',
-        'vec4 starHashData = textureCube(starHashCubemap, galacticCoordinates);',
+        'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
+        'vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);',
 
         '//Red',
         'float scaledBits = starHashData.r * 255.0;',
@@ -280,7 +321,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Add the dim stars lighting',
         'vec4 starData = texture2D(dimStarData, vec2(starXCoordinate, starYCoordinate));',
-        'vec3 galacticLighting = max(drawStarLight(starData, galacticCoordinates), 0.0);',
+        'vec3 galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition), 0.0);',
 
         '//Blue',
         'scaledBits = starHashData.b * 255.0;',
@@ -292,7 +333,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Add the medium stars lighting',
         'starData = texture2D(medStarData, vec2(starXCoordinate, starYCoordinate));',
-        'galacticLighting += max(drawStarLight(starData, galacticCoordinates), 0.0);',
+        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition), 0.0);',
 
         '//Alpha',
         'scaledBits = starHashData.a * 255.0;',
@@ -304,12 +345,12 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Add the bright stars lighting',
         'starData = texture2D(brightStarData, vec2(starXCoordinate, starYCoordinate));',
-        'galacticLighting += max(drawStarLight(starData, galacticCoordinates), 0.0);',
+        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition), 0.0);',
 
         '//Check our distance from each of the four primary planets',
 
 
-        '//Get the galactic lighting from',
+        '//Get the galactic lighting from the Milky Way',
 
 
         '//Apply the transmittance function to all of our light sources',

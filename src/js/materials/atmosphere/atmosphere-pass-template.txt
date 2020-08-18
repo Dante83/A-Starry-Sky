@@ -5,8 +5,14 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false){
     let uniforms = {
       uTime: {type: 'f', value: 0.0},
+      localSiderealTime: {type: 'f', value: 0.0},
+      latitude: {type: 'f', value: 0.0},
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
       moonPosition: {type: 'vec3', value: new THREE.Vector3()},
+      venusPosition: {type: 'vec3', value: new THREE.Vector3()},
+      marsPosition: {type: 'vec3', value: new THREE.Vector3()},
+      jupiterPosition: {type: 'vec3', value: new THREE.Vector3()},
+      saturnPosition: {type: 'vec3', value: new THREE.Vector3()},
       mieInscatteringSum: {type: 't', value: null},
       rayleighInscatteringSum: {type: 't', value: null},
       transmittance: {type: 't', value: null},

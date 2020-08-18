@@ -142,6 +142,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
       self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
     }
+
+    self.baseSunVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
   }
 
   //Upon completion, this method self destructs
@@ -149,6 +151,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //Connect up our reference values
     self.baseSunVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.baseSunVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
+    self.baseSunVar.material.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
     self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade >= 0.95;
     self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
 
