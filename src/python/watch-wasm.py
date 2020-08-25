@@ -19,7 +19,7 @@ cpp_files = [['SkyState.cpp',\
  ['SkyInterpolator.cpp']]
 module_file = ['state-engine.js', 'interpolation-engine.js']
 exported_functions = [['_main', '_setupSky', '_updateSky'],\
-['_main', '_initialize', '_updateFinalValues', '_updateTimeData', '_tick']]
+['_main', '_initialize', '_updateFinalValues', '_updateTimeData', '_tick', '_setSunAndMoonTimeTo']]
 cpp_update_date = {}
 
 def recursivelyWalkDirectories(absolute_cpp_directory, file_check_callback):

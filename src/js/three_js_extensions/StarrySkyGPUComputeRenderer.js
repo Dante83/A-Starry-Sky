@@ -325,11 +325,15 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 
 	};
 
-	this.createTexture = function () {
-
-		var data = new Float32Array( sizeX * sizeY * 4 );
+	this.createTexture = function (inData = false) {
+    var data
+    if(!inData){
+		  data = new Float32Array( sizeX * sizeY * 4 );
+    }
+    else{
+      data = inData;
+    }
 		return new THREE.DataTexture( data, sizeX, sizeY, THREE.RGBAFormat, THREE.FloatType );
-
 	};
 
 	this.renderTexture = function ( input, output ) {

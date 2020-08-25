@@ -1,0 +1,11 @@
+//This helps
+//--------------------------v
+//https://threejs.org/docs/#api/en/core/Uniform
+StarrySky.Materials.Autoexposure.testPass = {
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+}

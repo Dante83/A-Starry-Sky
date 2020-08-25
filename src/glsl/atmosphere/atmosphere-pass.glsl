@@ -54,6 +54,8 @@ const float scatteringMoonIntensity = 1.44; //Moon reflects 7.2% of all light
   //Tangent space lighting
   varying vec3 tangentSpaceSunLightDirection;
   varying vec3 tangentSpaceViewDirection;
+#elif($isMeteringPass)
+  varying vec2 vUv;
 #endif
 
 $atmosphericFunctions
@@ -183,7 +185,20 @@ vec3 linearAtmosphericPass(vec3 sourcePosition, float sourceIntensity, vec3 sphe
 }
 
 void main(){
-  vec3 sphericalPosition = normalize(vWorldPosition);
+
+  #if($isMeteringPass)
+    float rho = length(vUv.xy);
+    float height = sqrt(1.0 - rho * rho);
+    float phi = piOver2 - atan(height, rho);
+    float theta = atan(vUv.y, vUv.x);
+    vec3 sphericalPosition;
+    sphericalPosition.x = sin(phi) * cos(theta);
+    sphericalPosition.z = sin(phi) * sin(theta);
+    sphericalPosition.y = cos(phi);
+    sphericalPosition = normalize(sphericalPosition);
+  #else
+    vec3 sphericalPosition = normalize(vWorldPosition);
+  #endif
 
   //Get our transmittance for this texel
   float cosOfViewAngle = sphericalPosition.y;
@@ -205,7 +220,7 @@ void main(){
   #endif
 
   //This stuff never shows up near our sun, so we can exclude it
-  #if(!$isSunPass)
+  #if(!$isSunPass && !$isMeteringPass)
     //Get the stellar starting id data from the galactic cube map
     vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);
     vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);
@@ -273,6 +288,10 @@ void main(){
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;
     $draw_moon_pass
     combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);
+  #elif($isMeteringPass)
+    //Just a regular atmospheric pass, without tone mapping
+    float circularMask = 1.0 - step(1.0, rho);
+    vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass) * circularMask;
   #else
   //Regular atmospheric pass
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting;
@@ -283,5 +302,9 @@ void main(){
     //Triangular Blue Noise Dithering Pass
   #endif
 
-  gl_FragColor = vec4(combinedPass, 1.0);
+  #if($isMeteringPass)
+    gl_FragColor = vec4(combinedPass, circularMask);
+  #else
+    gl_FragColor = vec4(combinedPass, 1.0);
+  #endif
 }

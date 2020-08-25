@@ -7,7 +7,8 @@ StarrySky = {
     Stars: {},
     Sun: {},
     Moon: {},
-    Postprocessing: {}
+    Postprocessing: {},
+    Autoexposure: {}
   },
   Renderers: {},
   LUTlibraries: {},

@@ -77,3 +77,11 @@ groups:
         fragment: 'star-data-map.glsl'
         template: 'star-data-map-template.txt'
         material: 'star-data-map.js'
+  -
+    base_glsl_dir: '../glsl/autoexposure'
+    base_js_dir: '../js/materials/autoexposure'
+    shaders:
+      -
+        vertex: 'vertex.glsl'
+        template: 'metering-survey-template.txt'
+        material: 'metering-survey.js'

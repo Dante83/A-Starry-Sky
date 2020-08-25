@@ -2001,6 +2001,13 @@ var _updateTimeData = Module["_updateTimeData"] = function() {
 };
 
 /** @type {function(...*):?} */
+var _setSunAndMoonTimeTo = Module["_setSunAndMoonTimeTo"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["setSunAndMoonTimeTo"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
 var _tick = Module["_tick"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');

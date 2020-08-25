@@ -21,4 +21,6 @@ public:
   float rotateAstroObjects(float fractOfFinalPosition);
   void getHorizonFades();
   void getLunarParallacticAngle(float* interpolatedAstroPositions, float interpolatedLSRT);
+  void updateSunAndMoonRADecAndScale(float fractOfFinalPosition);
+  void rotateSunAndMoon(float fractOfFinalPosition);
 };

@@ -7,6 +7,10 @@ StarrySky.SkyDirector = function(parentComponent){
   this.EVENT_INITIALIZATION_RESPONSE = 1;
   this.EVENT_UPDATE_LATEST = 2;
   this.EVENT_RETURN_LATEST = 3;
+  this.EVENT_INITIALIZE_AUTOEXPOSURE = 4;
+  this.EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE = 5;
+  this.EVENT_UPDATE_AUTOEXPOSURE = 6;
+  this.EVENT_RETURN_AUTOEXPOSURE = 7;
   //7 Astronomical RAs and Decs (14), 7(21) brightnesses, Lunar Parallactic Angle(22)
   //Earthshine Intensity(23), Solar and Lunar Scale Multiplier(25) or 25 variables
   //14 of these require rotational transformations
@@ -24,7 +28,8 @@ StarrySky.SkyDirector = function(parentComponent){
   const NUMBER_OF_LINEAR_INTERPOLATIONS = 11;
   const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
   const TOTAL_BYTES_FOR_WORKER_BUFFERS = BYTES_PER_32_BIT_FLOAT * NUMBER_OF_FLOATS;
-  const TWENTY_MINUTES = 20.0 * 60.0;
+  const ONE_MINUTE = 60.0;
+  const TWENTY_MINUTES = 20.0 * ONE_MINUTE;
   let transferrableInitialStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
   this.transferrableFinalStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
   this.finalStateFloat32Array = new Float32Array(this.transferrableFinalStateBuffer);
@@ -41,6 +46,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.speed;
   this.interpolationT = 0.0;
   this.finalT = TWENTY_MINUTES;
+  this.updateExposureT = ONE_MINUTE;
   this.ready = false;
   this.parentComponent = parentComponent;
   this.renderer = parentComponent.el.sceneEl.renderer;
@@ -54,6 +60,12 @@ StarrySky.SkyDirector = function(parentComponent){
   this.atmosphereLUTLibrary;
   this.stellarLUTLibrary;
   this.moonAndSunRendererSize;
+  this.exposureVariables = {
+    sunPosition: new THREE.Vector3(),
+    moonPosition: new THREE.Vector3(),
+    sunHorizonFade: 0.0,
+    moonHorizonFade: 0.0,
+  }
 
   //Set up our web assembly hooks
   let self = this;
@@ -78,6 +90,35 @@ StarrySky.SkyDirector = function(parentComponent){
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
     }
+  }
+
+  this.initializeAutoExposure = function(){
+      //Get the initial position of our sun and moon
+      //and pass them into our metering survey
+      console.log("Requesting exposure state");
+      Module._setSunAndMoonTimeTo(0.0);
+      self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
+      self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
+      self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
+      self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
+      self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
+      console.log("Rendered");
+
+      //Get the final position of our sun and moon
+      //and pass them into our metering survey
+      // Module._setSunAndMoonTimeTo(0.0);
+      // self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
+      // self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
+      // self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
+      // self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
+      // self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
+
+      //Pass this information to our web worker to get our exposure value
+
+  }
+
+  this.updateFinalExposure = function(){
+    //Update our final exposure constant
   }
 
   this.initializeRenderers = function(){
@@ -116,7 +157,12 @@ StarrySky.SkyDirector = function(parentComponent){
       self.renderers.bloomRenderer = new StarrySky.Renderers.BloomRenderer(self, 'shared', 4.0);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
       self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
+      self.renderers.meteringSurveyRenderer = new StarrySky.Renderers.MeteringSurveyRenderer(self);
 
+      //Now set up our auto-exposure system
+      self.initializeAutoExposure();
+
+      //Run the animation as we wait for the exposure, hopefully the default will work well enough
       self.start();
     }
   }
@@ -190,6 +236,9 @@ StarrySky.SkyDirector = function(parentComponent){
       if(self.interpolationT >= self.finalT){
         self.updateFinalSkyState(self.finalLSRT, self.finalStateFloat32Array[14]);
       }
+
+      //Check if we need to update our auto-exposure final state again
+      self.renderers.meteringSurveyRenderer.render(self.skyState.sun.position, self.skyState.moon.position, self.skyState.sun.horizonFade, self.skyState.moon.horizonFade);
     }
   }
 
@@ -270,6 +319,13 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyDirectorWASMIsReady = true;
       self.initializeRenderers();
     }
+    else if(postObject.eventType === this.EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE){
+      //Once we get back the results, send these off to our linear interpolator
+    }
+    else if(postObject.eventType === this.EVENT_RETURN_AUTOEXPOSURE){
+      //Once I get back this result shift our linear interpolator again
+    }
+
     return false;
   });
   this.renderers = {};

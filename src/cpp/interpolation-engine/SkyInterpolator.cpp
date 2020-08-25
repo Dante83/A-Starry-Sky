@@ -21,6 +21,7 @@ extern "C" {
   void updateFinalValues(float* astroPositions_f, float* linearValues_f);
   void updateTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
   float tick(float t);
+  void setSunAndMoonTimeTo(float t);
 }
 
 void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
@@ -63,6 +64,20 @@ void EMSCRIPTEN_KEEPALIVE updateTimeData(float t_0, float t_f, float initialLSRT
   skyInterpolator->oneOverDeltaT = 1.0 / (t_f - t_0);
   skyInterpolator->initialLSRT = initialLSRT;
   skyInterpolator->deltaLSRT = fmod((fmod((finalLSRT - initialLSRT), PI_TIMES_TWO) + PI_TIMES_THREE), PI_TIMES_TWO) - PI;
+}
+
+void EMSCRIPTEN_KEEPALIVE setSunAndMoonTimeTo(float t){
+  float tRelativeToT_0 = t - skyInterpolator->t_0;
+  float tFractional = tRelativeToT_0 * skyInterpolator->oneOverDeltaT;
+
+  //Update our linear interpolations
+  skyInterpolator->updateSunAndMoonRADecAndScale(tFractional);
+
+  //Update our rotation of our astronomical objects in the sky
+  skyInterpolator->rotateSunAndMoon(tFractional);
+
+  //Get the horizon fade of our sun and moon
+  skyInterpolator->getHorizonFades();
 }
 
 float EMSCRIPTEN_KEEPALIVE tick(float t){
@@ -120,6 +135,48 @@ float SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
   getLunarParallacticAngle(interpolatedAstroPositions, interpolatedLSRT);
 
   return interpolatedLSRT;
+}
+
+void SkyInterpolator::rotateSunAndMoon(float fractOfFinalPosition){
+  //Interpolate the x, y and z right ascension and hour angle for the sun and moon
+  float interpolatedAstroPositions[6];
+  #pragma unroll
+  for(int i = 0; i < 4; ++i){
+    interpolatedAstroPositions[i] = astroPositions_0[i] + fractOfFinalPosition * deltaPositions[i];
+  }
+  float interpolatedLSRT = skyInterpolator->initialLSRT + fractOfFinalPosition * skyInterpolator->deltaLSRT;
+
+  //Rotate our objects into the x, y, z coordinates of our azimuth and altitude
+  float sinLocalSiderealTime = sin(interpolatedLSRT);
+  float cosLocalSiderealTime = cos(interpolatedLSRT);
+  #pragma unroll
+  for(int i = 0; i < 2; ++i){
+    //Convert the right ascension and hour angle to an x, y, z coordinate
+    float interpolatedRA = interpolatedAstroPositions[i * 2];
+    float interpolatedDec = interpolatedAstroPositions[i * 2 + 1];
+    float cosOfDec = cos(interpolatedDec);
+    float equitorialX = cosOfDec * cos(interpolatedRA);
+    float equitorialZ = cosOfDec * sin(interpolatedRA);
+    float equitorialY = sin(interpolatedDec);
+
+    //Rotate the object
+    float term0 = cosLocalSiderealTime * equitorialX + sinLocalSiderealTime * equitorialZ;
+    float x_term = sinOfLatitude * term0 - cosOfLatitude * equitorialY;
+    float y_term = cosOfLatitude * term0 + sinOfLatitude * equitorialY;
+    float z_term = sinLocalSiderealTime * equitorialX - cosLocalSiderealTime * equitorialZ;
+
+    //Get the magnitude of the vector
+    float magnitudeOfAstroVector = 1.0 / sqrt(x_term * x_term + y_term * y_term + z_term * z_term);
+    rotatedAstroPositions[3 * i] = x_term * magnitudeOfAstroVector;
+    rotatedAstroPositions[3 * i + 1] = y_term * magnitudeOfAstroVector;
+    rotatedAstroPositions[3 * i + 2] = z_term * magnitudeOfAstroVector;
+  }
+}
+
+void SkyInterpolator::updateSunAndMoonRADecAndScale(float fractOfFinalPosition){
+  //Interpolate our scales
+  linearValues[2] = linearValues_0[2] + fractOfFinalPosition * deltaLinearValues[2];
+  linearValues[4] = linearValues_0[4] + fractOfFinalPosition * deltaLinearValues[4];
 }
 
 void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){

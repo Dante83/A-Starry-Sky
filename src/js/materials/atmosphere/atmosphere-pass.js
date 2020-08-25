@@ -93,7 +93,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
     '}',
   ].join('\n'),
-  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false){
+  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
     let originalGLSL = [
     'precision mediump float;',
 
@@ -151,6 +151,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//Tangent space lighting',
       'varying vec3 tangentSpaceSunLightDirection;',
       'varying vec3 tangentSpaceViewDirection;',
+    '#elif($isMeteringPass)',
+      'varying vec2 vUv;',
     '#endif',
 
     '$atmosphericFunctions',
@@ -280,7 +282,20 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '}',
 
     'void main(){',
-      'vec3 sphericalPosition = normalize(vWorldPosition);',
+
+      '#if($isMeteringPass)',
+        'float rho = length(vUv.xy);',
+        'float height = sqrt(1.0 - rho * rho);',
+        'float phi = piOver2 - atan(height, rho);',
+        'float theta = atan(vUv.y, vUv.x);',
+        'vec3 sphericalPosition;',
+        'sphericalPosition.x = sin(phi) * cos(theta);',
+        'sphericalPosition.z = sin(phi) * sin(theta);',
+        'sphericalPosition.y = cos(phi);',
+        'sphericalPosition = normalize(sphericalPosition);',
+      '#else',
+        'vec3 sphericalPosition = normalize(vWorldPosition);',
+      '#endif',
 
       '//Get our transmittance for this texel',
       'float cosOfViewAngle = sphericalPosition.y;',
@@ -302,7 +317,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#endif',
 
       '//This stuff never shows up near our sun, so we can exclude it',
-      '#if(!$isSunPass)',
+      '#if(!$isSunPass && !$isMeteringPass)',
         '//Get the stellar starting id data from the galactic cube map',
         'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
         'vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);',
@@ -370,6 +385,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
         '$draw_moon_pass',
         'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);',
+      '#elif($isMeteringPass)',
+        '//Just a regular atmospheric pass, without tone mapping',
+        'float circularMask = 1.0 - step(1.0, rho);',
+        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass) * circularMask;',
       '#else',
       '//Regular atmospheric pass',
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting;',
@@ -380,7 +399,11 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '//Triangular Blue Noise Dithering Pass',
       '#endif',
 
-      'gl_FragColor = vec4(combinedPass, 1.0);',
+      '#if($isMeteringPass)',
+        'gl_FragColor = vec4(combinedPass, circularMask);',
+      '#else',
+        'gl_FragColor = vec4(combinedPass, 1.0);',
+      '#endif',
     '}',
     ];
 
@@ -408,18 +431,28 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '0');
         updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, '');
         updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, moonCode);
+        updatedGLSL = updatedGLSL.replace(/\$isMeteringPass/g, '0');
       }
       else if(sunCode !== false){
         updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, '0');
         updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, '');
         updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '1');
         updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, sunCode);
+        updatedGLSL = updatedGLSL.replace(/\$isMeteringPass/g, '0');
+      }
+      else if(meteringCode !== false){
+        updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, '');
+        updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, '');
+        updatedGLSL = updatedGLSL.replace(/\$isMeteringPass/g, '1');
       }
       else{
         updatedGLSL = updatedGLSL.replace(/\$isMoonPass/g, '0');
         updatedGLSL = updatedGLSL.replace(/\$draw_moon_pass/g, '');
         updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '0');
         updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, '');
+        updatedGLSL = updatedGLSL.replace(/\$isMeteringPass/g, '0');
       }
 
       updatedLines.push(updatedGLSL);
