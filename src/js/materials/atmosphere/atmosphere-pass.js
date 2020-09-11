@@ -146,7 +146,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform sampler2D moonAperatureSizeMap;',
       'uniform sampler2D moonAperatureOrientationMap;',
       'varying vec2 vUv;',
-      'varying mat3 TBNMatrix;',
 
       '//Tangent space lighting',
       'varying vec3 tangentSpaceSunLightDirection;',
@@ -210,7 +209,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'float randSeed = uTime * 0.002 + (starposition.x + starposition.y + starposition.z) * 10000.0;',
 
         '//lacunarity, gain, initialAmplitude, initialFrequency',
-        'return 2.0 * noise(randSeed) - 1.0;',
+        'return 0.7 * (2.0 * noise(randSeed) - 1.0);',
       '}',
 
       'float fastAiry(float r){',
@@ -400,7 +399,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#endif',
 
       '#if($isMeteringPass)',
-        'gl_FragColor = vec4(combinedPass, circularMask);',
+        'gl_FragColor = vec4(combinedPass, sphericalPosition.y);',
       '#else',
         'gl_FragColor = vec4(combinedPass, 1.0);',
       '#endif',

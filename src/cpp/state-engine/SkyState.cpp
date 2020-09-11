@@ -3,16 +3,18 @@
 #include "world_state/AstroTime.h"
 #include "world_state/Location.h"
 #include "astro_bodies/SkyManager.h"
+#include "autoexposure/MeteringHistogram.h"
 #include <emscripten/emscripten.h>
 
 //
 //Constructor
 //
-SkyState::SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* skyManagerPnt, float *memoryPtrIn){
+SkyState::SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* skyManagerPnt, MeteringHistogram* meteringHistogramPtr, float *memoryPtrIn){
   astroTime = astroTimePnt;
   location = locationPnt;
   skyManager = skyManagerPnt;
   memoryPtr = memoryPtrIn;
+  meteringHistogram = meteringHistogramPtr;
 }
 
 SkyState* skyState;
@@ -21,6 +23,7 @@ extern "C" {
   int main();
   void setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset, float* memoryPtr);
   void updateSky(int year, int month, int day, int hour, int minute, double second, double utcOffset);
+  float updateHistogramAndHemisphericalLighting(int widthOfTexture, float* skyColorIntensities, float* hemisphericalSkyLight);
 }
 
 void SkyState::updateHeap32Memory(){
@@ -65,7 +68,8 @@ void EMSCRIPTEN_KEEPALIVE setupSky(double latitude, double longitude, int year, 
   AstroTime *astroTime = new AstroTime(year, month, day, hour, minute, second, utcOffset);
   Location *location = new Location(latitude, longitude);
   SkyManager *skyManager = new SkyManager(astroTime, location);
-  skyState = new SkyState(astroTime, location, skyManager, memoryPtr);
+  MeteringHistogram *meteringHistogram = new MeteringHistogram();
+  skyState = new SkyState(astroTime, location, skyManager, meteringHistogram, memoryPtr);
   skyState->updateHeap32Memory();
 }
 
@@ -73,6 +77,15 @@ void EMSCRIPTEN_KEEPALIVE updateSky(int year, int month, int day, int hour, int 
   skyState->astroTime->setAstroTimeFromYMDHMSTZ(year, month, day, hour, minute, second, utcOffset);
   skyState->skyManager->update();
   skyState->updateHeap32Memory();
+}
+
+float EMSCRIPTEN_KEEPALIVE updateHistogramAndHemisphericalLighting(int widthOfTexture, float* skyColorIntensities, float* hemisphericalSkyLight){
+  float logAverageOfLighting = skyState->meteringHistogram->updateHistogramAndSkyHemisphericalLightColor(skyColorIntensities, widthOfTexture);
+  hemisphericalSkyLight[0] = static_cast<float>(skyState->meteringHistogram->skyHemisphericalLightColor[0]);
+  hemisphericalSkyLight[1] = static_cast<float>(skyState->meteringHistogram->skyHemisphericalLightColor[1]);
+  hemisphericalSkyLight[2] = static_cast<float>(skyState->meteringHistogram->skyHemisphericalLightColor[2]);
+
+  return logAverageOfLighting;
 }
 
 int main(){

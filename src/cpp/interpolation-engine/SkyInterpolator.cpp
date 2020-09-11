@@ -17,14 +17,17 @@ SkyInterpolator* skyInterpolator;
 
 extern "C" {
   int main();
-  void initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
-  void updateFinalValues(float* astroPositions_f, float* linearValues_f);
-  void updateTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
-  float tick(float t);
+  void initializeAstromicalValues(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
+  void updateFinalAstronomicalValues(float* astroPositions_f, float* linearValues_f);
+  void updateAstronomicalTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
+  float tick_astronomicalInterpolations(float t);
   void setSunAndMoonTimeTo(float t);
+  void initializeLightingValues(float logAverageOfSkyIntensity_0, float logAverageOfSkyIntensity_f);
+  void updateLightingTimeData(float t_0, float t_f);
+  float tick_lightingInterpolations(float t);
 }
 
-void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
+void EMSCRIPTEN_KEEPALIVE initializeAstromicalValues(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
   skyInterpolator->sinOfLatitude = -sin(latitude * DEG_2_RAD);
   skyInterpolator->cosOfLatitude = cos(latitude * DEG_2_RAD);
   skyInterpolator->tanOfLatitude = skyInterpolator->sinOfLatitude / skyInterpolator->cosOfLatitude;
@@ -35,7 +38,7 @@ void EMSCRIPTEN_KEEPALIVE initialize(float latitude, float* astroPositions_0, fl
   skyInterpolator->rotationallyDepedentAstroValues = rotationallyDepedentAstroValues;
 }
 
-void EMSCRIPTEN_KEEPALIVE updateFinalValues(float* astroPositions_f, float* linearValues_f){
+void EMSCRIPTEN_KEEPALIVE updateFinalAstronomicalValues(float* astroPositions_f, float* linearValues_f){
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_RAS_AND_DECS; i += 2){
     float ra_0 = skyInterpolator->astroPositions_0[i];
@@ -59,16 +62,16 @@ void EMSCRIPTEN_KEEPALIVE updateFinalValues(float* astroPositions_f, float* line
   }
 }
 
-void EMSCRIPTEN_KEEPALIVE updateTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT){
-  skyInterpolator->t_0 = t_0;
-  skyInterpolator->oneOverDeltaT = 1.0 / (t_f - t_0);
+void EMSCRIPTEN_KEEPALIVE updateAstronomicalTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT){
+  skyInterpolator->astronomical_t_0 = t_0;
+  skyInterpolator->oneOverAstronomicalDeltaT = 1.0 / (t_f - t_0);
   skyInterpolator->initialLSRT = initialLSRT;
   skyInterpolator->deltaLSRT = fmod((fmod((finalLSRT - initialLSRT), PI_TIMES_TWO) + PI_TIMES_THREE), PI_TIMES_TWO) - PI;
 }
 
 void EMSCRIPTEN_KEEPALIVE setSunAndMoonTimeTo(float t){
-  float tRelativeToT_0 = t - skyInterpolator->t_0;
-  float tFractional = tRelativeToT_0 * skyInterpolator->oneOverDeltaT;
+  float tRelativeToT_0 = t - skyInterpolator->astronomical_t_0;
+  float tFractional = tRelativeToT_0 * skyInterpolator->oneOverAstronomicalDeltaT;
 
   //Update our linear interpolations
   skyInterpolator->updateSunAndMoonRADecAndScale(tFractional);
@@ -80,12 +83,12 @@ void EMSCRIPTEN_KEEPALIVE setSunAndMoonTimeTo(float t){
   skyInterpolator->getHorizonFades();
 }
 
-float EMSCRIPTEN_KEEPALIVE tick(float t){
-  float tRelativeToT_0 = t - skyInterpolator->t_0;
-  float tFractional = tRelativeToT_0 * skyInterpolator->oneOverDeltaT;
+float EMSCRIPTEN_KEEPALIVE tick_astronomicalInterpolations(float t){
+  float tRelativeToT_0 = t - skyInterpolator->astronomical_t_0;
+  float tFractional = tRelativeToT_0 * skyInterpolator->oneOverAstronomicalDeltaT;
 
   //Update our linear interpolations
-  skyInterpolator->updateLinearInterpolations(tFractional);
+  skyInterpolator->updateAstronomicalLinearInterpolations(tFractional);
 
   //Update our rotation of our astronomical objects in the sky
   float interpolatedLSRT = skyInterpolator->rotateAstroObjects(tFractional);
@@ -94,6 +97,26 @@ float EMSCRIPTEN_KEEPALIVE tick(float t){
   skyInterpolator->getHorizonFades();
 
   return interpolatedLSRT;
+}
+
+//Note that the interpolations for lighting exist on 2 second real time interpolations
+//while astronomical calculations are done in astronomical time
+//The two exists on two seperate time lines, with the lighting calculations depending
+//on our astronomical calculations through the position of the sun and moon.
+float EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
+  float tFractional = (t - skyInterpolator->lighting_t_0) * skyInterpolator->oneOverLightingDeltaT;
+
+  return skyInterpolator->initialLogAverageOfSkyIntensity + tFractional * skyInterpolator->finalLogAverageOfSkyIntensity;
+}
+
+void EMSCRIPTEN_KEEPALIVE initializeLightingValues(float initialLogAverageOfSkyIntensity, float finalLogAverageOfSkyIntensity){
+  skyInterpolator->initialLogAverageOfSkyIntensity = initialLogAverageOfSkyIntensity;
+  skyInterpolator->finalLogAverageOfSkyIntensity = finalLogAverageOfSkyIntensity;
+}
+
+void EMSCRIPTEN_KEEPALIVE updateLightingTimeData(float t_0, float t_f){
+  skyInterpolator->lighting_t_0 = t_0;
+  skyInterpolator->oneOverLightingDeltaT = 1.0 / (t_f - t_0);
 }
 
 float SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
@@ -179,7 +202,7 @@ void SkyInterpolator::updateSunAndMoonRADecAndScale(float fractOfFinalPosition){
   linearValues[4] = linearValues_0[4] + fractOfFinalPosition * deltaLinearValues[4];
 }
 
-void SkyInterpolator::updateLinearInterpolations(float fractOfFinalPosition){
+void SkyInterpolator::updateAstronomicalLinearInterpolations(float fractOfFinalPosition){
   #pragma unroll
   for(int i = 0; i < NUMBER_OF_LINEAR_VALUES; i += 1){
     linearValues[i] = linearValues_0[i] + fractOfFinalPosition * deltaLinearValues[i];

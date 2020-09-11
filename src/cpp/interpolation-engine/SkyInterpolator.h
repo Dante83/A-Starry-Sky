@@ -6,10 +6,16 @@ public:
   float sinOfLatitude;
   float cosOfLatitude;
   float tanOfLatitude;
-  float t_0;
-  float oneOverDeltaT;
+  float astronomical_t_0;
+  float oneOverAstronomicalDeltaT;
+  float lighting_t_0;
+  float oneOverLightingDeltaT;
   float initialLSRT;
   float deltaLSRT;
+  float initialLogAverageOfSkyIntensity;
+  float finalLogAverageOfSkyIntensity;
+  float initialSkyHemisphericalLightingColor[3];
+  float estimatedFinalSkyHemisphericalLightingColor[3];
   float deltaPositions[9];
   float deltaLinearValues[9];
   float* astroPositions_0;
@@ -17,7 +23,8 @@ public:
   float* rotatedAstroPositions;
   float* linearValues;
   float* rotationallyDepedentAstroValues;
-  void updateLinearInterpolations(float fractOfFinalPosition);
+  void updateAstronomicalLinearInterpolations(float fractOfFinalPosition);
+  void updateLightingLinearInterpolations(float fractionOfFinalPosition);
   float rotateAstroObjects(float fractOfFinalPosition);
   void getHorizonFades();
   void getLunarParallacticAngle(float* interpolatedAstroPositions, float interpolatedLSRT);

@@ -1980,24 +1980,24 @@ var ___wasm_call_ctors = Module["___wasm_call_ctors"] = function() {
 };
 
 /** @type {function(...*):?} */
-var _initialize = Module["_initialize"] = function() {
+var _initializeAstromicalValues = Module["_initializeAstromicalValues"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["initialize"].apply(null, arguments)
+  return Module["asm"]["initializeAstromicalValues"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */
-var _updateFinalValues = Module["_updateFinalValues"] = function() {
+var _updateFinalAstronomicalValues = Module["_updateFinalAstronomicalValues"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["updateFinalValues"].apply(null, arguments)
+  return Module["asm"]["updateFinalAstronomicalValues"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */
-var _updateTimeData = Module["_updateTimeData"] = function() {
+var _updateAstronomicalTimeData = Module["_updateAstronomicalTimeData"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["updateTimeData"].apply(null, arguments)
+  return Module["asm"]["updateAstronomicalTimeData"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */
@@ -2008,10 +2008,31 @@ var _setSunAndMoonTimeTo = Module["_setSunAndMoonTimeTo"] = function() {
 };
 
 /** @type {function(...*):?} */
-var _tick = Module["_tick"] = function() {
+var _tick_astronomicalInterpolations = Module["_tick_astronomicalInterpolations"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["tick"].apply(null, arguments)
+  return Module["asm"]["tick_astronomicalInterpolations"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _tick_lightingInterpolations = Module["_tick_lightingInterpolations"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["tick_lightingInterpolations"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _initializeLightingValues = Module["_initializeLightingValues"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["initializeLightingValues"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _updateLightingTimeData = Module["_updateLightingTimeData"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["updateLightingTimeData"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */

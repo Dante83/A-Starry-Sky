@@ -5,9 +5,10 @@
 StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.renderer = skyDirector.renderer;
   this.skyDirector = skyDirector;
+  this.meteringSurveyTextureSize = 128;
 
-  this.meteringSurveyRenderer = new THREE.StarrySkyComputationRenderer(128, 128, this.renderer);
-  this.meteringSurveyData = new Float32Array( 128 * 128 * 4 );
+  this.meteringSurveyRenderer = new THREE.StarrySkyComputationRenderer(this.meteringSurveyTextureSize, this.meteringSurveyTextureSize, this.renderer);
+  this.meteringSurveyData = new Float32Array( this.meteringSurveyTextureSize * this.meteringSurveyTextureSize * 4 );
   this.meteringSurveyTexture = this.meteringSurveyRenderer.createTexture(this.meteringSurveyData);
   this.meteringSurveyVar = this.meteringSurveyRenderer.addVariable(`meteringSurveyVar`,
     StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(

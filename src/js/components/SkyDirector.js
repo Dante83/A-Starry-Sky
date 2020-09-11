@@ -3,10 +3,10 @@ StarrySky.SkyDirector = function(parentComponent){
   this.skyInterpolatorWASMIsReady = false;
   this.assetManagerInitialized = false;
   this.skyState;
-  this.EVENT_INITIALIZE = 0;
-  this.EVENT_INITIALIZATION_RESPONSE = 1;
-  this.EVENT_UPDATE_LATEST = 2;
-  this.EVENT_RETURN_LATEST = 3;
+  this.EVENT_INITIALIZE_SKY_STATE = 0;
+  this.EVENT_INITIALIZATION_SKY_STATE_RESPONSE = 1;
+  this.EVENT_UPDATE_LATEST_SKY_STATE = 2;
+  this.EVENT_RETURN_LATEST_SKY_STATE = 3;
   this.EVENT_INITIALIZE_AUTOEXPOSURE = 4;
   this.EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE = 5;
   this.EVENT_UPDATE_AUTOEXPOSURE = 6;
@@ -29,6 +29,7 @@ StarrySky.SkyDirector = function(parentComponent){
   const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
   const TOTAL_BYTES_FOR_WORKER_BUFFERS = BYTES_PER_32_BIT_FLOAT * NUMBER_OF_FLOATS;
   const ONE_MINUTE = 60.0;
+  const TWO_SECONDS = 2.0;
   const TWENTY_MINUTES = 20.0 * ONE_MINUTE;
   let transferrableInitialStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
   this.transferrableFinalStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
@@ -37,10 +38,14 @@ StarrySky.SkyDirector = function(parentComponent){
   this.astroPositions_f_ptr;
   this.rotatedAstroPositions_ptr;
   this.rotatedAstroPositions;
-  this.linearValues_0_ptr;
-  this.linearValues_f_ptr;
-  this.linearValues_ptr;
-  this.linearValues;
+  this.astronomicalLinearValues_0_ptr;
+  this.astronomicalLinearValues_f_ptr;
+  this.astronomicalLinearValues_ptr;
+  this.astronomicalLinearValues;
+  this.lightingLinearValues_0_ptr;
+  this.lightingLinearValues_f_ptr;
+  this.lightingLinearValues_ptr;
+  this.lightingLinearValues;
   this.rotatedAstroDependentValues;
   this.finalLSRT;
   this.speed;
@@ -78,7 +83,7 @@ StarrySky.SkyDirector = function(parentComponent){
     if(self.assetManagerInitialized && self.skyInterpolatorWASMIsReady){
       //Post our message to the web worker to get the initial state of our sky
       self.webAssemblyWorker.postMessage({
-        eventType: self.EVENT_INITIALIZE,
+        eventType: self.EVENT_INITIALIZE_SKY_STATE,
         latitude: self.assetManager.data.skyLocationData.latitude,
         longitude: self.assetManager.data.skyLocationData.longitude,
         date: self.assetManager.data.skyTimeData.date,
@@ -90,35 +95,6 @@ StarrySky.SkyDirector = function(parentComponent){
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
     }
-  }
-
-  this.initializeAutoExposure = function(){
-      //Get the initial position of our sun and moon
-      //and pass them into our metering survey
-      console.log("Requesting exposure state");
-      Module._setSunAndMoonTimeTo(0.0);
-      self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
-      self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
-      self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
-      self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
-      self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
-      console.log("Rendered");
-
-      //Get the final position of our sun and moon
-      //and pass them into our metering survey
-      // Module._setSunAndMoonTimeTo(0.0);
-      // self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
-      // self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
-      // self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
-      // self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
-      // self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
-
-      //Pass this information to our web worker to get our exposure value
-
-  }
-
-  this.updateFinalExposure = function(){
-    //Update our final exposure constant
   }
 
   this.initializeRenderers = function(){
@@ -175,23 +151,23 @@ StarrySky.SkyDirector = function(parentComponent){
     let copyFromIndex = self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT;
     let copyEndIndex = copyFromIndex + NUMBER_OF_ROTATIONAL_TRANSFORMATIONS;
     Module.HEAPF32.copyWithin(insertIndex, copyFromIndex, copyEndIndex);
-    insertIndex = self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT;
-    copyFromIndex = self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT;
+    insertIndex = self.astronomicalLinearValues_0_ptr / BYTES_PER_32_BIT_FLOAT;
+    copyFromIndex = self.astronomicalLinearValues_f_ptr / BYTES_PER_32_BIT_FLOAT;
     copyEndIndex = copyFromIndex + NUMBER_OF_LINEAR_INTERPOLATIONS;
     Module.HEAPF32.copyWithin(insertIndex, copyFromIndex, copyEndIndex);
     self.finalLSRT = self.finalStateFloat32Array[14];
     Module.HEAPF32.set(self.finalStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
-    Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+    Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.astronomicalLinearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
 
     //Set initial values to final values in module and update our final values to the values
     //returned from our worker.
-    Module._updateFinalValues(self.astroPositions_f_ptr, self.linearValues_f_ptr);
+    Module._updateFinalAstronomicalValues(self.astroPositions_f_ptr, self.astronomicalLinearValues_f_ptr);
     self.finalT = self.interpolationT + TWENTY_MINUTES;
-    Module._updateTimeData(self.interpolationT, self.finalT, lsrt_0, self.finalLSRT);
+    Module._updateAstronomicalTimeData(self.interpolationT, self.finalT, lsrt_0, self.finalLSRT);
 
     //Return the final state back to the worker thread so it can determine the state five minutes from now
     self.webAssemblyWorker.postMessage({
-      eventType: self.EVENT_UPDATE_LATEST,
+      eventType: self.EVENT_UPDATE_LATEST_SKY_STATE,
       transferrableFinalStateBuffer: self.transferrableFinalStateBuffer
     }, [self.transferrableFinalStateBuffer]);
   }
@@ -219,18 +195,18 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.saturn.position.fromArray(self.rotatedAstroPositions.slice(18, 21));
 
       //Update our linear values
-      self.skyState.sun.intensity = self.linearValues[0];
+      self.skyState.sun.intensity = self.astronomicalLinearValues[0];
       self.skyState.sun.horizonFade = self.rotatedAstroDependentValues[0];
-      self.skyState.sun.scale = self.linearValues[1];
-      self.skyState.moon.intensity = self.linearValues[2];
+      self.skyState.sun.scale = self.astronomicalLinearValues[1];
+      self.skyState.moon.intensity = self.astronomicalLinearValues[2];
       self.skyState.moon.horizonFade = self.rotatedAstroDependentValues[1];
-      self.skyState.moon.scale = self.linearValues[3];
-      self.skyState.moon.earthshineIntensity = self.linearValues[5];
-      self.skyState.mercury.intensity = self.linearValues[6];
-      self.skyState.venus.intensity = self.linearValues[7];
-      self.skyState.mars.intensity = self.linearValues[8];
-      self.skyState.jupiter.intensity = self.linearValues[9];
-      self.skyState.saturn.intensity = self.linearValues[10];
+      self.skyState.moon.scale = self.astronomicalLinearValues[3];
+      self.skyState.moon.earthshineIntensity = self.astronomicalLinearValues[5];
+      self.skyState.mercury.intensity = self.astronomicalLinearValues[6];
+      self.skyState.venus.intensity = self.astronomicalLinearValues[7];
+      self.skyState.mars.intensity = self.astronomicalLinearValues[8];
+      self.skyState.jupiter.intensity = self.astronomicalLinearValues[9];
+      self.skyState.saturn.intensity = self.astronomicalLinearValues[10];
 
       //Check if we need to update our final state again
       if(self.interpolationT >= self.finalT){
@@ -238,7 +214,6 @@ StarrySky.SkyDirector = function(parentComponent){
       }
 
       //Check if we need to update our auto-exposure final state again
-      self.renderers.meteringSurveyRenderer.render(self.skyState.sun.position, self.skyState.moon.position, self.skyState.sun.horizonFade, self.skyState.moon.horizonFade);
     }
   }
 
@@ -246,12 +221,12 @@ StarrySky.SkyDirector = function(parentComponent){
   this.webAssemblyWorker = new Worker("../src/cpp/state-engine/starry-sky-web-worker.js");
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
-    if(postObject.eventType === self.EVENT_RETURN_LATEST){
+    if(postObject.eventType === self.EVENT_RETURN_LATEST_SKY_STATE){
       //Attach our 32 bit float array buffers back to this thread again
       self.transferrableFinalStateBuffer = postObject.transferrableFinalStateBuffer;
       self.finalStateFloat32Array = new Float32Array(self.transferrableFinalStateBuffer);
     }
-    else if(postObject.eventType === self.EVENT_INITIALIZATION_RESPONSE){
+    else if(postObject.eventType === self.EVENT_INITIALIZATION_SKY_STATE_RESPONSE){
       //Attach our 32 bit float array buffers back to this thread again
       transferrableInitialStateBuffer = postObject.transferrableInitialStateBuffer;
       self.transferrableFinalStateBuffer = postObject.transferrableFinalStateBuffer;
@@ -266,23 +241,23 @@ StarrySky.SkyDirector = function(parentComponent){
       self.rotatedAstroPositions_ptr = Module._malloc(NUMBER_OF_ROTATION_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
       self.rotatedAstroDepedentValues_ptr = Module._malloc(NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
 
-      self.linearValues_0_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
-      self.linearValues_f_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.linearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
-      self.linearValues_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
+      self.astronomicalLinearValues_0_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.astronomicalLinearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      self.astronomicalLinearValues_f_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.astronomicalLinearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      self.astronomicalLinearValues_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
 
       //Attach references to our interpolated values
       self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS);
-      self.linearValues = new Float32Array(Module.HEAPF32.buffer, self.linearValues_ptr, NUMBER_OF_LINEAR_INTERPOLATIONS);
+      self.astronomicalLinearValues = new Float32Array(Module.HEAPF32.buffer, self.astronomicalLinearValues_ptr, NUMBER_OF_LINEAR_INTERPOLATIONS);
       self.rotatedAstroDependentValues = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroDepedentValues_ptr, NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES);
 
       //Run our sky interpolator to determine our azimuth, altitude and other variables
       let latitude = self.assetManager.data.skyLocationData.latitude;
-      Module._initialize(latitude, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.linearValues_0_ptr, self.linearValues_ptr, self.rotatedAstroDepedentValues_ptr);
-      Module._updateFinalValues(self.astroPositions_f_ptr, self.linearValues_f_ptr);
+      Module._initializeAstromicalValues(latitude, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.astronomicalLinearValues_0_ptr, self.astronomicalLinearValues_ptr, self.rotatedAstroDepedentValues_ptr);
+      Module._updateFinalAstronomicalValues(self.astroPositions_f_ptr, self.astronomicalLinearValues_f_ptr);
       self.finalLSRT = self.finalStateFloat32Array[14];
-      Module._updateTimeData(self.interpolationT, self.interpolationT + TWENTY_MINUTES, initialStateFloat32Array[14], self.finalLSRT);
+      Module._updateAstronomicalTimeData(self.interpolationT, self.interpolationT + TWENTY_MINUTES, initialStateFloat32Array[14], self.finalLSRT);
       self.skyState = {
         sun: {
           position: new THREE.Vector3(),
@@ -311,7 +286,7 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Return the final state back to the worker thread so it can determine the state five minutes from now
       self.webAssemblyWorker.postMessage({
-        eventType: self.EVENT_UPDATE_LATEST,
+        eventType: self.EVENT_UPDATE_LATEST_SKY_STATE,
         transferrableFinalStateBuffer: self.transferrableFinalStateBuffer
       }, [self.transferrableFinalStateBuffer]);
 
@@ -321,13 +296,59 @@ StarrySky.SkyDirector = function(parentComponent){
     }
     else if(postObject.eventType === this.EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE){
       //Once we get back the results, send these off to our linear interpolator
+
     }
     else if(postObject.eventType === this.EVENT_RETURN_AUTOEXPOSURE){
       //Once I get back this result shift our linear interpolator again
+
     }
 
     return false;
   });
+
+  this.initializeAutoExposure = async function(){
+      //Get the initial position of our sun and moon
+      //and pass them into our metering survey
+      Module._setSunAndMoonTimeTo(0.0);
+      self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
+      self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
+      self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
+      self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
+      self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
+      const meteringSurveyBuffer1 = self.renderers.meteringSurveyRenderer.meteringSurveyData.slice(0);
+
+      //Get our position for the sun and moon 2 seconds from now
+      Module._setSunAndMoonTimeTo(TWO_SECONDS);
+      self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
+      self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
+      self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
+      self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
+      self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
+
+      //Pass this information to our web worker to get our exposure value
+      self.webAssemblyWorker.postMessage({
+        eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
+        meteringSurveyTextureSize: self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize,
+        meteringSurveyBuffer0: meteringSurveyBuffer1,
+        meteringSurveyBufferf: self.renderers.meteringSurveyRenderer.meteringSurveyData
+      }, [meteringSurveyBuffer1, self.renderers.meteringSurveyRenderer.meteringSurveyData]);
+  }
+
+  this.updateAutoExposure = async function(now){
+    Module._setSunAndMoonTimeTo(now + TWO_SECONDS);
+    self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
+    self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
+    self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
+    self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
+    self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
+
+    //Pass this information to our web worker to get our exposure value
+    self.webAssemblyWorker.postMessage({
+      eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
+      meteringSurveyBufferf: self.renderers.meteringSurveyRenderer.meteringSurveyData
+    }, [meteringSurveyBuffer1, self.renderers.meteringSurveyRenderer.meteringSurveyData]);
+  }
+
   this.renderers = {};
 
   this.start = function(){
