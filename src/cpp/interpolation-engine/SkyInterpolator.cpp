@@ -22,8 +22,7 @@ extern "C" {
   void updateAstronomicalTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
   float tick_astronomicalInterpolations(float t);
   void setSunAndMoonTimeTo(float t);
-  void initializeLightingValues(float logAverageOfSkyIntensity_0, float logAverageOfSkyIntensity_f);
-  void updateLightingTimeData(float t_0, float t_f);
+  void updateLightingValues(float logAverageOfSkyIntensity_0, float logAverageOfSkyIntensity_f, float t_0, float t_f);
   float tick_lightingInterpolations(float t);
 }
 
@@ -106,15 +105,12 @@ float EMSCRIPTEN_KEEPALIVE tick_astronomicalInterpolations(float t){
 float EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
   float tFractional = (t - skyInterpolator->lighting_t_0) * skyInterpolator->oneOverLightingDeltaT;
 
-  return skyInterpolator->initialLogAverageOfSkyIntensity + tFractional * skyInterpolator->finalLogAverageOfSkyIntensity;
+  return skyInterpolator->initialLogAverageOfSkyIntensity + tFractional * skyInterpolator->deltaLogAverageOfSkyIntensity;
 }
 
-void EMSCRIPTEN_KEEPALIVE initializeLightingValues(float initialLogAverageOfSkyIntensity, float finalLogAverageOfSkyIntensity){
+void EMSCRIPTEN_KEEPALIVE updateLightingValues(float initialLogAverageOfSkyIntensity, float finalLogAverageOfSkyIntensity, float t_0, float t_f){
   skyInterpolator->initialLogAverageOfSkyIntensity = initialLogAverageOfSkyIntensity;
-  skyInterpolator->finalLogAverageOfSkyIntensity = finalLogAverageOfSkyIntensity;
-}
-
-void EMSCRIPTEN_KEEPALIVE updateLightingTimeData(float t_0, float t_f){
+  skyInterpolator->deltaLogAverageOfSkyIntensity = finalLogAverageOfSkyIntensity - initialLogAverageOfSkyIntensity;
   skyInterpolator->lighting_t_0 = t_0;
   skyInterpolator->oneOverLightingDeltaT = 1.0 / (t_f - t_0);
 }

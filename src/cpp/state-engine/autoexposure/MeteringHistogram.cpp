@@ -20,21 +20,19 @@ float MeteringHistogram::updateHistogramAndSkyHemisphericalLightColor(float* col
     float b = colorIntensitiesPtr[i * 4 + 2];
     float a = colorIntensitiesPtr[i * 4 + 3];
     float luminanceValueOfPixel = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    logOfLuminance += log(0.000001 + luminanceValueOfPixel);
+    logOfLuminance += log(luminanceValueOfPixel + 0.000000001);
 
     //The y-coordinate is stored in our alpha channel for each pixel and is used to weight
     //the averaging for our ambient lighting.
-    avgRed = a * r;
-    avgGreen = a * g;
-    avgBlue = a * b;
-    totalWeights += a;
+    avgRed += a * r;
+    avgGreen += a * g;
+    avgBlue += a * b;
   }
-  logOfLuminance = exp(logOfLuminance / static_cast<float>(numberOfPixels));
-
-  float oneOverWeights = logOfLuminance / totalWeights;
+  float oneOverWeights = 1.0 / static_cast<float>(numberOfPixels);
+  logOfLuminance = exp(logOfLuminance * oneOverWeights);
   skyHemisphericalLightColor[0] = avgRed * oneOverWeights;
   skyHemisphericalLightColor[1] = avgGreen * oneOverWeights;
   skyHemisphericalLightColor[2] = avgBlue * oneOverWeights;
 
-  return 0.18 * oneOverWeights;
+  return 0.18 * logOfLuminance;
 }

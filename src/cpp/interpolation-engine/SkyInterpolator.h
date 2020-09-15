@@ -13,7 +13,7 @@ public:
   float initialLSRT;
   float deltaLSRT;
   float initialLogAverageOfSkyIntensity;
-  float finalLogAverageOfSkyIntensity;
+  float deltaLogAverageOfSkyIntensity;
   float initialSkyHemisphericalLightingColor[3];
   float estimatedFinalSkyHemisphericalLightingColor[3];
   float deltaPositions[9];

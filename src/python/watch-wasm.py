@@ -21,7 +21,7 @@ cpp_files = [['SkyState.cpp',\
 module_file = ['state-engine.js', 'interpolation-engine.js']
 exported_functions = [['_main', '_setupSky', '_updateSky', '_updateHistogramAndHemisphericalLighting'],\
 ['_main', '_initializeAstromicalValues', '_updateFinalAstronomicalValues', '_updateAstronomicalTimeData',\
-'_tick_astronomicalInterpolations', '_setSunAndMoonTimeTo', '_initializeLightingValues', '_updateLightingTimeData',\
+'_tick_astronomicalInterpolations', '_setSunAndMoonTimeTo', '_updateLightingValues',\
 '_tick_lightingInterpolations']]
 cpp_update_date = {}
 

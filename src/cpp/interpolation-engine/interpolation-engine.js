@@ -2022,17 +2022,10 @@ var _tick_lightingInterpolations = Module["_tick_lightingInterpolations"] = func
 };
 
 /** @type {function(...*):?} */
-var _initializeLightingValues = Module["_initializeLightingValues"] = function() {
+var _updateLightingValues = Module["_updateLightingValues"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["initializeLightingValues"].apply(null, arguments)
-};
-
-/** @type {function(...*):?} */
-var _updateLightingTimeData = Module["_updateLightingTimeData"] = function() {
-  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
-  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["updateLightingTimeData"].apply(null, arguments)
+  return Module["asm"]["updateLightingValues"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */

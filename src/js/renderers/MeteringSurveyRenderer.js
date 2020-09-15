@@ -8,8 +8,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.meteringSurveyTextureSize = 128;
 
   this.meteringSurveyRenderer = new THREE.StarrySkyComputationRenderer(this.meteringSurveyTextureSize, this.meteringSurveyTextureSize, this.renderer);
-  this.meteringSurveyData = new Float32Array( this.meteringSurveyTextureSize * this.meteringSurveyTextureSize * 4 );
-  this.meteringSurveyTexture = this.meteringSurveyRenderer.createTexture(this.meteringSurveyData);
+  this.meteringSurveyTexture = this.meteringSurveyRenderer.createTexture();
   this.meteringSurveyVar = this.meteringSurveyRenderer.addVariable(`meteringSurveyVar`,
     StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
       skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
@@ -78,6 +77,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     self.meteringSurveyVar.material.uniforms.moonHorizonFade.value = moonFade;
 
     self.meteringSurveyRenderer.compute();
-    test = self.meteringSurveyRenderer.getCurrentRenderTarget(self.meteringSurveyVar).texture;
+    let renderTargetTexture = self.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar);
+    return renderTargetTexture;
   }
 }

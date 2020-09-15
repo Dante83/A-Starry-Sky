@@ -24,17 +24,16 @@ var wasmModule;
 var initialize;
 var skyState;
 var initialAstronomicalPostObject;
-var initialMeteringPostObject;
 var wasmIsReady = false;
 var initialSkyDateReceived = false;
 var skyStateIsReady = false;
 var meteringSurveyTextureSize;
+var meteringSurveyBufferLength;
 var lightingStateIsReady = false;
 var skyState;
-var lightingState;
+var lightingState = {};
 var update;
 var requests = [];
-var hemisphericalSkyColorBuffer = ;
 var hemisphericalSkyColorFloatArray;
 var hemisphericalGroundColorBuffer;
 var hemisphericalGroundColorFloatArray;
@@ -126,38 +125,39 @@ function initializeSkyAstronomicalState(){
   }
 }
 
-function initializeHemisphericalLighting(){
-    meteringSurveyTextureSize = postObject.meteringSurveyTextureSize;
-    lightingState.skyMeteringSurveyMemoryPtr = Module._malloc(postObject.meteringSurveyBuffer1.length * BYTES_PER_32_BIT_FLOAT);
-    lightingState.skyHemisphericalLightColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT);
-    lightingState = {
-      skyMeteringSurveyFloatArray: new Float32Array(Module.HEAPF32.buffer, lightingState.skyMeteringSurveyMemoryPtr, postObject.meteringSurveyBuffer1.length),
-      skyHemisphericalLightColorFloatArray: new Float32Array(Module.HEAPF32.buffer, lightingState.skyHemisphericalLightColorPtr, 3)
-    };
-    lightingState.skyMeteringSurveyFloatArray.set(initialMeteringPostObject.meteringSurveyBuffer0, 0, postObject.meteringSurveyBuffer0.length);
-    const initialLogAverageOfSkyIntensity = Module._updateHistogramAndHemisphericalLighting(meteringSurveyTextureSize, lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr);
-    lightingState.skyMeteringSurveyFloatArray.set(initialMeteringPostObject.meteringSurveyBuffer1, 0, postObject.meteringSurveyBuffer1.length);
-    const finalLogAverageOfSkyIntensity = Module._updateHistogramAndHemisphericalLighting(meteringSurveyTextureSize, lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr);
+function initializeHemisphericalLighting(postObject){
+  meteringSurveyTextureSize = postObject.meteringSurveyTextureSize;
+  meteringSurveyBufferLength = meteringSurveyTextureSize * meteringSurveyTextureSize * 4;
+  lightingState.skyMeteringSurveyMemoryPtr = Module._malloc(meteringSurveyBufferLength * BYTES_PER_32_BIT_FLOAT);
+  lightingState.skyHemisphericalLightColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT);
+  lightingState.skyMeteringSurveyFloatArray = new Float32Array(Module.HEAPF32.buffer, lightingState.skyMeteringSurveyMemoryPtr, meteringSurveyBufferLength);
+  lightingState.skyHemisphericalLightColorFloatArray = new Float32Array(Module.HEAPF32.buffer, lightingState.skyHemisphericalLightColorPtr, 3);
+  lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyBuffer0, 0, meteringSurveyBufferLength);
+  const initialLogAverageOfSkyIntensity = Module._updateHistogramAndHemisphericalLighting(meteringSurveyTextureSize, lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr);
+  lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyBufferf, 0, meteringSurveyBufferLength);
+  const finalLogAverageOfSkyIntensity = Module._updateHistogramAndHemisphericalLighting(meteringSurveyTextureSize, lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr);
 
-    postMessage({
-      eventType: EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE,
-      initialLogAverageOfSkyIntensity: initialLogAverageOfSkyIntensity,
-      finalLogAverageOfSkyIntensity: finalLogAverageOfSkyIntensity,
-      meteringSurveyBuffer: postObject.meteringSurveyBuffer1,
-    }, [postObject.meteringSurveyBuffer1]);
+  postMessage({
+    eventType: EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE,
+    initialLogAverageOfSkyIntensity: initialLogAverageOfSkyIntensity,
+    finalLogAverageOfSkyIntensity: finalLogAverageOfSkyIntensity,
+    meteringSurveyBuffer: postObject.meteringSurveyBufferf,
+  }, [postObject.meteringSurveyBufferf]);
 }
 
 onmessage = function(e){
   let postObject = e.data;
   if(postObject.eventType === EVENT_UPDATE_AUTOEXPOSURE){
-    lightingState.skyMeteringSurveyFloatArray.set(initialMeteringPostObject.meteringSurveyBuffer1, 0, postObject.meteringSurveyBuffer1.length);
+    lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyBufferf, 0, meteringSurveyBufferLength);
     const finalLogAverageOfSkyIntensity = Module._updateHistogramAndHemisphericalLighting(meteringSurveyTextureSize, lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr);
+
+    console.log(finalLogAverageOfSkyIntensity);
 
     postMessage({
       eventType: EVENT_RETURN_AUTOEXPOSURE,
       finalLogAverageOfSkyIntensity: finalLogAverageOfSkyIntensity,
-      meteringSurveyBuffer: postObject.meteringSurveyBuffer1,
-    }, [postObject.meteringSurveyBuffer1]);
+      meteringSurveyBuffer: postObject.meteringSurveyBufferf,
+    }, [postObject.meteringSurveyBufferf]);
   }
   else if(postObject.eventType === EVENT_UPDATE_LATEST_SKY_STATE){
     skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_SKY_STATE_UPDATES);
@@ -183,8 +183,7 @@ onmessage = function(e){
     initializeSkyAstronomicalState();
   }
   else if(postObject.eventType === EVENT_INITIALIZE_AUTOEXPOSURE){
-    initialMeteringPostObject = postObject;
-    initializeHemisphericalLighting();
+    initializeHemisphericalLighting(postObject);
   }
 
   return true;
