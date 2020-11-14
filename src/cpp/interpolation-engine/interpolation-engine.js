@@ -1271,11 +1271,11 @@ function updateGlobalBufferAndViews(buf) {
 }
 
 var STATIC_BASE = 1024,
-    STACK_BASE = 5247504,
+    STACK_BASE = 5247552,
     STACKTOP = STACK_BASE,
-    STACK_MAX = 4624,
-    DYNAMIC_BASE = 5247504,
-    DYNAMICTOP_PTR = 4464;
+    STACK_MAX = 4672,
+    DYNAMIC_BASE = 5247552,
+    DYNAMICTOP_PTR = 4512;
 
 assert(STACK_BASE % 16 === 0, 'stack must start aligned');
 assert(DYNAMIC_BASE % 16 === 0, 'heap must start aligned');
@@ -1820,7 +1820,7 @@ var ASM_CONSTS = {
 
 
 
-// STATICTOP = STATIC_BASE + 3600;
+// STATICTOP = STATIC_BASE + 3648;
 /* global initializers */  __ATINIT__.push({ func: function() { ___wasm_call_ctors() } });
 
 
@@ -1873,7 +1873,7 @@ var ASM_CONSTS = {
     }
 
   function _emscripten_get_sbrk_ptr() {
-      return 4464;
+      return 4512;
     }
 
   
@@ -2026,6 +2026,20 @@ var _updateLightingValues = Module["_updateLightingValues"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
   return Module["asm"]["updateLightingValues"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _bolometricMagnitudeToLuminosity = Module["_bolometricMagnitudeToLuminosity"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["bolometricMagnitudeToLuminosity"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _luminosityToAtmosphericIntensity = Module["_luminosityToAtmosphericIntensity"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["luminosityToAtmosphericIntensity"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */

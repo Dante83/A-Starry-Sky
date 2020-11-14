@@ -5,7 +5,7 @@
 StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.renderer = skyDirector.renderer;
   this.skyDirector = skyDirector;
-  this.meteringSurveyTextureSize = 128;
+  this.meteringSurveyTextureSize = 64;
 
   this.meteringSurveyRenderer = new THREE.StarrySkyComputationRenderer(this.meteringSurveyTextureSize, this.meteringSurveyTextureSize, this.renderer);
   this.meteringSurveyTexture = this.meteringSurveyRenderer.createTexture();
@@ -25,7 +25,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   );
   this.meteringSurveyRenderer.setVariableDependencies(this.meteringSurveyVar, []);
   this.meteringSurveyVar.material.vertexShader = StarrySky.Materials.Autoexposure.meteringSurvey.vertexShader;
-  this.meteringSurveyVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, false)));
+  this.meteringSurveyVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, false, true)));
   this.meteringSurveyVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.meteringSurveyVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.meteringSurveyVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
@@ -75,6 +75,10 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     self.meteringSurveyVar.material.uniforms.moonPosition.value = moonPosition;
     self.meteringSurveyVar.material.uniforms.sunHorizonFade.value = sunFade;
     self.meteringSurveyVar.material.uniforms.moonHorizonFade.value = moonFade;
+    self.meteringSurveyVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
+    self.meteringSurveyVar.material.uniforms.sunLuminosity.value = self.skyDirector.skyState.sun.luminosity;
+    self.meteringSurveyVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
+    self.meteringSurveyVar.material.uniforms.moonLuminosity.value = self.skyDirector.skyState.moon.luminosity;
 
     self.meteringSurveyRenderer.compute();
     let renderTargetTexture = self.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar);

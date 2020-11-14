@@ -47,12 +47,13 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.sunHorizonFade.needsUpdate = true;
     self.atmosphereMaterial.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
     self.atmosphereMaterial.uniforms.moonHorizonFade.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.toneMappingExposure.value = 1.0;
-    self.atmosphereMaterial.uniforms.toneMappingExposure.needsUpdate = true;
     self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
     self.atmosphereMaterial.uniforms.moonPosition.needsUpdate = true;
     self.atmosphereMaterial.uniforms.uTime.value = t;
     self.atmosphereMaterial.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
+    self.atmosphereMaterial.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
+    self.atmosphereMaterial.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
+    self.atmosphereMaterial.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
   }
 
   //Upon completion, this method self destructs

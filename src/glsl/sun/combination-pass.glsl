@@ -35,7 +35,6 @@ void main(){
     bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;
     combinedLight += abs(bloomStrength * bloomLight);
   }
-  combinedLight = ACESFilmicToneMapping(combinedLight);
 
   //Late triangular blue noise
 

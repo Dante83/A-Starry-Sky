@@ -24,6 +24,8 @@ extern "C" {
   void setSunAndMoonTimeTo(float t);
   void updateLightingValues(float logAverageOfSkyIntensity_0, float logAverageOfSkyIntensity_f, float t_0, float t_f);
   float tick_lightingInterpolations(float t);
+  float bolometricMagnitudeToLuminosity(float x);
+  float luminosityToAtmosphericIntensity(float x);
 }
 
 void EMSCRIPTEN_KEEPALIVE initializeAstromicalValues(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
@@ -103,16 +105,24 @@ float EMSCRIPTEN_KEEPALIVE tick_astronomicalInterpolations(float t){
 //The two exists on two seperate time lines, with the lighting calculations depending
 //on our astronomical calculations through the position of the sun and moon.
 float EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
-  float tFractional = (t - skyInterpolator->lighting_t_0) * skyInterpolator->oneOverLightingDeltaT;
-
+  float tFractional = (t - skyInterpolator->lightingTInitial) * skyInterpolator->oneOverLightingDeltaT;
   return skyInterpolator->initialLogAverageOfSkyIntensity + tFractional * skyInterpolator->deltaLogAverageOfSkyIntensity;
 }
 
 void EMSCRIPTEN_KEEPALIVE updateLightingValues(float initialLogAverageOfSkyIntensity, float finalLogAverageOfSkyIntensity, float t_0, float t_f){
   skyInterpolator->initialLogAverageOfSkyIntensity = initialLogAverageOfSkyIntensity;
   skyInterpolator->deltaLogAverageOfSkyIntensity = finalLogAverageOfSkyIntensity - initialLogAverageOfSkyIntensity;
-  skyInterpolator->lighting_t_0 = t_0;
+  skyInterpolator->lightingTInitial = t_0;
   skyInterpolator->oneOverLightingDeltaT = 1.0 / (t_f - t_0);
+}
+
+//These are kind of hackish - I'm not sure they're even remotely correct.
+float EMSCRIPTEN_KEEPALIVE bolometricMagnitudeToLuminosity(float x){
+  return 1.3e6 * pow(100.0, 0.2 * (26.74 - x));
+}
+
+float EMSCRIPTEN_KEEPALIVE luminosityToAtmosphericIntensity(float x){
+  return log2(x * 1.0e-3);
 }
 
 float SkyInterpolator::rotateAstroObjects(float fractOfFinalPosition){
@@ -209,8 +219,11 @@ void SkyInterpolator::getHorizonFades(){
   #pragma unroll
   for(int i = 0; i < 2; ++i){
     float objectYPosition = rotatedAstroPositions[i * 3 + 1];
-    float linearFade = 1.7 * objectYPosition + 1.1;
-    rotationallyDepedentAstroValues[START_OF_HORIZON_FADE_INDEX + i] = (linearFade < 0.0) ? 0.0 : (1.0 < linearFade) ? 1.0 : linearFade;
+
+    //This is based around the idea that at 18 degrees below the horizon we are officially in night
+    //We use the sin of this angle to determine the position below the horizon when the sun has dissapeared
+    //and clamp our results between 0.0 and 1.0 so we never add or remove light
+    rotationallyDepedentAstroValues[START_OF_HORIZON_FADE_INDEX + i] = fmin(fmax(3.24 * objectYPosition + 1.0, 0.0), 1.0);
   }
 }
 

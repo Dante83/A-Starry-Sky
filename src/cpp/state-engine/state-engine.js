@@ -1271,11 +1271,11 @@ function updateGlobalBufferAndViews(buf) {
 }
 
 var STATIC_BASE = 1024,
-    STACK_BASE = 5299232,
+    STACK_BASE = 5299344,
     STACKTOP = STACK_BASE,
-    STACK_MAX = 56352,
-    DYNAMIC_BASE = 5299232,
-    DYNAMICTOP_PTR = 56192;
+    STACK_MAX = 56464,
+    DYNAMIC_BASE = 5299344,
+    DYNAMICTOP_PTR = 56304;
 
 assert(STACK_BASE % 16 === 0, 'stack must start aligned');
 assert(DYNAMIC_BASE % 16 === 0, 'heap must start aligned');
@@ -1820,7 +1820,7 @@ var ASM_CONSTS = {
 
 
 
-// STATICTOP = STATIC_BASE + 55328;
+// STATICTOP = STATIC_BASE + 55440;
 /* global initializers */  __ATINIT__.push({ func: function() { ___wasm_call_ctors() } });
 
 
@@ -1877,7 +1877,7 @@ var ASM_CONSTS = {
     }
 
   function _emscripten_get_sbrk_ptr() {
-      return 56192;
+      return 56304;
     }
 
   function _emscripten_memcpy_big(dest, src, num) {
@@ -2124,10 +2124,17 @@ var _updateSky = Module["_updateSky"] = function() {
 };
 
 /** @type {function(...*):?} */
-var _updateHistogramAndHemisphericalLighting = Module["_updateHistogramAndHemisphericalLighting"] = function() {
+var _updateMeteringAndLightingData = Module["_updateMeteringAndLightingData"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["updateHistogramAndHemisphericalLighting"].apply(null, arguments)
+  return Module["asm"]["updateMeteringAndLightingData"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _initializeMeteringAndLightingDependencies = Module["_initializeMeteringAndLightingDependencies"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["initializeMeteringAndLightingDependencies"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */

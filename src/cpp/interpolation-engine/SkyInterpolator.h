@@ -8,7 +8,7 @@ public:
   float tanOfLatitude;
   float astronomical_t_0;
   float oneOverAstronomicalDeltaT;
-  float lighting_t_0;
+  float lightingTInitial;
   float oneOverLightingDeltaT;
   float initialLSRT;
   float deltaLSRT;

@@ -2,23 +2,20 @@
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Atmosphere.atmosphereShader = {
-  uniforms: function(isSunShader = false, isMoonShader = false){
+  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false){
     let uniforms = {
       uTime: {type: 'f', value: 0.0},
       localSiderealTime: {type: 'f', value: 0.0},
       latitude: {type: 'f', value: 0.0},
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
       moonPosition: {type: 'vec3', value: new THREE.Vector3()},
-      venusPosition: {type: 'vec3', value: new THREE.Vector3()},
-      marsPosition: {type: 'vec3', value: new THREE.Vector3()},
-      jupiterPosition: {type: 'vec3', value: new THREE.Vector3()},
-      saturnPosition: {type: 'vec3', value: new THREE.Vector3()},
       mieInscatteringSum: {type: 't', value: null},
       rayleighInscatteringSum: {type: 't', value: null},
       transmittance: {type: 't', value: null},
-      toneMappingExposure: {type: 'f', value: 1.0},
       sunHorizonFade: {type: 'f', value: 1.0},
-      moonHorizonFade: {type: 'f', value: 1.0}
+      moonHorizonFade: {type: 'f', value: 1.0},
+      scatteringSunIntensity: {type: 'f', value: 20.0},
+      scatteringMoonIntensity: {type: 'f', value: 1.4}
     }
 
     //Pass our specific uniforms in here.
@@ -29,6 +26,12 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonDiffuseMap = {type: 't', value: null};
     }
     else if(isMoonShader){
+      uniforms.starsExposure = {type: 'f', value: -4.0};
+      uniforms.moonExposure = {type: 'f', value: 1.0};
+      uniforms.venusPosition = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.marsPosition = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.jupiterPosition = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.saturnPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.moonAngularDiameterCos = {type: 'f', value: 1.0};
       uniforms.sunRadius = {type: 'f', value: 1.0};
       uniforms.radiusOfMoonPlane = {type: 'f', value: 1.0};
@@ -47,6 +50,19 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.medStarData = {type: 't', value: null};
       uniforms.brightStarData = {type: 't', value: null};
       uniforms.starColorMap = {type: 't', value: null};
+    }
+
+    if(!isSunShader && !isMoonShader && !isMeteringShader){
+      uniforms.starsExposure = {type: 'f', value: -4.0},
+      uniforms.venusPosition = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.marsPosition = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.jupiterPosition = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.saturnPosition = {type: 'vec3', value: new THREE.Vector3()};
+    }
+
+    if(isMeteringShader){
+      uniforms.sunLuminosity = {type: 'f', value: 20.0};
+      uniforms.moonLuminosity = {type: 'f', value: 1.4};
     }
 
     return uniforms;
@@ -109,6 +125,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform vec3 saturnPosition;',
     'uniform float sunHorizonFade;',
     'uniform float moonHorizonFade;',
+    'uniform float scatteringMoonIntensity;',
+    'uniform float scatteringSunIntensity;',
     'uniform sampler2D mieInscatteringSum;',
     'uniform sampler2D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
@@ -124,8 +142,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'const float piOver2 = 1.5707963267948966192313;',
     'const float piTimes2 = 6.283185307179586476925286;',
     'const float pi = 3.141592653589793238462;',
-    'const float scatteringSunIntensity = 20.0;',
-    'const float scatteringMoonIntensity = 1.44; //Moon reflects 7.2% of all light',
+    'const vec3 inverseGamma = vec3(0.454545454545454545454545);',
+    'const vec3 gamma = vec3(2.2);',
 
     '#if($isSunPass)',
       'uniform float sunAngularDiameterCos;',
@@ -138,6 +156,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'const float ac2 = 0.67104811;',
       'const float ac3 = -0.06948355;',
     '#elif($isMoonPass)',
+      'uniform float starsExposure;',
+      'uniform float moonExposure;',
       'uniform float moonAngularDiameterCos;',
       'uniform float sunRadius;',
       'uniform sampler2D moonDiffuseMap;',
@@ -152,11 +172,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'varying vec3 tangentSpaceViewDirection;',
     '#elif($isMeteringPass)',
       'varying vec2 vUv;',
+      'uniform float moonLuminosity;',
+      'uniform float sunLuminosity;',
+    '#else',
+      'uniform float starsExposure;',
     '#endif',
 
     '$atmosphericFunctions',
 
-    '#if(!$isSunPass)',
+    '#if(!$isSunPass && !$isMeteringPass)',
       'vec3 getSpectralColor(){',
         'return vec3(1.0);',
       '}',
@@ -243,7 +267,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'return texture2D(starColorMap, uv).rgb;',
       '}',
 
-      'vec3 drawStarLight(vec4 starData, vec3 galacticSphericalPosition, vec3 skyPosition){',
+      'vec3 drawStarLight(vec4 starData, vec3 galacticSphericalPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
         '//I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.',
         'float temperature = sqrt(dot(starData.xyz, starData.xyz));',
         'vec3 normalizedStarPosition = starData.xyz / temperature;',
@@ -254,7 +278,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);',
 
         "//Use the distance to the star to determine it's perceived twinkling",
-        'float starBrightness = pow(2.512, (3.5 - starData.a)) ;',
+        'float starBrightness = pow(100.0, (-starData.a + starAndSkyExposureReduction) * 0.2);',
         'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1400.0;',
 
         '//Modify the intensity and color of this star using approximation of stellar scintillation',
@@ -315,8 +339,16 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'float lunarMask = texture2D(moonDiffuseMap, vUv).a;',
       '#endif',
 
+      '//Atmosphere',
+      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
+      'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
+
       '//This stuff never shows up near our sun, so we can exclude it',
       '#if(!$isSunPass && !$isMeteringPass)',
+        '//Get the intensity of our sky color',
+        'vec3 intensityVector = vec3(0.3, 0.59, 0.11);',
+        'float starAndSkyExposureReduction =  starsExposure - 10.0 * dot(pow(solarAtmosphericPass + lunarAtmosphericPass, inverseGamma), intensityVector);',
+
         '//Get the stellar starting id data from the galactic cube map',
         'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
         'vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);',
@@ -335,7 +367,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Add the dim stars lighting',
         'vec4 starData = texture2D(dimStarData, vec2(starXCoordinate, starYCoordinate));',
-        'vec3 galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition), 0.0);',
+        'vec3 galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
         '//Blue',
         'scaledBits = starHashData.b * 255.0;',
@@ -347,7 +379,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Add the medium stars lighting',
         'starData = texture2D(medStarData, vec2(starXCoordinate, starYCoordinate));',
-        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition), 0.0);',
+        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
         '//Alpha',
         'scaledBits = starHashData.a * 255.0;',
@@ -359,7 +391,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Add the bright stars lighting',
         'starData = texture2D(brightStarData, vec2(starXCoordinate, starYCoordinate));',
-        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition), 0.0);',
+        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
         '//Check our distance from each of the four primary planets',
 
@@ -368,38 +400,51 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
         '//Apply the transmittance function to all of our light sources',
-        'galacticLighting = galacticLighting * transmittanceFade;',
+        'galacticLighting = pow(galacticLighting, gamma) * transmittanceFade;',
       '#endif',
-
-      '//Atmosphere',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
-      'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
+
         '$draw_sun_pass',
-        'combinedPass = combinedPass + sunTexel;',
+
+        'combinedPass = pow(ACESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);',
       '#elif($isMoonPass)',
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
+
         '$draw_moon_pass',
+
+        '//Now mix in the moon light',
         'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);',
+
+        '//And bring it back to the normal gamma afterwards',
+        'combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);',
       '#elif($isMeteringPass)',
-        '//Just a regular atmospheric pass, without tone mapping',
+        '//Cut this down to the circle of the sky ignoring the galatic lighting',
         'float circularMask = 1.0 - step(1.0, rho);',
         'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass) * circularMask;',
+
+        '//Combine the colors together and apply a transformation from the scattering intensity to the moon luminosity',
+        'vec3 intensityPassColors = lunarAtmosphericPass * (moonLuminosity / scatteringMoonIntensity) + solarAtmosphericPass * (sunLuminosity / scatteringSunIntensity);',
+
+        '//Get the greyscale color of the sky for the intensity pass verses the r, g and b channels',
+        'float intensityPass = (0.3 * intensityPassColors.r + 0.59 * intensityPassColors.g + 0.11 * intensityPassColors.b) * circularMask;',
+
+        '//Now apply the ACESFilmicTonemapping',
+        'combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);',
       '#else',
-      '//Regular atmospheric pass',
+        '//Regular atmospheric pass',
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting;',
 
-        '//Color Adjustment Pass',
-        'combinedPass = ACESFilmicToneMapping(combinedPass);',
+        '//Now apply the ACESFilmicTonemapping',
+        'combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);',
 
         '//Triangular Blue Noise Dithering Pass',
       '#endif',
 
       '#if($isMeteringPass)',
-        'gl_FragColor = vec4(combinedPass, sphericalPosition.y);',
+        'gl_FragColor = vec4(combinedPass, intensityPass);',
       '#else',
         'gl_FragColor = vec4(combinedPass, 1.0);',
       '#endif',

@@ -18,7 +18,7 @@ float lerpBloomFactor(float factor){
 }
 
 void main(){
-  //Fade this plane out towards the edges to avoid rough edges
+  //Fade this plane out towards the edgeys to avoid rough edges
   vec2 offsetUV = vUv * 2.0 - vec2(0.5);
   float pixelDistanceFromMoon = distance(offsetUV, vec2(0.5));
   float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromMoon)));
@@ -36,7 +36,6 @@ void main(){
 
     combinedLight += abs(bloomStrength * bloomLight);
   }
-  combinedLight = ACESFilmicToneMapping(combinedLight);
 
   //Late triangular blue noise
 

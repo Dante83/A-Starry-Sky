@@ -2,7 +2,7 @@ import os, time
 
 cpp_directories = ['../cpp/state-engine/', '../cpp/' '../cpp/interpolation-engine/']
 cpp_files = [['SkyState.cpp',\
- 'autoexposure/MeteringHistogram.cpp',\
+ 'autoexposure/LightingAnalyzer.cpp',\
  'world_state/AstroTime.cpp',\
  'world_state/Location.cpp',\
  'astro_bodies/SkyManager.cpp',\
@@ -19,10 +19,11 @@ cpp_files = [['SkyState.cpp',\
  'astro_bodies/planets/Saturn.cpp'],\
  ['SkyInterpolator.cpp']]
 module_file = ['state-engine.js', 'interpolation-engine.js']
-exported_functions = [['_main', '_setupSky', '_updateSky', '_updateHistogramAndHemisphericalLighting'],\
+exported_functions = [['_main', '_setupSky', '_updateSky', '_initializeMeteringAndLightingDependencies',\
+'_updateMeteringAndLightingData'],\
 ['_main', '_initializeAstromicalValues', '_updateFinalAstronomicalValues', '_updateAstronomicalTimeData',\
 '_tick_astronomicalInterpolations', '_setSunAndMoonTimeTo', '_updateLightingValues',\
-'_tick_lightingInterpolations']]
+'_tick_lightingInterpolations', '_bolometricMagnitudeToLuminosity', '_luminosityToAtmosphericIntensity']]
 cpp_update_date = {}
 
 def recursivelyWalkDirectories(absolute_cpp_directory, file_check_callback):

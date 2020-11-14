@@ -122,8 +122,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.moonPosition.needsUpdate = true;
     self.baseMoonVar.material.uniforms.sunLightDirection.needsUpdate = true;
     self.baseMoonVar.material.uniforms.uTime.value = t;
-    self.combinationPassMaterial.uniforms.toneMappingExposure.value = 1.0;
-    self.combinationPassMaterial.uniforms.toneMappingExposure.needsUpdate = true;
+    self.baseMoonVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
+    self.baseMoonVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
+    self.baseMoonVar.material.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
+    self.baseMoonVar.material.uniforms.moonExposure.value = self.skyDirector.exposureVariables.moonExposure;
 
     //Run our float shaders shaders
     self.moonRenderer.compute();

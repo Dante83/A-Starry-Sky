@@ -29,7 +29,7 @@ StarrySky.SkyDirector = function(parentComponent){
   const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
   const TOTAL_BYTES_FOR_WORKER_BUFFERS = BYTES_PER_32_BIT_FLOAT * NUMBER_OF_FLOATS;
   const ONE_MINUTE = 60.0;
-  const TWO_SECONDS = 2.0;
+  const HALF_A_SECOND = 0.5;
   const FOUR_SECONDS = 4.0;
   const TWENTY_MINUTES = 20.0 * ONE_MINUTE;
   let transferrableInitialStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
@@ -49,8 +49,8 @@ StarrySky.SkyDirector = function(parentComponent){
   this.interpolationT = 0.0;
   this.finalAstronomicalT = TWENTY_MINUTES;
   this.exposureT = 0.0;
-  this.finalExposureT = TWO_SECONDS;
-  this.interpolatedLogAverageOfSkyIntensity = 1.0;
+  this.time = 0.0;
+  this.interpolatedSkyIntensityMagnitude = 1.0;
   this.ready = false;
   this.parentComponent = parentComponent;
   this.renderer = parentComponent.el.sceneEl.renderer;
@@ -69,8 +69,10 @@ StarrySky.SkyDirector = function(parentComponent){
     moonPosition: new THREE.Vector3(),
     sunHorizonFade: 0.0,
     moonHorizonFade: 0.0,
-    finalLogAverageOfSkyIntensity: 0.0,
-    queuedLogAverageOfSkyIntensity: 0.0
+    exposureCoefficient0: 0.0,
+    starsExposure: 0.0,
+    moonExposure: 0.0,
+    exposureCoefficientf: 0.0,
   }
   let transferrableIntialLightingBuffer;
   let transferrableIntialLightingFloat32Array;
@@ -181,8 +183,10 @@ StarrySky.SkyDirector = function(parentComponent){
 
   this.tick = function(time, timeDelta){
     if(parentComponent.initialized){
-      self.exposureT += timeDelta * 0.0001;
-      self.interpolationT = self.exposureT * self.speed;
+      const timeDeltaInSeconds = timeDelta * 0.001;
+      self.exposureT += timeDeltaInSeconds;
+      self.time = time * 0.001;
+      self.interpolationT += timeDeltaInSeconds * self.speed;
 
       //Update our sky state
       self.skyState.LSRT = Module._tick_astronomicalInterpolations(self.interpolationT);
@@ -201,10 +205,17 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.saturn.position.fromArray(self.rotatedAstroPositions.slice(18, 21));
 
       //Update our linear values
-      self.skyState.sun.intensity = self.astronomicalLinearValues[0];
+      // self.skyState.sun.luminosity = Module._bolometricMagnitudeToLuminosity(self.astronomicalLinearValues[0] + 0.0001);
+      // self.skyState.sun.intensity = Module._luminosityToAtmosphericIntensity(self.skyState.sun.luminosity);
+      self.skyState.sun.luminosity = 100000.0;
+      self.skyState.sun.intensity = 10.0;
       self.skyState.sun.horizonFade = self.rotatedAstroDependentValues[0];
       self.skyState.sun.scale = self.astronomicalLinearValues[1];
-      self.skyState.moon.intensity = self.astronomicalLinearValues[2];
+      // self.skyState.moon.intensity = Module._bolometricMagnitudeToLuminosity(self.astronomicalLinearValues[2] + 0.0001);
+      // self.skyState.moon.luminosity =  Module._luminosityToAtmosphericIntensity(self.skyState.moon.luminosity);
+      self.skyState.moon.luminosity = 0.1;
+      //self.skyState.moon.intensity = 0.5;
+      self.skyState.moon.intensity = 0.0001;
       self.skyState.moon.horizonFade = self.rotatedAstroDependentValues[1];
       self.skyState.moon.scale = self.astronomicalLinearValues[3];
       self.skyState.moon.earthshineIntensity = self.astronomicalLinearValues[5];
@@ -220,13 +231,13 @@ StarrySky.SkyDirector = function(parentComponent){
       }
 
       //Interpolate our log average of the sky intensity
-      self.interpolatedLogAverageOfSkyIntensity = Module._tick_lightingInterpolations(self.exposureT);
+      const interpolatedSkyIntensityMagnitude = Module._tick_lightingInterpolations(self.time);
+      self.exposureVariables.starsExposure = Math.min(6.8 - interpolatedSkyIntensityMagnitude, 3.7)
 
       //Check if we need to update our auto-exposure final state again
-      if(self.exposureT >= self.finalExposureT){
-        const initialT = self.finalExposureT;
-        self.finalExposureT += TWO_SECONDS;
-        Module._updateLightingValues(self.interpolatedLogAverageOfSkyIntensity, self.exposureVariables.queuedLogAverageOfSkyIntensity, initialT, self.finalExposureT);
+      if(self.exposureT >= HALF_A_SECOND){
+        self.exposureT = 0.0;
+        Module._updateLightingValues(interpolatedSkyIntensityMagnitude, self.exposureVariables.exposureCoefficientf, self.time, self.time + HALF_A_SECOND);
         self.updateAutoExposure();
       }
     }
@@ -311,21 +322,25 @@ StarrySky.SkyDirector = function(parentComponent){
     }
     else if(postObject.eventType === self.EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE){
       //Once we get back the results, send these off to our linear interpolator
-      self.exposureVariables.finalLogAverageOfSkyIntensity = postObject.finalLogAverageOfSkyIntensity;
-      Module._updateLightingValues(postObject.initialLogAverageOfSkyIntensity, self.exposureVariables.finalLogAverageOfSkyIntensity, self.interpolationT, self.interpolationT + TWO_SECONDS);
+      self.exposureVariables.exposureCoefficientf = postObject.exposureCoefficientf;
+      Module._updateLightingValues(postObject.exposureCoefficient0,  postObject.exposureCoefficientf, self.time, self.time + HALF_A_SECOND);
 
       //Now re-attach our array for use in the renderer
-      self.transfferableFinalLightingBuffer = postObject.meteringSurveyBuffer;
+      self.transfferableFinalLightingBuffer = postObject.meteringSurveyFloatArray.buffer;
+
+      //Hook up our results to our interpolator for constant exposure variation
+      self.exposureVariables.exposureCoefficient0 = postObject.exposureCoefficient0;
+      self.exposureVariables.exposureCoefficientf = postObject.exposureCoefficientf;
 
       //Pass the data back to the worker to get the next data set
       self.updateAutoExposure();
     }
     else if(postObject.eventType === self.EVENT_RETURN_AUTOEXPOSURE){
-      //Once we get back the results, send these off to our linear interpolator
-      self.exposureVariables.queuedLogAverageOfSkyIntensity = postObject.finalLogAverageOfSkyIntensity;
+      //Hook up our results to our interpolator for constant exposure variation
+      self.exposureVariables.exposureCoefficientf = postObject.exposureCoefficientf;
 
       //Now re-attach our array for use in the renderer
-      self.transfferableFinalLightingBuffer = postObject.meteringSurveyBuffer;
+      self.transfferableFinalLightingBuffer = postObject.meteringSurveyFloatArray.buffer;
     }
 
     return false;
@@ -333,7 +348,8 @@ StarrySky.SkyDirector = function(parentComponent){
 
   this.initializeAutoExposure = async function(){
       const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
-      const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize * 4;
+      const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize;
+      const numberOfColorChannelsInMeteringPixel = 4;
 
       //Get the initial position of our sun and moon
       //and pass them into our metering survey
@@ -343,18 +359,18 @@ StarrySky.SkyDirector = function(parentComponent){
       self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
       self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
       let renderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
-      transferrableIntialLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer);
+      transferrableIntialLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
       transferrableIntialLightingFloat32Array = new Float32Array(transferrableIntialLightingBuffer);
       self.renderer.readRenderTargetPixels(renderTarget, 0, 0, meteringTextureSize, meteringTextureSize, transferrableIntialLightingFloat32Array);
 
       //Get our position for the sun and moon 2 seconds from now
-      Module._setSunAndMoonTimeTo(TWO_SECONDS * self.speed);
+      Module._setSunAndMoonTimeTo(HALF_A_SECOND * self.speed);
       self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
       self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
       self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
       self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
       renderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
-      self.transfferableFinalLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer);
+      self.transfferableFinalLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
       self.transfferableFinalLightingFloat32Array = new Float32Array(transferrableIntialLightingBuffer);
       self.renderer.readRenderTargetPixels(renderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transfferableFinalLightingFloat32Array);
 
@@ -362,27 +378,27 @@ StarrySky.SkyDirector = function(parentComponent){
       self.webAssemblyWorker.postMessage({
         eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
         meteringSurveyTextureSize: self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize,
-        meteringSurveyBuffer0: transferrableIntialLightingBuffer,
-        meteringSurveyBufferf: self.transfferableFinalLightingBuffer
+        meteringSurveyFloatArray0: transferrableIntialLightingFloat32Array,
+        meteringSurveyFloatArrayf: self.transfferableFinalLightingFloat32Array
       }, [transferrableIntialLightingBuffer, self.transfferableFinalLightingBuffer]);
   }
 
   this.updateAutoExposure = async function(){
     const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
-    const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize * 4;
 
-    Module._setSunAndMoonTimeTo((self.finalAstronomicalT + TWO_SECONDS) * self.speed);
+    Module._setSunAndMoonTimeTo(self.interpolationT + HALF_A_SECOND * self.speed);
     self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
     self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
     self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
     self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
     const renderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
+    self.transfferableFinalLightingFloat32Array = new Float32Array(self.transfferableFinalLightingBuffer);
     self.renderer.readRenderTargetPixels(renderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transfferableFinalLightingFloat32Array);
 
     //Pass this information to our web worker to get our exposure value
     self.webAssemblyWorker.postMessage({
       eventType: self.EVENT_UPDATE_AUTOEXPOSURE,
-      meteringSurveyBufferf: self.transfferableFinalLightingBuffer
+      meteringSurveyFloatArrayf: self.transfferableFinalLightingFloat32Array
     }, [self.transfferableFinalLightingBuffer]);
   }
 

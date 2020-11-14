@@ -103,8 +103,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
     self.baseSunVar.material.uniforms.moonPosition.needsUpdate = true;
     self.baseSunVar.material.uniforms.uTime.value = t;
-    self.combinationPassMaterial.uniforms.toneMappingExposure.value = 1.0;
-    self.combinationPassMaterial.uniforms.toneMappingExposure.needsUpdate = true;
+    self.baseSunVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
+    self.baseSunVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();

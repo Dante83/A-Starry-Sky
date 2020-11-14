@@ -11,8 +11,7 @@ StarrySky.Materials.Sun.combinationPass = {
     blurTexture4: {type: 't', 'value': null},
     blurTexture5: {type: 't', 'value': null},
     bloomStrength: {type: 'f', 'value': null},
-    bloomRadius: {type: 'f', 'value': null},
-    toneMappingExposure: {type: 'f', value: 1.0}
+    bloomRadius: {type: 'f', 'value': null}
   },
   vertexShader: [
     'varying vec3 vWorldPosition;',
@@ -67,7 +66,6 @@ StarrySky.Materials.Sun.combinationPass = {
         'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
         'combinedLight += abs(bloomStrength * bloomLight);',
       '}',
-      'combinedLight = ACESFilmicToneMapping(combinedLight);',
 
       '//Late triangular blue noise',
 

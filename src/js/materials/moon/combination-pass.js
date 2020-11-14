@@ -11,8 +11,7 @@ StarrySky.Materials.Moon.combinationPass = {
     blurTexture4: {type: 't', 'value': null},
     blurTexture5: {type: 't', 'value': null},
     bloomStrength: {type: 'f', 'value': null},
-    bloomRadius: {type: 'f', 'value': null},
-    toneMappingExposure: {type: 'f', value: 1.0}
+    bloomRadius: {type: 'f', 'value': null}
   },
   vertexShader: [
     'varying vec3 vWorldPosition;',
@@ -50,7 +49,7 @@ StarrySky.Materials.Moon.combinationPass = {
     '}',
 
     'void main(){',
-      '//Fade this plane out towards the edges to avoid rough edges',
+      '//Fade this plane out towards the edgeys to avoid rough edges',
       'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
       'float pixelDistanceFromMoon = distance(offsetUV, vec2(0.5));',
       'float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromMoon)));',
@@ -68,7 +67,6 @@ StarrySky.Materials.Moon.combinationPass = {
 
         'combinedLight += abs(bloomStrength * bloomLight);',
       '}',
-      'combinedLight = ACESFilmicToneMapping(combinedLight);',
 
       '//Late triangular blue noise',
 

@@ -3,18 +3,19 @@
 #include "world_state/AstroTime.h"
 #include "world_state/Location.h"
 #include "astro_bodies/SkyManager.h"
-#include "autoexposure/MeteringHistogram.h"
+#include "autoexposure/LightingAnalyzer.h"
 #include <emscripten/emscripten.h>
+#include <cmath>
 
 //
 //Constructor
 //
-SkyState::SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* skyManagerPnt, MeteringHistogram* meteringHistogramPtr, float *memoryPtrIn){
+SkyState::SkyState(AstroTime* astroTimePnt, Location* locationPnt, SkyManager* skyManagerPnt, LightingAnalyzer* lightingAnalyzerPtr, float *memoryPtrIn){
   astroTime = astroTimePnt;
   location = locationPnt;
   skyManager = skyManagerPnt;
   memoryPtr = memoryPtrIn;
-  meteringHistogram = meteringHistogramPtr;
+  lightingAnalyzer = lightingAnalyzerPtr;
 }
 
 SkyState* skyState;
@@ -23,7 +24,8 @@ extern "C" {
   int main();
   void setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset, float* memoryPtr);
   void updateSky(int year, int month, int day, int hour, int minute, double second, double utcOffset);
-  float updateHistogramAndHemisphericalLighting(int widthOfTexture, float* skyColorIntensities, float* hemisphericalSkyLight);
+  void initializeMeteringAndLightingDependencies(float* xyzPtr, float* pixelWeightsPtr, int widthOfTexture);
+  float updateMeteringAndLightingData(float* skyColorIntensities, float* hemisphericalSkyLight);
 }
 
 void SkyState::updateHeap32Memory(){
@@ -68,8 +70,8 @@ void EMSCRIPTEN_KEEPALIVE setupSky(double latitude, double longitude, int year, 
   AstroTime *astroTime = new AstroTime(year, month, day, hour, minute, second, utcOffset);
   Location *location = new Location(latitude, longitude);
   SkyManager *skyManager = new SkyManager(astroTime, location);
-  MeteringHistogram *meteringHistogram = new MeteringHistogram();
-  skyState = new SkyState(astroTime, location, skyManager, meteringHistogram, memoryPtr);
+  LightingAnalyzer *lightingAnalyzer = new LightingAnalyzer();
+  skyState = new SkyState(astroTime, location, skyManager, lightingAnalyzer, memoryPtr);
   skyState->updateHeap32Memory();
 }
 
@@ -79,13 +81,47 @@ void EMSCRIPTEN_KEEPALIVE updateSky(int year, int month, int day, int hour, int 
   skyState->updateHeap32Memory();
 }
 
-float EMSCRIPTEN_KEEPALIVE updateHistogramAndHemisphericalLighting(int widthOfTexture, float* skyColorIntensities, float* hemisphericalSkyLight){
-  float logAverageOfLighting = skyState->meteringHistogram->updateHistogramAndSkyHemisphericalLightColor(skyColorIntensities, widthOfTexture);
-  hemisphericalSkyLight[0] = static_cast<float>(skyState->meteringHistogram->skyHemisphericalLightColor[0]);
-  hemisphericalSkyLight[1] = static_cast<float>(skyState->meteringHistogram->skyHemisphericalLightColor[1]);
-  hemisphericalSkyLight[2] = static_cast<float>(skyState->meteringHistogram->skyHemisphericalLightColor[2]);
+//This is just an external wrapper function we can call from our javascript
+float EMSCRIPTEN_KEEPALIVE updateMeteringAndLightingData(float* skyColorIntensities, float* hemisphericalSkyLight){
+  return skyState->lightingAnalyzer->updateMeteringAndLightingData(skyColorIntensities, hemisphericalSkyLight);
+}
 
-  return logAverageOfLighting;
+void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(float* xyzPtr, float* pixelWeightsPtr, int widthOfTexture){
+  //Attach our pointers to the object
+  skyState->lightingAnalyzer->widthOfTexture = widthOfTexture;
+  skyState->lightingAnalyzer->xyzCoordinatesOfPixel = xyzPtr;
+  skyState->lightingAnalyzer->pixelWeights = pixelWeightsPtr;
+
+  //Set their constant values for future reference
+  float sumOfPixelWeights = 0.0;
+  const float halfWidthOfTexture = widthOfTexture * 0.5;
+  const float radiusOfSkyCircle = halfWidthOfTexture * halfWidthOfTexture;
+  const int numberOfPixels = widthOfTexture * widthOfTexture;
+  for(int i = 0; i < numberOfPixels; ++i){
+    float x = (i % widthOfTexture) - halfWidthOfTexture;
+    float y = floor(i / widthOfTexture) - halfWidthOfTexture;
+
+    //Use this to set the x y and z coordinates of our pixel
+    float rhoSquared = x * x + y * y;
+    float rho = sqrt(rhoSquared);
+    float height = sqrt(1.0 - rhoSquared);
+    float phi = TWO_OVER_PI - atan2(height, rho);
+    float theta = atan2(y, x);
+    float x3 = sin(phi) * cos(theta);
+    float y3 = sin(phi) * sin(theta);
+    float z3 = cos(phi);
+    float normalizationConstant = 1.0 / sqrt(x3 * x3 + y3 * y3 + z3 * z3);
+
+    xyzPtr[i * 3] = x3 * normalizationConstant;
+    xyzPtr[i * 3 + 1] = y3 * normalizationConstant;
+    xyzPtr[i * 3 + 2] = z3 * normalizationConstant;
+
+    float pixelRadius = x * x + y * y;
+    float thisPixelsWeight = pixelRadius < radiusOfSkyCircle ? 1.0 : 0.0;
+    skyState->lightingAnalyzer->pixelWeights[i] = thisPixelsWeight;
+    sumOfPixelWeights += thisPixelsWeight;
+  }
+  skyState->lightingAnalyzer->oneOverSumOfWeightWeights = 1.0 / sumOfPixelWeights;
 }
 
 int main(){
