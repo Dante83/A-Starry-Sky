@@ -118,7 +118,7 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float initialLogAverageOfSkyInten
 
 //These are kind of hackish - I'm not sure they're even remotely correct.
 float EMSCRIPTEN_KEEPALIVE bolometricMagnitudeToLuminosity(float x){
-  return 1.3e6 * pow(100.0, 0.2 * (26.74 - x));
+  return 100000.0 * pow(100.0, 0.2 * (26.74 - x));
 }
 
 float EMSCRIPTEN_KEEPALIVE luminosityToAtmosphericIntensity(float x){

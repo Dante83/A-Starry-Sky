@@ -147,22 +147,17 @@ void Moon::updatePosition(){
 
   #define MEAN_LUNAR_DISTANCE_FROM_EARTH 384400000.0
   scale = MEAN_LUNAR_DISTANCE_FROM_EARTH / distanceFromEarthInMeters;
-  //NOTE: We are using a lunar magnitude of 2.0 for now as
-  //we do not yet have HDR implemented.
-  #define LUNAR_MAGNITUDE 2.0
-  irradianceFromEarth = LUNAR_MAGNITUDE * scale * scale;
 
   //From all of the above, we can get our right ascension and declination
   convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude);
   double geocentricElongationOfTheMoon = acos(cos_eclipticalLatitude * cos((sun->longitude * DEG_2_RAD) - eclipticalLongitude));
 
   //Finally,update our moon brightness
-  //From approximation 48.4 in Meeus, page 346
+  //From approximation 48.2 and 48.3, in Meeus, page 346
   double twoTimesMeanElongationInRads = 2.0 * meanAnomalyInRads;
-  double lunarPhaseAngleI = 180.0 - meanElongation - 6.289 * sin(meanAnomalyInRads) + 2.1 * sin(sun->meanAnomaly * DEG_2_RAD)
-  - 1.274 * sin(twoTimesMeanElongationInRads - meanAnomalyInRads) - 0.658 * sin(twoTimesMeanElongationInRads)
-  - 0.214 * sin(2.0 * meanAnomalyInRads) - 0.110 * sin(meanElongationInRads);
-  double lunarPhaseAngleInRads = lunarPhaseAngleI * DEG_2_RAD;
+  double phiOfMoon = acos(sin(sun->declination) * sin(declination) + cos(sun->declination) * cos(declination) * cos(sun->declination - declination));
+  double lunarPhaseAngleInRads = atan2(sun->distance2Earth * sin(phiOfMoon), distanceFromEarthInMeters - sun->distance2Earth * cos(phiOfMoon));
+  lunarPhaseAngleInRads = fmod(lunarPhaseAngleInRads, PI);
 
   //Changing our lunar intensity model over to the one used by A Physically-Based Night Sky Model
   //by Henrik Jensen et. al.
@@ -174,8 +169,9 @@ void Moon::updatePosition(){
   #define FULL_EARTHSHINE 0.19
   #define IRRADIANCE_OF_SUN 28.8
   double phiOverTwo = 0.5 * lunarPhaseAngleInRads;
-  earthShineIntensity = 0.5 * FULL_EARTHSHINE * (1.0 - sin(phiMinusPiOverTwo) * tan(phiMinusPiOverTwo) * log(0.5 * phiMinusPiOverTwo));
-  irradianceFromEarth = illuminationOfMoonCoefficient * (earthShineIntensity + IRRADIANCE_OF_SUN * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(0.5 *phiOverTwo)));
+  earthShineIntensity = 0.5 * FULL_EARTHSHINE * (1.0 - sin(phiMinusPiOverTwo) * tan(phiMinusPiOverTwo) * log(1.0 / tan(0.5 * phiMinusPiOverTwo)));
+  irradianceFromEarth = illuminationOfMoonCoefficient * (earthShineIntensity + IRRADIANCE_OF_SUN * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(1.0 / tan(0.5 * phiOverTwo))));
+  irradianceFromEarth = lunarPhaseAngleInRads / DEG_2_RAD;
 
   //Update the paralactic angle
   updateParalacticAngle();

@@ -21,6 +21,7 @@ public:
   double angularDiameterMultiplier;
   double parallacticAngle;
   double scale;
+  double irradianceFromEarth;
   void updatePosition();
   void updatePosition(double secondsTillNextUpdate);
   void setMeanLongitude(double inValue);

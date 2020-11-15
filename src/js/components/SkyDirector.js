@@ -137,7 +137,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
-      self.renderers.bloomRenderer = new StarrySky.Renderers.BloomRenderer(self, 'shared', 4.0);
+      self.renderers.bloomRenderer = new StarrySky.Renderers.BloomRenderer(self, 'shared', 0.98);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
       self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
       self.renderers.meteringSurveyRenderer = new StarrySky.Renderers.MeteringSurveyRenderer(self);
@@ -205,17 +205,16 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.saturn.position.fromArray(self.rotatedAstroPositions.slice(18, 21));
 
       //Update our linear values
-      // self.skyState.sun.luminosity = Module._bolometricMagnitudeToLuminosity(self.astronomicalLinearValues[0] + 0.0001);
-      // self.skyState.sun.intensity = Module._luminosityToAtmosphericIntensity(self.skyState.sun.luminosity);
+      self.skyState.sun.luminosity = Module._bolometricMagnitudeToLuminosity(self.astronomicalLinearValues[0] + 0.0001);
+      self.skyState.sun.intensity = Module._luminosityToAtmosphericIntensity(self.skyState.sun.luminosity);
       self.skyState.sun.luminosity = 100000.0;
       self.skyState.sun.intensity = 10.0;
       self.skyState.sun.horizonFade = self.rotatedAstroDependentValues[0];
       self.skyState.sun.scale = self.astronomicalLinearValues[1];
-      // self.skyState.moon.intensity = Module._bolometricMagnitudeToLuminosity(self.astronomicalLinearValues[2] + 0.0001);
-      // self.skyState.moon.luminosity =  Module._luminosityToAtmosphericIntensity(self.skyState.moon.luminosity);
+      self.skyState.moon.intensity = Module._bolometricMagnitudeToLuminosity(self.astronomicalLinearValues[2] + 0.0001);
+      self.skyState.moon.luminosity =  Module._luminosityToAtmosphericIntensity(self.skyState.moon.luminosity);
       self.skyState.moon.luminosity = 0.1;
-      //self.skyState.moon.intensity = 0.5;
-      self.skyState.moon.intensity = 0.0001;
+      self.skyState.moon.intensity = 0.25;
       self.skyState.moon.horizonFade = self.rotatedAstroDependentValues[1];
       self.skyState.moon.scale = self.astronomicalLinearValues[3];
       self.skyState.moon.earthshineIntensity = self.astronomicalLinearValues[5];
@@ -235,7 +234,7 @@ StarrySky.SkyDirector = function(parentComponent){
       self.exposureVariables.starsExposure = Math.min(6.8 - interpolatedSkyIntensityMagnitude, 3.7)
 
       //Check if we need to update our auto-exposure final state again
-      if(self.exposureT >= HALF_A_SECOND){
+      if(self.exposureT >= HALF_A_SECOND && self.transfferableFinalLightingBuffer.byteLength !== 0){
         self.exposureT = 0.0;
         Module._updateLightingValues(interpolatedSkyIntensityMagnitude, self.exposureVariables.exposureCoefficientf, self.time, self.time + HALF_A_SECOND);
         self.updateAutoExposure();

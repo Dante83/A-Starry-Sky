@@ -77,8 +77,8 @@ StarrySky.AssetManager = function(skyDirector){
         //Fill in the details of our texture
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.magFilter = THREE.LinearFilter;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.magFilter = THREE.Linear;
+        texture.minFilter = THREE.LinearMipmapLinear;
         texture.encoding = moonEncodings[i];
         texture.format = moonFormats[i];
         //Swap this tomorrow and implement custom mip-maps

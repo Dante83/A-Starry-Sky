@@ -230,7 +230,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '}',
 
       'float colorTwinkleFactor(vec3 starposition){',
-        'float randSeed = uTime * 0.002 + (starposition.x + starposition.y + starposition.z) * 10000.0;',
+        'float randSeed = uTime * 0.0007 + (starposition.x + starposition.y + starposition.z) * 10000.0;',
 
         '//lacunarity, gain, initialAmplitude, initialFrequency',
         'return 0.7 * (2.0 * noise(randSeed) - 1.0);',

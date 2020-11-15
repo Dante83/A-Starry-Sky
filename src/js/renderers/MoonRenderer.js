@@ -60,8 +60,13 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
     this.baseMoonVar.material.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
   }
+  this.baseMoonVar.format = THREE.RGBAFormat;
+  this.baseMoonVar.type = THREE.UnsignedByteType;
   this.baseMoonVar.minFilter = THREE.LinearFilter;
-  this.baseMoonVar.magFilter = THREE.LinearFilter;
+  this.baseMoonVar.magFilter = THREE.LinearMipmapLinear;
+  this.baseMoonVar.generateMipmaps = true;
+  this.baseMoonVar.encoding = THREE.sRGBEncoding;
+  this.baseMoonVar.needsUpdate = true;
 
   //Check for any errors in initialization
   let error1 = this.moonRenderer.init();
@@ -81,7 +86,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     vertexShader: StarrySky.Materials.Moon.combinationPass.vertexShader,
     fragmentShader: StarrySky.Materials.Moon.combinationPass.fragmentShader
   });
-
   //Attach the material to our geometry
   this.moonMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
   this.baseMoonVar.material.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
@@ -98,8 +102,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   }
 
   //And update our object with our initial values
-  this.setBloomStrength(5.0);
-  this.setBloomRadius(1.0);
+  this.setBloomStrength(3.0);
+  this.setBloomRadius(0.7);
 
   this.tick = function(t){
     //Update the position of our mesh
@@ -138,6 +142,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
     //Get our moon disk whether we pass it into the bloom shader or not
     let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
+    baseTexture.generateMipmaps = true;
     self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
     self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
     if(this.bloomEnabled){

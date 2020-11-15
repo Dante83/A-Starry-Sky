@@ -62,7 +62,7 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     this.seperableBlurHorizontalVars[i].material.uniforms.direction.value = blurDirectionX;
     this.seperableBlurHorizontalVars[i].material.uniforms.direction.needsUpdate = true;
     this.seperableBlurHorizontalVars[i].minFilter = THREE.LinearFilter;
-    this.seperableBlurHorizontalVars[i].magFilter = THREE.LinearFilter;
+    this.seperableBlurHorizontalVars[i].magFilter = THREE.LinearMipmapLinear;
     this.seperableBlurHorizontalVars[i].wrapS = THREE.ClampToEdgeWrapping;
     this.seperableBlurHorizontalVars[i].wrapT = THREE.ClampToEdgeWrapping;
 

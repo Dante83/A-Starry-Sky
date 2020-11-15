@@ -82,8 +82,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   }
 
   //And update our object with our initial values
-  this.setBloomStrength(5.0);
-  this.setBloomRadius(1.0);
+  this.setBloomStrength(3.0);
+  this.setBloomRadius(0.7);
 
   this.tick = function(t){
     //Update the position of our mesh
