@@ -6,10 +6,6 @@ varying vec3 galacticCoordinates;
 uniform float uTime;
 uniform vec3 sunPosition;
 uniform vec3 moonPosition;
-uniform vec3 venusPosition;
-uniform vec3 marsPosition;
-uniform vec3 jupiterPosition;
-uniform vec3 saturnPosition;
 uniform float sunHorizonFade;
 uniform float moonHorizonFade;
 uniform float scatteringMoonIntensity;
@@ -24,6 +20,21 @@ uniform sampler2D transmittance;
   uniform sampler2D medStarData;
   uniform sampler2D brightStarData;
   uniform sampler2D starColorMap;
+
+  uniform vec3 venusPosition;
+  uniform vec3 marsPosition;
+  uniform vec3 jupiterPosition;
+  uniform vec3 saturnPosition;
+
+  uniform float venusBrightness;
+  uniform float marsBrightness;
+  uniform float jupiterBrightness;
+  uniform float saturnBrightness;
+
+  const vec3 venusColor = vec3(0.913, 0.847, 0.772);
+  const vec3 marsColor = vec3(0.894, 0.509, 0.317);
+  const vec3 jupiterColor = vec3(0.901, 0.858, 0.780);
+  const vec3 saturnColor = vec3(0.905, 0.772, 0.494);
 #endif
 
 const float piOver2 = 1.5707963267948966192313;
@@ -175,6 +186,16 @@ $atmosphericFunctions
     starBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0) * twinkleFactor(normalizedStarPosition, distanceToEdgeOfSky, sqrt(starBrightness) + 3.0);
     return sqrt(vec3(starBrightness)) * starColor;
   }
+
+  vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){
+    //Use the distance to the star to determine it's perceived twinkling
+    float planetBrightness = pow(100.0, (-planetMagnitude + starAndSkyExposureReduction) * 0.2);
+    float approximateDistanceOnSphereStar = distance(skyPosition, planetPosition) * 1400.0;
+
+    //Pass this brightness into the fast Airy function to make the star glow
+    planetBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0);
+    return sqrt(vec3(planetBrightness)) * planetColor;
+  }
 #endif
 
 vec3 linearAtmosphericPass(vec3 sourcePosition, float sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){
@@ -281,10 +302,10 @@ void main(){
     galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
     //Check our distance from each of the four primary planets
-
-
-    //Get the galactic lighting from the Milky Way
-
+    galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+    galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+    galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+    galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
     //Apply the transmittance function to all of our light sources
     galacticLighting = pow(galacticLighting, gamma) * transmittanceFade;

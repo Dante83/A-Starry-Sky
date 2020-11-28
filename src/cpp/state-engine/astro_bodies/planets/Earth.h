@@ -7,7 +7,7 @@
 class Earth : public Planet{
 public:
   Earth(AstroTime* astroTimeRef);
-  void updatePosition();
+  void updatePosition(double trueObliquityOfEclipticInRads);
   void updateEclipticalLongitude();
   void updateEclipticalLatitude();
   void updateRadiusVector();

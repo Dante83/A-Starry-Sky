@@ -18,7 +18,8 @@ const EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE = 5;
 const EVENT_UPDATE_AUTOEXPOSURE = 6;
 const EVENT_RETURN_AUTOEXPOSURE = 7;
 const MINUTES_BETWEEN_SKY_STATE_UPDATES = 20.0;
-var date;
+const SECONDS_BETWEEN_SKY_STATE_UPDATES = 20.0 * 60.0;
+var numberOfUpdates;
 var updateLoop;
 var wasmModule;
 var initialize;
@@ -49,8 +50,7 @@ var updateSkyState = function(arrayReference){
       skyState.day,
       skyState.hour,
       skyState.minute,
-      skyState.second,
-      skyState.utcOffset
+      skyState.second
     );
 
     //Copy the data from our starry sky web assembly heap to the transfferable memory
@@ -64,20 +64,20 @@ var updateSkyState = function(arrayReference){
 function initializeSkyAstronomicalState(){
   if(wasmIsReady && initialSkyDateReceived){
     //Set the current date time.
-    date = new Date(initialAstronomicalPostObject.date);
+    const dateAtLocation = new Date(initialAstronomicalPostObject.date);
+    let dateAtUTC = new Date(dateAtLocation.getTime() + (initialAstronomicalPostObject.utcOffset * 3600.0) * 1000.0);
 
     //Construct the initial sky state
     skyState = {
-      date: date,
+      initialDate: dateAtLocation,
       latitude: initialAstronomicalPostObject.latitude,
       longitude: initialAstronomicalPostObject.longitude,
-      year: date.getFullYear(),
-      month: date.getMonth() + 1,
-      day: date.getDate(),
-      hour: date.getHours(),
-      minute: date.getMinutes(),
-      second: date.getSeconds() + (date.getMilliseconds() * 0.001),
-      utcOffset: initialAstronomicalPostObject.utcOffset,
+      year: dateAtUTC.getFullYear(),
+      month: dateAtUTC.getMonth() + 1,
+      day: dateAtUTC.getDate(),
+      hour: dateAtUTC.getHours(),
+      minute: dateAtUTC.getMinutes(),
+      second: dateAtUTC.getSeconds() + (dateAtUTC.getMilliseconds() * 0.001),
       memoryPtr: null,
       astroValuesFloat32Array: null,
       bufferSize: null
@@ -99,7 +99,6 @@ function initializeSkyAstronomicalState(){
       skyState.hour,
       skyState.minute,
       skyState.second,
-      skyState.utcOffset,
       skyState.memoryPtr
     );
     let initialStateFloat32Array = new Float32Array(initialStateBuffer, 0.0, NUMBER_OF_ASTRONOMICAL_FLOATS);
@@ -107,15 +106,22 @@ function initializeSkyAstronomicalState(){
     initialStateFloat32Array.set(skyState.astroValuesFloat32Array, 0, NUMBER_OF_ASTRONOMICAL_FLOATS);
 
     //Construct the sky state five minutes from now
-    skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_SKY_STATE_UPDATES);
-    skyState.year = date.getFullYear();
-    skyState.month = date.getMonth() + 1;
-    skyState.day = date.getDate();
-    skyState.hour = date.getHours();
-    skyState.minute = date.getMinutes();
-    skyState.second = date.getSeconds() + (date.getMilliseconds() * 0.001);
+    numberOfUpdates = 1;
+    dateAtUTC = new Date(dateAtLocation.getTime() + (SECONDS_BETWEEN_SKY_STATE_UPDATES + initialAstronomicalPostObject.utcOffset * 3600.0) * 1000.0);
+    skyState.year = dateAtUTC.getFullYear();
+    skyState.month = dateAtUTC.getMonth() + 1;
+    skyState.day = dateAtUTC.getDate();
+    skyState.hour = dateAtUTC.getHours();
+    skyState.minute = dateAtUTC.getMinutes();
+    skyState.second = dateAtUTC.getSeconds() + (dateAtUTC.getMilliseconds() * 0.001);
     let finalStateBuffer = initialAstronomicalPostObject.transferrableFinalStateBuffer;
     updateSkyState(finalStateBuffer);
+
+    console.log("Sky State");
+    const initialFloatArray = new Float32Array(initialStateBuffer);
+    const finalFloatArray = new Float32Array(finalStateBuffer);
+    console.log(`Initial Jupiter RA: ${initialFloatArray[10]} DEC: ${initialFloatArray[11]}`);
+    console.log(`Final Jupiter RA: ${finalFloatArray[10]} DEC: ${finalFloatArray[11]}`);
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
@@ -169,13 +175,14 @@ onmessage = function(e){
     }, [postObject.meteringSurveyFloatArrayf.buffer]);
   }
   else if(postObject.eventType === EVENT_UPDATE_LATEST_SKY_STATE){
-    skyState.date.setMinutes(skyState.date.getMinutes() + MINUTES_BETWEEN_SKY_STATE_UPDATES);
-    skyState.year = date.getFullYear();
-    skyState.month = date.getMonth() + 1;
-    skyState.day = date.getDate();
-    skyState.hour = date.getHours();
-    skyState.minute = date.getMinutes();
-    skyState.second = date.getSeconds() + (date.getMilliseconds() * 0.001);
+    numberOfUpdates += 1;
+    dateAtUTC = new Date(skyState.initialDate.getTime() + ((numberOfUpdates * SECONDS_BETWEEN_SKY_STATE_UPDATES) + initialAstronomicalPostObject.utcOffset * 3600.0) * 1000.0);
+    skyState.year = dateAtUTC.getFullYear();
+    skyState.month = dateAtUTC.getMonth() + 1;
+    skyState.day = dateAtUTC.getDate();
+    skyState.hour = dateAtUTC.getHours();
+    skyState.minute = dateAtUTC.getMinutes();
+    skyState.second = dateAtUTC.getSeconds() + (dateAtUTC.getMilliseconds() * 0.001);
     let finalStateBuffer = postObject.transferrableFinalStateBuffer;
     updateSkyState(finalStateBuffer);
 

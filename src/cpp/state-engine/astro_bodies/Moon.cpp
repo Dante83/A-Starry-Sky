@@ -16,7 +16,7 @@ Moon::Moon(AstroTime* astroTimeRef) : AstronomicalBody(astroTimeRef){
 //
 //Methods
 //
-void Moon::updatePosition(){
+void Moon::updatePosition(double trueObliquityOfEclipticInRads){
   double julianCentury = astroTime->julianCentury;
   double a_1 = check4GreaterThan360(119.75 + 131.849 * julianCentury) * DEG_2_RAD;
   double a_2 = check4GreaterThan360(53.09 + 479264.290 * julianCentury) * DEG_2_RAD;
@@ -149,8 +149,8 @@ void Moon::updatePosition(){
   scale = MEAN_LUNAR_DISTANCE_FROM_EARTH / distanceFromEarthInMeters;
 
   //From all of the above, we can get our right ascension and declination
-  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude);
-  double geocentricElongationOfTheMoon = acos(cos_eclipticalLatitude * cos((sun->longitude * DEG_2_RAD) - eclipticalLongitude));
+  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude, trueObliquityOfEclipticInRads);
+  double geocentricElongationOfTheMoon = acos(cos_eclipticalLatitude * cos(sun->longitude - eclipticalLongitude));
 
   //Finally,update our moon brightness
   //From approximation 48.2 and 48.3, in Meeus, page 346
@@ -167,11 +167,10 @@ void Moon::updatePosition(){
   double illuminationOfMoonCoefficient = TWO_THIRDS * AVERAGE_ALBEDO_OF_MOON * (RADIUS_OF_THE_MOON_IN_M * RADIUS_OF_THE_MOON_IN_M) / (distanceFromEarthInMeters * distanceFromEarthInMeters);
   double phiMinusPiOverTwo = 0.5 * (PI - lunarPhaseAngleInRads);
   #define FULL_EARTHSHINE 0.19
-  #define IRRADIANCE_OF_SUN 28.8
+  #define IRRADIANCE_OF_SUN 1300.0
   double phiOverTwo = 0.5 * lunarPhaseAngleInRads;
   earthShineIntensity = 0.5 * FULL_EARTHSHINE * (1.0 - sin(phiMinusPiOverTwo) * tan(phiMinusPiOverTwo) * log(1.0 / tan(0.5 * phiMinusPiOverTwo)));
   irradianceFromEarth = illuminationOfMoonCoefficient * (earthShineIntensity + IRRADIANCE_OF_SUN * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(1.0 / tan(0.5 * phiOverTwo))));
-  irradianceFromEarth = lunarPhaseAngleInRads / DEG_2_RAD;
 
   //Update the paralactic angle
   updateParalacticAngle();
@@ -205,7 +204,7 @@ void Moon::setLongitudeOfTheAscendingNodeOfOrbit(double inValue){
 }
 
 void Moon::updateParalacticAngle(){
-  double hourAngle = (astroTime->greenwhichSiderealTime * DEG_2_RAD) - location->lonInRads - rightAscension;
+  double hourAngle = astroTime->localApparentSiderealTime * DEG_2_RAD - rightAscension;
   double parallacticAngleDenominator = tan(location->latInRads) * cos(declination) - sin(declination) * cos(hourAngle);
   parallacticAngle = parallacticAngleDenominator != 0.0 ? sin(hourAngle) / parallacticAngleDenominator : PI_OVER_TWO;
 }

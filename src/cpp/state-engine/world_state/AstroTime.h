@@ -3,7 +3,7 @@
 class AstroTime{
 public:
   //Constructor
-  AstroTime(int yr, int mnth, int d, int h, int m, double s, double uOffset);
+  AstroTime(int yr, int mnth, int d, int h, int m, double s);
   //variables
   int dayOfTheYear;
   int year;
@@ -15,9 +15,9 @@ public:
   int minute;
   double second;
   double timeOfDayInSeconds;
-  double utcOffset;
   double julianDay;
   double julianCentury;
+  double julianMilliennia;
   double greenwhichSiderealTime;
   double greenwhichApparentSiderealTime;
   double localApparentSiderealTime;
@@ -25,7 +25,7 @@ public:
 
   //Updaters
   void updateLocalApparentSiderealTime(double longitude);
-  void setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s, double uOffset);
+  void setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s);
   void setGreenwhichSiderealTime(double inValue);
 private:
   bool isLeapYear;
@@ -36,7 +36,7 @@ private:
   int* daysUpToMonth;
   int* daysInMonth;
 
-  void addSeconds(double seconds);
+  void convertToUTC(double seconds);
   void updateIsLeapYear();
   void updateDayOfTheYear();
   void updateJulianDayAndCentury();

@@ -10,6 +10,6 @@ public:
   double averageAlbedo;
   double distanceFromEarth;
   double getPhaseAngleInDegrees();
-  void updatePosition();
+  void updatePosition(double trueObliquityOfEclipticInRads);
   virtual void updateMagnitudeOfPlanet() = 0;
 };

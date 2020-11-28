@@ -3,6 +3,7 @@
 #include "planets/Earth.h"
 #include "OtherPlanet.h"
 #include <cmath>
+#include <stdio.h>
 
 //
 //Constructor
@@ -13,7 +14,7 @@ OtherPlanet::OtherPlanet(AstroTime* astroTimeRef) : Planet(astroTimeRef){
   //
 };
 
-void OtherPlanet::updatePosition(){
+void OtherPlanet::updatePosition(double trueObliquityOfEclipticInRads){
   //Update each of our heliocentric coordinates
   updateEclipticalLongitude();
   updateEclipticalLatitude();
@@ -36,12 +37,12 @@ void OtherPlanet::updatePosition(){
 
   //Convert the latitude and longitude of the planet to right-ascension and decliation
   //Inherited from Astronomical Body
-  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipiticalLatitude);
+  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipiticalLatitude, trueObliquityOfEclipticInRads);
 
   //Use our distance from to the sun and distance from the earth to determine the brightness of the planet
   //as seen from earth
-  distanceFromSun = sqrt(heliocentric_x * heliocentric_x + heliocentric_y * heliocentric_y + heliocentric_z * heliocentric_z);
-  distanceFromEarth = sqrt(x * x + y * y + z * z);
+  distanceFromSun = sqrt(heliocentric_x * heliocentric_x + heliocentric_y * heliocentric_y + heliocentric_z * heliocentric_z) * AVERAGE_SOLAR_DISTANCE;
+  distanceFromEarth = sqrt(x * x + y * y + z * z) * AVERAGE_SOLAR_DISTANCE;
 }
 
 double OtherPlanet::getPhaseAngleInDegrees(){

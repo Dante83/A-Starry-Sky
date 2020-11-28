@@ -32,6 +32,7 @@ StarrySky.SkyDirector = function(parentComponent){
   const HALF_A_SECOND = 0.5;
   const FOUR_SECONDS = 4.0;
   const TWENTY_MINUTES = 20.0 * ONE_MINUTE;
+  const PI_OVER_TWO = Math.PI * 0.5;
   let transferrableInitialStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
   this.transferrableFinalStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
   this.finalStateFloat32Array = new Float32Array(this.transferrableFinalStateBuffer);
@@ -198,7 +199,7 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.moon.position.fromArray(self.rotatedAstroPositions.slice(3, 6));
       let mp = self.skyState.moon.position;
       self.skyState.moon.quadOffset.set(-mp.z, mp.y, -mp.x).normalize().multiplyScalar(RADIUS_OF_SKY);
-      self.skyState.moon.parallacticAngle = self.rotatedAstroDependentValues[2];
+      self.skyState.moon.parallacticAngle = self.rotatedAstroDependentValues[2] - PI_OVER_TWO;
       self.skyState.mercury.position.fromArray(self.rotatedAstroPositions.slice(9, 12));
       self.skyState.venus.position.fromArray(self.rotatedAstroPositions.slice(12, 15));
       self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions.slice(15, 18));

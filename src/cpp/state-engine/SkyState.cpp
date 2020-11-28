@@ -22,8 +22,8 @@ SkyState* skyState;
 
 extern "C" {
   int main();
-  void setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset, float* memoryPtr);
-  void updateSky(int year, int month, int day, int hour, int minute, double second, double utcOffset);
+  void setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, float* memoryPtr);
+  void updateSky(int year, int month, int day, int hour, int minute, double second);
   void initializeMeteringAndLightingDependencies(float* xyzPtr, float* pixelWeightsPtr, int widthOfTexture);
   float updateMeteringAndLightingData(float* skyColorIntensities, float* hemisphericalSkyLight);
 }
@@ -65,9 +65,9 @@ void SkyState::updateHeap32Memory(){
 }
 
 //What we use to get all of this rolling.
-void EMSCRIPTEN_KEEPALIVE setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, double utcOffset, float* memoryPtr){
+void EMSCRIPTEN_KEEPALIVE setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, float* memoryPtr){
   //Set up our sky to the current time
-  AstroTime *astroTime = new AstroTime(year, month, day, hour, minute, second, utcOffset);
+  AstroTime *astroTime = new AstroTime(year, month, day, hour, minute, second);
   Location *location = new Location(latitude, longitude);
   SkyManager *skyManager = new SkyManager(astroTime, location);
   LightingAnalyzer *lightingAnalyzer = new LightingAnalyzer();
@@ -75,8 +75,8 @@ void EMSCRIPTEN_KEEPALIVE setupSky(double latitude, double longitude, int year, 
   skyState->updateHeap32Memory();
 }
 
-void EMSCRIPTEN_KEEPALIVE updateSky(int year, int month, int day, int hour, int minute, double second, double utcOffset){
-  skyState->astroTime->setAstroTimeFromYMDHMSTZ(year, month, day, hour, minute, second, utcOffset);
+void EMSCRIPTEN_KEEPALIVE updateSky(int year, int month, int day, int hour, int minute, double second){
+  skyState->astroTime->setAstroTimeFromYMDHMSTZ(year, month, day, hour, minute, second);
   skyState->skyManager->update();
   skyState->updateHeap32Memory();
 }

@@ -13,7 +13,7 @@ public:
   double heliocentric_z;
   double distanceFromSun;
 protected:
-  virtual void updatePosition() = 0;
+  virtual void updatePosition(double trueObliquityOfEclipticInRads) = 0;
   virtual void updateEclipticalLongitude() = 0;
   virtual void updateEclipticalLatitude() = 0;
   virtual void updateRadiusVector() = 0;

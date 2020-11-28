@@ -22,8 +22,7 @@ public:
   double parallacticAngle;
   double scale;
   double irradianceFromEarth;
-  void updatePosition();
-  void updatePosition(double secondsTillNextUpdate);
+  void updatePosition(double trueObliquityOfEclipticInRads);
   void setMeanLongitude(double inValue);
   void setMeanElongation(double inValue);
   void setMeanAnomaly(double inValue);
