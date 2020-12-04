@@ -1,7 +1,6 @@
 #include "AstroTime.h"
 #include "../Constants.h"
 #include <cmath>
-#include <stdio.h>
 
 //
 //Constructors

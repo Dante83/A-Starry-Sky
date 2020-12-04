@@ -2,7 +2,6 @@
 #include "SkyInterpolator.h"
 #include <emscripten/emscripten.h>
 #include <cmath>
-#include "stdio.h"
 
 //
 //Constructor

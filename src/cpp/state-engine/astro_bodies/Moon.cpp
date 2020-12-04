@@ -141,16 +141,14 @@ void Moon::updatePosition(double trueObliquityOfEclipticInRads){
 
   double eclipticalLongitude = (meanLongitude + (sum_l * 0.000001)) * DEG_2_RAD;
   double eclipticalLatitude = (sum_b * 0.000001) * DEG_2_RAD;
-  double cos_eclipticalLatitude = cos(eclipticalLatitude);
-  double sin_eclipticalLongitude = sin(eclipticalLongitude);
   distanceFromEarthInMeters = 385000560.0 + sum_r;
 
   #define MEAN_LUNAR_DISTANCE_FROM_EARTH 384400000.0
   scale = MEAN_LUNAR_DISTANCE_FROM_EARTH / distanceFromEarthInMeters;
 
   //From all of the above, we can get our right ascension and declination
-  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipticalLatitude, trueObliquityOfEclipticInRads);
-  double geocentricElongationOfTheMoon = acos(cos_eclipticalLatitude * cos(sun->longitude - eclipticalLongitude));
+  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, eclipticalLatitude, trueObliquityOfEclipticInRads);
+  double geocentricElongationOfTheMoon = acos(cos(eclipticalLatitude) * cos(sun->longitude - eclipticalLongitude));
 
   //Finally,update our moon brightness
   //From approximation 48.2 and 48.3, in Meeus, page 346

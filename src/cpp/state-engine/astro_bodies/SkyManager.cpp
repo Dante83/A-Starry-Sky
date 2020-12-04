@@ -12,7 +12,6 @@
 #include "../Constants.h"
 #include <stdbool.h>
 #include <cmath>
-#include <stdio.h>
 
 SkyManager::SkyManager(AstroTime* astroTimeRef, Location* locationRef): sun(astroTimeRef), moon(astroTimeRef),
 earth(astroTimeRef), mercury(astroTimeRef), venus(astroTimeRef), mars(astroTimeRef), jupiter(astroTimeRef),
@@ -91,8 +90,6 @@ void SkyManager::update(){
   eccentricityOfTheEarth = 0.016708634 - 0.000042037 * julianCentury - 0.0000001267 * julianCentury_pow2;
   sun.equationOfCenter = (1.914602 - 0.004817 * julianCentury - 0.000014 * julianCentury_pow2) * sin(sunsMeanAnomolyInRads) + (0.019993 - 0.000101 * julianCentury) * sin(2 * sunsMeanAnomolyInRads) + 0.000289 * sin(3 * sunsMeanAnomolyInRads);
   sun.setTrueLongitude((sun.meanLongitude + sun.equationOfCenter) * DEG_2_RAD);
-
-  printf("Passed in true obliquity of ecliptic: %f\n", trueObliquityOfEclipticInRads);
 
   //Update the state of our sky from this information
   sun.eccentricityOfTheEarth = &eccentricityOfTheEarth;

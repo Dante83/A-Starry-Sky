@@ -4,7 +4,6 @@
 #include "Earth.h"
 #include "Jupiter.h"
 #include <cmath>
-#include <stdio.h>
 
 //
 //Constructor
@@ -22,8 +21,6 @@ void Jupiter::updateMagnitudeOfPlanet(){
 };
 
 void Jupiter::updateEclipticalLongitude(){
-  printf("Updating Jupiter ecliptical latitude and longitude\n");
-
   const double L_0_A[64] = {59954691.0, 9695899.0, 573610.0, 306389.0, 97187.0,
     72903.0, 64264.0, 39806.0, 38858.0, 27965.0, 13590.0, 8769.0, 8246.0, 7368.0,
     6263.0, 6114.0, 5305.0, 5305.0, 4905.0, 4647.0, 3045.0, 2610.0, 2028.0, 1921.0,
@@ -150,7 +147,8 @@ void Jupiter::updateEclipticalLongitude(){
     julianMillienniaMultiple *= astroTime->julianMilliennia;
   }
   eclipticalLongitude *= 1.0e-8;
-  printf("Jupiter Ecliptical Longitude: %f\n", eclipticalLongitude);
+  eclipticalLongitude = fmod(eclipticalLongitude, PI_TIMES_TWO);
+  eclipticalLongitude = eclipticalLongitude < 0 ?  PI_TIMES_TWO + eclipticalLongitude : eclipticalLongitude;
 }
 
 void Jupiter::updateEclipticalLatitude(){
@@ -229,7 +227,6 @@ void Jupiter::updateEclipticalLatitude(){
     julianMillienniaMultiple *= astroTime->julianMilliennia;
   }
   eclipticalLatitude *= 1.0e-8;
-  printf("Jupiter Ecliptical Latitude: %f\n", eclipticalLatitude);
 }
 
 void Jupiter::updateRadiusVector(){
@@ -344,5 +341,4 @@ void Jupiter::updateRadiusVector(){
     julianMillienniaMultiple *= astroTime->julianMilliennia;
   }
   radiusVector *= 1.0e-8;
-  printf("Jupiter Radius: %f\n", radiusVector);
 }

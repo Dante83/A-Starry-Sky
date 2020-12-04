@@ -22,189 +22,177 @@ void Venus::updateMagnitudeOfPlanet(){
 }
 
 void Venus::updateEclipticalLongitude(){
-  const double L_0_A[24] = {317614666.774, 1353968.419, 89891.645, 5477.194, 3455.741,
-  2372.061, 1317.168, 1664.146, 1438.387, 1200.521, 761.38, 707.676, 584.836,
-  769.314, 499.915, 326.221, 429.498, 326.967, 231.937, 179.695, 128.263, 155.464,
-  127.907, 105.547};
-  const double L_0_B[24] = {0.0, 5.59313319619, 5.30650047764, 4.41630661466, 2.6996444782,
-  2.99377542079, 5.18668228402, 4.25018630147, 4.15745084182, 6.15357116043, 1.95014701047,
-  1.06466702668, 3.9983988823, 0.81629615196, 4.1234021282, 4.59056477038, 3.58642858577,
-  5.67736584311, 3.16251059356, 4.65337908917, 4.22604490814, 5.5704389169, 0.96209781904,
-  1.53721203088};
-  const double L_0_C[24] = {0.0, 10213.2855462, 20426.5710924, 7860.41939244, 11790.6290887,
-  3930.20969622, 26.2983197998, 1577.34354245, 9683.59458112, 30639.8566386, 529.690965095,
-  775.522611324, 191.448266112, 9437.76293489, 15720.8387849, 10404.7338123, 19367.1891622,
-  5507.55323867, 9153.90361602, 1109.37855209, 20.7753954924, 19651.0484811, 5661.33204915,
-  801.820931124};
+  const double L_0_A[24] = {317614667.0, 1353968.0, 89892.0, 5477.0, 3456.0, 2372.0,
+    1664.0, 1438.0, 1317.0, 1201.0, 769.0, 761.0, 708.0, 585.0, 500.0, 429.0, 327.0,
+    326.0, 232.0, 180.0, 155.0, 128.0, 128.0, 106.0};
+  const double L_0_B[24] = {0.0, 5.5931332, 5.3065, 4.4163, 2.6996, 2.9938, 4.2502,
+    4.1575, 5.1867, 6.1536, 0.816, 1.950, 1.065, 3.998, 4.123, 3.586, 5.677, 4.591,
+    3.163, 4.653, 5.570, 4.226, 0.962, 1.537};
+  const double L_0_C[24] = {0.0, 10213.2855462, 20426.57109, 7860.4194, 11790.6291,
+    3930.2097, 1577.3435, 9683.5946, 26.2983, 30639.8566, 9437.763, 529.691,
+    775.523, 191.448, 15720.839, 19367.189, 5507.553, 10404.734, 9153.904,
+    1109.379, 19651.048, 20.775, 5661.332, 801.821};
 
   double L0 = 0.0;
   for(int i = 0; i < 24; ++i){
-    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianCentury);
+    L0 += L_0_A[i] * cos(L_0_B[i] + L_0_C[i] * astroTime->julianMilliennia);
   }
 
-  const double L_1_A[12] = {1.02132855462e+12, 95617.813, 7787.201, 151.666, 141.694,
-  173.908, 82.235, 69.732, 52.292, 38.313, 29.63, 25.056};
-  const double L_1_B[12] = {0.0, 2.4640651111, 0.6247848222, 6.10638559291, 2.12362986036,
-  2.65539499463, 5.70231469551, 2.68128549229, 3.60270736876, 1.03371309443, 1.25050823203,
-  6.1065063866};
-  const double L_1_C[12] = {0.0, 10213.2855462, 20426.5710924, 1577.34354245, 30639.8566386,
-  26.2983197998, 191.448266112, 9437.76293489, 775.522611324, 529.690965095, 5507.55323867,
-  10404.7338123};
+  const double L_1_A[12] = {1021352943053.0, 95708.0, 14445.0, 213.0, 174.0, 152.0,
+    82.0, 70.0, 52.0, 38.0, 30.0, 25.0};
+  const double L_1_B[12] = {0.0, 2.46424, 0.51625, 1.795, 2.655, 6.106, 5.7,
+    2.68, 3.6, 1.03, 1.25, 6.11};
+  const double L_1_C[12] = {0.0, 10213.28555, 20426.57109, 30639.857, 26.298, 1577.344,
+    191.45, 9437.76, 775.52, 529.69, 5507.55, 10404.73};
 
   double L1 = 0.0;
   for(int i = 0; i < 12; ++i){
-    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianCentury);
+    L1 += L_1_A[i] * cos(L_1_B[i] + L_1_C[i] * astroTime->julianMilliennia);
   }
 
-  const double L_2_A[8] = {3894.209, 595.403, 287.868, 23.838, 9.964, 7.196, 7.043,
-  6.014};
-  const double L_2_B[8] = {0.34823650721, 2.01456107998, 0.0, 2.04588223604, 3.97089333901,
-  3.65730119531, 1.52107808192, 1.00039990357};
-  const double L_2_C[8] = {10213.2855462, 20426.5710924, 0.0, 26.2983197998, 775.522611324,
-  30639.8566386, 1577.34354245, 191.448266112};
+  const double L_2_A[8] = {54127.0, 3891.0, 1338.0, 24.0, 19.0, 10.0, 7.0, 6.0};
+  const double L_2_B[8] = {0.0, 0.3451, 2.0201, 2.05, 3.54, 3.97, 1.52, 1.0};
+  const double L_2_C[8] = {0.0, 10213.2855, 20426.5711, 26.3, 30639.86, 775.52, 1577.34, 191.45};
 
   double L2 = 0.0;
   for(int i = 0; i < 8; ++i){
-    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianCentury);
+    L2 += L_2_A[i] * cos(L_2_B[i] + L_2_C[i] * astroTime->julianMilliennia);
   }
 
-  const double L_3_A[3] = {136.328, 30.661, 3.041};
-  const double L_3_B[3] = {4.79698723753, 3.71663788064, 3.14159265359};
-  const double L_3_C[3] = {10213.2855462, 20426.5710924, 0.0};
+  const double L_3_A[3] = {136.0, 78.0, 26.0};
+  const double L_3_B[3] = {4.804, 3.67, 0.0};
+  const double L_3_C[3] = {10213.286, 20426.57, 0.0};
 
   double L3 = 0.0;
   for(int i = 0; i < 3; ++i){
-    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianCentury);
+    L3 += L_3_A[i] * cos(L_3_B[i] + L_3_C[i] * astroTime->julianMilliennia);
   }
 
-  const double L_4_A[3] = {1.636, 1.08, 0.018};
-  const double L_4_B[3] = {2.50540811485, 5.10106236574, 0.88315856739};
-  const double L_4_C[3] = {10213.2855462, 20426.5710924, 30639.8566386};
+  const double L_4_A[3] = {114.0, 3.0, 2.0};
+  const double L_4_B[3] = {3.1416, 5.21, 2.51};
+  const double L_4_C[3] = {0.0, 20426.57, 10213.29};
 
   double L4 = 0.0;
   for(int i = 0; i < 3; ++i){
-    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTime->julianCentury);
+    L4 += L_4_A[i] * cos(L_4_B[i] + L_4_C[i] * astroTime->julianMilliennia);
   }
 
-  const double L_5_A = 0.122;
-  const double L_5_B = 1.8871172463;
-  const double L_5_C = 10213.2855462;
-  double L5 = L_5_A * cos(L_5_B + L_5_C * astroTime->julianCentury);
+  const double L_5_A = 1.0;
+  const double L_5_B = 3.14;
+  const double L_5_C = 0.0;
+  double L5 = L_5_A * cos(L_5_B + L_5_C * astroTime->julianMilliennia);
 
-  double julianCenturyMultiple = 1.0;
-  double LValues[5] = {L0, L1, L2, L3, L4};
+  double julianMillienniaMultiple = 1.0;
+  double LValues[6] = {L0, L1, L2, L3, L4, L5};
   eclipticalLongitude = 0.0;
-  for(int i = 0; i < 5; ++i){
-    eclipticalLongitude += LValues[i] * julianCenturyMultiple;
-    julianCenturyMultiple *= astroTime->julianCentury;
+  for(int i = 0; i < 6; ++i){
+    eclipticalLongitude += LValues[i] * julianMillienniaMultiple;
+    julianMillienniaMultiple *= astroTime->julianMilliennia;
   }
-  eclipticalLongitude = eclipticalLongitude / 1.0e-8;
+  eclipticalLongitude *= 1.0e-8;
+  eclipticalLongitude = fmod(eclipticalLongitude, PI_TIMES_TWO);
+  eclipticalLongitude = eclipticalLongitude < 0 ?  PI_TIMES_TWO + eclipticalLongitude : eclipticalLongitude;
 }
 
 void Venus::updateEclipticalLatitude(){
-  const double B_0_A[9] = {5923638.472, 40107.978, 32814.918, 1011.392, 149.458,
-  137.788, 129.973, 119.507, 107.971};
-  const double B_0_B[9] = {0.26702775812, 1.14737178112, 3.14159265359, 1.0894611973,
-  6.25390268112, 0.86020095586, 3.67152480061, 3.70468787104, 4.53903678347};
-  const double B_0_C[9] = {10213.2855462, 20426.5710924, 0.0, 30639.8566386, 18073.7049387,
-  1577.34354245, 9437.76293489, 2352.86615377, 22003.9146349};
+  const double B_0_A[9] = {5923638.0, 40108.0, 32815.0, 1011.0, 149.0, 138.0, 130.0, 120.0, 108.0};
+  const double B_0_B[9] = {0.2670278, 1.14737, 3.14159, 1.0895, 6.254, 0.86, 3.672, 3.705, 4.539};
+  const double B_0_C[9] = {10213.2855462, 20426.57109, 0.0, 30639.8566, 18073.705, 1577.344, 9437.763, 2352.866, 22003.915};
 
   double B0 = 0.0;
   for(int i = 0; i < 9; ++i){
-    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianCentury);
+    B0 += B_0_A[i] * cos(B_0_B[i] + B_0_C[i] * astroTime->julianMilliennia);
   }
 
-  const double B_1_A[4] = {287821.243, 3499.578, 1257.844, 96.152};
-  const double B_1_B[4] = {1.88964962838, 3.71117560516, 0.0, 2.74240664188};
-  const double B_1_C[4] = {10213.2855462, 20426.5710924, 0.0, 30639.8566386};
+  const double B_1_A[4] = {513348.0, 4380.0, 199.0, 197.0};
+  const double B_1_B[4] = {1.803643, 3.3862, 0.0, 2.53};
+  const double B_1_C[4] = {10213.285546, 20426.5711, 0.0, 30639.857};
 
   double B1 = 0.0;
   for(int i = 0; i < 4; ++i){
-    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianCentury);
+    B1 += B_1_A[i] * cos(B_1_B[i] + B_1_C[i] * astroTime->julianMilliennia);
   }
 
-  const double B_2_A[4] = {12657.745, 151.225, 37.476, 10.627};
-  const double B_2_B[4] = {3.34796457029, 0.0, 5.34638962141, 3.81894300538};
-  const double B_2_C[4] = {10213.2855462, 0.0, 20426.5710924, 30639.8566386};
+  const double B_2_A[4] = {22378.0, 282.0, 173.0, 27.0};
+  const double B_2_B[4] = {3.38509, 0.0, 5.256, 3.87};
+  const double B_2_C[4] = {10213.28555, 0.0, 20426.571, 30639.86};
 
   double B2 = 0.0;
   for(int i = 0; i < 4; ++i){
-    B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTime->julianCentury);
+    B2 += B_2_A[i] * cos(B_2_B[i] + B_2_C[i] * astroTime->julianMilliennia);
   }
 
-  const double B_3_A[4] = {376.505, 12.587, 4.809, 0.835};
-  const double B_3_B[4] = {4.87650249694, 3.14159265359, 0.43423918018, 5.57179521329};
-  const double B_3_C[4] = {10213.2855462, 0.0, 20426.5710924, 30639.8566386};
+  const double B_3_A[4] = {647.0, 20.0, 6.0, 3.0};
+  const double B_3_B[4] = {4.992, 3.14, 0.77, 5.44};
+  const double B_3_C[4] = {10213.286, 0.0, 20426.57, 30639.86};
 
   double B3 = 0.0;
   for(int i = 0; i < 4; ++i){
-    B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTime->julianCentury);
+    B3 += B_3_A[i] * cos(B_3_B[i] + B_3_C[i] * astroTime->julianMilliennia);
   }
 
-  const double B_4_A = 8.558;
-  const double B_4_B = 0.17181972054;
-  const double B_4_C = 10213.2855462;
-  double B4 = B_4_A * cos(B_4_B + B_4_C * astroTime->julianCentury);
+  const double B_4_A = 14.0;
+  const double B_4_B = 0.32;
+  const double B_4_C = 10213.29;
+  double B4 = B_4_A * cos(B_4_B + B_4_C * astroTime->julianMilliennia);
 
-  double julianCenturyMultiple = 1.0;
-  double BValues[4] = {B0, B1, B2, B3};
+  double julianMillienniaMultiple = 1.0;
+  double BValues[5] = {B0, B1, B2, B3, B4};
   eclipticalLatitude = 0.0;
-  for(int i = 0; i < 4; ++i){
-    eclipticalLatitude += BValues[i] * julianCenturyMultiple;
-    julianCenturyMultiple *= astroTime->julianCentury;
+  for(int i = 0; i < 5; ++i){
+    eclipticalLatitude += BValues[i] * julianMillienniaMultiple;
+    julianMillienniaMultiple *= astroTime->julianMilliennia;
   }
-  eclipticalLatitude = eclipticalLatitude / 1.0e-8;
+  eclipticalLatitude *= 1.0e-8;
 }
 
 void Venus::updateRadiusVector(){
-  const double R_0_A[12] = {72334820.891, 489824.182, 1658.058, 1632.096, 1378.043,
-  498.395, 373.958, 263.615, 237.454, 221.985, 119.466, 125.896};
-  const double R_0_B[12] = {0.0, 4.02151831717, 4.90206728031, 2.84548795207, 1.12846591367,
-  2.58682193892, 1.42314832858, 5.52938716941, 2.55136053886, 2.01346696541, 3.01975080538,
-  2.72769850819};
-  const double R_0_C[12] = {0.0, 10213.2855462, 20426.5710924, 7860.41939244, 11790.6290887,
-  9683.59458112, 3930.20969622, 9437.76293489, 15720.8387849, 19367.1891622, 10404.7338123,
-  1577.34354245};
+  const double R_0_A[12] = {72334821.0, 489824.0, 1658.0, 1632.0, 1378.0, 498.0,
+    374.0, 264.0, 237.0, 222.0, 126.0, 119};
+  const double R_0_B[12] = {0.0, 4.021518, 4.9021, 2.8455, 1.1285, 2.587, 1.423,
+    5.529, 2.551, 2.013, 2.728, 3.02};
+  const double R_0_C[12] = {0.0, 10213.285546, 20426.5711, 7860.4194, 11790.6291,
+    9683.595, 3930.21, 9437.763, 15720.839, 19367.189, 1577.344, 10404.734};
 
   double R0 = 0.0;
   for(int i = 0; i < 12; ++i){
-    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianCentury);
+    R0 += R_0_A[i] * cos(R_0_B[i] + R_0_C[i] * astroTime->julianMilliennia);
   }
 
-  const double R_1_A[3] = {34551.041, 234.203, 233.998};
-  const double R_1_B[3] = {0.89198706276, 1.77224942363, 3.14159265359};
-  const double R_1_C[3] = {10213.2855462, 20426.5710924, 0.0};
+  const double R_1_A[3] = {34551.0, 234.0, 234.0};
+  const double R_1_B[3] = {0.89199, 1.772, 3.142};
+  const double R_1_C[3] = {10213.28555, 20426.571, 0.0};
 
   double R1 = 0.0;
   for(int i = 0; i < 3; ++i){
-    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianCentury);
+    R1 += R_1_A[i] * cos(R_1_B[i] + R_1_C[i] * astroTime->julianMilliennia);
   }
 
-  const double R_2_A[3] = {1406.587, 15.529, 13.059};
-  const double R_2_B[3] = {5.06366395112, 5.47321056992, 0.0};
-  const double R_2_C[3] = {10213.2855462, 20426.5710924, 0.0};
+  const double R_2_A[3] = {1407.0, 16.0, 13.0};
+  const double R_2_B[3] = {5.0637, 5.47, 0.0};
+  const double R_2_C[3] = {10213.28555, 20426.571, 0.0};
 
   double R2 = 0.0;
   for(int i = 0; i < 3; ++i){
-    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianCentury);
+    R2 += R_2_A[i] * cos(R_2_B[i] + R_2_C[i] * astroTime->julianMilliennia);
   }
 
-  const double R_3_A = 49.582;
-  const double R_3_B = 3.22264415899;
-  const double R_3_C = 10213.2855462;
-  double R3 = R_3_A * cos(R_3_B + R_3_C * astroTime->julianCentury);
+  const double R_3_A = 50.0;
+  const double R_3_B = 3.22;
+  const double R_3_C = 10213.29;
+  double R3 = R_3_A * cos(R_3_B + R_3_C * astroTime->julianMilliennia);
 
-  const double R_4_A = 0.573;
-  const double R_4_B = 0.92253525592;
-  const double R_4_C = 10213.2855462;
-  double R4 = R_4_A * cos(R_4_B + R_4_C * astroTime->julianCentury);
+  const double R_4_A = 1.0;
+  const double R_4_B = 0.92;
+  const double R_4_C = 10213.29;
+  double R4 = R_4_A * cos(R_4_B + R_4_C * astroTime->julianMilliennia);
 
-  double julianCenturyMultiple = 1.0;
-  double RValues[4] = {R0, R1, R2, R3};
+  double julianMillienniaMultiple = 1.0;
+  double RValues[5] = {R0, R1, R2, R3, R4};
   radiusVector = 0.0;
-  for(int i = 0; i < 4; ++i){
-    radiusVector += RValues[i] * julianCenturyMultiple;
-    julianCenturyMultiple *= astroTime->julianCentury;
+  for(int i = 0; i < 5; ++i){
+    radiusVector += RValues[i] * julianMillienniaMultiple;
+    julianMillienniaMultiple *= astroTime->julianMilliennia;
   }
-  radiusVector = radiusVector / 1.0e-8;
+  radiusVector *= 1.0e-8;
 }

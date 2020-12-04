@@ -2,7 +2,6 @@
 #include "../world_state/AstroTime.h"
 #include "../Constants.h"
 #include <cmath>
-#include <stdio.h>
 
 //
 //Constructor
@@ -17,15 +16,15 @@ AstronomicalBody::AstronomicalBody(AstroTime* astroTimeRef){
 //EclipticalLongitude is eclipticalLongitude
 //Beta is eclipticalLatitude
 //
-void AstronomicalBody::convertEclipticalLongitudeAndLatitudeToRaAndDec(double eclipticalLongitude, double sin_eclipticalLongitude, double eclipticalLatitude, double cos_eclipticalLatitude, double trueObliquityOfEclipticInRads){
-  printf("latitude: %f longitude: %f\n", eclipticalLatitude, eclipticalLongitude);
-  printf("True Obliquity Of Ecliptic: %f\n", trueObliquityOfEclipticInRads);
-
+void AstronomicalBody::convertEclipticalLongitudeAndLatitudeToRaAndDec(double eclipticalLongitude, double eclipticalLatitude, double trueObliquityOfEclipticInRads){
   //Use these to acquire the equatorial solarGPUCoordinates
   double sinEpsilon = sin(trueObliquityOfEclipticInRads);
   double cosEpsilon = cos(trueObliquityOfEclipticInRads);
+  double sin_eclipticalLongitude = sin(eclipticalLongitude);
   double sin_eclipticalLatitude = sin(eclipticalLatitude);
-  rightAscension = check4GreaterThan2Pi(atan2(sin_eclipticalLongitude * cosEpsilon - (sin_eclipticalLatitude / cos_eclipticalLatitude) * sinEpsilon, cos(eclipticalLongitude)));
+  double cos_eclipticalLatitude = cos(eclipticalLatitude);
+  double tan_eclipticalLatitude = sin_eclipticalLatitude / cos_eclipticalLatitude;
+  rightAscension = check4GreaterThan2Pi(atan2(sin(eclipticalLongitude) * cosEpsilon - tan_eclipticalLatitude * sinEpsilon, cos(eclipticalLongitude)));
   declination = checkBetweenMinusPiOver2AndPiOver2(asin(sin_eclipticalLatitude * cosEpsilon + cos_eclipticalLatitude * sinEpsilon * sin_eclipticalLongitude));
 }
 

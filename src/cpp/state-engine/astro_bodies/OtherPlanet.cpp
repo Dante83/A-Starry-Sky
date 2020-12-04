@@ -3,7 +3,6 @@
 #include "planets/Earth.h"
 #include "OtherPlanet.h"
 #include <cmath>
-#include <stdio.h>
 
 //
 //Constructor
@@ -32,12 +31,13 @@ void OtherPlanet::updatePosition(double trueObliquityOfEclipticInRads){
   double y = heliocentric_y - earth->heliocentric_y;
   double z = heliocentric_z - earth->heliocentric_z;
 
-  double heliocentricLongitude = atan2(y, x);
-  double heliocentricLatitude = atan2(z, sqrt(x * x + y * y));
+  double geocentricLongitude = atan2(y, x);
+  geocentricLongitude = geocentricLongitude < 0.0 ? geocentricLongitude + PI_TIMES_TWO : geocentricLongitude;
+  double geoCentricLatitude = atan2(z, sqrt(x * x + y * y));
 
   //Convert the latitude and longitude of the planet to right-ascension and decliation
   //Inherited from Astronomical Body
-  convertEclipticalLongitudeAndLatitudeToRaAndDec(eclipticalLongitude, sin_eclipticalLongitude, eclipticalLatitude, cos_eclipiticalLatitude, trueObliquityOfEclipticInRads);
+  convertEclipticalLongitudeAndLatitudeToRaAndDec(geocentricLongitude, geoCentricLatitude, trueObliquityOfEclipticInRads);
 
   //Use our distance from to the sun and distance from the earth to determine the brightness of the planet
   //as seen from earth

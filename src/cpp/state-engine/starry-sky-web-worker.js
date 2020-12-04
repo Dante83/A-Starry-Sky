@@ -120,8 +120,11 @@ function initializeSkyAstronomicalState(){
     console.log("Sky State");
     const initialFloatArray = new Float32Array(initialStateBuffer);
     const finalFloatArray = new Float32Array(finalStateBuffer);
-    console.log(`Initial Jupiter RA: ${initialFloatArray[10]} DEC: ${initialFloatArray[11]}`);
-    console.log(`Final Jupiter RA: ${finalFloatArray[10]} DEC: ${finalFloatArray[11]}`);
+    console.log(`Initial Saturn RA: ${initialFloatArray[12] * 57.2958} DEC: ${initialFloatArray[13] * 57.2958}`);
+    console.log(`Initial Jupiter RA: ${initialFloatArray[10] * 57.2958} DEC: ${initialFloatArray[11] * 57.2958}`);
+    console.log(`Initial Mars RA: ${initialFloatArray[8] * 57.2958} DEC: ${initialFloatArray[9] * 57.2958}`);
+    console.log(`Initial Venus RA: ${initialFloatArray[6] * 57.2958} DEC: ${initialFloatArray[7] * 57.2958}`);
+    console.log(`Initial Mercury RA: ${initialFloatArray[4] * 57.2958} DEC: ${initialFloatArray[5] * 57.2958}`);
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
