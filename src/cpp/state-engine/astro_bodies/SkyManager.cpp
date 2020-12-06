@@ -95,8 +95,8 @@ void SkyManager::update(){
   sun.eccentricityOfTheEarth = &eccentricityOfTheEarth;
   sun.meanObliquityOfTheEclipitic = &meanObliquityOfTheEclipitic;
   sun.updatePosition();
-  moon.updatePosition(trueObliquityOfEclipticInRads);
   earth.updatePosition(trueObliquityOfEclipticInRads);
+  moon.updatePosition(trueObliquityOfEclipticInRads);
   OtherPlanet* otherPlanets[5] = {&mercury, &venus, &mars, &jupiter, &saturn};
   for(int i = 0; i < 5; ++i){
     otherPlanets[i]->updatePosition(trueObliquityOfEclipticInRads);

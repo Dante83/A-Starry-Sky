@@ -27,10 +27,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
     else if(isMoonShader){
       uniforms.moonExposure = {type: 'f', value: 1.0};
-      uniforms.venusPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.marsPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.jupiterPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.saturnPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.moonAngularDiameterCos = {type: 'f', value: 1.0};
       uniforms.sunRadius = {type: 'f', value: 1.0};
       uniforms.radiusOfMoonPlane = {type: 'f', value: 1.0};
@@ -50,11 +46,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.brightStarData = {type: 't', value: null};
       uniforms.starColorMap = {type: 't', value: null};
 
+      uniforms.mercuryPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.venusPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.marsPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.jupiterPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.saturnPosition = {type: 'vec3', value: new THREE.Vector3()};
 
+      uniforms.mercuryBrightness = {type: 'f', value: 0.0};
       uniforms.venusBrightness = {type: 'f', value: 0.0};
       uniforms.marsBrightness = {type: 'f', value: 0.0};
       uniforms.jupiterBrightness = {type: 'f', value: 0.0};
@@ -132,23 +130,26 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform sampler2D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
 
-    '#if(!$isSunPass)',
+    '#if(!$isSunPass && !$isMeteringPass)',
       'uniform samplerCube starHashCubemap;',
       'uniform sampler2D dimStarData;',
       'uniform sampler2D medStarData;',
       'uniform sampler2D brightStarData;',
       'uniform sampler2D starColorMap;',
 
+      'uniform vec3 mercuryPosition;',
       'uniform vec3 venusPosition;',
       'uniform vec3 marsPosition;',
       'uniform vec3 jupiterPosition;',
       'uniform vec3 saturnPosition;',
 
+      'uniform float mercuryBrightness;',
       'uniform float venusBrightness;',
       'uniform float marsBrightness;',
       'uniform float jupiterBrightness;',
       'uniform float saturnBrightness;',
 
+      'const vec3 mercuryColor = vec3(1.0);',
       'const vec3 venusColor = vec3(0.913, 0.847, 0.772);',
       'const vec3 marsColor = vec3(0.894, 0.509, 0.317);',
       'const vec3 jupiterColor = vec3(0.901, 0.858, 0.780);',
@@ -420,6 +421,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
         '//Check our distance from each of the four primary planets',
+        'galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
         'galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
         'galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
         'galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',

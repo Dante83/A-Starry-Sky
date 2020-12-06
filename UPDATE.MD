@@ -13,6 +13,7 @@
 * Used nearest neighbor grouping to organize stars into two LUTs with x, y, z coordinates, driven by a bit-packed stellar lookup cubemap dramatically speeding up our stellar lighting calculations, while increasing the number of visible stars.
 * Switched stellar color model from single highest intensity model to a full spectrum model driven by the python [Colour-Science Library](https://www.colour-science.org/).
 * Switched from a position based fake HDR system to a periodic metering sky-survey based solution.
+* Added VSOP87 Planet support for Mercury, Venus, Mars, Jupiter and Saturn using the terms from Appendix II of Meeus' Astronomical Algorithms with variable magnitudes.
 
 **Version 0.3.0**
 * **!Important:** In version 0.3.0 and above, you should no longer include the  ```material="shader: sky;"``` attribute as all of our shaders have been internalized.

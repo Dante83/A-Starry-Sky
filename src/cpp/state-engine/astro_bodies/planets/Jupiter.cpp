@@ -16,8 +16,10 @@ Jupiter::Jupiter(AstroTime* astroTimeRef) : OtherPlanet(astroTimeRef){
 
 //From page 286 of Meeus
 void Jupiter::updateMagnitudeOfPlanet(){
+  double distanceFromEarthInAU = distanceFromEarth / AVERAGE_SOLAR_DISTANCE;
+  double distanceFromSunInAU = distanceFromSun / AVERAGE_SOLAR_DISTANCE;
   double phaseAngle = getPhaseAngleInDegrees();
-  irradianceFromEarth = -9.40 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.005 * phaseAngle;
+  irradianceFromEarth = -9.40 + 5.0 * log10(distanceFromEarthInAU * distanceFromSunInAU) + 0.005 * phaseAngle;
 };
 
 void Jupiter::updateEclipticalLongitude(){

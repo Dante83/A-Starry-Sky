@@ -19,12 +19,11 @@ Moon::Moon(AstroTime* astroTimeRef) : AstronomicalBody(astroTimeRef){
 void Moon::updatePosition(double trueObliquityOfEclipticInRads){
   double julianCentury = astroTime->julianCentury;
   double a_1 = check4GreaterThan360(119.75 + 131.849 * julianCentury) * DEG_2_RAD;
-  double a_2 = check4GreaterThan360(53.09 + 479264.290 * julianCentury) * DEG_2_RAD;
+  double a_2 = check4GreaterThan360(53.09 + 479264.29 * julianCentury) * DEG_2_RAD;
   double a_3 = check4GreaterThan360(313.45 + 481266.484 * julianCentury) * DEG_2_RAD;
-  double e_parameter = 1.0 - 0.002516 * julianCentury - 0.0000074 * julianCentury * julianCentury;
+  double e_parameter = 1.0 - julianCentury * (0.002516 + 0.0000074 * julianCentury);
   double e_parameter_squared = e_parameter * e_parameter;
 
-  //STILL! For the love of cheese why?! BTW, there are 60 of these terms.
   const double D_coeficients[60] = {0.0, 2.0, 2.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0,
   2.0, 0.0, 1.0, 0.0, 2.0, 0.0, 0.0, 4.0, 0.0, 4.0, 2.0, 2.0, 1.0, 1.0, 2.0,
   2.0, 4.0, 2.0, 0.0, 2.0, 2.0, 1.0, 2.0, 0.0, 0.0, 2.0, 2.0, 2.0, 4.0, 0.0,
@@ -88,7 +87,6 @@ void Moon::updatePosition(double trueObliquityOfEclipticInRads){
     else if(abs(M_coeficients[i]) == 2.0){
       e_coefficient = e_parameter_squared;
     }
-
     sum_l += e_coefficient * l_sum_coeficients[i] * sin(sumOfTerms);
     sum_r += e_coefficient * r_sum_coeficients[i] * cos(sumOfTerms);
   }
@@ -142,7 +140,6 @@ void Moon::updatePosition(double trueObliquityOfEclipticInRads){
   double eclipticalLongitude = (meanLongitude + (sum_l * 0.000001)) * DEG_2_RAD;
   double eclipticalLatitude = (sum_b * 0.000001) * DEG_2_RAD;
   distanceFromEarthInMeters = 385000560.0 + sum_r;
-
   #define MEAN_LUNAR_DISTANCE_FROM_EARTH 384400000.0
   scale = MEAN_LUNAR_DISTANCE_FROM_EARTH / distanceFromEarthInMeters;
 
@@ -153,9 +150,8 @@ void Moon::updatePosition(double trueObliquityOfEclipticInRads){
   //Finally,update our moon brightness
   //From approximation 48.2 and 48.3, in Meeus, page 346
   double twoTimesMeanElongationInRads = 2.0 * meanAnomalyInRads;
-  double phiOfMoon = acos(sin(sun->declination) * sin(declination) + cos(sun->declination) * cos(declination) * cos(sun->declination - declination));
+  double phiOfMoon = acos(sin(sun->declination) * sin(declination) + cos(sun->declination) * cos(declination) * cos(sun->rightAscension - rightAscension));
   double lunarPhaseAngleInRads = atan2(sun->distance2Earth * sin(phiOfMoon), distanceFromEarthInMeters - sun->distance2Earth * cos(phiOfMoon));
-  lunarPhaseAngleInRads = fmod(lunarPhaseAngleInRads, PI);
 
   //Changing our lunar intensity model over to the one used by A Physically-Based Night Sky Model
   //by Henrik Jensen et. al.
@@ -163,12 +159,10 @@ void Moon::updatePosition(double trueObliquityOfEclipticInRads){
   #define RADIUS_OF_THE_MOON_IN_M 1737100.0
   #define TWO_THIRDS 0.6666666666666
   double illuminationOfMoonCoefficient = TWO_THIRDS * AVERAGE_ALBEDO_OF_MOON * (RADIUS_OF_THE_MOON_IN_M * RADIUS_OF_THE_MOON_IN_M) / (distanceFromEarthInMeters * distanceFromEarthInMeters);
-  double phiMinusPiOverTwo = 0.5 * (PI - lunarPhaseAngleInRads);
-  #define FULL_EARTHSHINE 0.19
-  #define IRRADIANCE_OF_SUN 1300.0
   double phiOverTwo = 0.5 * lunarPhaseAngleInRads;
-  earthShineIntensity = 0.5 * FULL_EARTHSHINE * (1.0 - sin(phiMinusPiOverTwo) * tan(phiMinusPiOverTwo) * log(1.0 / tan(0.5 * phiMinusPiOverTwo)));
-  irradianceFromEarth = illuminationOfMoonCoefficient * (earthShineIntensity + IRRADIANCE_OF_SUN * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(1.0 / tan(0.5 * phiOverTwo))));
+  #define FULL_EARTHSHINE 0.19
+  earthShineIntensity = abs(0.5 * FULL_EARTHSHINE * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(1.0 / tan(0.5 * phiOverTwo))));
+  irradianceFromEarth = illuminationOfMoonCoefficient * (earthShineIntensity + sun->irradianceFromEarth) * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(1.0 / tan(0.5 * phiOverTwo)));
 
   //Update the paralactic angle
   updateParalacticAngle();

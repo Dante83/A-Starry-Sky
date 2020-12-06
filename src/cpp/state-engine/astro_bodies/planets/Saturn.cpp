@@ -14,15 +14,19 @@ Saturn::Saturn(AstroTime* astroTimeRef) : OtherPlanet(astroTimeRef){
   //
 };
 
-//From page 286 of Meeus
+//Magnitude equations from page 286 of Meeus and ring equations from chapter 45
 void Saturn::updateMagnitudeOfPlanet(){
+  double distanceFromEarthInAU = distanceFromEarth / AVERAGE_SOLAR_DISTANCE;
+  double distanceFromSunInAU = distanceFromSun / AVERAGE_SOLAR_DISTANCE;
   //We ignore the abberation effects when calculating this value
   double i = check4GreaterThan360(28.075216 - 0.012998 * astroTime->julianCentury + 0.000004 * astroTime->julianCentury * astroTime->julianCentury) * DEG_2_RAD;
-  double omega = check4GreaterThan360(169.508470 + 1.394681 * astroTime->julianCentury + 0.000412 * astroTime->julianCentury * astroTime->julianCentury) * DEG_2_RAD;
+  double omega = check4GreaterThan360(169.50847 + 1.394681 * astroTime->julianCentury + 0.000412 * astroTime->julianCentury * astroTime->julianCentury) * DEG_2_RAD;
   double x = heliocentric_x - earth->heliocentric_x;
   double y = heliocentric_y - earth->heliocentric_y;
   double z = heliocentric_z - earth->heliocentric_z;
+  double delta = sqrt(x * x + y * y + z * z);
   double lambda = atan2(y, x);
+  lambda = lambda < PI_TIMES_TWO ? lambda + PI_TIMES_TWO : lambda;
   double sin_lambda_minus_omega = sin(lambda - omega);
   double beta = atan2(z, sqrt(x * x + y * y));
   double sin_i = sin(i);
@@ -30,18 +34,22 @@ void Saturn::updateMagnitudeOfPlanet(){
   double sin_beta = sin(beta);
   double cos_beta = cos(beta);
   double sinB = sin_i * cos_beta * sin_lambda_minus_omega - cos_i * sin_beta;
-  double cos_eclipticalLatitude = cos(eclipticalLatitude);
-  double u1 = atan2(sin_i * sin(eclipticalLatitude) + cos_i * cos_eclipticalLatitude * sin(eclipticalLongitude - omega), (cos_eclipticalLatitude * cos(eclipticalLongitude - omega)));
-  double u2 = atan2(sin_i * sin_beta + cos_i * cos_beta * sin_lambda_minus_omega, (cos_beta * cos(lambda - omega)));
+  double a = (375.35/3600.0) / delta;
+  double b = a * abs(sinB);
+  double longitudeOfAscendingNodeOfSaturnsOrbit = check4GreaterThan360(113.6655 + 0.8771 * astroTime->julianCentury) * DEG_2_RAD;
+  double lPrime = check4GreaterThan360(eclipticalLongitude * RAD_2_DEG - 0.01759 / radiusVector) * DEG_2_RAD;
+  double bPrime = check4GreaterThan360(b - 0.000764 * (cos(eclipticalLongitude - longitudeOfAscendingNodeOfSaturnsOrbit) / radiusVector)) * DEG_2_RAD;
+  double u1 = check4GreaterThan360(atan2(sin_i * sin(bPrime) + cos_i * cos(bPrime) * sin(lPrime - omega), (cos(bPrime) * cos(lPrime - omega))) * RAD_2_DEG);
+  double u2 = check4GreaterThan360(atan2(sin_i * sin_beta + cos_i * cos_beta * sin_lambda_minus_omega, cos_beta * cos(lambda - omega)) * RAD_2_DEG);
   double deltaU = abs(u1 - u2);
-  irradianceFromEarth = -8.88 + 5.0 * log(distanceFromSun * distanceFromEarth) + 0.44 * abs(deltaU) - 2.60 * abs(sinB) + 1.25 * sinB * sinB;
+  irradianceFromEarth = -8.88 + 5.0 * log10(distanceFromEarthInAU * distanceFromSunInAU) + 0.044 * deltaU - 2.60 * abs(sinB) + 1.25 * sinB * sinB;
 }
 
 void Saturn::updateEclipticalLongitude(){
   const double L_0_A[90] = {87401354.0, 11107660.0, 1414151.0, 398379.0, 350769.0,
     206816.0, 76271.0, 23990.0, 16574.0, 15820.0, 15054.0, 14907.0, 14610.0,
     13160.0, 13005.0, 10725.0, 6126.0, 5863.0, 5228.0, 5020.0, 4593.0, 4006.0,
-    3874.0, 3269.0, 2954.0, 2461.0, 1758.0, 16401581.0, 1391.0, 1124.0, 1087.0,
+    3874.0, 3269.0, 2954.0, 2461.0, 1758.0, 1640.0, 1581.0, 1391.0, 1124.0, 1087.0,
     1017.0, 957.0, 853.0, 849.0, 789.0, 749.0, 744.0, 687.0, 654.0, 634.0, 625.0,
     580.0, 546.0, 543.0, 530.0, 478.0, 474.0, 452.0, 449.0, 372.0, 355.0, 347.0,
     343.0, 330.0, 322.0, 322.0, 309.0, 287.0, 278.0, 249.0, 227.0, 220.0, 209.0,
@@ -78,7 +86,7 @@ void Saturn::updateEclipticalLongitude(){
     40255.0, 19942.0, 10512.0, 6939.0, 4803.0, 4056.0, 3769.0, 3385.0, 3302.0,
     3071.0, 1953.0, 1249.0, 922.0, 706.0, 650.0, 628.0, 487.0, 479.0, 468.0, 417.0,
     408.0, 352.0, 344.0, 340.0, 336.0, 332.0, 289.0, 281.0, 266.0, 230.0, 192.0,
-    173.0, 167.0, 136.0, 131128.0, 109.0, 98.0, 94.0, 92.0, 87.0, 83.0, 78.0,
+    173.0, 167.0, 136.0, 131.0, 128.0, 109.0, 98.0, 94.0, 92.0, 87.0, 83.0, 78.0,
     67.0, 66.0, 62.0, 62.0, 58.0, 57.0, 55.0, 54.0, 51.0, 47.0, 47.0, 46.0, 44.0,
     40.0, 40.0, 38.0, 38.0, 37.0, 35.0, 34.0, 33.0, 33.0, 33.0, 32.0, 31.0, 30.0,
     30.0, 30.0, 29.0, 28.0, 26.0};
@@ -316,7 +324,7 @@ void Saturn::updateRadiusVector(){
     613.0, 599.0, 503.0};
   const double R_1_B[38] = {0.2584352, 0.711147, 5.796358, 0.472157, 3.141593,
     1.407449, 6.01744, 5.09246, 1.1756, 1.6082, 0.75886, 5.9433, 1.2885, 0.8679,
-    0.393, 1.2585, 3.4366, 4.6068, 2.1673, 2.4505, 6.0239, 4.308, 1.253, 1.8665,
+    0.393, 1.2585, 3.4366, 4.6068, 2.1673, 2.4505, 6.0239, 1.2919, 4.308, 1.253, 1.8665,
     0.0753, 0.48, 5.152, 0.983, 1.885, 1.402, 3.064, 1.382, 4.144, 1.725, 3.033,
     2.549, 2.13};
   const double R_1_C[38] = {213.2990954, 206185548, 426.598191, 220.412642, 0.0,

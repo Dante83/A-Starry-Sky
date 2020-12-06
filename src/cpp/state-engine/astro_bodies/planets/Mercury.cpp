@@ -16,9 +16,11 @@ Mercury::Mercury(AstroTime* astroTimeRef) : OtherPlanet(astroTimeRef){
 
 //From page 286 of Meeus
 void Mercury::updateMagnitudeOfPlanet(){
+  double distanceFromEarthInAU = distanceFromEarth / AVERAGE_SOLAR_DISTANCE;
+  double distanceFromSunInAU = distanceFromSun / AVERAGE_SOLAR_DISTANCE;
   double phaseAngle = getPhaseAngleInDegrees();
   double phaseAngleTerms = 0.0380 * phaseAngle - 0.000273 * phaseAngle * phaseAngle + 0.000002 * phaseAngle * phaseAngle * phaseAngle;
-  irradianceFromEarth = -0.42 + 5.0 * log(distanceFromEarth * distanceFromSun) + phaseAngleTerms;
+  irradianceFromEarth = -0.42 + 5.0 * log10(distanceFromEarthInAU * distanceFromSunInAU) + phaseAngleTerms;
 }
 
 void Mercury::updateEclipticalLongitude(){
@@ -103,7 +105,7 @@ void Mercury::updateEclipticalLongitude(){
 void Mercury::updateEclipticalLatitude(){
   const double B_0_A[14] = {11737529.0, 2388077.0, 1222840.0, 543252.0, 129779.0,
     31867.0, 7963.0, 2014.0, 514.0, 209.0, 208.0, 132.0, 121.0, 100.0};
-  const double B_0_B[14] = {1.98357499+5.0373896, 3.1415927, 1.796444, 4.832325,
+  const double B_0_B[14] = {1.98357499, 5.0373896, 3.1415927, 1.796444, 4.832325,
     1.58088, 4.6097, 1.3532, 4.378, 2.02, 4.918, 1.119, 1.813, 5.657};
   const double B_0_C[14] = {26087.90314157, 52175.8062831, 0.0, 78263.709425,
     104351.612566, 130439.51571, 156527.4188, 182615.322, 208703.225, 24978.525,

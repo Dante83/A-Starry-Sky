@@ -180,17 +180,17 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.sunLightDirection.value = self.skyDirector.skyState.sun.quadOffset;
     self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade < 0.95;
 
+    self.baseMoonVar.material.uniforms.mercuryPosition.value = self.skyDirector.skyState.mercury.position;
     self.baseMoonVar.material.uniforms.venusPosition.value = self.skyDirector.skyState.venus.position;
     self.baseMoonVar.material.uniforms.marsPosition.value = self.skyDirector.skyState.mars.position;
     self.baseMoonVar.material.uniforms.jupiterPosition.value = self.skyDirector.skyState.jupiter.position;
     self.baseMoonVar.material.uniforms.saturnPosition.value = self.skyDirector.skyState.saturn.position;
 
+    self.baseMoonVar.material.uniforms.mercuryBrightness.value = self.skyDirector.skyState.mercury.intensity;
     self.baseMoonVar.material.uniforms.venusBrightness.value = self.skyDirector.skyState.venus.intensity;
     self.baseMoonVar.material.uniforms.marsBrightness.value = self.skyDirector.skyState.mars.intensity;
     self.baseMoonVar.material.uniforms.jupiterBrightness.value = self.skyDirector.skyState.jupiter.intensity;
     self.baseMoonVar.material.uniforms.saturnBrightness.value = self.skyDirector.skyState.saturn.intensity;
-
-    console.log(self.skyDirector.skyState);
 
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager){

@@ -7,7 +7,7 @@ importScripts('./state-engine.js');
 //and so anarcho-communism still works perfectly fine... for now.
 //
 const BYTES_PER_32_BIT_FLOAT = 4;
-const NUMBER_OF_ASTRONOMICAL_FLOATS = 25;
+const NUMBER_OF_ASTRONOMICAL_FLOATS = 26;
 
 const EVENT_INITIALIZE_SKY_STATE = 0;
 const EVENT_INITIALIZATION_SKY_STATE_RESPONSE = 1;
@@ -117,14 +117,8 @@ function initializeSkyAstronomicalState(){
     let finalStateBuffer = initialAstronomicalPostObject.transferrableFinalStateBuffer;
     updateSkyState(finalStateBuffer);
 
-    console.log("Sky State");
     const initialFloatArray = new Float32Array(initialStateBuffer);
     const finalFloatArray = new Float32Array(finalStateBuffer);
-    console.log(`Initial Saturn RA: ${initialFloatArray[12] * 57.2958} DEC: ${initialFloatArray[13] * 57.2958}`);
-    console.log(`Initial Jupiter RA: ${initialFloatArray[10] * 57.2958} DEC: ${initialFloatArray[11] * 57.2958}`);
-    console.log(`Initial Mars RA: ${initialFloatArray[8] * 57.2958} DEC: ${initialFloatArray[9] * 57.2958}`);
-    console.log(`Initial Venus RA: ${initialFloatArray[6] * 57.2958} DEC: ${initialFloatArray[7] * 57.2958}`);
-    console.log(`Initial Mercury RA: ${initialFloatArray[4] * 57.2958} DEC: ${initialFloatArray[5] * 57.2958}`);
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.

@@ -52,6 +52,6 @@ void Sun::setMeanLongitude(double inValue){
 void Sun::setScaleAndIrradiance(double& distanceFromEarthToSun){
   scale = AVERAGE_SOLAR_DISTANCE / distanceFromEarthToSun;
   //Using 11.0 for now as we do not yet have HDR implemented
-  #define AVERAGE_SOLAR_IRRADIANCE 11.0
+  #define AVERAGE_SOLAR_IRRADIANCE 1300.0
   irradianceFromEarth = AVERAGE_SOLAR_IRRADIANCE * scale * scale;
 }

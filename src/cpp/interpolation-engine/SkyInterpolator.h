@@ -16,8 +16,8 @@ public:
   float deltaLogAverageOfSkyIntensity;
   float initialSkyHemisphericalLightingColor[3];
   float estimatedFinalSkyHemisphericalLightingColor[3];
-  float deltaPositions[9];
-  float deltaLinearValues[9];
+  float deltaPositions[14];
+  float deltaLinearValues[11];
   float* astroPositions_0;
   float* linearValues_0;
   float* rotatedAstroPositions;

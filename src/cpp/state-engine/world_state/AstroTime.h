@@ -28,17 +28,7 @@ public:
   void setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s);
   void setGreenwhichSiderealTime(double inValue);
 private:
-  bool isLeapYear;
-  static int daysInLeapYear[];
-  static int daysInNormalYear[];
-  static int daysInMonthLeapYear[];
-  static int daysInMonthNormalYear[];
-  int* daysUpToMonth;
-  int* daysInMonth;
-
   void convertToUTC(double seconds);
-  void updateIsLeapYear();
-  void updateDayOfTheYear();
   void updateJulianDayAndCentury();
   double check4GreaterThan360(double inValue);
 };

@@ -63,11 +63,13 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
     self.atmosphereMaterial.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
 
+    self.atmosphereMaterial.uniforms.mercuryPosition.value = self.skyDirector.skyState.mercury.position;
     self.atmosphereMaterial.uniforms.venusPosition.value = self.skyDirector.skyState.venus.position;
     self.atmosphereMaterial.uniforms.marsPosition.value = self.skyDirector.skyState.mars.position;
     self.atmosphereMaterial.uniforms.jupiterPosition.value = self.skyDirector.skyState.jupiter.position;
     self.atmosphereMaterial.uniforms.saturnPosition.value = self.skyDirector.skyState.saturn.position;
 
+    self.atmosphereMaterial.uniforms.mercuryBrightness.value = self.skyDirector.skyState.mercury.intensity;
     self.atmosphereMaterial.uniforms.venusBrightness.value = self.skyDirector.skyState.venus.intensity;
     self.atmosphereMaterial.uniforms.marsBrightness.value = self.skyDirector.skyState.mars.intensity;
     self.atmosphereMaterial.uniforms.jupiterBrightness.value = self.skyDirector.skyState.jupiter.intensity;

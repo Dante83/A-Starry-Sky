@@ -16,9 +16,11 @@ Venus::Venus(AstroTime* astroTimeRef) : OtherPlanet(astroTimeRef){
 
 //From page 286 of Meeus
 void Venus::updateMagnitudeOfPlanet(){
+  double distanceFromEarthInAU = distanceFromEarth / AVERAGE_SOLAR_DISTANCE;
+  double distanceFromSunInAU = distanceFromSun / AVERAGE_SOLAR_DISTANCE;
   double phaseAngle = getPhaseAngleInDegrees();
   double phaseAngleComponent = 0.0009 * phaseAngle + 0.000239 * phaseAngle * phaseAngle - 0.00000065 * phaseAngle * phaseAngle * phaseAngle;
-  irradianceFromEarth = -4.40 * 5.0 * log(distanceFromEarth * distanceFromSun) + phaseAngleComponent;
+  irradianceFromEarth = -4.40 + 5.0 * log10(distanceFromEarthInAU * distanceFromSunInAU) + phaseAngleComponent;
 }
 
 void Venus::updateEclipticalLongitude(){

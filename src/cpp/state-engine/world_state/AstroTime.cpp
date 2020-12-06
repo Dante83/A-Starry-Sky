@@ -10,25 +10,15 @@ AstroTime::AstroTime(int yr, int mnth, int d, int h, int m, double s){
   year = yr;
   dblYear = static_cast<double>(year);
   month = mnth;
-  day = d - 1;
+  day = d;
   hour = h;
   minute = m;
   second = s;
   timeOfDayInSeconds = static_cast<double>(((h * 60) + m) * 60) + s;
 
   //Run internal methods
-  updateIsLeapYear();
-  updateDayOfTheYear();
   updateJulianDayAndCentury();
 };
-
-//
-//Static variables
-//
-int AstroTime::daysInLeapYear[] = {31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335};
-int AstroTime::daysInNormalYear[] = {31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334};
-int AstroTime::daysInMonthLeapYear[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-int AstroTime::daysInMonthNormalYear[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 void AstroTime::setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, double s){
   //Initialize all of our variables.
@@ -40,11 +30,9 @@ void AstroTime::setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, 
   if(yr != year){
     year = yr;
     dblYear = static_cast<double>(year);
-    updateIsLeapYear();
   }
-  if((d - 1) != day){
-    day = d - 1;
-    updateDayOfTheYear();
+  if(d != (day - 1)){
+    day = (d + 1);
   }
   updateJulianDayAndCentury();
 }
@@ -58,23 +46,6 @@ double AstroTime::check4GreaterThan360(double inNum){
     return 0.0;
   }
   return outDegrees;
-}
-
-void AstroTime::updateIsLeapYear(){
-  isLeapYear = (fmod(dblYear, 4.0) == 0.0 || dblYear == 0.0) && (((fmod(dblYear, 100.0) == 0.0) && (fmod(dblYear, 400.0) == 0.0)) || (fmod(dblYear, 100.0) != 0.0));
-  if(isLeapYear){
-    daysUpToMonth = AstroTime::daysInLeapYear;
-    daysInMonth = AstroTime::daysInMonthLeapYear;
-  }
-  else{
-    daysUpToMonth = AstroTime::daysInNormalYear;
-    daysInMonth = AstroTime::daysInMonthNormalYear;
-  }
-  daysInYear = isLeapYear ? 366 : 365;
-}
-
-void AstroTime::updateDayOfTheYear(){
-  dayOfTheYear = month > 1 ? (daysUpToMonth[month - 2] + day) : day;
 }
 
 void AstroTime::updateJulianDayAndCentury(){

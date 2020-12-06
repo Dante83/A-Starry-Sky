@@ -14,23 +14,26 @@ uniform sampler2D mieInscatteringSum;
 uniform sampler2D rayleighInscatteringSum;
 uniform sampler2D transmittance;
 
-#if(!$isSunPass)
+#if(!$isSunPass && !$isMeteringPass)
   uniform samplerCube starHashCubemap;
   uniform sampler2D dimStarData;
   uniform sampler2D medStarData;
   uniform sampler2D brightStarData;
   uniform sampler2D starColorMap;
 
+  uniform vec3 mercuryPosition;
   uniform vec3 venusPosition;
   uniform vec3 marsPosition;
   uniform vec3 jupiterPosition;
   uniform vec3 saturnPosition;
 
+  uniform float mercuryBrightness;
   uniform float venusBrightness;
   uniform float marsBrightness;
   uniform float jupiterBrightness;
   uniform float saturnBrightness;
 
+  const vec3 mercuryColor = vec3(1.0);
   const vec3 venusColor = vec3(0.913, 0.847, 0.772);
   const vec3 marsColor = vec3(0.894, 0.509, 0.317);
   const vec3 jupiterColor = vec3(0.901, 0.858, 0.780);
@@ -302,6 +305,7 @@ void main(){
     galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
     //Check our distance from each of the four primary planets
+    galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
     galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
     galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
     galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);

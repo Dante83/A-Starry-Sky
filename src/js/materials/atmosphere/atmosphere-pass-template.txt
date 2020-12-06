@@ -27,10 +27,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
     else if(isMoonShader){
       uniforms.moonExposure = {type: 'f', value: 1.0};
-      uniforms.venusPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.marsPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.jupiterPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.saturnPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.moonAngularDiameterCos = {type: 'f', value: 1.0};
       uniforms.sunRadius = {type: 'f', value: 1.0};
       uniforms.radiusOfMoonPlane = {type: 'f', value: 1.0};
@@ -50,11 +46,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.brightStarData = {type: 't', value: null};
       uniforms.starColorMap = {type: 't', value: null};
 
+      uniforms.mercuryPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.venusPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.marsPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.jupiterPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.saturnPosition = {type: 'vec3', value: new THREE.Vector3()};
 
+      uniforms.mercuryBrightness = {type: 'f', value: 0.0};
       uniforms.venusBrightness = {type: 'f', value: 0.0};
       uniforms.marsBrightness = {type: 'f', value: 0.0};
       uniforms.jupiterBrightness = {type: 'f', value: 0.0};

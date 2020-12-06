@@ -18,7 +18,7 @@ StarrySky.SkyDirector = function(parentComponent){
   //1 (LSRT) is a rotational interpolation
   const RADIUS_OF_SKY = 5000.0;
   const BYTES_PER_32_BIT_FLOAT = 4;
-  const NUMBER_OF_FLOATS = 25;
+  const NUMBER_OF_FLOATS = 26;
   const NUMBER_OF_ROTATIONAL_OBJECTS = 7;
   const NUMBER_OF_HORIZON_FADES = 2;
   const NUMBER_OF_PARALLACTIC_ANGLES = 1;
@@ -27,6 +27,7 @@ StarrySky.SkyDirector = function(parentComponent){
   const NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES = NUMBER_OF_HORIZON_FADES + NUMBER_OF_PARALLACTIC_ANGLES;
   const NUMBER_OF_LINEAR_INTERPOLATIONS = 11;
   const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
+  const LINEAR_ARRAY_END = LINEAR_ARRAY_START + NUMBER_OF_LINEAR_INTERPOLATIONS + 1;
   const TOTAL_BYTES_FOR_WORKER_BUFFERS = BYTES_PER_32_BIT_FLOAT * NUMBER_OF_FLOATS;
   const ONE_MINUTE = 60.0;
   const HALF_A_SECOND = 0.5;
@@ -165,7 +166,7 @@ StarrySky.SkyDirector = function(parentComponent){
     Module.HEAPF32.copyWithin(insertIndex, copyFromIndex, copyEndIndex);
     self.finalLSRT = self.finalStateFloat32Array[14];
     Module.HEAPF32.set(self.finalStateFloat32Array.slice(0, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS), self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT);
-    Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.astronomicalLinearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+    Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.astronomicalLinearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
 
     //Set initial values to final values in module and update our final values to the values
     //returned from our worker.
@@ -200,22 +201,19 @@ StarrySky.SkyDirector = function(parentComponent){
       let mp = self.skyState.moon.position;
       self.skyState.moon.quadOffset.set(-mp.z, mp.y, -mp.x).normalize().multiplyScalar(RADIUS_OF_SKY);
       self.skyState.moon.parallacticAngle = self.rotatedAstroDependentValues[2] - PI_OVER_TWO;
-      self.skyState.mercury.position.fromArray(self.rotatedAstroPositions.slice(9, 12));
-      self.skyState.venus.position.fromArray(self.rotatedAstroPositions.slice(12, 15));
+      self.skyState.mercury.position.fromArray(self.rotatedAstroPositions.slice(6, 9));
+      self.skyState.venus.position.fromArray(self.rotatedAstroPositions.slice(9, 12));
+      self.skyState.mars.position.fromArray(self.rotatedAstroPositions.slice(12, 15));
       self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions.slice(15, 18));
       self.skyState.saturn.position.fromArray(self.rotatedAstroPositions.slice(18, 21));
 
       //Update our linear values
-      self.skyState.sun.luminosity = Module._bolometricMagnitudeToLuminosity(self.astronomicalLinearValues[0] + 0.0001);
-      self.skyState.sun.intensity = Module._luminosityToAtmosphericIntensity(self.skyState.sun.luminosity);
-      self.skyState.sun.luminosity = 100000.0;
-      self.skyState.sun.intensity = 10.0;
+      self.skyState.sun.luminosity = 100000.0 * self.astronomicalLinearValues[0] / 1300.0;
+      self.skyState.sun.intensity = 10.0 *  self.astronomicalLinearValues[0] / 1300.0;
       self.skyState.sun.horizonFade = self.rotatedAstroDependentValues[0];
       self.skyState.sun.scale = self.astronomicalLinearValues[1];
-      self.skyState.moon.intensity = Module._bolometricMagnitudeToLuminosity(self.astronomicalLinearValues[2] + 0.0001);
-      self.skyState.moon.luminosity =  Module._luminosityToAtmosphericIntensity(self.skyState.moon.luminosity);
-      self.skyState.moon.luminosity = 0.1;
-      self.skyState.moon.intensity = 0.25;
+      self.skyState.moon.luminosity = 200.0 * self.astronomicalLinearValues[2];
+      self.skyState.moon.intensity = 500.0 * self.astronomicalLinearValues[2];
       self.skyState.moon.horizonFade = self.rotatedAstroDependentValues[1];
       self.skyState.moon.scale = self.astronomicalLinearValues[3];
       self.skyState.moon.earthshineIntensity = self.astronomicalLinearValues[5];
@@ -268,13 +266,13 @@ StarrySky.SkyDirector = function(parentComponent){
       self.rotatedAstroDepedentValues_ptr = Module._malloc(NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES * BYTES_PER_32_BIT_FLOAT);
 
       self.astronomicalLinearValues_0_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.astronomicalLinearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(initialStateFloat32Array.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.astronomicalLinearValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.astronomicalLinearValues_f_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
-      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, NUMBER_OF_LINEAR_INTERPOLATIONS), self.astronomicalLinearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
+      Module.HEAPF32.set(self.finalStateFloat32Array.slice(LINEAR_ARRAY_START, LINEAR_ARRAY_END), self.astronomicalLinearValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.astronomicalLinearValues_ptr = Module._malloc(NUMBER_OF_LINEAR_INTERPOLATIONS * BYTES_PER_32_BIT_FLOAT);
 
       //Attach references to our interpolated values
-      self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATIONAL_TRANSFORMATIONS);
+      self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATION_OUTPUT_VALUES);
       self.astronomicalLinearValues = new Float32Array(Module.HEAPF32.buffer, self.astronomicalLinearValues_ptr, NUMBER_OF_LINEAR_INTERPOLATIONS);
       self.rotatedAstroDependentValues = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroDepedentValues_ptr, NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES);
 
