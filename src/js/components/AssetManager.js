@@ -23,6 +23,8 @@ StarrySky.AssetManager = function(skyDirector){
       console.error(`The <a-starry-sky> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
     }
   });
+  const skyLightingTags = starrySkyComponent.el.getElementsByTagName('sky-lighting');
+  tagLists.push(skyLightingTags);
   //These are excluded from our search above :D
   const skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
 
@@ -36,6 +38,8 @@ StarrySky.AssetManager = function(skyDirector){
   this.hasSkyTimeTag = false;
   this.skyAtmosphericParametersTag;
   this.hasSkyAtmosphericParametersTag = false;
+  this.skyLightingTag;
+  this.hasSkyLightingTag = false;
   this.skyAssetsTags;
   this.hasSkyAssetsTag = false;
   this.hasLoadedImages = false;
@@ -351,6 +355,7 @@ StarrySky.AssetManager = function(skyDirector){
       self.data.skyLocationData = self.hasSkyLocationTag ? self.skyLocationTag.data : defaultValues.location;
       self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
       self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
+      self.data.skyLighting = self.hasSkyLightingTag ? self.skyLightingTag.data : defaultValues.lighting;
       self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
       self.loadImageAssets(self.skyDirector.renderer);
 
@@ -406,6 +411,12 @@ StarrySky.AssetManager = function(skyDirector){
     for(let i = 0; i < skyAssetsTags.length; ++i){
       activeTags.push(skyAssetsTags[i]);
     }
+  }
+  if(skyLightingTags.length === 1){
+    this.skyDataSetsLength += 1;
+    this.skyLightingTag = skyLightingTags[0];
+    this.hasSkyLightingTag = true;
+    activeTags.push(this.skyLightingTag);
   }
   for(let i = 0; i < activeTags.length; ++i){
     checkIfAllHTMLDataLoaded(activeTags[i]);
