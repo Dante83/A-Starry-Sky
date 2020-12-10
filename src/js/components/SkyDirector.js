@@ -18,7 +18,6 @@ StarrySky.SkyDirector = function(parentComponent){
   //1 (LSRT) is a rotational interpolation
   const RADIUS_OF_SKY = 5000.0;
   const BYTES_PER_32_BIT_FLOAT = 4;
-  const BYTES_PER_8_BIT_INT = 1;
   const NUMBER_OF_FLOATS = 26;
   const NUMBER_OF_ROTATIONAL_OBJECTS = 7;
   const NUMBER_OF_HORIZON_FADES = 2;
@@ -77,12 +76,9 @@ StarrySky.SkyDirector = function(parentComponent){
     moonExposure: 0.0,
     exposureCoefficientf: 0.0,
   }
-  let transferableGroundIntialLightingBuffer;
   let transferableIntialLightingFloat32Array;
   this.transferableSkyFinalLightingBuffer;
   this.transferableSkyFinalLightingFloat32Array;
-  this.transferableGroundFinalLightingBuffer;
-  this.transferableGroundFinalLightingUint8Array;
 
   //Set up our web assembly hooks
   let self = this;
@@ -350,14 +346,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.initializeAutoExposure = async function(){
       const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
       const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize;
-      const groundColorSamplerTextureSize = self.renderers.meteringSurveyRenderer.groundColorSamperTextureSize;
-      const numberOfPixelsInGroundSamplingBuffer = groundColorSamplerTextureSize * groundColorSamplerTextureSize;
       const numberOfColorChannelsInMeteringPixel = 4;
-      const numberOfColorChannelsInGroundColorSamplerPixel = 3;
-
-      //Take a snapshot of the ground
-      this.groundColorCamera.position.set(this.camera.position).add(0.0, 0.5, 0.0);
-
 
       //Get the initial position of our sun and moon
       //and pass them into our metering survey
@@ -366,17 +355,14 @@ StarrySky.SkyDirector = function(parentComponent){
       self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
       self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
       self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
-      let skyRenderTarget, groundRenderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
+      let skyRenderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
       transferableSkyIntialLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
       transferableIntialSkyLightingFloat32Array = new Float32Array(transferableSkyIntialLightingBuffer);
-      transferableGroundIntialLightingBuffer = new ArrayBuffer(BYTES_PER_8_BIT_INT * numberOfPixelsInGroundSamplingBuffer * numberOfColorChannelsInGroundColorSamplerPixel);
-      transferableGroundIntialLightingUInt8Array = new Uint8Array(transferableSkyIntialLightingBuffer);
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, transferableIntialSkyLightingFloat32Array);
-      self.renderer.readRenderTargetPixels(groundRenderTarget, 0, 0, groundColorSamplerTextureSize, groundColorSamplerTextureSize, transferableGroundIntialLightingUInt8Array);
 
       //Note that for updates we base the cameras position on linear projected position
       //of the main user camera HALF_A_SECOND from now.
-      
+
 
       //Get our position for the sun and moon 2 seconds from now
       Module._setSunAndMoonTimeTo(HALF_A_SECOND * self.speed);
@@ -384,27 +370,20 @@ StarrySky.SkyDirector = function(parentComponent){
       self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
       self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
       self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
-      skyRenderTarget, groundRenderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
+      skyRenderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
       self.transferableSkyFinalLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
       self.transferableSkyFinalLightingFloat32Array = new Float32Array(transferableSkyIntialLightingBuffer);
-      self.transferableGroundFinalLightingBuffer = new ArrayBuffer(BYTES_PER_8_BIT_INT * numberOfPixelsInGroundSamplingBuffer * numberOfColorChannelsInGroundColorSamplerPixel);
-      self.transferableGroundFinalLightingUInt8Array = new Uint8Array(self.transferableSkyFinalLightingBuffer);
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transferableSkyFinalLightingFloat32Array);
-      self.renderer.readRenderTargetPixels(groundRenderTarget, 0, 0, groundColorSamplerTextureSize, groundColorSamplerTextureSize, self.transferableGroundFinalLightingUInt8Array);
 
       //Pass this information to our web worker to get our exposure value
       self.webAssemblyWorker.postMessage({
         eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
         meteringSurveyTextureSize: self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize,
         meteringSurveyFloatArray0: transferableIntialSkyLightingFloat32Array,
-        meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array,
-        groundColorFloatArray0: transferableGroundIntialLightingUInt8Array,
-        groundColorFloatArrayf: self.transferableGroundFinalLightingUInt8Array
+        meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array
       }, [
         transferableSkyIntialLightingBuffer,
-        self.transferableSkyFinalLightingBuffer,
-        transferableGroundIntialLightingBuffer,
-        self.transferableGroundFinalLightingBuffer
+        self.transferableSkyFinalLightingBuffer
       ]);
   }
 

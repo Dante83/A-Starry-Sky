@@ -6,16 +6,6 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.renderer = skyDirector.renderer;
   this.skyDirector = skyDirector;
   this.meteringSurveyTextureSize = 64;
-  this.groundColorSamplerTextureSize = 64;
-  const groundColorSamplerRatePerMeter = 2.0;
-  const halfGroundSamplerTextureSize = Math.ceil(this.groundColorSamplerTextureSize / groundColorSamplerRatePerMeter);
-
-  //Set up a ground camera that will always target the ground so we can track our ground color
-  this.groundColorCamera = new THREE.OrthographicCamera(-halfGroundSamplerTextureSize, halfGroundSamplerTextureSize, halfGroundSamplerTextureSize, halfGroundSamplerTextureSize, 1, 100);
-  this.groundColorCamera.position.set(this.camera.position).add(0.0, 10.0, 0.0);
-  this.groundColorCamera.lookAt(this.camera.position);
-  this.scene.add(this.groundColorCamera);
-  this.groundRenderTarget = new THREE.WebGLRenderTarget(this.meteringSurveyTextureSize, this.meteringSurveyTextureSize);
 
   this.meteringSurveyRenderer = new THREE.StarrySkyComputationRenderer(this.meteringSurveyTextureSize, this.meteringSurveyTextureSize, this.renderer);
   this.meteringSurveyTexture = this.meteringSurveyRenderer.createTexture();
@@ -93,11 +83,6 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     self.meteringSurveyRenderer.compute();
     const skyRenderTarget = self.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar);
 
-    //Update our ground colors
-    this.renderer.setRenderTarget(this.groundRenderTarget);
-    this.renderer.render();
-    const groundRenderTarget = this.renderer.getCurrentRenderTarget(this.meteringSurveyVar);
-
-    return {skyRenderTarget, groundRenderTarget};
+    return skyRenderTarget;
   }
 }

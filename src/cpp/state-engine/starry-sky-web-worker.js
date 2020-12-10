@@ -38,8 +38,6 @@ var lightingState = {};
 var update;
 var requests = [];
 var hemisphericalSkyColorFloatArray;
-var hemisphericalGroundColorBuffer;
-var hemisphericalGroundColorFloatArray;
 
 var updateSkyState = function(arrayReference){
   if(wasmIsReady && skyStateIsReady){
