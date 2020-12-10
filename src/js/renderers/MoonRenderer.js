@@ -88,6 +88,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   });
   //Attach the material to our geometry
   this.moonMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
+  this.moonMesh.castShadow = false;
+  this.moonMesh.receiveShadow = false;
+  this.moonMesh.fog = false;
   this.baseMoonVar.material.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
 
   let self = this;

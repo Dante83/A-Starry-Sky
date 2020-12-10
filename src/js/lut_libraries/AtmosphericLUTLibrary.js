@@ -26,7 +26,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   document.body.appendChild(renderer.domElement);
 
   //Create our first renderer, for transmittance
-  let transmittanceRenderer = new THREE.StarrySkyComputationRenderer(512, 512, renderer);
+  const TRANSMITTANCE_TEXTURE_SIZE = 512;
+  let transmittanceRenderer = new THREE.StarrySkyComputationRenderer(TRANSMITTANCE_TEXTURE_SIZE, TRANSMITTANCE_TEXTURE_SIZE, renderer);
 
   //Using a 3D look up table of 256x32x32, I can have 2 256x32 textures per row
   //and 16*32 rows, using this structure allows us to directly compute the 3D texture
@@ -76,6 +77,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   //Run the actual shader
   transmittanceRenderer.compute();
   let transmittanceLUT = transmittanceRenderer.getCurrentRenderTarget(transmittanceVar).texture;
+  const BYTES_PER_32_BIT_FLOAT = 4;
+  this.transferrableTransmittanceBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
+  this.transferableTransmittanceFloat32Array = new Float32Array(this.transferrableTransmittanceBuffer);
+  this.renderer.readRenderTargetPixels(renderTarget, 0, 0, meteringTextureSize, meteringTextureSize, this.transferableSkyFinalLightingFloat32Array);
 
   //
   //Set up our single scattering texture

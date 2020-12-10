@@ -34,6 +34,9 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
 
   //Attach the material to our geometry
   this.skyMesh = new THREE.Mesh(this.geometry, this.atmosphereMaterial);
+  this.skyMesh.castShadow = false;
+  this.skyMesh.receiveShadow = false;
+  this.skyMesh.fog = false;
 
   let self = this;
   this.tick = function(t){

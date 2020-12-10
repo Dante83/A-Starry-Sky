@@ -68,7 +68,7 @@
   <!--Scene Scripts-->
   </head>
   <body>
-    <a-scene physics>
+    <a-scene physics light="defaultLightsEnabled: false">
       <!-- Sky Setup -->
       <a-starry-sky>
         <sky-location>
@@ -93,7 +93,14 @@
         </sky-atmospheric-parameters>
       </a-starry-sky>
 
+      <a-assets>
+        <a-asset-item id="low-poly-desert" src="./assets/3d-models/low-poly-desert.glb" ></a-asset-item>
+      </a-assets>
+
+      <a-entity camera look-controls wasd-controls="acceleration: 300"></a-entity>
+
       <!-- Scene Setup-->
+      <a-entity gltf-model="#low-poly-desert" position="0 0 0"></a-entity>
     </a-scene>
   </body>
 </html>

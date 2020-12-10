@@ -53,7 +53,7 @@ var updateSkyState = function(arrayReference){
       skyState.second
     );
 
-    //Copy the data from our starry sky web assembly heap to the transfferable memory
+    //Copy the data from our starry sky web assembly heap to the transferable memory
     let updatedFloat32Array = new Float32Array(arrayReference, 0.0, NUMBER_OF_ASTRONOMICAL_FLOATS);
     updatedFloat32Array.set(skyState.astroValuesFloat32Array, 0, NUMBER_OF_ASTRONOMICAL_FLOATS);
     return true;
@@ -88,7 +88,7 @@ function initializeSkyAstronomicalState(){
     }
     wasmModule = initialAstronomicalPostObject.WASMModule;
     skyStateIsReady = true;
-    let initialStateBuffer = initialAstronomicalPostObject.transferrableInitialStateBuffer;
+    let initialStateBuffer = initialAstronomicalPostObject.transferableInitialStateBuffer;
     skyState.memoryPtr = Module._malloc(NUMBER_OF_ASTRONOMICAL_FLOATS * BYTES_PER_32_BIT_FLOAT);
     Module._setupSky(
       skyState.latitude,
@@ -114,7 +114,7 @@ function initializeSkyAstronomicalState(){
     skyState.hour = dateAtUTC.getHours();
     skyState.minute = dateAtUTC.getMinutes();
     skyState.second = dateAtUTC.getSeconds() + (dateAtUTC.getMilliseconds() * 0.001);
-    let finalStateBuffer = initialAstronomicalPostObject.transferrableFinalStateBuffer;
+    let finalStateBuffer = initialAstronomicalPostObject.transferableFinalStateBuffer;
     updateSkyState(finalStateBuffer);
 
     const initialFloatArray = new Float32Array(initialStateBuffer);
@@ -124,8 +124,8 @@ function initializeSkyAstronomicalState(){
     //begin rotating our sky.
     postMessage({
       eventType: EVENT_INITIALIZATION_SKY_STATE_RESPONSE,
-      transferrableInitialStateBuffer: initialStateBuffer,
-      transferrableFinalStateBuffer: finalStateBuffer
+      transferableInitialStateBuffer: initialStateBuffer,
+      transferableFinalStateBuffer: finalStateBuffer
     }, [initialStateBuffer, finalStateBuffer]);
   }
 }
@@ -180,14 +180,14 @@ onmessage = function(e){
     skyState.hour = dateAtUTC.getHours();
     skyState.minute = dateAtUTC.getMinutes();
     skyState.second = dateAtUTC.getSeconds() + (dateAtUTC.getMilliseconds() * 0.001);
-    let finalStateBuffer = postObject.transferrableFinalStateBuffer;
+    let finalStateBuffer = postObject.transferableFinalStateBuffer;
     updateSkyState(finalStateBuffer);
 
     //Once finished, return these memory objects back to the primary thread to
     //begin rotating our sky.
     postMessage({
       eventType: EVENT_RETURN_LATEST_SKY_STATE,
-      transferrableFinalStateBuffer: finalStateBuffer
+      transferableFinalStateBuffer: finalStateBuffer
     }, [finalStateBuffer]);
   }
   else if(postObject.eventType === EVENT_INITIALIZE_SKY_STATE){

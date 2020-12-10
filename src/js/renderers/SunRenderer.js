@@ -68,6 +68,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
   //Attach the material to our geometry
   this.sunMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
+  this.sunMesh.castShadow = false;
+  this.sunMesh.receiveShadow = false;
+  this.sunMesh.fog = false;
   this.baseSunVar.material.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
 
   let self = this;
