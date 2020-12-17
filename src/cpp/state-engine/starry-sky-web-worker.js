@@ -133,41 +133,112 @@ function initializeHemisphericalLighting(postObject){
   const skyMaskBufferLength = meteringSurveyTextureSize * meteringSurveyTextureSize;
   const meteringSurveyBufferLength = skyMaskBufferLength * 4;
   const directionalSurveyBufferLength = skyMaskBufferLength * 3;
+  const transmittanceBufferLength = postObject.transmittanceTextureSize * 3;
+  const groundColorBufferLength = 3;
   lightingState.skyMeteringSurveyMemoryPtr = Module._malloc(meteringSurveyBufferLength * BYTES_PER_32_BIT_FLOAT);
   lightingState.skyDirectionalVectorMemoryPtr = Module._malloc(directionalSurveyBufferLength * BYTES_PER_32_BIT_FLOAT);
-  lightingState.skyHemisphericalLightColorPtr = Module._malloc(18 * BYTES_PER_32_BIT_FLOAT); // 3 colors channels for all sides of the cube
   lightingState.skyMaskPtr = Module._malloc(skyMaskBufferLength * BYTES_PER_32_BIT_FLOAT);
+  lightingState.transmittanceLUTPtr = Module._malloc(transmittanceBufferLength * BYTES_PER_32_BIT_FLOAT);
+  lightingState.transmittanceLUTPtr.set(postObject.transmittanceLUT, 0, postObject.transmittanceLUT.bufferSize.length);
+  lightingState.directLightingColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT); //Three colors of our direct lighting color
+  lightingState.skyHemisphericalLightColorPtr = Module._malloc(21 * BYTES_PER_32_BIT_FLOAT); // 3 colors channels for all sides of the cube and 1 for the fog color
+  lightingState.groundColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT);
+  lightingState.groundColorPtr.set(postObject.groundColor, 0, 3 * BYTES_PER_32_BIT_FLOAT);
 
   //Start by intializing our masks and directional vectors
-  Module._initializeMeteringAndLightingDependencies(lightingState.skyDirectionalVectorMemoryPtr, lightingState.skyMaskPtr, meteringSurveyTextureSize);
+  Module._initializeMeteringAndLightingDependencies(meteringSurveyTextureSize, postObject.transmittanceTextureSize,
+    lightingState.skyDirectionalVectorMemoryPtr, lightingState.skyMaskPtr, lightingState.groundColorPtr, lightingState.transmittanceLUTPtr);
 
   //We only return the color of the sky for hemispherical lighting and the exposure to scale the sky color
   lightingState.skyMeteringSurveyFloatArray = new Float32Array(Module.HEAPF32.buffer, lightingState.skyMeteringSurveyMemoryPtr, meteringSurveyBufferLength);
-  lightingState.skyHemisphericalLightColorFloatArray = new Float32Array(Module.HEAPF32.buffer, lightingState.skyHemisphericalLightColorPtr, 18);
+  lightingState.skyHemisphericalLightColorFloatArray = new Float32Array(Module.HEAPF32.buffer, lightingState.skyHemisphericalLightColorPtr, 21);
   lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyFloatArray0, 0, meteringSurveyBufferLength);
-  const exposureCoefficient0 = Module._updateMeteringAndLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr);
+  const exposureCoefficient0 = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
+  let directLightingColor0 = new Float32Array(3);
+  lightingState.directLightingColorFloatArray.set(directLightingColor, 0, directLightingColor.bufferSize * BYTES_PER_32_BIT_FLOAT);
+  const dominantLightY = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPosition0, postObject.sunRadius0, postObject.moonRadius0 postObject.moonYPosition0, postObject.sunIntensity0, postObject.moonIntensity0, exposureCoefficient0, lightingState.directLightingColorBuffer);
+  let sunYPosition0 = postObject.sunYPosition0;
+  let moonYPosition0 = postObject.moonYPosition0;
+  if(postObject.sunYPosition0 > (2.0 * sunRadius0)){
+    sunYPosition0 = dominantLightY0;
+  }
+  else{
+    moonYPosition0 = dominantLightY0;
+  }
+  let hemisphericalLightingAndFogColors0 = new Float32Array(21);
+  lightingState.skyHemisphericalColorArray.set(hemisphericalLightingAndFogColors, 0, hemisphericalLightingAndFogColors.bufferSize * BYTES_PER_32_BIT_FLOAT);
+  Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyMeteringSurveyfPtr, postObject.hmdViewX, postObject.hmdViewZ);
+
   lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyFloatArrayf, 0, meteringSurveyBufferLength);
-  const exposureCoefficientf = Module._updateMeteringAndLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr);
+  const exposureCoefficientf = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
+  let directLightingColorf = new Float32Array(3);
+  lightingState.directLightingColorFloatArray.set(directLightingColor, 0, directLightingColor.bufferSize * BYTES_PER_32_BIT_FLOAT);
+  const dominantLightY = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf, postObject.sunRadiusf, postObject.moonRadiusf postObject.moonYPositionf, postObject.sunIntensityf, postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorBuffer);
+  let sunYPositionf = postObject.sunYPositionf;
+  let moonYPositionf = postObject.moonYPositionf;
+  if(postObject.sunYPositionf > (2.0 * sunRadiusf)){
+    sunYPositionf = dominantLightYf;
+  }
+  else{
+    moonYPositionf = dominantLightYf;
+  }
+  let hemisphericalLightingAndFogColorsf = new Float32Array(21);
+  lightingState.skyHemisphericalColorArray.set(hemisphericalLightingAndFogColors, 0, hemisphericalLightingAndFogColors.bufferSize * BYTES_PER_32_BIT_FLOAT);
+  Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyMeteringSurveyfPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
   postMessage({
     eventType: EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE,
     exposureCoefficient0: exposureCoefficient0,
     exposureCoefficientf: exposureCoefficientf,
+    sunYPosition0: sunYPosition0,
+    sunYPositionf: sunYPositionf,
+    moonYPosition0: moonYPosition0,
+    moonYPositionf: moonYPositionf,
     meteringSurveyFloatArray: postObject.meteringSurveyFloatArrayf,
-  }, [postObject.meteringSurveyFloatArrayf.buffer]);
+    directLightingColor0: directLightingColorFloatArray0,
+    directLightingColorf: directLightingColorFloatArray,
+    hemisphericalLightingColor0: skyHemisphericalColorArray0,
+    hemisphericalLightingColorf: skyHemisphericalColorArray,
+  }, [postObject.meteringSurveyFloatArrayf.buffer,
+    directLightingColorFloatArray0.buffer,
+    directLightingColorFloatArray.buffer,
+    skyHemisphericalColorArray0.buffer,
+    skyHemisphericalColorArray
+  ]);
 }
 
 onmessage = function(e){
   let postObject = e.data;
   if(postObject.eventType === EVENT_UPDATE_AUTOEXPOSURE){
     lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyFloatArrayf, 0, meteringSurveyBufferLength);
-    const exposureCoefficientf = Module._updateMeteringAndLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr);
+    const exposureCoefficientf = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
+    let directLightingColor = new Float32Array(3);
+    lightingState.directLightingColorFloatArray.set(directLightingColor, 0, directLightingColor.bufferSize * BYTES_PER_32_BIT_FLOAT);
+    const dominantLightY = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPosition, postObject.sunRadius, postObject.moonRadius postObject.moonYPosition, postObject.sunIntensity, postObject.moonIntensity, exposureCoefficientf, lightingState.directLightingColorBuffer);
+    let sunYPosition = postObject.sunYPosition;
+    let moonYPosition = postObject.moonYPosition;
+    if(postObject.sunYPosition > (2.0 * sunRadius)){
+      sunYPosition = dominantLightY;
+    }
+    else{
+      moonYPosition = dominantLightY;
+    }
+    let hemisphericalLightingAndFogColors = new Float32Array(21);
+    lightingState.skyHemisphericalColorArray.set(hemisphericalLightingAndFogColors, 0, hemisphericalLightingAndFogColors.bufferSize * BYTES_PER_32_BIT_FLOAT);
+    Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyMeteringSurveyfPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
     postMessage({
       eventType: EVENT_RETURN_AUTOEXPOSURE,
       exposureCoefficientf: exposureCoefficientf,
+      sunYPosition: sunYPosition,
+      moonYPosition: moonYPosition,
       meteringSurveyFloatArray: postObject.meteringSurveyFloatArrayf,
-    }, [postObject.meteringSurveyFloatArrayf.buffer]);
+      directLightingColor: lightingState.directLightingColorFloatArray,
+      hemisphericalLightingColor: lightingState.skyHemisphericalColorArray,
+    }, [postObject.meteringSurveyFloatArrayf.buffer,
+      lightingState.directLightingColorFloatArray.buffer,
+      lightingState.skyHemisphericalColorArray.buffer
+    ]);
   }
   else if(postObject.eventType === EVENT_UPDATE_LATEST_SKY_STATE){
     numberOfUpdates += 1;

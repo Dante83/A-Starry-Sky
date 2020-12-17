@@ -20,7 +20,7 @@ cpp_files = [['SkyState.cpp',\
  ['SkyInterpolator.cpp']]
 module_file = ['state-engine.js', 'interpolation-engine.js']
 exported_functions = [['_main', '_setupSky', '_updateSky', '_initializeMeteringAndLightingDependencies',\
-'_updateMeteringAndLightingData'],\
+'_updateMeteringData', '_updateDirectLighting', '_updateHemisphericalLightingData'],\
 ['_main', '_initializeAstromicalValues', '_updateFinalAstronomicalValues', '_updateAstronomicalTimeData',\
 '_tick_astronomicalInterpolations', '_setSunAndMoonTimeTo', '_updateLightingValues',\
 '_tick_lightingInterpolations', '_bolometricMagnitudeToLuminosity', '_luminosityToAtmosphericIntensity']]

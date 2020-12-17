@@ -24,8 +24,10 @@ extern "C" {
   int main();
   void setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, float* memoryPtr);
   void updateSky(int year, int month, int day, int hour, int minute, double second);
-  void initializeMeteringAndLightingDependencies(float* xyzPtr, float* pixelWeightsPtr, int widthOfTexture);
-  float updateMeteringAndLightingData(float* skyColorIntensities, float* hemisphericalSkyLight);
+  void initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int widthOfTransmittanceTexture, int heightOfTransmittanceTexture, float* xyzPtr, float* pixelWeightsPtr, float* groundColor, float* transmittanceLUT);
+  float updateMeteringData(float* skyColorIntensities);
+  void updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr);
+  float updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer);
 }
 
 void SkyState::updateHeap32Memory(){
@@ -82,15 +84,105 @@ void EMSCRIPTEN_KEEPALIVE updateSky(int year, int month, int day, int hour, int 
 }
 
 //This is just an external wrapper function we can call from our javascript
-float EMSCRIPTEN_KEEPALIVE updateMeteringAndLightingData(float* skyColorIntensities, float* hemisphericalSkyLight){
-  return skyState->lightingAnalyzer->updateMeteringAndLightingData(skyColorIntensities, hemisphericalSkyLight);
+float EMSCRIPTEN_KEEPALIVE updateMeteringData(float* skyColorIntensities){
+  return skyState->lightingAnalyzer->updateMeteringData(skyColorIntensities);
 }
 
-void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(float* xyzPtr, float* pixelWeightsPtr, int widthOfTexture){
+void EMSCRIPTEN_KEEPALIVE updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewY){
+  skyState->lightingAnalyzer->updateHemisphericalLightingData(skyColorIntensitiesPtr, hemisphericalAndDirectSkyLightPtr, hmdViewX, hmdViewZ)
+}
+
+float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer){
+  //Determine whether sun or moon is dominant based on the height
+  float dominantLightRadius = sunRadius;
+  float dominantLightY = sunYPosition;
+  bool sunIsDominantLightSource = true;
+  float dominantLightIntensity = sunIntensity;
+  if(sunY < -sunRadius){
+    dominantLightRadius = moonRadius;
+    dominantLightY = moonYPosition;
+    sunIsDominantLightSource = false;
+    dominantLightIntensity = moonIntensity;
+  }
+
+  //We are only chopping off the intensity from the horizon, solar eclipse
+  //or lunar eclipse here. We do not emulate phases of the moon or a more
+  //accurate solution which would require summing over the intensities of
+  //all pixels on a image of the sun or moon - this is just a point source
+  //approximation.
+  float totalLightSourceArea = PI * dominantLightRadius * dominantLightRadius;
+  float visibleAreaOfLightSource = 0.0;
+  if(dominantLightY >= dominantLightRadius){
+    visibleAreaOfLightSource = totalLightSourceArea;
+  }
+  if(dominantLightY > -dominantLightRadius && dominantLightY < 0.0){
+    //LightSource is above horizon, we automatically get half of our sphere
+    if(dominantLightY > 0.0){
+      visibleAreaOfLightSource = PI_OVER_TWO * dominantLightRadius * dominantLightRadius;
+    }
+
+    //And apply the usual business to get the percentVisible
+    float h = dominantLightRadius - distanceFromLightSourceCenterToHorizon;
+    float d = distanceFromLightSourceCenterToHorizon - h;
+    float dOverH = d / h;
+    float chordLength = 2.0 * dominantLightRadius * sqrt(1.0 - dOverH * dOverH);
+    float angleWithHorizon = 2.0 * atan2(chordLength, 2.0 * d);
+    visibleAreaOfLightSource += 0.5 * (dominantLightRadius * dominantLightRadius) * (angleWithHorizon - sin(angleWithHorizon));
+  }
+  float lightIntensity = sunIsDominantLightSource ? sunIntensity / 700.0 : moonIntensity * 0.025;
+  lightIntensity *= visibleAreaOfLightSource / totalLightSourceArea;
+  //Not sure if this is accurate, but a nice linear transition works to keep us in the transmittance between
+  //these two points. Maybe come back here at a later time and do the calculus to get the perfect
+  //answer. We're getting rusty at calculus anyways.
+  dominantLightY += dominantLightRadius * (1.0 - (visibleAreaOfLightSource / totalLightSourceArea));
+
+  //If this is the lunar light, we modify the intensity of the light based on our metering results
+  // if(!sunIsDominantLightSource){
+  //
+  // }
+
+  //Once we have the base source light, we need to apply the transmittance to this light
+  //Use this height information to acquire the appropriate position on the transmittance LUT
+  int xPosition = 0.5 * (1.0 + dominantLightY) * widthOfTransmittanceTexture;
+  float r = height + RADIUS_OF_EARTH;
+  int yPosition = sqrt((heightOfCamera * heightOfCamera - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED) * heightOfTransmittanceTexture;
+
+  //Get the look-up color for the LUT for the weighted nearest 4 colors
+  float transmittance[3] = {0.0, 0.0, 0.0};
+  float xClamped = ceil(xPosition);
+  float weight = xClampled - xPosition;
+  float totalWeight = weight;
+  skyState->lightingAnalyzer->xyToIndexStartForRedColor(xClamped, yPosition, weight, transmittance);
+  xClamped = floor(x);
+  weight = xPosition - xClamped;
+  totalWeight += weight;
+  skyState->lightingAnalyzer->xyToIndexStartForRedColor(xClamped, yPosition, weight, transmittance);
+  yClamped = ceil(y);
+  weight = yClamped - yPosition;
+  totalWeight += weight;
+  skyState->lightingAnalyzer->xyToIndexStartForRedColor(xPosition, yClamped, weight, transmittance);
+  yClamped = floor(y);
+  weight = yPosition - yClamped;
+  totalWeight += weight;
+  skyState->lightingAnalyzer->xyToIndexStartForRedColor(xPosition, yClamped, weight, transmittance);
+  //Modify the color our light as a side effect
+  for(int i = 0; i < 3; ++i){
+    //The first three items tell us the color of the light
+    directLightingPointer[i] = transmittance[i] * lightIntensity / totalWeight;
+  }
+
+  //Apply this LUT transmittance to our direct lighting
+  return dominantLightY;
+}
+
+void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int transmittanceTextureSize, float* xyzPtr, float* pixelWeightsPtr, float* groundColor, float* transmittanceLUT){
   //Attach our pointers to the object
-  skyState->lightingAnalyzer->widthOfTexture = widthOfTexture;
+  skyState->lightingAnalyzer->widthOfMeteringTexture = widthOfMeteringTexture;
   skyState->lightingAnalyzer->xyzCoordinatesOfPixel = xyzPtr;
   skyState->lightingAnalyzer->pixelWeights = pixelWeightsPtr;
+  skyState->lightingAnalyzer->groundColor = groundColor;
+  skyState->lightingAnalyzer->transmittanceLUT = transmittanceLUT;
+  skyState->lightingAnalyzer->widthOfTransmittanceTexture = transmittanceTextureSize;
 
   //Set their constant values for future reference
   float sumOfPixelWeights = 0.0;
