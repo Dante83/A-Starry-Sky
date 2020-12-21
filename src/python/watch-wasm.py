@@ -1,4 +1,4 @@
-import os, time
+setupInterpolatorsimport os, time
 
 cpp_directories = ['../cpp/state-engine/', '../cpp/' '../cpp/interpolation-engine/']
 cpp_files = [['SkyState.cpp',\
@@ -17,11 +17,13 @@ cpp_files = [['SkyState.cpp',\
  'astro_bodies/planets/Mars.cpp',\
  'astro_bodies/planets/Jupiter.cpp',\
  'astro_bodies/planets/Saturn.cpp'],\
- ['SkyInterpolator.cpp']]
+ ['SkyInterpolator.cpp',\
+ 'color/ColorInterpolator.cpp'
+ ]]
 module_file = ['state-engine.js', 'interpolation-engine.js']
 exported_functions = [['_main', '_setupSky', '_updateSky', '_initializeMeteringAndLightingDependencies',\
 '_updateMeteringData', '_updateDirectLighting', '_updateHemisphericalLightingData'],\
-['_main', '_initializeAstromicalValues', '_updateFinalAstronomicalValues', '_updateAstronomicalTimeData',\
+['_main', '_setupInterpolators', '_updateFinalAstronomicalValues', '_updateAstronomicalTimeData',\
 '_tick_astronomicalInterpolations', '_setSunAndMoonTimeTo', '_updateLightingValues',\
 '_tick_lightingInterpolations', '_bolometricMagnitudeToLuminosity', '_luminosityToAtmosphericIntensity']]
 cpp_update_date = {}

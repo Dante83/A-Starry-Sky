@@ -1,8 +1,10 @@
 #pragma once
+#include "color/ColorInterpolator.h"
 
 class SkyInterpolator{
 public:
   SkyInterpolator();
+  ColorInterpolator* colorInterpolator;
   float sinOfLatitude;
   float cosOfLatitude;
   float tanOfLatitude;
@@ -14,6 +16,10 @@ public:
   float deltaLSRT;
   float initialLogAverageOfSkyIntensity;
   float deltaLogAverageOfSkyIntensity;
+  float dominantLightY0;
+  float deltaDominantLightDelta;
+  float dominantLightIntensity0;
+  float deltaDominantLightIntensity;
   float initialSkyHemisphericalLightingColor[3];
   float estimatedFinalSkyHemisphericalLightingColor[3];
   float deltaPositions[14];
@@ -23,6 +29,7 @@ public:
   float* rotatedAstroPositions;
   float* linearValues;
   float* rotationallyDepedentAstroValues;
+  float* interpolatedMeteringAndLightingValues;
   void updateAstronomicalLinearInterpolations(float fractOfFinalPosition);
   void updateLightingLinearInterpolations(float fractionOfFinalPosition);
   float rotateAstroObjects(float fractOfFinalPosition);

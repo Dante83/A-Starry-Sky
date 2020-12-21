@@ -1,15 +1,14 @@
 #include "Constants.h"
 #include "SkyInterpolator.h"
+#include "color/ColorInterpolator.h"
 #include <emscripten/emscripten.h>
 #include <cmath>
 
 //
 //Constructor
 //
-SkyInterpolator::SkyInterpolator(){
-  //
-  //Empty constructor
-  //
+SkyInterpolator::SkyInterpolator(ColorInterpolator* ColorInterpolatorPtr){
+  colorInterpolator = ColorInterpolatorPtr;
 }
 
 SkyInterpolator* skyInterpolator;
@@ -22,12 +21,17 @@ extern "C" {
   float tick_astronomicalInterpolations(float t);
   void setSunAndMoonTimeTo(float t);
   void updateLightingValues(float logAverageOfSkyIntensity_0, float logAverageOfSkyIntensity_f, float t_0, float t_f);
-  float tick_lightingInterpolations(float t);
+  void tick_lightingInterpolations(float t);
   float bolometricMagnitudeToLuminosity(float x);
   float luminosityToAtmosphericIntensity(float x);
 }
 
-void EMSCRIPTEN_KEEPALIVE initializeAstromicalValues(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
+void EMSCRIPTEN_KEEPALIVE setupInterpolators(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
+  //Set up our color interpolator for for animating colors of our lights
+  ColorInterpolator* colorInterpolator = new ColorInterpolator();
+  skyInterpolator = new SkyInterpolator(colorInterpolator);
+
+  //Set up our astronomical values
   skyInterpolator->sinOfLatitude = -sin(latitude * DEG_2_RAD);
   skyInterpolator->cosOfLatitude = cos(latitude * DEG_2_RAD);
   skyInterpolator->tanOfLatitude = skyInterpolator->sinOfLatitude / skyInterpolator->cosOfLatitude;
@@ -103,9 +107,20 @@ float EMSCRIPTEN_KEEPALIVE tick_astronomicalInterpolations(float t){
 //while astronomical calculations are done in astronomical time
 //The two exists on two seperate time lines, with the lighting calculations depending
 //on our astronomical calculations through the position of the sun and moon.
-float EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
+void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
   float tFractional = (t - skyInterpolator->lightingTInitial) * skyInterpolator->oneOverLightingDeltaT;
-  return skyInterpolator->initialLogAverageOfSkyIntensity + tFractional * skyInterpolator->deltaLogAverageOfSkyIntensity;
+
+  //Interpolate the metering
+  float meteringValue = skyInterpolator->initialLogAverageOfSkyIntensity + tFractional * skyInterpolator->deltaLogAverageOfSkyIntensity;
+
+  //Interpolate direct light y position
+  float directLightingY = skyInterpolator->dominantLightY0 + tFractional * skyInterpolator->deltaDominantLightDelta;
+
+  //Interpolate the direct light brightness
+  float directLightIntensity = skyInterpolator->dominantLightIntensity0 + tFractional * skyInterpolator->dominantLightIntensity0;
+
+  //Interpolate our light colors
+  colorInterpolator->updateLightingLinearInterpolations(tFractional);
 }
 
 void EMSCRIPTEN_KEEPALIVE updateLightingValues(float initialLogAverageOfSkyIntensity, float finalLogAverageOfSkyIntensity, float t_0, float t_f){

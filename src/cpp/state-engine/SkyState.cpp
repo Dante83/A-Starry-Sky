@@ -175,7 +175,7 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
   return dominantLightY;
 }
 
-void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int transmittanceTextureSize, float* xyzPtr, float* pixelWeightsPtr, float* groundColor, float* transmittanceLUT){
+void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int transmittanceTextureSize, float* xyzPtr, float* pixelWeightsPtr, float* groundColor, float* transmittanceLUT, float* fogColor){
   //Attach our pointers to the object
   skyState->lightingAnalyzer->widthOfMeteringTexture = widthOfMeteringTexture;
   skyState->lightingAnalyzer->xyzCoordinatesOfPixel = xyzPtr;
@@ -183,6 +183,7 @@ void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfM
   skyState->lightingAnalyzer->groundColor = groundColor;
   skyState->lightingAnalyzer->transmittanceLUT = transmittanceLUT;
   skyState->lightingAnalyzer->widthOfTransmittanceTexture = transmittanceTextureSize;
+  skyState->lightingAnalyzer->fogColor = fogColor;
 
   //Set their constant values for future reference
   float sumOfPixelWeights = 0.0;

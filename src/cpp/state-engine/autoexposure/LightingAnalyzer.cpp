@@ -34,7 +34,7 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
   float negativeZHemisphericalLightColor[3] = {0.0, 0.0, 0.0};
 
   float* arrayOfHemisphericalLights[6] = {
-    &hemisphericalSkyLightPtr, &postiveYHemisphericalLightColor, &postiveZHemisphericalLightColor,
+    &postiveXHemisphericalLightColor, &postiveYHemisphericalLightColor, &postiveZHemisphericalLightColor,
     &negativeXHemisphericalLightColor, &negativeYHemisphericalLightColor, &negativeZHemisphericalLightColor
   }
 
@@ -56,7 +56,7 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
 
       //For fog, we presume that the y of the look direction is zero, and we just dot each of our
       //directional vectors with our hmd x and y values to decide the contribution.
-      (*arrayOfHemisphericalLights[k])[j] = max(normalizedHMDViewX * directLightingColor[0] + normalizedHMDViewY * directLightingColor[2], 0.0) * linearColorTimesPixelWeight;
+      (*fogColor[k])[j] = max(normalizedHMDViewX * directLightingColor[0] + normalizedHMDViewY * directLightingColor[2], 0.0) * linearColorTimesPixelWeight;
 
       //As we are looking for lighting coming from a given direction in the sky
       //We actually wish to negate any of our directions so that the vectors are
@@ -70,7 +70,7 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
     }
   }
 
-  for(int i = 0; i < 7; ++i){
+  for(int i = 0; i < 6; ++i){
     for(int j = 0; j < 3; ++j){
       (*arrayOfHemisphericalLights[k])[j] = (*arrayOfHemisphericalLights[k])[j] * oneOverSumOfWeightWeights;
     }
@@ -86,10 +86,14 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
 
   //Now bring our values back into the normal range of intensities and save it to our final hemispherical
   //lighting array so that we can bring this back out to the first CPU.
-  for(int i = 0; i < 7; ++i){
+  for(int i = 0; i < 6; ++i){
     for(int j = 0; j < 3; ++j){
       hemisphericalSkyLightPtr[i * 3 + j] =  pow((*arrayOfHemisphericalLights[k])[j], ONE_OVER_TWO_POINT_TWO);
     }
+  }
+
+  for(int j = 0; j < 3; ++j){
+    (*fogColor[k])[j] = pow((*fogColor[k])[j] * oneOverSumOfWeightWeights, ONE_OVER_TWO_POINT_TWO);
   }
 }
 
