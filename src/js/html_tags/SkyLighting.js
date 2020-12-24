@@ -4,6 +4,9 @@ window.customElements.define('sky-ground-color-red', class extends HTMLElement{}
 window.customElements.define('sky-ground-color-green', class extends HTMLElement{});
 window.customElements.define('sky-ground-color-blue', class extends HTMLElement{});
 window.customElements.define('sky-shadow-type', class extends HTMLElement{});
+window.customElements.define('sky-shadow-draw-distance', class extends HTMLElement{});
+window.customElements.define('sky-shadow-draw-behind-distance', class extends HTMLElement{});
+window.customElements.define('sky-shadow-camera-resolution', class extends HTMLElement{});
 
 StarrySky.DefaultData.lighting = {
   groundColor: {
@@ -11,7 +14,10 @@ StarrySky.DefaultData.lighting = {
     green: 0,
     blue: 0
   },
-  shadowType: 'Basic'
+  shadowType: 'Basic',
+  shadowDrawDistance: 128.0,
+  shadowDrawBehindDistance: 10.0,
+  shadowCameraResolution: 512
 };
 
 //Parent tag
@@ -33,8 +39,12 @@ class SkyLighting extends HTMLElement {
       //Get child tags and acquire their values.
       let groundColorTags = self.getElementsByTagName('sky-ground-color');
       let shadowTypeTags = self.getElementsByTagName('sky-shadow-type');
+      let shadowDrawDistanceTags = self.getElementsByTagName('sky-shadow-draw-distance');
+      let shadowDrawBehindDistanceTags = self.getElementsByTagName('sky-shadow-draw-behind-distance');
+      let shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
 
-      [groundColorTags, shadowTypeTags].forEach(function(tags){
+      [groundColorTags, shadowTypeTags, shadowDrawDistanceTags, shadowDrawBehindDistanceTags,
+      shadowCameraResolutionTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-lighting-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -73,6 +83,11 @@ class SkyLighting extends HTMLElement {
         console.warn("No valid shadow type provided in the <sky-shadow-type> tag. Valid shadow map types include 'Basic', 'PSF', 'VSM', and 'PSF Soft'. Default to Basic.");
       }
 
+      //Parse the values in our tags
+      self.data.shadowDrawDistance = shadowDrawDistanceTags.length > 0 ? parseFloat(shadowDrawDistanceTags[0].innerHTML) : self.data.shadowDrawDistance;
+      self.data.shadowDrawBehindDistance = shadowDrawBehindDistanceTags.length > 0 ? parseFloat(shadowDrawBehindDistanceTags[0].innerHTML) : self.data.shadowDrawBehindDistance;
+      self.data.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML) : self.data.shadowCameraResolution;
+
       //Clamp our results to the appropriate ranges
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){
         let result = Math.min(Math.max(inValue, minValue), maxValue);
@@ -84,6 +99,11 @@ class SkyLighting extends HTMLElement {
         }
         return result;
       };
+
+      //Clamp the values in our tags
+      self.data.shadowDrawDistance = clampAndWarn(self.data.shadowDrawDistance, 1.0, 500000.0, '<sky-shadow-draw-distance>');
+      self.data.shadowDrawBehindDistance = clampAndWarn(self.data.shadowDrawBehindDistance, -1.0, 500000.0, '<sky-shadow-draw-behind-distance>');
+      self.data.shadowCameraResolution = clampAndWarn(self.data.shadowCameraResolution, 64, 2048, '<sky-shadow-camera-resolution>');
 
       //Parse our ground color
       if(groundColor.length === 1){

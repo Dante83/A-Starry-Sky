@@ -241,11 +241,8 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Interpolate our log average of the sky intensity
       Module._tick_lightingInterpolations(self.time);
-      //Set the following and the lighting values after runnning this.
-      //const interpolatedSkyIntensityMagnitude =
-      //self.directLightingPosition;
-      //self.directLightingIntensity;
-      //self.
+      const interpolatedSkyIntensityMagnitude = self.lightingColorValues[28]
+      self.lightingManager.tick(self.lightingColorValues);
       self.exposureVariables.starsExposure = Math.min(6.8 - interpolatedSkyIntensityMagnitude, 3.7);
 
       //Check if we need to update our auto-exposure final state again
@@ -303,7 +300,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Setting this buffer is deffered until our lighting worker is complete
       self.lightingColorValues_0_ptr = Module._malloc(NUMBER_OF_LIGHTING_COLOR_CHANNELS * BYTES_PER_32_BIT_FLOAT);
       self.lightingColorValues_f_ptr = Module._malloc(NUMBER_OF_LIGHTING_COLOR_CHANNELS * BYTES_PER_32_BIT_FLOAT);
-      self.lightingColorValues_ptr = Module._malloc(NUMBER_OF_LIGHTING_COLOR_CHANNELS * BYTES_PER_32_BIT_FLOAT);
+      self.lightingColorValues_ptr = Module._malloc((NUMBER_OF_LIGHTING_COLOR_CHANNELS + 5) * BYTES_PER_32_BIT_FLOAT);
 
       //Attach references to our interpolated values
       self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATION_OUTPUT_VALUES);
@@ -362,8 +359,11 @@ StarrySky.SkyDirector = function(parentComponent){
       Module.HEAPF32.set(lightingColorArray0.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS), self.lightingColorValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
       self.lightingColorValuesf = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_f_ptr, NUMBER_OF_LIGHTING_COLOR_CHANNELS);
       Module.HEAPF32.set(self.lightingColorArrayf.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS), self.lightingColorValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
-      self.lightingColorValues = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_ptr, NUMBER_OF_LIGHTING_COLOR_CHANNELS);
+      self.lightingColorValues = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_ptr, NUMBER_OF_LIGHTING_COLOR_CHANNELS + 5);
       self.exposureVariables.exposureCoefficientf = postObject.exposureCoefficientf;
+
+      //Hook up our output lighting value array so we can get back multiple values from interpolating our lighting
+      Module._initializeLightingValues(self.lightingColorValues_ptr);
 
       //Update the state of our interpolator
       Module._updateLightingValues(postObject.exposureCoefficient0,  postObject.exposureCoefficientf, postObject.dominantLightY0, postObject.dominantLightYf, self.time, self.time + HALF_A_SECOND);
@@ -580,6 +580,20 @@ StarrySky.SkyDirector = function(parentComponent){
     //Grab all of our assets
     self.assetManager = new StarrySky.AssetManager(self);
   });
+
+  //
+  //These hooks are here as user functions because users may wish to
+  //disable atmospheric perspective.
+  //
+  this.disableAtmosphericPerspective = function(){
+    self.assetManager.data.atmosphericPerspectiveEnabled = false;
+
+  }
+
+  this.enableAtmosphericPerspective = function(){
+    self.assetManager.data.atmosphericPerspectiveEnabled = true;
+
+  }
 
   function onRuntimeInitialized() {
       self.skyInterpolatorWASMIsReady = true;

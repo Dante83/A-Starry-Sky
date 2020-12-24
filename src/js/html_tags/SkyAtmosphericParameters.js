@@ -14,6 +14,7 @@ window.customElements.define('sky-number-of-gathering-steps', class extends HTML
 window.customElements.define('sky-ozone-enabled', class extends HTMLElement{});
 window.customElements.define('sky-sun-angular-diameter', class extends HTMLElement{});
 window.customElements.define('sky-moon-angular-diameter', class extends HTMLElement{});
+window.customElements.define('sky-max-atmospheric-perspective', class extends HTMLElement{});
 
 StarrySky.DefaultData.skyAtmosphericParameters = {
   solarIntensity: 1367.0,
@@ -40,7 +41,9 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
   numberOfGatheringSteps: 30,
   ozoneEnabled: true,
   sunAngularDiameter: 3.38,
-  moonAngularDiameter: 3.15
+  moonAngularDiameter: 3.15,
+  atmosphericPerspectiveEnabled: true,
+  atmosphericPerspectiveMaxFogDensity: 0.00025
 };
 
 //Parent tag
@@ -73,10 +76,12 @@ class SkyAtmosphericParameters extends HTMLElement {
       let ozoneEnabledTags = self.getElementsByTagName('sky-ozone-enabled');
       let sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
       let moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
+      let atmosphericPerspectiveMaxFogDensityTags = self.getElementsByTagName('sky-max-atmospheric-perspective')
 
       [solarIntensityTags, lunarMaxIntensityTags, rayleighMolecularDensityTags, airIndexOfRefractionTags,
       solarColorTags, lunarColorTags, mieBetaTags, mieDirectionalGTags, numberOfRayStepsTags,
-      numberOfGatheringStepsTags, ozoneEnabledTags, sunAngularDiameterTags, moonAngularDiameterTags].forEach(function(tags){
+      numberOfGatheringStepsTags, ozoneEnabledTags, sunAngularDiameterTags, moonAngularDiameterTags,
+      atmosphericPerspectiveMaxFogDensityTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -108,6 +113,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       self.data.ozoneEnabled = ozoneEnabledTags.length > 0 ? JSON.parse(ozoneEnabledTags[0].innerHTML.toLowerCase()) === true : self.data.ozoneEnabled;
       self.data.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFloat(sunAngularDiameterTags[0].innerHTML) : self.data.sunAngularDiameter;
       self.data.moonAngularDiameter = moonAngularDiameterTags.length > 0 ? parseFloat(moonAngularDiameterTags[0].innerHTML) : self.data.moonAngularDiameter;
+      self.data.atmosphericPerspectiveMaxFogDensity = atmosphericPerspectiveMaxFogDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveMaxFogDensityTags[0].innerHTML) : self.data.atmosphericPerspectiveMaxFogDensity;
 
       let listOfColorBasedTags = [solarColorTags, lunarColorTags, mieBetaTags];
       let listOfDatas = [self.data.solarColor, self.data.lunarColor, self.data.mieBeta]
@@ -149,6 +155,8 @@ class SkyAtmosphericParameters extends HTMLElement {
       self.data.numberOfGatheringSteps = clampAndWarn(self.data.numberOfGatheringSteps, 2, 1000, '<sky-number-of-gathering-steps>');
       self.data.sunAngularDiameter = clampAndWarn(self.data.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
       self.data.moonAngularDiameter = clampAndWarn(self.data.moonAngularDiameter, 0.1, 90.0, '<sky-moon-angular-diameter>');
+      self.data.atmosphericPerspectiveMaxFogDensity = clampAndWarn(self.data.atmosphericPerspectiveMaxFogDensity, 0.0, Infinity, '<sky-max-atmospheric-perspective>');
+      self.data.atmosphericPerspectiveEnabled = self.data.atmosphericPerspectiveMaxFogDensity > 0.0;
 
       //
       //TODO: Clamp and warn each of our color systems.

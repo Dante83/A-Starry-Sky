@@ -41,9 +41,9 @@ void ColorInterpolator::updateLightingLinearInterpolations(float tFractional){
 
     //Convert our values back into RGB
     float* rbg = convertHSLToRGB(hue, saturation, lightness);
-    interpolatedLightingInterpolations[rChannel] = rbg[0];
-    interpolatedLightingInterpolations[gChannel] = rbg[1];
-    interpolatedLightingInterpolations[bChannel] = rbg[2];
+    interpolatedMeteringAndLightingValues[rChannel] = rbg[0];
+    interpolatedMeteringAndLightingValues[gChannel] = rbg[1];
+    interpolatedMeteringAndLightingValues[bChannel] = rbg[2];
   }
 }
 

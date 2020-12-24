@@ -5,6 +5,7 @@ class SkyInterpolator{
 public:
   SkyInterpolator();
   ColorInterpolator* colorInterpolator;
+  bool dominantLightIsSun;
   float sinOfLatitude;
   float cosOfLatitude;
   float tanOfLatitude;
@@ -17,7 +18,7 @@ public:
   float initialLogAverageOfSkyIntensity;
   float deltaLogAverageOfSkyIntensity;
   float dominantLightY0;
-  float deltaDominantLightDelta;
+  float deltaDominantLightY;
   float dominantLightIntensity0;
   float deltaDominantLightIntensity;
   float initialSkyHemisphericalLightingColor[3];

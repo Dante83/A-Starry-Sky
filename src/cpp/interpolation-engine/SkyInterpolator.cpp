@@ -20,7 +20,8 @@ extern "C" {
   void updateAstronomicalTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
   float tick_astronomicalInterpolations(float t);
   void setSunAndMoonTimeTo(float t);
-  void updateLightingValues(float logAverageOfSkyIntensity_0, float logAverageOfSkyIntensity_f, float t_0, float t_f);
+  void initializeLightingValues(float* lightingDataInterpolatedValues);
+  void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float dominantLightIntensity0, float dominantLightIntensityF, float* lightColors0, float* lightColorsf, float t_0, float t_f);
   void tick_lightingInterpolations(float t);
   float bolometricMagnitudeToLuminosity(float x);
   float luminosityToAtmosphericIntensity(float x);
@@ -113,19 +114,68 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
   //Interpolate the metering
   float meteringValue = skyInterpolator->initialLogAverageOfSkyIntensity + tFractional * skyInterpolator->deltaLogAverageOfSkyIntensity;
 
-  //Interpolate direct light y position
-  float directLightingY = skyInterpolator->dominantLightY0 + tFractional * skyInterpolator->deltaDominantLightDelta;
-
   //Interpolate the direct light brightness
-  float directLightIntensity = skyInterpolator->dominantLightIntensity0 + tFractional * skyInterpolator->dominantLightIntensity0;
+  float directLightIntensity = skyInterpolator->dominantLightIntensity0 + tFractional * skyInterpolator->deltaDominantLightIntensity;
+
+  //Interpolate direct light y position
+  float directLightingX;
+  float directLightingZ;
+  if(skyInterpolator->dominantLightIsSun){
+    directLightingX = skyInterpolator->rotatedAstroPositions[0];
+    directLightingZ = skyInterpolator->rotatedAstroPositions[2];
+  }
+  else{
+    directLightingX = skyInterpolator->rotatedAstroPositions[3];
+    directLightingZ = skyInterpolator->rotatedAstroPositions[5];
+    directLightIntensity *= pow(100.0, fmin(6.8 - meteringValue, 3.7) * 0.2);
+  }
+  float directLightingY = skyInterpolator->dominantLightY0 + tFractional * skyInterpolator->deltaDominantLightY;
 
   //Interpolate our light colors
   colorInterpolator->updateLightingLinearInterpolations(tFractional);
+
+  //Update our memory
+  skyInterpolator->interpolatedMeteringAndLightingValues[24] = directLightIntensity;
+  skyInterpolator->interpolatedMeteringAndLightingValues[25] = directLightingX;
+  skyInterpolator->interpolatedMeteringAndLightingValues[26] = directLightingY;
+  skyInterpolator->interpolatedMeteringAndLightingValues[27] = directLightingZ;
+  skyInterpolator->interpolatedMeteringAndLightingValues[28] = meteringValue;
 }
 
-void EMSCRIPTEN_KEEPALIVE updateLightingValues(float initialLogAverageOfSkyIntensity, float finalLogAverageOfSkyIntensity, float t_0, float t_f){
-  skyInterpolator->initialLogAverageOfSkyIntensity = initialLogAverageOfSkyIntensity;
-  skyInterpolator->deltaLogAverageOfSkyIntensity = finalLogAverageOfSkyIntensity - initialLogAverageOfSkyIntensity;
+void EMSCRIPTEN_KEEPALIVE initializeLightingValues(float* lightingDataInterpolatedValues){
+  skyInterpolator->interpolatedMeteringAndLightingValues = lightingDataInterpolatedValues;
+  colorInterpolator->interpolatedMeteringAndLightingValues = lightingDataInterpolatedValues;
+}
+
+void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float dominantLightIntensity0, float dominantLightIntensityF, float* lightColors0, float* lightColorsf, float t_0, float t_f){
+  skyInterpolator->initialLogAverageOfSkyIntensity = skyIntensity0;
+  skyInterpolator->deltaLogAverageOfSkyIntensity = skyIntensityf - skyIntensity0;
+
+  if(dominantLightIsSun0 !== dominantLightIsSunf){
+    skyInterpolator->dominantLightIsSun = true;
+    skyInterpolator->dominantLightY0 = dominantLightIsSun0 ? dominantLightY0 ? dominantLightYf;
+    skyInterpolator->deltaDominantLightY = 0.0;
+    if(dominantLightIsSun0){
+      //Sun is setting
+      skyInterpolator->dominantLightIntensity0 = dominantLightIntensity0;
+      skyInterpolator->deltaDominantLightIntensity = -dominantLightIntensity0;
+    }
+    else{
+      //Sun is rising
+      skyInterpolator->dominantLightIntensity0 = 0.0;
+      skyInterpolator->deltaDominantLightIntensity = dominantLightIntensity0;
+    }
+  }
+  else{
+    skyInterpolator->dominantLightIsSun = dominantLightIsSun0;
+    skyInterpolator->dominantLightY0 = dominantLightY0;
+    skyInterpolator->deltaDominantLightY = dominantLightYf - dominantLightY0;
+    skyInterpolator->dominantLightIntensity0 = dominantLightIntensity0;
+    skyInterpolator->deltaDominantLightIntensity = dominantLightIntensityf - dominantLightIntensity0;
+  }
+
+  colorInterpolator->updateFinalColorValues(lightColors0, lightColorsf);
+
   skyInterpolator->lightingTInitial = t_0;
   skyInterpolator->oneOverLightingDeltaT = 1.0 / (t_f - t_0);
 }

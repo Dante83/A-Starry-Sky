@@ -11,5 +11,5 @@ StarrySky = {
     Autoexposure: {}
   },
   Renderers: {},
-  LUTlibraries: {},
+  LUTlibraries: {}
 };

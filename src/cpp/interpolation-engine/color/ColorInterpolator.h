@@ -5,7 +5,7 @@ public:
   ColorInterpolator();
   float* hsl0[NUMBER_OF_INTERPOLATED_COLORS];
   float* deltaHSL[NUMBER_OF_INTERPOLATED_COLORS];
-  float* interpolatedLightingInterpolations;
+  float* interpolatedMeteringAndLightingValues;
   void updateLightingLinearInterpolations(float tFractional);
   void updateFinalColorValues(float* rgb0, float* rgbf);
   float hueToRGB(float p, float q, float t);

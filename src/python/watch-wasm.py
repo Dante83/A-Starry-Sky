@@ -25,7 +25,8 @@ exported_functions = [['_main', '_setupSky', '_updateSky', '_initializeMeteringA
 '_updateMeteringData', '_updateDirectLighting', '_updateHemisphericalLightingData'],\
 ['_main', '_setupInterpolators', '_updateFinalAstronomicalValues', '_updateAstronomicalTimeData',\
 '_tick_astronomicalInterpolations', '_setSunAndMoonTimeTo', '_updateLightingValues',\
-'_tick_lightingInterpolations', '_bolometricMagnitudeToLuminosity', '_luminosityToAtmosphericIntensity']]
+'_tick_lightingInterpolations', '_bolometricMagnitudeToLuminosity', '_luminosityToAtmosphericIntensity',\
+'_initializeLightingValues']]
 cpp_update_date = {}
 
 def recursivelyWalkDirectories(absolute_cpp_directory, file_check_callback):
