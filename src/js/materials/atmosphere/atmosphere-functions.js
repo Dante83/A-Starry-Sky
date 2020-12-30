@@ -99,8 +99,8 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
 
     '//height parameterization methods',
     '//[0, 1]',
-    'float parameterizationOfCosOfViewZenithToX(float viewZenithAngle){',
-      'return 0.5 * (1.0 + viewZenithAngle);',
+    'float parameterizationOfCosOfViewZenithToX(float cosOfTheViewAngle){',
+      'return 0.5 * (1.0 + cosOfTheViewAngle);',
     '}',
 
     '//',

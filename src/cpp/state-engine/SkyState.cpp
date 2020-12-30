@@ -24,9 +24,9 @@ extern "C" {
   int main();
   void setupSky(double latitude, double longitude, int year, int month, int day, int hour, int minute, double second, float* memoryPtr);
   void updateSky(int year, int month, int day, int hour, int minute, double second);
-  void initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int widthOfTransmittanceTexture, int heightOfTransmittanceTexture, float* xyzPtr, float* pixelWeightsPtr, float* groundColor, float* transmittanceLUT);
+  void initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int transmittanceTextureSize, float* xyzPtr, float* pixelWeightsPtr, float* groundColor, float* transmittanceLUT, float* fogColor);
   float updateMeteringData(float* skyColorIntensities);
-  void updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr);
+  void updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewZ);
   float updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer);
 }
 
@@ -88,8 +88,8 @@ float EMSCRIPTEN_KEEPALIVE updateMeteringData(float* skyColorIntensities){
   return skyState->lightingAnalyzer->updateMeteringData(skyColorIntensities);
 }
 
-void EMSCRIPTEN_KEEPALIVE updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewY){
-  skyState->lightingAnalyzer->updateHemisphericalLightingData(skyColorIntensitiesPtr, hemisphericalAndDirectSkyLightPtr, hmdViewX, hmdViewZ)
+void EMSCRIPTEN_KEEPALIVE updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewZ){
+  skyState->lightingAnalyzer->updateHemisphericalLightingData(skyColorIntensitiesPtr, hemisphericalAndDirectSkyLightPtr, hmdViewX, hmdViewZ);
 }
 
 float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer){
@@ -98,7 +98,7 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
   float dominantLightY = sunYPosition;
   bool sunIsDominantLightSource = true;
   float dominantLightIntensity = sunIntensity;
-  if(sunY < -sunRadius){
+  if(sunYPosition < -sunRadius){
     dominantLightRadius = moonRadius;
     dominantLightY = moonYPosition;
     sunIsDominantLightSource = false;
@@ -122,8 +122,8 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
     }
 
     //And apply the usual business to get the percentVisible
-    float h = dominantLightRadius - distanceFromLightSourceCenterToHorizon;
-    float d = distanceFromLightSourceCenterToHorizon - h;
+    float h = dominantLightRadius - dominantLightY;
+    float d = dominantLightY - h;
     float dOverH = d / h;
     float chordLength = 2.0 * dominantLightRadius * sqrt(1.0 - dOverH * dOverH);
     float angleWithHorizon = 2.0 * atan2(chordLength, 2.0 * d);
@@ -143,25 +143,25 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
 
   //Once we have the base source light, we need to apply the transmittance to this light
   //Use this height information to acquire the appropriate position on the transmittance LUT
-  int xPosition = 0.5 * (1.0 + dominantLightY) * widthOfTransmittanceTexture;
-  float r = height + RADIUS_OF_EARTH;
-  int yPosition = sqrt((heightOfCamera * heightOfCamera - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED) * heightOfTransmittanceTexture;
+  int xPosition = 0.5 * (1.0 + dominantLightY) * skyState->lightingAnalyzer->widthOfTransmittanceTexture;
+  float r = heightOfCamera + RADIUS_OF_EARTH;
+  int yPosition = sqrt((heightOfCamera * heightOfCamera - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED) * skyState->lightingAnalyzer->widthOfTransmittanceTexture;
 
   //Get the look-up color for the LUT for the weighted nearest 4 colors
   float transmittance[3] = {0.0, 0.0, 0.0};
   float xClamped = ceil(xPosition);
-  float weight = xClampled - xPosition;
+  float weight = xClamped - xPosition;
   float totalWeight = weight;
   skyState->lightingAnalyzer->xyToIndexStartForRedColor(xClamped, yPosition, weight, transmittance);
-  xClamped = floor(x);
+  xClamped = floor(xPosition);
   weight = xPosition - xClamped;
   totalWeight += weight;
   skyState->lightingAnalyzer->xyToIndexStartForRedColor(xClamped, yPosition, weight, transmittance);
-  yClamped = ceil(y);
+  float yClamped = ceil(yPosition);
   weight = yClamped - yPosition;
   totalWeight += weight;
   skyState->lightingAnalyzer->xyToIndexStartForRedColor(xPosition, yClamped, weight, transmittance);
-  yClamped = floor(y);
+  yClamped = floor(yPosition);
   weight = yPosition - yClamped;
   totalWeight += weight;
   skyState->lightingAnalyzer->xyToIndexStartForRedColor(xPosition, yClamped, weight, transmittance);
@@ -187,12 +187,12 @@ void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfM
 
   //Set their constant values for future reference
   float sumOfPixelWeights = 0.0;
-  const float halfWidthOfTexture = widthOfTexture * 0.5;
+  const float halfWidthOfTexture = widthOfMeteringTexture * 0.5;
   const float radiusOfSkyCircle = halfWidthOfTexture * halfWidthOfTexture;
-  const int numberOfPixels = widthOfTexture * widthOfTexture;
+  const int numberOfPixels = widthOfMeteringTexture * widthOfMeteringTexture;
   for(int i = 0; i < numberOfPixels; ++i){
-    float x = (i % widthOfTexture) - halfWidthOfTexture;
-    float y = floor(i / widthOfTexture) - halfWidthOfTexture;
+    float x = (i % widthOfMeteringTexture) - halfWidthOfTexture;
+    float y = floor(i / widthOfMeteringTexture) - halfWidthOfTexture;
 
     //Use this to set the x y and z coordinates of our pixel
     float rhoSquared = x * x + y * y;

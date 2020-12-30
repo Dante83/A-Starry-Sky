@@ -15,13 +15,13 @@ SkyInterpolator* skyInterpolator;
 
 extern "C" {
   int main();
-  void initializeAstromicalValues(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
+  void setupInterpolators(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
   void updateFinalAstronomicalValues(float* astroPositions_f, float* linearValues_f);
   void updateAstronomicalTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
   float tick_astronomicalInterpolations(float t);
   void setSunAndMoonTimeTo(float t);
   void initializeLightingValues(float* lightingDataInterpolatedValues);
-  void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float dominantLightIntensity0, float dominantLightIntensityF, float* lightColors0, float* lightColorsf, float t_0, float t_f);
+  void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float dominantLightIntensity0, float dominantLightIntensityf, float* lightColors0, float* lightColorsf, float t_0, float t_f);
   void tick_lightingInterpolations(float t);
   float bolometricMagnitudeToLuminosity(float x);
   float luminosityToAtmosphericIntensity(float x);
@@ -132,7 +132,7 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
   float directLightingY = skyInterpolator->dominantLightY0 + tFractional * skyInterpolator->deltaDominantLightY;
 
   //Interpolate our light colors
-  colorInterpolator->updateLightingLinearInterpolations(tFractional);
+  skyInterpolator->colorInterpolator->updateLightingLinearInterpolations(tFractional);
 
   //Update our memory
   skyInterpolator->interpolatedMeteringAndLightingValues[24] = directLightIntensity;
@@ -144,16 +144,16 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
 
 void EMSCRIPTEN_KEEPALIVE initializeLightingValues(float* lightingDataInterpolatedValues){
   skyInterpolator->interpolatedMeteringAndLightingValues = lightingDataInterpolatedValues;
-  colorInterpolator->interpolatedMeteringAndLightingValues = lightingDataInterpolatedValues;
+  skyInterpolator->colorInterpolator->interpolatedMeteringAndLightingValues = lightingDataInterpolatedValues;
 }
 
-void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float dominantLightIntensity0, float dominantLightIntensityF, float* lightColors0, float* lightColorsf, float t_0, float t_f){
+void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightYf, float dominantLightIntensity0, float dominantLightIntensityf, float* lightColors0, float* lightColorsf, float t_0, float t_f){
   skyInterpolator->initialLogAverageOfSkyIntensity = skyIntensity0;
   skyInterpolator->deltaLogAverageOfSkyIntensity = skyIntensityf - skyIntensity0;
 
-  if(dominantLightIsSun0 !== dominantLightIsSunf){
+  if(dominantLightIsSun0 != dominantLightIsSunf){
     skyInterpolator->dominantLightIsSun = true;
-    skyInterpolator->dominantLightY0 = dominantLightIsSun0 ? dominantLightY0 ? dominantLightYf;
+    skyInterpolator->dominantLightY0 = dominantLightIsSun0 ? dominantLightY0 : dominantLightYf;
     skyInterpolator->deltaDominantLightY = 0.0;
     if(dominantLightIsSun0){
       //Sun is setting
@@ -174,7 +174,7 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
     skyInterpolator->deltaDominantLightIntensity = dominantLightIntensityf - dominantLightIntensity0;
   }
 
-  colorInterpolator->updateFinalColorValues(lightColors0, lightColorsf);
+  skyInterpolator->colorInterpolator->updateFinalColorValues(lightColors0, lightColorsf);
 
   skyInterpolator->lightingTInitial = t_0;
   skyInterpolator->oneOverLightingDeltaT = 1.0 / (t_f - t_0);

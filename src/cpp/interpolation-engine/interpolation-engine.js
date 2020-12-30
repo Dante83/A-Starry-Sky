@@ -1980,10 +1980,10 @@ var ___wasm_call_ctors = Module["___wasm_call_ctors"] = function() {
 };
 
 /** @type {function(...*):?} */
-var _initializeAstromicalValues = Module["_initializeAstromicalValues"] = function() {
+var _setupInterpolators = Module["_setupInterpolators"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["initializeAstromicalValues"].apply(null, arguments)
+  return Module["asm"]["setupInterpolators"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */
@@ -2019,6 +2019,13 @@ var _tick_lightingInterpolations = Module["_tick_lightingInterpolations"] = func
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
   return Module["asm"]["tick_lightingInterpolations"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _initializeLightingValues = Module["_initializeLightingValues"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["initializeLightingValues"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */

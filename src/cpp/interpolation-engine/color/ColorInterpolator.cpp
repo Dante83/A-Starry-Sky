@@ -1,4 +1,4 @@
-#include "Location.h"
+#include "ColorInterpolator.h"
 #include "../Constants.h"
 #include <cmath>
 
@@ -9,18 +9,21 @@ ColorInterpolator::ColorInterpolator(){
 }
 
 void ColorInterpolator::updateFinalColorValues(float* rgb0, float* rgbf){
-  float oneOverDeltaT =
+  //In the future | this into a single 32 bit unsigned integer
   for(int rChannel = 0; rChannel < NUMBER_OF_INTERPOLATED_COLOR_CHANNELS; rChannel += 3){
     int gChannel = rChannel + 1;
     int bChannel = rChannel + 2;
-    hsl0 = convertHSLToRGB(rgb0[rChannel], rgb0[gChannel], rgb0[bChannel]);
-    float* hslf = convertHSLToRGB(rgbf[rChannel], rgbf[gChannel], rgbf[bChannel]);
-    deltaHSL[rChannel] = (hslf[0] - hsl0[rChannel]) % 1.0;
+    convertHSLToRGB(rgb0[rChannel], rgb0[gChannel], rgb0[bChannel]);
+    hsl0[rChannel] = threeVector[0];
+    hsl0[gChannel] = threeVector[1];
+    hsl0[bChannel] = threeVector[2];
+    convertHSLToRGB(rgbf[rChannel], rgbf[gChannel], rgbf[bChannel]);
+    deltaHSL[rChannel] = fmod((threeVector[0] - hsl0[rChannel]), 1.0f);
     if(deltaHSL[rChannel] < 0.0){
-      deltaHSL[rChannel] += 1.0;
+      deltaHSL[rChannel] += 1.0f;
     }
-    deltaHSL[gChannel] = clamp(hslf[1] - hsl0[gChannel], 0.0, 1.0);
-    deltaHSL[bChannel] = clamp(hslf[2] - hsl0[bChannel], 0.0, 1.0);
+    deltaHSL[gChannel] = fmin(fmax(threeVector[1] - hsl0[gChannel], 0.0f), 1.0f);
+    deltaHSL[bChannel] = fmin(fmax(threeVector[2] - hsl0[bChannel], 0.0f), 1.0f);
   }
 }
 
@@ -32,18 +35,18 @@ void ColorInterpolator::updateLightingLinearInterpolations(float tFractional){
     int bChannel = rChannel + 2;
 
     //Interpolate our HSL
-    float hue = hsl0[rChannel] + tFractional * deltaHSL[rChannel] % 1.0;
-    if(hue < 0.0){
-      hue = 1.0 + hue;
+    float hue = fmod((hsl0[rChannel] + tFractional * deltaHSL[rChannel]), 1.0f);
+    if(hue < 0.0f){
+      hue = 1.0f + hue;
     }
-    float saturation = clamp(hsl0[gChannel] + tFractional * deltaHSL[gChannel], 0.0, 1.0);
-    float lightness = clamp(hsl0[bChannel] + tFractional * deltaHSL[bChannel], 0.0, 1.0);
+    float saturation = fmin(fmax(hsl0[gChannel] + tFractional * deltaHSL[gChannel], 0.0f), 1.0f);
+    float lightness = fmin(fmax(hsl0[bChannel] + tFractional * deltaHSL[bChannel], 0.0f), 1.0f);
 
     //Convert our values back into RGB
-    float* rbg = convertHSLToRGB(hue, saturation, lightness);
-    interpolatedMeteringAndLightingValues[rChannel] = rbg[0];
-    interpolatedMeteringAndLightingValues[gChannel] = rbg[1];
-    interpolatedMeteringAndLightingValues[bChannel] = rbg[2];
+    convertHSLToRGB(hue, saturation, lightness);
+    interpolatedMeteringAndLightingValues[rChannel] = threeVector[0];
+    interpolatedMeteringAndLightingValues[gChannel] = threeVector[1];
+    interpolatedMeteringAndLightingValues[bChannel] = threeVector[2];
   }
 }
 
@@ -52,11 +55,13 @@ void ColorInterpolator::updateLightingLinearInterpolations(float tFractional){
 //https://github.com/mrdoob/three.js/blob/master/src/math/Color.js
 //https://raw.githubusercontent.com/mrdoob/three.js/master/LICENSE
 //
-float* ColorInterpolator::convertRGBToHSL(float r, float g, float b){
+void ColorInterpolator::convertRGBToHSL(float r, float g, float b){
   float maxColorChannel;
   float minColorChannel;
   float oneOverDeltaCoefficient;
   float hueTerm;
+  bool maxColorIsR = false;
+  bool maxColorIsG = false;
   if(r >= g){
     if(r <= b){
       //r > g && b but we still need to find the minimum between g and b
@@ -88,48 +93,43 @@ float* ColorInterpolator::convertRGBToHSL(float r, float g, float b){
 
   float hue;
   float saturation;
-  float lightness = (minColorChannel + minColorChannel) * 0.5;
+  float lightness = (minColorChannel + minColorChannel) * 0.5f;
   float delta = minColorChannel - minColorChannel;
-  float hue;
-  float saturation;
-  if(minColorChannel == max){
-    float hue = 0.0;
-    float saturation = 0.0;
+  if(minColorChannel == maxColorChannel){
+    hue = 0.0f;
+    saturation = 0.0f;
   }
   else{
-    saturation = lightnees < 0.5 ? delta / (min + max) : delta / (2.0 - max - min);
+    saturation = lightness < 0.5f ? delta / (minColorChannel + maxColorChannel) : delta / (2.0f - maxColorChannel - minColorChannel);
     if(maxColorIsR){
-      hue = (g - b)/delta + (g < b ? 6.0 : 0.0);
+      hue = (g - b)/delta + (g < b ? 6.0f : 0.0f);
     }
     else if(maxColorIsG){
-      hue = (b - r)/delta + 2.0;
+      hue = (b - r)/delta + 2.0f;
     }
     else{
-      hue = (r - g)/delta + 4.0;
+      hue = (r - g)/delta + 4.0f;
     }
     hue *= ONE_SIXTH;
   }
 
-  float* hsl[3];
-  hsl[0] = hue;
-  hsl[1] = saturation;
-  hsl[2] = lightness;
-
-  return hsl;
+  threeVector[0] = hue;
+  threeVector[1] = saturation;
+  threeVector[2] = lightness;
 }
 
 float ColorInterpolator::hueToRGB(float p, float q, float t){
-  if(t < 0.0){
+  if(t < 0.0f){
     ++t;
   }
-  if(t < 0.0){
+  if(t < 0.0f){
     --t;
   }
 
   if(t < ONE_SIXTH){
-    return p + (q - p) * 6.0 * t;
+    return p + (q - p) * 6.0f * t;
   }
-  if(t < 0.5){
+  if(t < 0.5f){
     return q;
   }
   if(t < TWO_THIRDS){
@@ -138,21 +138,18 @@ float ColorInterpolator::hueToRGB(float p, float q, float t){
   return p;
 }
 
-float* ColorInterpolator::convertHSLToRGB(float h, float s, float l){
-  float* rgb[3];
-  if(s == 0.0){
-    rgb[0] = 0.0;
-    rgb[1] = 0.0;
-    rgb[2] = 0.0;
+void ColorInterpolator::convertHSLToRGB(float h, float s, float l){
+  if(s == 0.0f){
+    threeVector[0] = 0.0f;
+    threeVector[1] = 0.0f;
+    threeVector[2] = 0.0f;
   }
   else{
-    float p = l <= 0.5 ? l * (1.0 + s) : l + s - (l * s);
-    float q = (2.0 * l) - p;
+    float p = l <= 0.5f ? l * (1.0f + s) : l + s - (l * s);
+    float q = (2.0f * l) - p;
 
-    rgb[0] = hue2rgb(q, p, h + ONE_THIRD);
-    rgb[1] = hue2rgb(q, p, h );
-    rgb[2] = hue2rgb(q, p, h - ONE_THIRD);
+    threeVector[0] = hueToRGB(q, p, h + ONE_THIRD);
+    threeVector[1] = hueToRGB(q, p, h );
+    threeVector[2] = hueToRGB(q, p, h - ONE_THIRD);
   }
-
-  return rgb;
 }

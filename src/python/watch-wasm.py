@@ -1,4 +1,4 @@
-setupInterpolatorsimport os, time
+import os, time
 
 cpp_directories = ['../cpp/state-engine/', '../cpp/' '../cpp/interpolation-engine/']
 cpp_files = [['SkyState.cpp',\

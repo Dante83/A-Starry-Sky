@@ -3,7 +3,7 @@
 
 class SkyInterpolator{
 public:
-  SkyInterpolator();
+  SkyInterpolator(ColorInterpolator* ColorInterpolatorPtr);
   ColorInterpolator* colorInterpolator;
   bool dominantLightIsSun;
   float sinOfLatitude;

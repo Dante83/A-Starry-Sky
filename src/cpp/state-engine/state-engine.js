@@ -1271,11 +1271,11 @@ function updateGlobalBufferAndViews(buf) {
 }
 
 var STATIC_BASE = 1024,
-    STACK_BASE = 5299088,
+    STACK_BASE = 5299104,
     STACKTOP = STACK_BASE,
-    STACK_MAX = 56208,
-    DYNAMIC_BASE = 5299088,
-    DYNAMICTOP_PTR = 56048;
+    STACK_MAX = 56224,
+    DYNAMIC_BASE = 5299104,
+    DYNAMICTOP_PTR = 56064;
 
 assert(STACK_BASE % 16 === 0, 'stack must start aligned');
 assert(DYNAMIC_BASE % 16 === 0, 'heap must start aligned');
@@ -1820,7 +1820,7 @@ var ASM_CONSTS = {
 
 
 
-// STATICTOP = STATIC_BASE + 55184;
+// STATICTOP = STATIC_BASE + 55200;
 /* global initializers */  __ATINIT__.push({ func: function() { ___wasm_call_ctors() } });
 
 
@@ -1877,7 +1877,7 @@ var ASM_CONSTS = {
     }
 
   function _emscripten_get_sbrk_ptr() {
-      return 56048;
+      return 56064;
     }
 
   function _emscripten_memcpy_big(dest, src, num) {
@@ -2124,10 +2124,24 @@ var _updateSky = Module["_updateSky"] = function() {
 };
 
 /** @type {function(...*):?} */
-var _updateMeteringAndLightingData = Module["_updateMeteringAndLightingData"] = function() {
+var _updateMeteringData = Module["_updateMeteringData"] = function() {
   assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
   assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
-  return Module["asm"]["updateMeteringAndLightingData"].apply(null, arguments)
+  return Module["asm"]["updateMeteringData"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _updateHemisphericalLightingData = Module["_updateHemisphericalLightingData"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["updateHemisphericalLightingData"].apply(null, arguments)
+};
+
+/** @type {function(...*):?} */
+var _updateDirectLighting = Module["_updateDirectLighting"] = function() {
+  assert(runtimeInitialized, 'you need to wait for the runtime to be ready (e.g. wait for main() to be called)');
+  assert(!runtimeExited, 'the runtime was exited (use NO_EXIT_RUNTIME to keep it alive after main() exits)');
+  return Module["asm"]["updateDirectLighting"].apply(null, arguments)
 };
 
 /** @type {function(...*):?} */
