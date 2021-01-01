@@ -133,19 +133,30 @@ function initializeHemisphericalLighting(postObject){
   const skyMaskBufferLength = meteringSurveyTextureSize * meteringSurveyTextureSize;
   const meteringSurveyBufferLength = skyMaskBufferLength * 4;
   const directionalSurveyBufferLength = skyMaskBufferLength * 3;
-  const transmittanceBufferLength = postObject.transmittanceTextureSize * 3;
+  const numElemntsInPostedTransmittanceBuffer = postObject.transmittanceTextureSize * postObject.transmittanceTextureSize * 4;
+  const transmittanceBufferLength = postObject.transmittanceTextureSize * postObject.transmittanceTextureSize * 3;
+  let transmittanceRGB = new Float32Array(transmittanceBufferLength);
+  //NOTE: This makes no sense and is a bit irking that we need to eliminate our alpha channel when we don't need it.
+  for(let i = 0, j = 0, numElements = numElemntsInPostedTransmittanceBuffer; i < numElements; ++i, ++j){
+    transmittanceRGB[j] = postObject.transmittanceTextureLUT[i];
+    if((i + 2) % 4 === 0){
+      ++i;
+    }
+  }
   lightingState.skyMeteringSurveyMemoryPtr = Module._malloc(meteringSurveyBufferLength * BYTES_PER_32_BIT_FLOAT);
   lightingState.skyDirectionalVectorMemoryPtr = Module._malloc(directionalSurveyBufferLength * BYTES_PER_32_BIT_FLOAT);
   lightingState.skyMaskPtr = Module._malloc(skyMaskBufferLength * BYTES_PER_32_BIT_FLOAT);
   lightingState.transmittanceLUTPtr = Module._malloc(transmittanceBufferLength * BYTES_PER_32_BIT_FLOAT);
-  lightingState.transmittanceLUTPtr.set(postObject.transmittanceLUT, 0, postObject.transmittanceLUT.bufferSize.length);
+  Module.HEAPF32.set(transmittanceRGB.slice(0), lightingState.transmittanceLUTPtr / BYTES_PER_32_BIT_FLOAT);
   lightingState.directLightingColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT); //Three colors of our direct lighting color
   lightingState.skyHemisphericalLightColorPtr = Module._malloc(18 * BYTES_PER_32_BIT_FLOAT); // 3 colors channels for all sides of the cube and 1 for the fog color
   lightingState.groundColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT);
+  Module.HEAPF32.set(postObject.groundColor.slice(0), lightingState.groundColorPtr / BYTES_PER_32_BIT_FLOAT);
   lightingState.fogColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT);
-  lightingState.groundColorPtr.set(postObject.groundColor, 0, 3 * BYTES_PER_32_BIT_FLOAT);
 
   //Start by intializing our masks and directional vectors
+  //void initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int transmittanceTextureSize,
+  //float* xyzPtr, float* pixelWeightsPtr, float* groundColor, float* transmittanceLUT, float* fogColor);
   Module._initializeMeteringAndLightingDependencies(meteringSurveyTextureSize, postObject.transmittanceTextureSize,
     lightingState.skyDirectionalVectorMemoryPtr, lightingState.skyMaskPtr, lightingState.groundColorPtr, lightingState.transmittanceLUTPtr, lightingState.fogColorPtr);
 
@@ -154,9 +165,9 @@ function initializeHemisphericalLighting(postObject){
   lightingState.skyHemisphericalLightColorFloatArray = new Float32Array(Module.HEAPF32.buffer, lightingState.skyHemisphericalLightColorPtr, 18);
   lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyFloatArray0, 0, meteringSurveyBufferLength);
   const exposureCoefficient0 = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
-  lightingState.directLightingColorFloatArray.set(directLightingColor, 0, directLightingColor.bufferSize * BYTES_PER_32_BIT_FLOAT);
-  const dominantLightY = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPosition0, postObject.sunRadius0, postObject.moonRadius0 postObject.moonYPosition0, postObject.sunIntensity0, postObject.moonIntensity0, exposureCoefficient0, lightingState.directLightingColorBuffer);
-  lightingState.skyHemisphericalColorArray.set(hemisphericalLightingAndFogColors, 0, hemisphericalLightingAndFogColors.bufferSize * BYTES_PER_32_BIT_FLOAT);
+  const dominantLightY0 = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPosition0,
+    postObject.sunRadius0, postObject.moonRadius0, postObject.moonYPosition0, postObject.sunIntensity0,
+    postObject.moonIntensity0, exposureCoefficient0, lightingState.directLightingColorPtr);
   Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyMeteringSurveyfPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
   //Copy our results into a new transferrable buffer that we will pass back to CPU 0
@@ -168,10 +179,9 @@ function initializeHemisphericalLighting(postObject){
   lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyFloatArrayf, 0, meteringSurveyBufferLength);
   const exposureCoefficientf = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
   let directLightingColorf = new Float32Array(3);
-  lightingState.directLightingColorFloatArray.set(directLightingColor, 0, directLightingColor.bufferSize * BYTES_PER_32_BIT_FLOAT);
-  const dominantLightY = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf, postObject.sunRadiusf, postObject.moonRadiusf postObject.moonYPositionf, postObject.sunIntensityf, postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorBuffer);
-  let lightingColorArrayf = new Float32Array(24);
-  lightingState.skyHemisphericalColorArray.set(hemisphericalLightingAndFogColors, 0, hemisphericalLightingAndFogColors.bufferSize * BYTES_PER_32_BIT_FLOAT);
+  const dominantLightYf = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf,
+    postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf,
+    postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr);
   Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyMeteringSurveyfPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
   //Copy our results into a new transferrable buffer that we will pass back to CPU 0
@@ -201,10 +211,7 @@ onmessage = function(e){
     lightingState.skyMeteringSurveyFloatArray.set(postObject.meteringSurveyFloatArrayf, 0, meteringSurveyBufferLength);
     const exposureCoefficientf = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
     let directLightingColorf = new Float32Array(3);
-    lightingState.directLightingColorFloatArray.set(directLightingColor, 0, directLightingColor.bufferSize * BYTES_PER_32_BIT_FLOAT);
-    const dominantLightY = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf, postObject.sunRadiusf, postObject.moonRadiusf postObject.moonYPositionf, postObject.sunIntensityf, postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorBuffer);
-    let lightingColorArrayf = new Float32Array(24);
-    lightingState.skyHemisphericalColorArray.set(hemisphericalLightingAndFogColors, 0, hemisphericalLightingAndFogColors.bufferSize * BYTES_PER_32_BIT_FLOAT);
+    const dominantLightYf = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf, postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf, postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr);
     Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyMeteringSurveyfPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
     //Copy our results into a new transferrable buffer that we will pass back to CPU 0

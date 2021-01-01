@@ -21,7 +21,7 @@ extern "C" {
   float tick_astronomicalInterpolations(float t);
   void setSunAndMoonTimeTo(float t);
   void initializeLightingValues(float* lightingDataInterpolatedValues);
-  void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float dominantLightIntensity0, float dominantLightIntensityf, float* lightColors0, float* lightColorsf, float t_0, float t_f);
+  void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float* lightColors0, float* lightColorsf, float t_0, float t_f);
   void tick_lightingInterpolations(float t);
   float bolometricMagnitudeToLuminosity(float x);
   float luminosityToAtmosphericIntensity(float x);
@@ -147,9 +147,11 @@ void EMSCRIPTEN_KEEPALIVE initializeLightingValues(float* lightingDataInterpolat
   skyInterpolator->colorInterpolator->interpolatedMeteringAndLightingValues = lightingDataInterpolatedValues;
 }
 
-void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightYf, float dominantLightIntensity0, float dominantLightIntensityf, float* lightColors0, float* lightColorsf, float t_0, float t_f){
+void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0, bool dominantLightIsSunf, float dominantLightY0, float dominantLightYf, float* lightColors0, float* lightColorsf, float t_0, float t_f){
   skyInterpolator->initialLogAverageOfSkyIntensity = skyIntensity0;
   skyInterpolator->deltaLogAverageOfSkyIntensity = skyIntensityf - skyIntensity0;
+  float dominantLightIntensity0 = sqrt(lightColors0[18] * lightColors0[18] + lightColors0[19] * lightColors0[19] + lightColors0[20] * lightColors0[20]);
+  float dominantLightIntensityf = sqrt(lightColorsf[18] * lightColorsf[18]+  lightColorsf[19] * lightColorsf[19] + lightColorsf[20] * lightColorsf[20] );
 
   if(dominantLightIsSun0 != dominantLightIsSunf){
     skyInterpolator->dominantLightIsSun = true;

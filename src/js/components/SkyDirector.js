@@ -38,6 +38,7 @@ StarrySky.SkyDirector = function(parentComponent){
   const FOUR_SECONDS = 4.0;
   const TWENTY_MINUTES = 20.0 * ONE_MINUTE;
   const PI_OVER_TWO = Math.PI * 0.5;
+  const DEG_2_RAD = 0.017453292519943295769236907684886;
   let transferableInitialStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
   this.transferableFinalStateBuffer = new ArrayBuffer(TOTAL_BYTES_FOR_WORKER_BUFFERS);
   this.finalStateFloat32Array = new Float32Array(this.transferableFinalStateBuffer);
@@ -73,6 +74,10 @@ StarrySky.SkyDirector = function(parentComponent){
   this.atmosphereLUTLibrary;
   this.stellarLUTLibrary;
   this.moonAndSunRendererSize;
+  this.dominantLightIsSun0;
+  this.dominantLightIsSunf;
+  this.dominantLightY0;
+  this.dominantLightYf;
   this.exposureVariables = {
     sunPosition: new THREE.Vector3(),
     moonPosition: new THREE.Vector3(),
@@ -114,6 +119,9 @@ StarrySky.SkyDirector = function(parentComponent){
         transferableInitialStateBuffer: transferableInitialStateBuffer,
         transferableFinalStateBuffer: self.transferableFinalStateBuffer
       }, [transferableInitialStateBuffer, self.transferableFinalStateBuffer]);
+
+      //Iitialize one of our key constants
+      BASE_RADIUS_OF_SUN = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
 
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
@@ -257,8 +265,23 @@ StarrySky.SkyDirector = function(parentComponent){
         //gets changed below, as the upcoming methods invoke async
         this.clonedPreviousCameraLookAtVector.copy(this.previousCameraLookAtVector);
         this.clonedPreviousCameraLookAtVector.normalize();
-        Module._updateLightingValues(interpolatedSkyIntensityMagnitude, self.exposureVariables.exposureCoefficientf, interpolatedDominateLightY, postObject.dominantLightYf self.time, self.time + HALF_A_SECOND);
-        self.updateAutoExposure(timeDeltaInSeconds);
+
+        //We should also save the last position for the sun to determine if the dominant light is the sun or not
+        self.dominantLightIsSun0 = true;
+        if(self.skyState.sun.position.y < -(BASE_RADIUS_OF_SUN * self.skyState.sun.scale)){
+          self.dominantLightIsSun0 = false;
+        }
+
+        //Is this what they mean by dependency injection overload?
+        //void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0,
+        //bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float dominantLightIntensity0,
+        //float dominantLightIntensityf, float* lightColors0, float* lightColorsf, float t_0, float t_f);
+        Module._updateLightingValues(interpolatedSkyIntensityMagnitude, self.exposureVariables.exposureCoefficientf,
+          self.dominantLightIsSun0, self.dominantLightIsSunF,
+          sp.y, self.dominantLightYf,
+          self.time, self.time + HALF_A_SECOND);
+
+        self.updateAutoExposure(timeDeltaInSeconds, interpolatedSkyIntensityMagnitude);
       }
 
       //Set our previous lookup target
@@ -365,8 +388,10 @@ StarrySky.SkyDirector = function(parentComponent){
       //Hook up our output lighting value array so we can get back multiple values from interpolating our lighting
       Module._initializeLightingValues(self.lightingColorValues_ptr);
 
-      //Update the state of our interpolator
-      Module._updateLightingValues(postObject.exposureCoefficient0,  postObject.exposureCoefficientf, postObject.dominantLightY0, postObject.dominantLightYf, self.time, self.time + HALF_A_SECOND);
+      Module._updateLightingValues(postObject.exposureCoefficient0,  postObject.exposureCoefficientf,
+        self.dominantLightIsSun0, self.dominantLightIsSunF,
+        postObject.dominantLightY0, postObject.dominantLightYf,
+        self.time, self.time + HALF_A_SECOND);
 
       //Now re-attach our array for use in the renderer
       self.transferableSkyFinalLightingBuffer = postObject.meteringSurveyFloatArray.buffer;
@@ -380,7 +405,7 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Pass the data back to the worker to get the next data set
       const deltaT = 1.0 / 60.0; //Presume 60 FPS on this first frame
-      self.updateAutoExposure(deltaT);
+      self.updateAutoExposure(deltaT, self.exposureVariables.exposureCoefficient0);
 
       //Start the sky here - as we should have everything back and ready by now
       self.start();
@@ -406,7 +431,7 @@ StarrySky.SkyDirector = function(parentComponent){
       const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
       const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize;
       const numberOfColorChannelsInMeteringPixel = 4;
-      const groundColorRef = self.assetManager.data.lighting.groundColor;
+      const groundColorRef = self.assetManager.data.skyLighting.groundColor;
       const groundColorArray = new Float32Array(3);
       groundColorArray[0] = groundColorRef.red / 255.0;
       groundColorArray[1] = groundColorRef.green / 255.0;
@@ -430,6 +455,12 @@ StarrySky.SkyDirector = function(parentComponent){
       transferableIntialSkyLightingFloat32Array = new Float32Array(transferableSkyIntialLightingBuffer);
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, transferableIntialSkyLightingFloat32Array);
 
+      //Determine if our sun is the dominant light source when we start
+      self.dominantLightIsSun0 = true;
+      if(sunYPos0 < -sunRadius0){
+        self.dominantLightIsSun0 = false;
+      }
+
       //Get our position for the sun and moon 2 seconds from now
       Module._setSunAndMoonTimeTo(HALF_A_SECOND * self.speed);
       self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
@@ -451,6 +482,12 @@ StarrySky.SkyDirector = function(parentComponent){
       const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
       this.previousCameraHeight = self.camera.position.y;
       this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
+
+      //Determine if our sun is the dominant light source when we end this interpolation
+      self.dominantLightIsSunf = true;
+      if(sunYPosf < -sunRadiusf){
+        self.dominantLightIsSunf = false;
+      }
 
       //Pass this information to our web worker to get our exposure value
       self.webAssemblyWorker.postMessage({
@@ -484,7 +521,7 @@ StarrySky.SkyDirector = function(parentComponent){
       ]);
   }
 
-  this.updateAutoExposure = async function(deltaT){
+  this.updateAutoExposure = async function(deltaT, interpolatedSkyIntensityMagnitude, interpolatedDominantY){
     const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
 
     Module._setSunAndMoonTimeTo(self.interpolationT + HALF_A_SECOND * self.speed);
@@ -502,7 +539,16 @@ StarrySky.SkyDirector = function(parentComponent){
     self.transferableSkyFinalLightingFloat32Array = new Float32Array(self.transferableSkyFinalLightingBuffer);
     self.renderer.readRenderTargetPixels(renderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transferableSkyFinalLightingFloat32Array);
 
-    //Predict the camera position 10 seconds from now
+    //Once we know what the final estimated position will be, we determine if the final dominant light will be the sun
+    //or not
+    self.dominantLightIsSunf = true;
+    self.dominantLightYf = moonYPosf;
+    if(sunYPosf < -sunRadiusf){
+      self.dominantLightIsSunf = false;
+      self.dominantLightYf = sunYPosf;
+    }
+
+    //Predict the camera position 0.5 seconds from now
     self.currentCameraLookAtTarget.set(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
     self.currentCameraLookAtTarget.normalize();
     self.lookAtInterpolationQuaternion.setFromUnitVectors(self.clonedPreviousCameraLookAtVector, self.currentCameraLookAtTarget);
@@ -587,12 +633,10 @@ StarrySky.SkyDirector = function(parentComponent){
   //
   this.disableAtmosphericPerspective = function(){
     self.assetManager.data.atmosphericPerspectiveEnabled = false;
-
   }
 
   this.enableAtmosphericPerspective = function(){
     self.assetManager.data.atmosphericPerspectiveEnabled = true;
-
   }
 
   function onRuntimeInitialized() {

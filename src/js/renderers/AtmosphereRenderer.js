@@ -8,9 +8,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
     transparent: false,
-    lights: false,
     flatShading: true,
-    clipping: true,
     vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
       skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,

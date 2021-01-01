@@ -59,9 +59,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
-    lights: false,
     flatShading: true,
-    clipping: true,
     vertexShader: StarrySky.Materials.Sun.combinationPass.vertexShader,
     fragmentShader: StarrySky.Materials.Sun.combinationPass.fragmentShader
   });

@@ -55,9 +55,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     side: THREE.DoubleSide,
     blending: THREE.NormalBlending,
     transparent: true,
-    lights: false,
     flatShading: true,
-    clipping: true,
     map: test,
   });
 

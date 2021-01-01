@@ -76,7 +76,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       let ozoneEnabledTags = self.getElementsByTagName('sky-ozone-enabled');
       let sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
       let moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
-      let atmosphericPerspectiveMaxFogDensityTags = self.getElementsByTagName('sky-max-atmospheric-perspective')
+      let atmosphericPerspectiveMaxFogDensityTags = self.getElementsByTagName('sky-max-atmospheric-perspective');
 
       [solarIntensityTags, lunarMaxIntensityTags, rayleighMolecularDensityTags, airIndexOfRefractionTags,
       solarColorTags, lunarColorTags, mieBetaTags, mieDirectionalGTags, numberOfRayStepsTags,

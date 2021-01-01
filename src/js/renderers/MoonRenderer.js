@@ -80,9 +80,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
-    lights: false,
     flatShading: true,
-    clipping: true,
     vertexShader: StarrySky.Materials.Moon.combinationPass.vertexShader,
     fragmentShader: StarrySky.Materials.Moon.combinationPass.fragmentShader
   });

@@ -4,7 +4,7 @@
 StarrySky.LightingManager = function(parentComponent){
   this.skyDirector = parentComponent;
   const lightingData = this.skyDirector.assetManager.data.skyLighting;
-  this.sourceLight = new THREE.DirectionLight(0xffffff, 1.0);
+  this.sourceLight = new THREE.DirectionalLight(0xffffff, 1.0);
   const shadow = this.sourceLight.shadow;
   this.sourceLight.castShadow = true;
   shadow.mapSize.width = lightingData.shadowCameraResolution;
@@ -15,7 +15,7 @@ StarrySky.LightingManager = function(parentComponent){
   const  totalDistance = lightingData.shadowDrawDistance + lightingData.shadowDrawBehindDistance;
   shadow.camera.right = totalDistance;
   shadow.camera.top = 0.5 * totalDistance;
-  shadow.camera.bottom = 0.5 totalDistance;
+  shadow.camera.bottom = 0.5 * totalDistance;
   this.targetScalar = 0.5 * totalDistance - lightingData.shadowDrawBehindDistance;
   this.shadowTarget = new THREE.Vector3();
   this.shadowTargetOffset = new THREE.Vector3();
@@ -34,10 +34,11 @@ StarrySky.LightingManager = function(parentComponent){
     parentComponent.scene.fog = this.fog;
   }
 
-  parentComponent.scene.append(this.sourceLight);
-  parentComponent.scene.append(this.xAxisHemisphericalLight);
-  parentComponent.scene.append(this.yAxisHemisphericalLight);
-  parentComponent.scene.append(this.zAxisHemisphericalLight);
+  const scene = parentComponent.scene;
+  scene.add(this.sourceLight);
+  scene.add(this.xAxisHemisphericalLight);
+  scene.add(this.yAxisHemisphericalLight);
+  scene.add(this.zAxisHemisphericalLight);
 
   this.cameraRef = parentComponent.camera;
   const self = this;
@@ -73,10 +74,10 @@ StarrySky.LightingManager = function(parentComponent){
     //or moon is in use and transitions between the two.
     //The target is a position weighted by the
     self.shadowTarget.copy(self.skyDirector.camera.position);
-    self.shadowTargetOffset.copy(self.skyDirector.camera.getWorldDirection())
+    self.skyDirector.camera.getWorldDirection(self.shadowTargetOffset);
     self.shadowTargetOffset.multiplyScalar(self.targetScalar);
     self.shadowTarget.add(self.shadowTargetOffset);
-    self.sourceLight.target.copy(self.shadowTarget);
+    self.sourceLight.target.position.copy(self.shadowTarget);
     self.sourceLight.color.fromArray(lightingState, 18);
     self.sourceLight.position.fromArray(lightingState, 25);
     self.sourceLight.intensity = lightingState[24];

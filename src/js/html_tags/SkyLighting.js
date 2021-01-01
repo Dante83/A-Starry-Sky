@@ -123,4 +123,4 @@ class SkyLighting extends HTMLElement {
     });
   };
 }
-window.customElements.define('sky-lighting', SkyAtmosphericParameters);
+window.customElements.define('sky-lighting', SkyLighting);

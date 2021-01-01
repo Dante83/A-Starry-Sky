@@ -17,12 +17,6 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     return false;
   }
 
-  //
-  //NOTE: For now, we will simply run through our sun lut to see it makes the
-  //atmosphere correctly. But eventuallly, we will fill up the above LUT collection
-  //so we can interpolate between LUTs in the event of key astronomical events.
-  //
-
   document.body.appendChild(renderer.domElement);
 
   //Create our first renderer, for transmittance
@@ -77,11 +71,12 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
 
   //Run the actual shader
   transmittanceRenderer.compute();
-  let transmittanceLUT = transmittanceRenderer.getCurrentRenderTarget(transmittanceVar).texture;
+  let transmittanceRenderTarget = transmittanceRenderer.getCurrentRenderTarget(transmittanceVar);
+  let transmittanceLUT = transmittanceRenderTarget.texture;
   const BYTES_PER_32_BIT_FLOAT = 4;
-  this.transferrableTransmittanceBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * TRANSMITTANCE_TEXTURE_SIZE * TRANSMITTANCE_TEXTURE_SIZE * 3);
+  this.transferrableTransmittanceBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * TRANSMITTANCE_TEXTURE_SIZE * TRANSMITTANCE_TEXTURE_SIZE * 4);
   this.transferableTransmittanceFloat32Array = new Float32Array(this.transferrableTransmittanceBuffer);
-  this.renderer.readRenderTargetPixels(renderTarget, 0, 0, meteringTextureSize, meteringTextureSize, this.transferableSkyFinalLightingFloat32Array);
+  this.renderer.readRenderTargetPixels(transmittanceRenderTarget, 0, 0, TRANSMITTANCE_TEXTURE_SIZE, TRANSMITTANCE_TEXTURE_SIZE, this.transferableTransmittanceFloat32Array);
 
   //
   //Set up our single scattering texture
