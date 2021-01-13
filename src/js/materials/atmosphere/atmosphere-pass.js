@@ -348,8 +348,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#endif',
 
       '//Get our transmittance for this texel',
+      '//Note that for uv2OfTransmittance, I am clamping the cosOfViewAngle',
+      '//to avoid edge interpolation in the 2-D texture with a different z',
       'float cosOfViewAngle = sphericalPosition.y;',
-      'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(cosOfViewAngle), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
+      'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.03125)), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
       'vec3 transmittanceFade = texture2D(transmittance, uv2OfTransmittance).rgb;',
 
       '//In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon',

@@ -1,6 +1,7 @@
 #include "ColorInterpolator.h"
 #include "../Constants.h"
 #include <cmath>
+#include <stdio.h>
 
 ColorInterpolator::ColorInterpolator(){
   //
@@ -17,6 +18,7 @@ void ColorInterpolator::updateFinalColorValues(float* rgb0, float* rgbf){
     hsl0[rChannel] = threeVector[0];
     hsl0[gChannel] = threeVector[1];
     hsl0[bChannel] = threeVector[2];
+    //printf("R: %f G: %f B: %f\r\n", hsl0[rChannel], hsl0[gChannel], hsl0[bChannel]);
     convertHSLToRGB(rgbf[rChannel], rgbf[gChannel], rgbf[bChannel]);
     deltaHSL[rChannel] = fmod((threeVector[0] - hsl0[rChannel]), 1.0f);
     if(deltaHSL[rChannel] < 0.0){

@@ -4,8 +4,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
   const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
-  const moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
-  const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(moonAngularRadiusInRadians) * 2.0;
+  this.moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(this.moonAngularRadiusInRadians) * 2.0;
   const diameterOfMoonPlane = 2.0 * radiusOfMoonPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
   this.bloomEnabled = false;
@@ -18,7 +18,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   //pass to combine these results with our original pass.
   this.moonRenderer = new THREE.StarrySkyComputationRenderer(skyDirector.moonAndSunRendererSize, skyDirector.moonAndSunRendererSize, skyDirector.renderer, true);
   let materials = StarrySky.Materials.Moon;
-  let baseMoonPartial = materials.baseMoonPartial.fragmentShader(moonAngularRadiusInRadians);
+  let baseMoonPartial = materials.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians);
 
   //Set up our transmittance texture
   this.baseMoonTexture = this.moonRenderer.createTexture();

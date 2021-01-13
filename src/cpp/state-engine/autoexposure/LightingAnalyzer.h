@@ -14,7 +14,7 @@ public:
   float* pixelWeights;
   float* groundColor;
   float* fogColor;
-  void xyToIndexStartForRedColor(int x, int y, float weight, float* transmittance);
+  void setTransmittance(int x, int y, float weight, float* transmittance);
   void updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewY);
   float updateMeteringData(float* skyColorIntensitiesPtr);
 };

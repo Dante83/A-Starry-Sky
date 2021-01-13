@@ -24,7 +24,7 @@ module_file = ['state-engine.js', 'interpolation-engine.js']
 exported_functions = [['_main', '_setupSky', '_updateSky', '_initializeMeteringAndLightingDependencies',\
 '_updateMeteringData', '_updateDirectLighting', '_updateHemisphericalLightingData'],\
 ['_main', '_setupInterpolators', '_updateFinalAstronomicalValues', '_updateAstronomicalTimeData',\
-'_tick_astronomicalInterpolations', '_setSunAndMoonTimeTo', '_updateLightingValues',\
+'_tick_astronomicalInterpolations', '_setSunAndMoonTimeTo', '_denormalizeSkyIntensity0', '_updateLightingValues',\
 '_tick_lightingInterpolations', '_bolometricMagnitudeToLuminosity', '_luminosityToAtmosphericIntensity',\
 '_initializeLightingValues']]
 cpp_update_date = {}

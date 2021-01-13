@@ -80,7 +80,6 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
 
     self.meteringSurveyRenderer.compute();
     const skyRenderTarget = self.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar);
-
     return skyRenderTarget;
   }
 }

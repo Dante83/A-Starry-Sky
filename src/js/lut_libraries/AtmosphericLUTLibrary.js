@@ -74,6 +74,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let transmittanceRenderTarget = transmittanceRenderer.getCurrentRenderTarget(transmittanceVar);
   let transmittanceLUT = transmittanceRenderTarget.texture;
   const BYTES_PER_32_BIT_FLOAT = 4;
+  //AVENGE ME!!!
+  //AVENGED!
   this.transferrableTransmittanceBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * TRANSMITTANCE_TEXTURE_SIZE * TRANSMITTANCE_TEXTURE_SIZE * 4);
   this.transferableTransmittanceFloat32Array = new Float32Array(this.transferrableTransmittanceBuffer);
   this.renderer.readRenderTargetPixels(transmittanceRenderTarget, 0, 0, TRANSMITTANCE_TEXTURE_SIZE, TRANSMITTANCE_TEXTURE_SIZE, this.transferableTransmittanceFloat32Array);

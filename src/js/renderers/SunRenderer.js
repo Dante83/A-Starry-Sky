@@ -3,8 +3,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   let assetManager = skyDirector.assetManager;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
-  const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(sunAngularRadiusInRadians) * 2.0;
+  this.sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+  const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(this.sunAngularRadiusInRadians) * 2.0;
   const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
 
@@ -15,7 +15,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   //pass to combine these results with our original pass.
   this.sunRenderer = new THREE.StarrySkyComputationRenderer(skyDirector.moonAndSunRendererSize, skyDirector.moonAndSunRendererSize, skyDirector.renderer);
   let materials = StarrySky.Materials.Sun;
-  let baseSunPartial = materials.baseSunPartial.fragmentShader(sunAngularRadiusInRadians);
+  let baseSunPartial = materials.baseSunPartial.fragmentShader(this.sunAngularRadiusInRadians);
 
   //Set up our transmittance texture
   this.baseSunTexture = this.sunRenderer.createTexture();

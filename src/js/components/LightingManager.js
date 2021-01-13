@@ -21,24 +21,27 @@ StarrySky.LightingManager = function(parentComponent){
   this.shadowTargetOffset = new THREE.Vector3();
   this.skyColorVector = new THREE.Vector3();
 
-  this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
-  this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
-  this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
-  this.xAxisHemisphericalLight.position = new THREE.Vector3(1, 0, 0);
-  this.yAxisHemisphericalLight.position = new THREE.Vector3(0, 1, 0);
-  this.zAxisHemisphericalLight.position = new THREE.Vector3(0, 0, 1);
+  //AVENGE ME!
+  // this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
+  // this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
+  // this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
+  // this.xAxisHemisphericalLight.position = new THREE.Vector3(1, 0, 0);
+  // this.yAxisHemisphericalLight.position = new THREE.Vector3(0, 1, 0);
+  // this.zAxisHemisphericalLight.position = new THREE.Vector3(0, 0, 1);
 
-  if(lightingData.atmosphericPerspectiveEnabled){
-    this.fog = new THREE.FogExp2(0x000000, 0);
-    this.maxFogDensity = lightingData.atmosphericPerspectiveMaxFogDensity;
-    parentComponent.scene.fog = this.fog;
-  }
+  //AVENGE ME!
+  // if(lightingData.atmosphericPerspectiveEnabled){
+  //   this.fog = new THREE.FogExp2(0x000000, 0);
+  //   this.maxFogDensity = lightingData.atmosphericPerspectiveMaxFogDensity;
+  //   parentComponent.scene.fog = this.fog;
+  // }
 
   const scene = parentComponent.scene;
   scene.add(this.sourceLight);
-  scene.add(this.xAxisHemisphericalLight);
-  scene.add(this.yAxisHemisphericalLight);
-  scene.add(this.zAxisHemisphericalLight);
+  //AVENGE ME!
+  // scene.add(this.xAxisHemisphericalLight);
+  // scene.add(this.yAxisHemisphericalLight);
+  // scene.add(this.zAxisHemisphericalLight);
 
   this.cameraRef = parentComponent.camera;
   const self = this;
@@ -85,11 +88,12 @@ StarrySky.LightingManager = function(parentComponent){
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
     //directions of x, y and z.
-    self.xAxisHemisphericalLight.color.fromArray(lightingState, 0);
-    self.yAxisHemisphericalLight.color.fromArray(lightingState, 3);
-    self.zAxisHemisphericalLight.color.fromArray(lightingState, 6);
-    self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
-    self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
-    self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
+    //AVENGE ME!!!
+    // self.xAxisHemisphericalLight.color.fromArray(lightingState, 0);
+    // self.yAxisHemisphericalLight.color.fromArray(lightingState, 3);
+    // self.zAxisHemisphericalLight.color.fromArray(lightingState, 6);
+    // self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
+    // self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
+    // self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
   }
 };

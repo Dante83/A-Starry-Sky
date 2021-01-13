@@ -3,7 +3,7 @@
 #include <cmath>
 #include "../Constants.h"
 
-void LightingAnalyzer::xyToIndexStartForRedColor(int x, int y, float weight, float* transmittance){
+void LightingAnalyzer::setTransmittance(int x, int y, float weight, float* transmittance){
   int startPosition = (x + y * widthOfTransmittanceTexture) * 3;
   transmittance[0] += transmittanceLUT[startPosition] * weight;
   transmittance[1] += transmittanceLUT[startPosition + 1] * weight;
@@ -113,5 +113,5 @@ float LightingAnalyzer::updateMeteringData(float* skyColorIntensitiesPtr){
 
   //But really we're just using hacky functions that I figured out over like months.
   //I don't think I have the above code understood at all - it's just a reference for the future.
-  return 0.2 * pow(fmax(logAverageOfLuminance * oneOverSumOfWeightWeights, 0.0), 2.4f);
+  return 0.2f * pow(fmax(logAverageOfLuminance * oneOverSumOfWeightWeights, 0.0), 2.4f);
 }
