@@ -155,6 +155,7 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
   // printf("direct lighting y: %f\r\n", directLightingY);
   // printf("direct lighting z: %f\r\n", directLightingZ);
   skyInterpolator->interpolatedMeteringAndLightingValues[24] = directLightIntensity;
+  //printf("x: %f y: %f z: %f\r\n", directLightingX, directLightingY, directLightingZ);
   skyInterpolator->interpolatedMeteringAndLightingValues[25] = directLightingX;
   skyInterpolator->interpolatedMeteringAndLightingValues[26] = directLightingY;
   skyInterpolator->interpolatedMeteringAndLightingValues[27] = directLightingZ;
@@ -188,8 +189,8 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
   //AVENGED
   float dominantLightIntensity0 = sqrt(fmax(lightColors0[18] * lightColors0[18] + lightColors0[19] * lightColors0[19] + lightColors0[20] * lightColors0[20], 0.0f));
   float dominantLightIntensityf = sqrt(fmax(lightColorsf[18] * lightColorsf[18] +  lightColorsf[19] * lightColorsf[19] + lightColorsf[20] * lightColorsf[20], 0.0f));
-  printf("dominantLightIntensity0: %f\r\n", dominantLightIntensity0);
-  printf("dominantLightIntensityf: %f\r\n", dominantLightIntensityf);
+  // printf("dominantLightIntensity0: %f\r\n", dominantLightIntensity0);
+  // printf("dominantLightIntensityf: %f\r\n", dominantLightIntensityf);
 
   if(dominantLightIsSun0 != dominantLightIsSunf){
     //This is either the transition to night time or day time

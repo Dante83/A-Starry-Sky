@@ -253,6 +253,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //console.log(self.lightingColorValues);
       self.interpolatedSkyIntensityMagnitude = self.lightingColorValues[28];
       //console.log(self.interpolatedSkyIntensityMagnitude);
+      //console.log(self.interpolatedSkyIntensityMagnitude);
       self.exposureVariables.starsExposure = Math.min(6.8 - self.interpolatedSkyIntensityMagnitude, 3.7);
 
       //Tick our light positions before we might just use them to set up the next interpolation
@@ -271,6 +272,7 @@ StarrySky.SkyDirector = function(parentComponent){
         // console.log('Update');
         // console.log(self.lightingColorValues.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS));
         // console.log(self.lightingColorArrayf.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS));
+        // console.log(self.lightingColorValues);
         Module.HEAPF32.set(self.lightingColorValues.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS), self.lightingColorValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
         Module.HEAPF32.set(self.lightingColorArrayf.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS), self.lightingColorValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
 
@@ -285,8 +287,10 @@ StarrySky.SkyDirector = function(parentComponent){
         //AVENGED
         const sunRadiusf = Math.sin(self.renderers.sunRenderer.sunAngularRadiusInRadians * self.skyState.sun.scale);
         self.dominantLightIsSun0 = true;
+        let dominantLightY0 = sp.y;
         if(self.skyState.sun.position.y < -sunRadiusf){
           self.dominantLightIsSun0 = false;
+          dominantLightY0 = mp.y;
         }
 
         //AVENGE ME!!!
@@ -301,10 +305,9 @@ StarrySky.SkyDirector = function(parentComponent){
         // console.log(`spy: ${sp.y}`);
         // console.log(`dominantLightYf: ${self.dominantLightYf}`);
         // console.log(self.time);
-
         Module._updateLightingValues(self.interpolatedSkyIntensityMagnitude, self.exposureVariables.exposureCoefficientf,
           self.dominantLightIsSun0, self.dominantLightIsSunf,
-          sp.y, self.dominantLightYf,
+          dominantLightY0, self.dominantLightYf,
           self.lightingColorValues_ptr, self.lightingColorValues_f_ptr,
           self.time, self.time + HALF_A_SECOND);
 
@@ -500,8 +503,10 @@ StarrySky.SkyDirector = function(parentComponent){
       //AVENGE ME!!!
       //AVENGED
       self.dominantLightIsSun0 = true;
+      self.dominantLightY0 = sunYPos0;
       if(sunYPos0 < -sunRadius0){
         self.dominantLightIsSun0 = false;
+        self.dominantLightY0 = moonYPos0;
       }
 
       //Get our position for the sun and moon 2 seconds from now
@@ -533,8 +538,10 @@ StarrySky.SkyDirector = function(parentComponent){
       //AVENGE ME!!!
       //AVENGED
       self.dominantLightIsSunf = true;
+      self.dominantLightYf = sunYPosf;
       if(sunYPosf < -sunRadiusf){
         self.dominantLightIsSunf = false;
+        self.dominantLightYf = moonYPosf;
       }
 
       //Pass this information to our web worker to get our exposure value
@@ -604,7 +611,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.updateAutoExposure = async function(deltaT){
     const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
 
-    Module._setSunAndMoonTimeTo(self.interpolationT + HALF_A_SECOND * self.speed);
+    Module._setSunAndMoonTimeTo(self.interpolationT + 2.0 * HALF_A_SECOND * self.speed);
     self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
     self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
     self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
@@ -626,10 +633,10 @@ StarrySky.SkyDirector = function(parentComponent){
     //AVENGE ME!!!
     //AVENGED
     self.dominantLightIsSunf = true;
-    self.dominantLightYf = moonYPosf;
+    self.dominantLightYf = sunYPosf;
     if(sunYPosf < -sunRadiusf){
       self.dominantLightIsSunf = false;
-      self.dominantLightYf = sunYPosf;
+      self.dominantLightYf = moonYPosf;
     }
 
     //Predict the camera position 0.5 seconds from now

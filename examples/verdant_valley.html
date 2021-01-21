@@ -99,10 +99,12 @@
         <a-asset-item id="low-poly-desert" src="./assets/3d-models/low-poly-desert.glb" ></a-asset-item>
       </a-assets>
 
+      <a-box color="white" depth="4" height="4" width="4" position="1 2 1" shadow="recieve: true"></a-box>
+
       <a-entity camera look-controls wasd-controls="acceleration: 300"></a-entity>
 
       <!-- Scene Setup-->
-      <a-entity gltf-model="#low-poly-desert" position="0 0 0"></a-entity>
+      <a-entity gltf-model="#low-poly-desert" position="0 0 0" shadow="receive: true"></a-entity>
     </a-scene>
   </body>
 </html>

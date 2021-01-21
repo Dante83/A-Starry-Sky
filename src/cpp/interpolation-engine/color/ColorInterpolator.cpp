@@ -14,12 +14,12 @@ void ColorInterpolator::updateFinalColorValues(float* rgb0, float* rgbf){
   for(int rChannel = 0; rChannel < NUMBER_OF_INTERPOLATED_COLOR_CHANNELS; rChannel += 3){
     int gChannel = rChannel + 1;
     int bChannel = rChannel + 2;
-    convertHSLToRGB(rgb0[rChannel], rgb0[gChannel], rgb0[bChannel]);
+    convertRGBToHSL(rgb0[rChannel], rgb0[gChannel], rgb0[bChannel]);
     hsl0[rChannel] = threeVector[0];
     hsl0[gChannel] = threeVector[1];
     hsl0[bChannel] = threeVector[2];
     //printf("R: %f G: %f B: %f\r\n", hsl0[rChannel], hsl0[gChannel], hsl0[bChannel]);
-    convertHSLToRGB(rgbf[rChannel], rgbf[gChannel], rgbf[bChannel]);
+    convertRGBToHSL(rgbf[rChannel], rgbf[gChannel], rgbf[bChannel]);
     deltaHSL[rChannel] = fmod((threeVector[0] - hsl0[rChannel]), 1.0f);
     if(deltaHSL[rChannel] < 0.0){
       deltaHSL[rChannel] += 1.0f;
@@ -65,7 +65,7 @@ void ColorInterpolator::convertRGBToHSL(float r, float g, float b){
   bool maxColorIsR = false;
   bool maxColorIsG = false;
   if(r >= g){
-    if(r <= b){
+    if(r >= b){
       //r > g && b but we still need to find the minimum between g and b
       maxColorIsR = true;
       maxColorChannel = r;
@@ -95,8 +95,8 @@ void ColorInterpolator::convertRGBToHSL(float r, float g, float b){
 
   float hue;
   float saturation;
-  float lightness = (minColorChannel + minColorChannel) * 0.5f;
-  float delta = minColorChannel - minColorChannel;
+  float lightness = (maxColorChannel + minColorChannel) * 0.5f;
+  float delta = maxColorChannel - minColorChannel;
   if(minColorChannel == maxColorChannel){
     hue = 0.0f;
     saturation = 0.0f;
@@ -115,19 +115,18 @@ void ColorInterpolator::convertRGBToHSL(float r, float g, float b){
     hue *= ONE_SIXTH;
   }
 
-  threeVector[0] = hue;
-  threeVector[1] = saturation;
-  threeVector[2] = lightness;
+  threeVector[0] = fmax(fmin(hue, 1.0), 0.0);
+  threeVector[1] = fmax(fmin(saturation, 1.0), 0.0);
+  threeVector[2] = fmax(fmin(lightness, 1.0), 0.0);
 }
 
 float ColorInterpolator::hueToRGB(float p, float q, float t){
   if(t < 0.0f){
-    ++t;
+    t += 1.0f;
   }
-  if(t < 0.0f){
-    --t;
+  if(t > 1.0f){
+    t -= 1.0f;
   }
-
   if(t < ONE_SIXTH){
     return p + (q - p) * 6.0f * t;
   }
@@ -141,17 +140,21 @@ float ColorInterpolator::hueToRGB(float p, float q, float t){
 }
 
 void ColorInterpolator::convertHSLToRGB(float h, float s, float l){
+  float clampedH = fmax(fmin(h, 1.0), 0.0);
+  float clampedS = fmax(fmin(s, 1.0), 0.0);
+  float clampedL = fmax(fmin(l, 1.0), 0.0);
+
   if(s == 0.0f){
-    threeVector[0] = 0.0f;
-    threeVector[1] = 0.0f;
-    threeVector[2] = 0.0f;
+    threeVector[0] = clampedL;
+    threeVector[1] = clampedL;
+    threeVector[2] = clampedL;
   }
   else{
-    float p = l <= 0.5f ? l * (1.0f + s) : l + s - (l * s);
-    float q = (2.0f * l) - p;
+    float p = clampedL <= 0.5f ? clampedL * (1.0f + clampedS) : clampedL + clampedS - (clampedL * clampedS);
+    float q = (2.0f * clampedL) - p;
 
-    threeVector[0] = hueToRGB(q, p, h + ONE_THIRD);
-    threeVector[1] = hueToRGB(q, p, h );
-    threeVector[2] = hueToRGB(q, p, h - ONE_THIRD);
+    threeVector[0] = hueToRGB(q, p, clampedH + ONE_THIRD);
+    threeVector[1] = hueToRGB(q, p, clampedH );
+    threeVector[2] = hueToRGB(q, p, clampedH - ONE_THIRD);
   }
 }

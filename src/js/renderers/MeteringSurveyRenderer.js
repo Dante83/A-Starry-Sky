@@ -51,7 +51,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   let plane = new THREE.PlaneBufferGeometry(2.0, 2.0, 1);
 
   //Create our material late
-  let material = new THREE.MeshLambertMaterial({
+  let material = new THREE.MeshBasicMaterial({
     side: THREE.DoubleSide,
     blending: THREE.NormalBlending,
     transparent: true,
