@@ -177,7 +177,7 @@ function initializeHemisphericalLighting(postObject){
   //AVENGE ME!!!
   //AVENGED
   const dominantLightY0 = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPosition0,
-    postObject.sunRadius0, postObject.moonRadius0, postObject.moonYPosition0, postObject.sunIntensity0,
+    postObject.sunRadius0, postObject.moonRadius0, postObject.moonYPosition0, postObject.sunIntensity0 * 0.01,
     postObject.moonIntensity0, exposureCoefficient0, lightingState.directLightingColorPtr);
   //Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyMeteringSurveyfPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
@@ -196,7 +196,7 @@ function initializeHemisphericalLighting(postObject){
   //AVENGE ME!!!
   //AVENGED
   const dominantLightYf = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf,
-    postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf,
+    postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf * 0.01,
     postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr);
   Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyMeteringSurveyfPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
@@ -235,7 +235,7 @@ onmessage = function(e){
     //AVENGED
     let directLightingColorf = new Float32Array(3);
     const dominantLightYf = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf,
-      postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf,
+      postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf * 0.01,
       postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr);
     //console.log(`Dominant Light Y: ${dominantLightYf}`);
     //console.log(`Dominant Light Color Ptr: ${lightingState.directLightingColorPtr}`);
@@ -247,6 +247,8 @@ onmessage = function(e){
     const directLightingPointerStart = lightingState.directLightingColorPtr / BYTES_PER_32_BIT_FLOAT;
     lightingColorArrayf.set(Module.HEAPF32.slice(directLightingPointerStart, directLightingPointerStart + 3), 18);
     // lightingColorArrayf.set(Module.HEAPF32.buffer, self.fogColorPtr, 21);
+
+    //console.log(Module.HEAPF32.slice(directLightingPointerStart, directLightingPointerStart + 3));
 
     // console.log(`Metering in the web worker: ${lightingColorArrayf}`);
     // console.log("Values in web worker");

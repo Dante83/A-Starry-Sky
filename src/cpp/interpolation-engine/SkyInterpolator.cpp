@@ -187,8 +187,16 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
   skyInterpolator->deltaLogAverageOfSkyIntensity = skyIntensityf - skyIntensity0;
   //AVENGE ME!
   //AVENGED
-  float dominantLightIntensity0 = sqrt(fmax(lightColors0[18] * lightColors0[18] + lightColors0[19] * lightColors0[19] + lightColors0[20] * lightColors0[20], 0.0f));
-  float dominantLightIntensityf = sqrt(fmax(lightColorsf[18] * lightColorsf[18] +  lightColorsf[19] * lightColorsf[19] + lightColorsf[20] * lightColorsf[20], 0.0f));
+  float color0 = lightColorsf[18];
+  float color1 = lightColorsf[19];
+  float color2 = lightColorsf[20];
+  //printf("color 0 : r: %f g: %f b: %f\r\n", color0, color1, color2);
+  float maxColorChannel0 = fmax(fmax(color0, color1), color2);
+  color0 = lightColorsf[18];
+  color1 = lightColorsf[19];
+  color2 = lightColorsf[20];
+  float maxColorChannelf = fmax(fmax(color0, color1), color2);
+  //printf("color f : r: %f g: %f b: %f\r\n", color0, color1, color2);
   // printf("dominantLightIntensity0: %f\r\n", dominantLightIntensity0);
   // printf("dominantLightIntensityf: %f\r\n", dominantLightIntensityf);
 
@@ -202,27 +210,30 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
     skyInterpolator->deltaDominantLightY = 0.0; //No changes in altitude occur on this first cycle
     if(dominantLightIsSun0){
       //Sun is setting, in which case fade out the entire brightness by the time it's set
-      skyInterpolator->dominantLightIntensity0 = dominantLightIntensity0;
-      skyInterpolator->deltaDominantLightIntensity = -dominantLightIntensity0;
+      skyInterpolator->dominantLightIntensity0 = maxColorChannel0;
+      skyInterpolator->deltaDominantLightIntensity = -maxColorChannel0;
     }
     else{
       //Sun is rising, in which case, ramp it up to full by the time it is visible
       skyInterpolator->dominantLightIntensity0 = 0.0;
-      skyInterpolator->deltaDominantLightIntensity = dominantLightIntensity0;
+      skyInterpolator->deltaDominantLightIntensity = maxColorChannelf;
     }
   }
   else{
     skyInterpolator->dominantLightIsSun = dominantLightIsSun0;
     skyInterpolator->dominantLightY0 = dominantLightY0;
     skyInterpolator->deltaDominantLightY = dominantLightYf - dominantLightY0;
-    skyInterpolator->dominantLightIntensity0 = dominantLightIntensity0;
-    skyInterpolator->deltaDominantLightIntensity = dominantLightIntensityf - dominantLightIntensity0;
+    skyInterpolator->dominantLightIntensity0 = maxColorChannel0;
+    skyInterpolator->deltaDominantLightIntensity = maxColorChannelf - maxColorChannel0;
   }
 
   //Normalize our light colors
   //Also if we want to convert from 0-1 to 0-255, this is where we want to do it
-  float normalization0Factors[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, dominantLightIntensity0};
-  float normalizationfFactors[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, dominantLightIntensityf};
+  printf("blightColors0 R: %f G: %f B: %f\r\n", lightColors0[18], lightColors0[19], lightColors0[20]);
+  printf("blightColorsf R: %f G: %f B: %f\r\n", lightColorsf[18], lightColorsf[19], lightColorsf[20]);
+  printf("dominantLightIntensity0: %f\r\n", maxColorChannel0);
+  float normalization0Factors[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, maxColorChannel0};
+  float normalizationfFactors[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, maxColorChannelf};
   for(int i = 0; i < 7; ++i){
     int offset = i * 3;
     float normalizationFactor0 = normalization0Factors[i] > 0.0f ? 1.0f / normalization0Factors[i] : 0.0f;
@@ -232,8 +243,8 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
       lightColorsf[offset + j] *= normalizationFactorf;
     }
   }
-  // printf("lightColors0 R: %f G: %f B: %f\r\n", lightColors0[18], lightColors0[19], lightColors0[20]);
-  // printf("lightColorsf R: %f G: %f B: %f\r\n", lightColorsf[18], lightColorsf[19], lightColorsf[20]);
+  printf("lightColors0 R: %f G: %f B: %f\r\n", lightColors0[18], lightColors0[19], lightColors0[20]);
+  printf("lightColorsf R: %f G: %f B: %f\r\n", lightColorsf[18], lightColorsf[19], lightColorsf[20]);
   skyInterpolator->colorInterpolator->updateFinalColorValues(lightColors0, lightColorsf);
 
   skyInterpolator->lightingTInitial = t_0;

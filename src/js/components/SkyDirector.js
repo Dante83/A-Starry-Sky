@@ -268,7 +268,7 @@ StarrySky.SkyDirector = function(parentComponent){
         //AVENGED
         //Our colors are normalized and the brightnesses pulled out of them
         //so we need to inject those values back in before updating all of our colors again
-        //Module._denormalizeSkyIntensity0();
+        Module._denormalizeSkyIntensity0();
         // console.log('Update');
         // console.log(self.lightingColorValues.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS));
         // console.log(self.lightingColorArrayf.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS));

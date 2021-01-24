@@ -2,9 +2,12 @@
 #include <stdbool.h>
 #include <cmath>
 #include "../Constants.h"
+#include <stdio.h>
 
 void LightingAnalyzer::setTransmittance(int x, int y, float weight, float* transmittance){
-  int startPosition = (x + y * widthOfTransmittanceTexture) * 3;
+  int clampedX = fmin(fmax(x, 0), widthOfTransmittanceTexture);
+  int clampedY = fmin(fmax(y, 0), widthOfTransmittanceTexture);
+  int startPosition = (clampedX + clampedY * widthOfTransmittanceTexture) * 3;
   transmittance[0] += transmittanceLUT[startPosition] * weight;
   transmittance[1] += transmittanceLUT[startPosition + 1] * weight;
   transmittance[2] += transmittanceLUT[startPosition + 2] * weight;

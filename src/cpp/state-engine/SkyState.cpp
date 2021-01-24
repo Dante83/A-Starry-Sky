@@ -6,7 +6,7 @@
 #include "autoexposure/LightingAnalyzer.h"
 #include <emscripten/emscripten.h>
 #include <cmath>
-// #include <stdio.h>
+#include <stdio.h>
 
 //
 //Constructor
@@ -143,17 +143,17 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
 
   //Once we have the base source light, we need to apply the transmittance to this light
   //Use this height information to acquire the appropriate position on the transmittance LUT
-  int widthTramissionTexture = skyState->lightingAnalyzer->widthOfTransmittanceTexture;
-  float xPosition = 0.5f * (1.0f + dominantLightY) * static_cast<float>(widthTramissionTexture);
+  int widthOfTransmittanceTexture = skyState->lightingAnalyzer->widthOfTransmittanceTexture;
+  float xPosition = 0.5f * (1.0f + dominantLightY) * static_cast<float>(widthOfTransmittanceTexture);
   float r = heightOfCamera + RADIUS_OF_EARTH;
-  float yPosition = static_cast<float>(widthTramissionTexture) - sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED) * static_cast<float>(widthTramissionTexture);
+  float yPosition = 1.0 - sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED) * static_cast<float>(widthOfTransmittanceTexture);
 
   //Get the look-up color for the LUT for the weighted nearest 4 colors
   float transmittance[3] = {0.0, 0.0, 0.0};
 
   //Upper Left
   int floorXPosition = fmax(static_cast<int>(floor(xPosition)), 0);
-  int ceilYPosition = fmin(static_cast<int>(ceil(yPosition)), widthTramissionTexture - 1);
+  int ceilYPosition = fmin(static_cast<int>(ceil(yPosition)), widthOfTransmittanceTexture - 1);
   float diffX = abs(xPosition - static_cast<float>(floorXPosition));
   float diffY = abs(yPosition - static_cast<float>(ceilYPosition));
   float weight = sqrt(diffX * diffX + diffY * diffY);
@@ -168,7 +168,7 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
   skyState->lightingAnalyzer->setTransmittance(floorXPosition, floorYPosition, weight, transmittance);
 
   //Upper Right
-  int ceilXPosition = fmin(static_cast<int>(ceil(xPosition)), widthTramissionTexture);
+  int ceilXPosition = fmin(static_cast<int>(ceil(xPosition)), widthOfTransmittanceTexture);
   diffX = abs(xPosition - static_cast<float>(ceilXPosition));
   diffY = abs(yPosition - static_cast<float>(ceilYPosition));
   weight = sqrt(diffX * diffX + diffY * diffY);

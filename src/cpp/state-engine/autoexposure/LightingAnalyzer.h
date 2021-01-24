@@ -4,7 +4,6 @@ class LightingAnalyzer{
 public:
   int widthOfMeteringTexture;
   int widthOfTransmittanceTexture;
-  int heightOfTransmittanceTexture;
   float oneOverSumOfWeightWeights;
   float yComponentOfDirectLighting;
   float* transmittanceLUT;

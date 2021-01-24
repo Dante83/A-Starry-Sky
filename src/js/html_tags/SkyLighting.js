@@ -17,7 +17,7 @@ StarrySky.DefaultData.lighting = {
   shadowType: 'Basic',
   shadowDrawDistance: 128.0,
   shadowDrawBehindDistance: 10.0,
-  shadowCameraResolution: 512
+  shadowCameraResolution: 2048
 };
 
 //Parent tag
