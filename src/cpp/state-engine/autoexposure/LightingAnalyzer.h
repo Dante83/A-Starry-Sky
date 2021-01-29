@@ -6,8 +6,9 @@ public:
   int widthOfTransmittanceTexture;
   float oneOverSumOfWeightWeights;
   float yComponentOfDirectLighting;
+  float directLightingColor[3];
+  float oneOverSumOfDirectionalWeights[6];
   float* transmittanceLUT;
-  float* directLightingColor;
   float* skyHemisphericalLightColor;
   float* xyzCoordinatesOfPixel;
   float* pixelWeights;

@@ -23,10 +23,10 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
   //when we are finished for the horizon values (x,z) as half the horizon
   //will always be this color. The ground color negativeY will always be
   //this color, while positiveY has no values at all.
-  float rGround = yComponentOfDirectLighting * directLightingColor[0] * groundColor[0];
-  float gGround = yComponentOfDirectLighting * directLightingColor[1] * groundColor[1];
-  float bGround = yComponentOfDirectLighting * directLightingColor[2] * groundColor[2];
-  float linearRGB[3] = {pow(rGround, 2.2f), pow(gGround, 2.2f), pow(bGround, 2.2f)};
+  float rGround = yComponentOfDirectLighting * directLightingColor[0] * pow(groundColor[0], 2.2f);
+  float gGround = yComponentOfDirectLighting * directLightingColor[1] * pow(groundColor[1], 2.2f);
+  float bGround = yComponentOfDirectLighting * directLightingColor[2] * pow(groundColor[2], 2.2f);
+  float linearGroundColors[3] = {rGround, gGround, bGround};
 
   //The final lighting colors that we pass back to the user
   float postiveXHemisphericalLightColor[3] = {0.0, 0.0, 0.0};
@@ -42,62 +42,85 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
     negativeXHemisphericalLightColor, negativeYHemisphericalLightColor, negativeZHemisphericalLightColor
   };
 
-  float normalizationConstantForHMD = 1.0f / sqrt(hmdViewX * hmdViewX + hmdViewZ * hmdViewZ);
+  float normalizationConstantForHMD = sqrt(fmax(hmdViewX * hmdViewX + hmdViewZ * hmdViewZ, 0.0f));
+  normalizationConstantForHMD = normalizationConstantForHMD > 0.0f ? normalizationConstantForHMD : 1.0f;
+  normalizationConstantForHMD = 1.0f / normalizationConstantForHMD;
   float normalizedHMDViewX = hmdViewX * normalizationConstantForHMD;
   float normalizedHMDViewY = hmdViewZ * normalizationConstantForHMD;
+  if((normalizedHMDViewX * normalizedHMDViewX + normalizedHMDViewY * normalizedHMDViewY) <= 0.0f){
+    normalizedHMDViewY = 1.0;
+  }
+  float fogTotalWeight = 0.0f;
   for(int i = 0; i < numberOfPixels; ++i){
     int iTimes4 = i * 4;
-
+    int iTimes3 = i * 3;
+    float skyDirectionX = xyzCoordinatesOfPixel[iTimes3];
+    float skyDirectionY = xyzCoordinatesOfPixel[iTimes3 + 1];
+    float skyDirectionZ = xyzCoordinatesOfPixel[iTimes3 + 2];
+    float hemisphericalLightingMagnitude[6] = {
+      skyDirectionX, skyDirectionY, skyDirectionZ,
+      -skyDirectionX, -skyDirectionY, -skyDirectionZ
+    };
     //Calculate the luminance
     float rgbSky[3] = {
       skyColorIntensitiesPtr[iTimes4],
       skyColorIntensitiesPtr[iTimes4 + 1],
       skyColorIntensitiesPtr[iTimes4 + 2]
     };
+
     for(int j = 0; j < 3; ++j){
       //Because this is used throughout this
-      float linearColorTimesPixelWeight = pow(rgbSky[j], 2.2f) * pixelWeights[i];
+      float pixelWeight = pixelWeights[i];
+      float linearColor = pow(rgbSky[j], 2.2f);
 
       //For fog, we presume that the y of the look direction is zero, and we just dot each of our
       //directional vectors with our hmd x and y values to decide the contribution.
-      fogColor[j] = fmax(normalizedHMDViewX * directLightingColor[0] + normalizedHMDViewY * directLightingColor[2], 0.0f) * linearColorTimesPixelWeight;
+      float fogWeight = fmax(normalizedHMDViewX * skyDirectionX + normalizedHMDViewY * skyDirectionY, 0.0f) * pixelWeight;
+      fogTotalWeight += fogWeight;
+      fogColor[j] += fogWeight * linearColor;
 
-      //As we are looking for lighting coming from a given direction in the sky
-      //We actually wish to negate any of our directions so that the vectors are
-      //pointing towards the center.
-      int lDirectional = 1.0f;
       for(int k = 0; k < 6; ++k){
-        int lightingDirection = k % 3;
-        lDirectional = k == 3 ? lDirectional : -lDirectional;
-        arrayOfHemisphericalLights[k][j] = fmax(lDirectional * directLightingColor[lightingDirection], 0.0f) * linearColorTimesPixelWeight;
+        arrayOfHemisphericalLights[k][j] += fmax(hemisphericalLightingMagnitude[k], 0.0f) * linearColor;
       }
     }
   }
 
-  for(int i = 0; i < 6; ++i){
-    for(int j = 0; j < 3; ++j){
-      arrayOfHemisphericalLights[i][j] = arrayOfHemisphericalLights[i][j] * oneOverSumOfWeightWeights;
+  //Normalize our results
+  fogTotalWeight = fogTotalWeight > 0.0f ? fogTotalWeight : 1.0f;
+  for(int i = 0; i < 3; ++i){
+    fogColor[i] = pow(fogColor[i] / fogTotalWeight, ONE_OVER_TWO_POINT_TWO);
+    float linearGroundColor = linearGroundColors[i];
+    for(int j = 0; j < 6; ++j){
+      arrayOfHemisphericalLights[j][i] *= oneOverSumOfDirectionalWeights[j];
     }
   }
 
   //Half the sky for our x,z values are our ground lighting, so we will average those two, now, too.
   for(int i = 0; i < 3; ++i){
-    postiveXHemisphericalLightColor[i] = 0.5f * (postiveXHemisphericalLightColor[i] + linearRGB[i]);
-    postiveZHemisphericalLightColor[i] = 0.5f * (postiveZHemisphericalLightColor[i] + linearRGB[i]);
-    negativeXHemisphericalLightColor[i] = 0.5f * (negativeXHemisphericalLightColor[i] + linearRGB[i]);
-    negativeZHemisphericalLightColor[i] = 0.5f * (negativeZHemisphericalLightColor[i] + linearRGB[i]);
+    float linearGroundColor = linearGroundColors[i];
+    postiveXHemisphericalLightColor[i] = 0.5f * (postiveXHemisphericalLightColor[i] + linearGroundColor);
+    postiveZHemisphericalLightColor[i] = 0.5f * (postiveZHemisphericalLightColor[i] + linearGroundColor);
+    negativeXHemisphericalLightColor[i] = 0.5f * (negativeXHemisphericalLightColor[i] + linearGroundColor);
+    negativeZHemisphericalLightColor[i] = 0.5f * (negativeZHemisphericalLightColor[i] + linearGroundColor);
   }
 
   //Now bring our values back into the normal range of intensities and save it to our final hemispherical
   //lighting array so that we can bring this back out to the first CPU.
+  float maxIntensity = 1.0E-9f;
   for(int i = 0; i < 6; ++i){
+    int iTimes3 = i * 3;
     for(int j = 0; j < 3; ++j){
-      hemisphericalAndDirectSkyLightPtr[i * 3 + j] = static_cast<float>(pow(arrayOfHemisphericalLights[i][j], ONE_OVER_TWO_POINT_TWO));
+      float skyColorChannel = pow(arrayOfHemisphericalLights[i][j], ONE_OVER_TWO_POINT_TWO);
+      hemisphericalAndDirectSkyLightPtr[iTimes3 + j] = skyColorChannel;
+      maxIntensity = fmax(maxIntensity, skyColorChannel);
     }
   }
-
-  for(int j = 0; j < 3; ++j){
-    fogColor[j] = static_cast<float>(pow(fogColor[j] * oneOverSumOfWeightWeights, ONE_OVER_TWO_POINT_TWO));
+  float oneOverMaxIntensity = 1.0 / maxIntensity;
+  for(int i = 0; i < 6; ++i){
+    int iTimes3 = i * 3;
+    for(int j = 0; j < 3; ++j){
+      hemisphericalAndDirectSkyLightPtr[iTimes3 + j] *= oneOverMaxIntensity;
+    }
   }
 }
 

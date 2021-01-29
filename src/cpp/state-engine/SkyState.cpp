@@ -91,7 +91,8 @@ float EMSCRIPTEN_KEEPALIVE updateMeteringData(float* skyColorIntensitiesPtr){
 
 void EMSCRIPTEN_KEEPALIVE updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewZ){
   //AVENGE ME!!!!
-  //skyState->lightingAnalyzer->updateHemisphericalLightingData(skyColorIntensitiesPtr, hemisphericalAndDirectSkyLightPtr, hmdViewX, hmdViewZ);
+  //AVENGED
+  skyState->lightingAnalyzer->updateHemisphericalLightingData(skyColorIntensitiesPtr, hemisphericalAndDirectSkyLightPtr, hmdViewX, hmdViewZ);
 }
 
 float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer){
@@ -193,6 +194,11 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
     }
   }
 
+  skyState->lightingAnalyzer->yComponentOfDirectLighting = dominantLightY;
+  skyState->lightingAnalyzer->directLightingColor[0] = directLightingPointer[0];
+  skyState->lightingAnalyzer->directLightingColor[1] = directLightingPointer[1];
+  skyState->lightingAnalyzer->directLightingColor[2] = directLightingPointer[2];
+
   //Apply this LUT transmittance to our direct lighting
   return dominantLightY;
 }
@@ -208,8 +214,9 @@ void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfM
   skyState->lightingAnalyzer->fogColor = fogColorPtr;
 
   //Set their constant values for future reference
-  float sumOfPixelWeights = 0.0;
-  const float halfWidthOfTexture = widthOfMeteringTexture * 0.5;
+  float sumOfPixelWeights = 0.0f;
+  float sumOfPixelDirectionalWeights[6] = {0.0f,0.0f,0.0f,0.0f,0.0f,0.0f};
+  const float halfWidthOfTexture = widthOfMeteringTexture * 0.5f;
   const float radiusOfSkyCircle = halfWidthOfTexture * halfWidthOfTexture;
   const int numberOfPixels = widthOfMeteringTexture * widthOfMeteringTexture;
   for(int i = 0; i < numberOfPixels; ++i){
@@ -219,24 +226,36 @@ void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfM
     //Use this to set the x y and z coordinates of our pixel
     float rhoSquared = x * x + y * y;
     float rho = sqrt(rhoSquared);
-    float height = sqrt(1.0 - rhoSquared);
+    float height = sqrt(1.0f - rhoSquared);
     float phi = TWO_OVER_PI - atan2(height, rho);
     float theta = atan2(y, x);
     float x3 = sin(phi) * cos(theta);
-    float y3 = sin(phi) * sin(theta);
-    float z3 = cos(phi);
-    float normalizationConstant = 1.0 / sqrt(x3 * x3 + y3 * y3 + z3 * z3);
-
-    xyzPtr[i * 3] = x3 * normalizationConstant;
-    xyzPtr[i * 3 + 1] = y3 * normalizationConstant;
-    xyzPtr[i * 3 + 2] = z3 * normalizationConstant;
+    float z3 = sin(phi) * sin(theta);
+    float y3 = cos(phi);
+    float normalizationConstant = 1.0f / sqrt(x3 * x3 + y3 * y3 + z3 * z3);
+    x3 *= normalizationConstant;
+    y3 *= normalizationConstant;
+    z3 *= normalizationConstant;
+    xyzPtr[i * 3] = x3;
+    xyzPtr[i * 3 + 1] = y3;
+    xyzPtr[i * 3 + 2] = z3;
 
     float pixelRadius = x * x + y * y;
-    float thisPixelsWeight = pixelRadius < radiusOfSkyCircle ? 1.0 : 0.0;
+    float thisPixelsWeight = pixelRadius < radiusOfSkyCircle ? 1.0f : 0.0f;
     skyState->lightingAnalyzer->pixelWeights[i] = thisPixelsWeight;
     sumOfPixelWeights += thisPixelsWeight;
+    sumOfPixelDirectionalWeights[0] += fmax(x3, 0.0f) * thisPixelsWeight;
+    sumOfPixelDirectionalWeights[1] += fmax(y3, 0.0f) * thisPixelsWeight;
+    sumOfPixelDirectionalWeights[2] += fmax(z3, 0.0f) * thisPixelsWeight;
+    sumOfPixelDirectionalWeights[3] += fmax(-x3, 0.0f) * thisPixelsWeight;
+    sumOfPixelDirectionalWeights[4] += fmax(y3, 0.0f) * thisPixelsWeight;
+    sumOfPixelDirectionalWeights[5] += fmax(-z3, 0.0f) * thisPixelsWeight;
   }
-  skyState->lightingAnalyzer->oneOverSumOfWeightWeights = 1.0 / sumOfPixelWeights;
+  skyState->lightingAnalyzer->oneOverSumOfWeightWeights = 1.0f / sumOfPixelWeights;
+  for(int i = 0; i < 6; ++i){
+    skyState->lightingAnalyzer->oneOverSumOfDirectionalWeights[i] = 1.0f / sumOfPixelDirectionalWeights[i];
+  }
+  skyState->lightingAnalyzer->oneOverSumOfDirectionalWeights[4] = 1.0f;
 }
 
 int main(){

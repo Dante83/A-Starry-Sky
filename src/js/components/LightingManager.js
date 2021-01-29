@@ -12,11 +12,12 @@ StarrySky.LightingManager = function(parentComponent){
   shadow.mapSize.height = lightingData.shadowCameraResolution;
   shadow.camera.near = RADIUS_OF_SKY - 128.0;
   shadow.camera.far = RADIUS_OF_SKY * 2.0;
-  shadow.camera.left = -64.0;
-  shadow.camera.right = 64.0;
-  shadow.camera.bottom = -64.0;
-  shadow.camera.top = 64.0;
+  shadow.camera.left = -32.0;
+  shadow.camera.right = 32.0;
+  shadow.camera.bottom = -32.0;
+  shadow.camera.top = 32.0;
   shadow.bias = -0.0003;
+  this.sourceLight.target = this.skyDirector.camera;
   //shadow.normalBias = 0.0001;
   const  totalDistance = lightingData.shadowDrawDistance + lightingData.shadowDrawBehindDistance;
   this.targetScalar = 0.5 * totalDistance - lightingData.shadowDrawBehindDistance;
@@ -42,7 +43,7 @@ StarrySky.LightingManager = function(parentComponent){
 
   const scene = parentComponent.scene;
   scene.add(this.sourceLight);
-  scene.add(this.sourceLight.target)
+  //scene.add(this.sourceLight.target)
   //AVENGE ME!
   // scene.add(this.xAxisHemisphericalLight);
   // scene.add(this.yAxisHemisphericalLight);
@@ -89,7 +90,6 @@ StarrySky.LightingManager = function(parentComponent){
     //or moon is in use and transitions between the two.
     //The target is a position weighted by the
     //console.log(`x: ${this.shadowTarget.x} y: ${this.shadowTarget.y} z: ${this.shadowTarget.z}`);
-    self.sourceLight.target.position = self.skyDirector.camera.position;
     //console.log(`R: ${lightingState[18]} G: ${lightingState[19]} B: ${lightingState[20]}`);
     self.sourceLight.position.x = -RADIUS_OF_SKY * lightingState[27];
     self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];

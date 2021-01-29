@@ -10,14 +10,14 @@ window.customElements.define('sky-shadow-camera-resolution', class extends HTMLE
 
 StarrySky.DefaultData.lighting = {
   groundColor: {
-    red: 0,
-    green: 0,
-    blue: 0
+    red: 101,
+    green: 67,
+    blue: 3
   },
   shadowType: 'Basic',
   shadowDrawDistance: 128.0,
   shadowDrawBehindDistance: 10.0,
-  shadowCameraResolution: 2048
+  shadowCameraResolution: 1024
 };
 
 //Parent tag

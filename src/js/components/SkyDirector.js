@@ -94,10 +94,10 @@ StarrySky.SkyDirector = function(parentComponent){
   this.transferableSkyFinalLightingFloat32Array;
   this.lightingColorBufferf;
   this.lightingColorArrayf;
-  this.previousCameraHeight;
   this.currentCameraLookAtTarget = new THREE.Vector3();
   this.previousCameraLookAtVector = new THREE.Vector3();
   this.clonedPreviousCameraLookAtVector = new THREE.Vector3();
+  this.previousCameraHeight = 0.0;
   this.lookAtInterpolationQuaternion = new THREE.Quaternion();
   this.lookAtInterpolatedQuaternion = new THREE.Quaternion();
 
@@ -135,6 +135,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Attach our camera, which should be loaded by now.
       const DEG_2_RAD = Math.PI / 180.0;
       self.camera = self.parentComponent.el.sceneEl.camera;
+      self.previousCameraHeight = self.camera.position.y;
       self.pixelsPerRadian = screen.width / (this.camera.fov * DEG_2_RAD);
 
       //Determine the best texture size for our renderers
@@ -260,6 +261,8 @@ StarrySky.SkyDirector = function(parentComponent){
       //AVENGE ME!!!
       self.lightingManager.tick(self.lightingColorValues);
 
+
+
       //Check if we need to update our auto-exposure final state again
       if(self.exposureT >= HALF_A_SECOND && self.transferableSkyFinalLightingBuffer.byteLength !== 0){
         self.exposureT = 0.0;
@@ -279,8 +282,8 @@ StarrySky.SkyDirector = function(parentComponent){
         //While we are still on this thread, we need to copy the previous look up vector before it
         //gets changed below, as the upcoming methods invoke async
         //AVENGE ME!!!
-        // this.clonedPreviousCameraLookAtVector.copy(this.previousCameraLookAtVector);
-        // this.clonedPreviousCameraLookAtVector.normalize();
+        this.clonedPreviousCameraLookAtVector.copy(this.previousCameraLookAtVector);
+        this.clonedPreviousCameraLookAtVector.normalize();
 
         //We should also save the last position for the sun to determine if the dominant light is the sun or not
         //AVENGE ME!!!
@@ -312,12 +315,13 @@ StarrySky.SkyDirector = function(parentComponent){
           self.time, self.time + HALF_A_SECOND);
 
         self.updateAutoExposure(timeDeltaInSeconds);
-      }
 
-      //Set our previous lookup target
-      //AVENGE ME!!!
-      // const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
-      // this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
+        //Set our previous lookup target
+        //AVENGE ME!!!
+        const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
+        this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
+        this.previousCameraHeight = self.camera.position.y;
+      }
     }
   }
 
@@ -473,11 +477,12 @@ StarrySky.SkyDirector = function(parentComponent){
       const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize;
       const numberOfColorChannelsInMeteringPixel = 4;
       //AVENGE ME!!!
-      // const groundColorRef = self.assetManager.data.skyLighting.groundColor;
-      // const groundColorArray = new Float32Array(3);
-      // groundColorArray[0] = groundColorRef.red / 255.0;
-      // groundColorArray[1] = groundColorRef.green / 255.0;
-      // groundColorArray[2] = groundColorRef.blue / 255.0;
+      //Avenged
+      const groundColorRef = self.assetManager.data.skyLighting.groundColor;
+      const groundColorArray = new Float32Array(3);
+      groundColorArray[0] = groundColorRef.red / 255.0;
+      groundColorArray[1] = groundColorRef.green / 255.0;
+      groundColorArray[2] = groundColorRef.blue / 255.0;
 
       //Get the initial position of our sun and moon
       //and pass them into our metering survey
@@ -530,9 +535,10 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Get the look at target for our camera to see where we are looking
       //AVENGE ME!!!
-      // const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
-      // this.previousCameraHeight = self.camera.position.y;
-      // this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
+      //Avenged
+      const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
+      this.previousCameraHeight = self.camera.position.y;
+      this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
 
       //Determine if our sun is the dominant light source when we end this interpolation
       //AVENGE ME!!!
@@ -546,43 +552,11 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Pass this information to our web worker to get our exposure value
       //AVENGE ME!!!
-      // self.webAssemblyWorker.postMessage({
-      //   eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
-      //   heightOfCamera: self.camera.position.y,
-      //   hmdViewX: cameraLookAtTarget.x,
-      //   hmdViewZ: cameraLookAtTarget.z,
-      //   sunYPosition0: sunYPos0,
-      //   sunYPositionf: sunYPosf,
-      //   sunRadius0: sunRadius0,
-      //   sunRadiusf: sunRadiusf,
-      //   sunIntensity0: sunIntensity0,
-      //   sunIntensityf: sunIntensityf,
-      //   moonYPosition0: moonYPos0,
-      //   moonYPositionf: moonYPosf,
-      //   moonRadius0: moonRadius0,
-      //   moonRadiusf: moonRadiusf,
-      //   moonIntensity0: moonIntensity0,
-      //   moonIntensityf: moonIntensityf,
-      //   transmittanceTextureSize: self.atmosphereLUTLibrary.transmittanceTextureSize,
-      //   meteringSurveyTextureSize: self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize,
-      //   meteringSurveyFloatArray0: transferableIntialSkyLightingFloat32Array,
-      //   meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array,
-      //   groundColor: groundColorArray,
-      //   transmittanceTextureLUT: self.atmosphereLUTLibrary.transferableTransmittanceFloat32Array
-      // }, [
-      //   transferableSkyIntialLightingBuffer,
-      //   self.transferableSkyFinalLightingBuffer,
-      //   groundColorArray.buffer,
-      //   self.atmosphereLUTLibrary.transferrableTransmittanceBuffer
-      // ]);
-
-      //AVENGE ME!!!
-      //This is a dummy variable for above
       self.webAssemblyWorker.postMessage({
         eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
-        heightOfCamera: 0.0,
-        hmdViewX: 0.0,
-        hmdViewZ: 0.0,
+        heightOfCamera: this.previousCameraHeight,
+        hmdViewX: this.previousCameraLookAtVector.x,
+        hmdViewZ: this.previousCameraLookAtVector.z,
         sunYPosition0: sunYPos0,
         sunYPositionf: sunYPosf,
         sunRadius0: sunRadius0,
@@ -596,19 +570,20 @@ StarrySky.SkyDirector = function(parentComponent){
         moonIntensity0: moonIntensity0,
         moonIntensityf: moonIntensityf,
         transmittanceTextureSize: self.atmosphereLUTLibrary.transmittanceTextureSize,
-        groundColor: null,
         meteringSurveyTextureSize: self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize,
         meteringSurveyFloatArray0: transferableIntialSkyLightingFloat32Array,
         meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array,
-        transmittanceTextureLUT: self.atmosphereLUTLibrary.transferableTransmittanceFloat32Array
+        transmittanceTextureLUT: self.atmosphereLUTLibrary.transferableTransmittanceFloat32Array,
+        groundColor: groundColorArray,
       }, [
         transferableSkyIntialLightingBuffer,
         self.transferableSkyFinalLightingBuffer,
-        self.atmosphereLUTLibrary.transferrableTransmittanceBuffer
+        self.atmosphereLUTLibrary.transferrableTransmittanceBuffer,
+        groundColorArray.buffer
       ]);
   }
 
-  this.updateAutoExposure = async function(deltaT){
+  this.updateAutoExposure = function(deltaT){
     const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
 
     Module._setSunAndMoonTimeTo(self.interpolationT + 2.0 * HALF_A_SECOND * self.speed);
@@ -641,8 +616,9 @@ StarrySky.SkyDirector = function(parentComponent){
 
     //Predict the camera position 0.5 seconds from now
     //AVENGE ME!!!
-    // self.currentCameraLookAtTarget.set(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
-    // self.currentCameraLookAtTarget.normalize();
+    //Avenged
+    self.currentCameraLookAtTarget.set(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
+    self.currentCameraLookAtTarget.normalize();
     // self.lookAtInterpolationQuaternion.setFromUnitVectors(self.clonedPreviousCameraLookAtVector, self.currentCameraLookAtTarget);
     // const estNumberOfFramesUntilNextUpdate = Math.ceil(0.5 / deltaT);
     // if(estNumberOfFramesUntilNextUpdate & 1){
@@ -668,24 +644,10 @@ StarrySky.SkyDirector = function(parentComponent){
     //   ++frameNumberBinaryIndex;
     // }
     // self.currentCameraLookAtTarget.applyQuaternion(self.lookAtInterpolatedQuaternion);
+    self.currentCameraLookAtTarget.x = 0.0;
+    self.currentCameraLookAtTarget.z = 0.0;
 
     //Pass this information to our web worker to get our exposure value
-    //AVENGE ME!!!
-    // self.webAssemblyWorker.postMessage({
-    //   eventType: self.EVENT_UPDATE_AUTOEXPOSURE,
-    //   sunYPosf: sunYPosf,
-    //   moonYPosf: moonYPosf,
-    //   sunRadiusf: sunRadiusf,
-    //   moonRadiusf: moonRadiusf,
-    //   sunIntensityf: sunIntensityf,
-    //   moonIntensityf: moonIntensityf,
-    //   heightOfCamera: self.camera.position.y,
-    //   hmdViewX: self.currentCameraLookAtTarget.x,
-    //   hmdViewZ: self.currentCameraLookAtTarget.z,
-    //   meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array
-    // }, [self.transferableSkyFinalLightingBuffer]);
-
-    //AVENGE ME!!!
     //This is a dummy post for above
     self.webAssemblyWorker.postMessage({
       eventType: self.EVENT_UPDATE_AUTOEXPOSURE,
@@ -695,9 +657,9 @@ StarrySky.SkyDirector = function(parentComponent){
       moonRadiusf: moonRadiusf,
       sunIntensityf: sunIntensityf,
       moonIntensityf: moonIntensityf,
-      heightOfCamera: 0.0,
-      hmdViewX: 0.0,
-      hmdViewZ: 0.0,
+      heightOfCamera: 2.0 * self.camera.position.y - self.previousCameraHeight,
+      hmdViewX: self.currentCameraLookAtTarget.x,
+      hmdViewZ: self.currentCameraLookAtTarget.z,
       meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array
     }, [self.transferableSkyFinalLightingBuffer]);
   }
