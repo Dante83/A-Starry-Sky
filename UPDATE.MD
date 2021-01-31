@@ -14,6 +14,8 @@
 * Switched stellar color model from single highest intensity model to a full spectrum model driven by the python [Colour-Science Library](https://www.colour-science.org/).
 * Switched from a position based fake HDR system to a periodic metering sky-survey based solution.
 * Added VSOP87 Planet support for Mercury, Venus, Mars, Jupiter and Saturn using the terms from Appendix II of Meeus' Astronomical Algorithms with variable magnitudes.
+* Implemented dynamic switching between sun and moon direct lighting to reduce overhead calculations and changed the lighting color method from an analytic solution to a transmittance LUT interpolated result with HSL based interpolation.
+* Added support for dynamic, single-color, atmospheric perspective using the current sky lighting conditions and the camera vector with HSL based interpolation.
 
 **Version 0.3.0**
 * **!Important:** In version 0.3.0 and above, you should no longer include the  ```material="shader: sky;"``` attribute as all of our shaders have been internalized.

@@ -229,11 +229,11 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
 
   //Normalize our light colors
   //Also if we want to convert from 0-1 to 0-255, this is where we want to do it
-  printf("blightColors0 R: %f G: %f B: %f\r\n", lightColors0[18], lightColors0[19], lightColors0[20]);
-  printf("blightColorsf R: %f G: %f B: %f\r\n", lightColorsf[18], lightColorsf[19], lightColorsf[20]);
-  printf("dominantLightIntensity0: %f\r\n", maxColorChannel0);
-  float normalization0Factors[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, maxColorChannel0};
-  float normalizationfFactors[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, maxColorChannelf};
+  printf("color 0 R: %f G: %f B: %f\r\n", lightColors0[0], lightColors0[1], lightColors0[2]);
+  printf("color f R: %f G: %f B: %f\r\n", lightColorsf[0], lightColorsf[1], lightColorsf[2]);
+  // printf("dominantLightIntensity0: %f\r\n", maxColorChannel0);
+  float normalization0Factors[7] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, maxColorChannel0};
+  float normalizationfFactors[7] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, maxColorChannelf};
   for(int i = 0; i < 7; ++i){
     int offset = i * 3;
     float normalizationFactor0 = normalization0Factors[i] > 0.0f ? 1.0f / normalization0Factors[i] : 0.0f;
@@ -243,8 +243,8 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
       lightColorsf[offset + j] *= normalizationFactorf;
     }
   }
-  printf("lightColors0 R: %f G: %f B: %f\r\n", lightColors0[18], lightColors0[19], lightColors0[20]);
-  printf("lightColorsf R: %f G: %f B: %f\r\n", lightColorsf[18], lightColorsf[19], lightColorsf[20]);
+  // printf("lightColors0 R: %f G: %f B: %f\r\n", lightColors0[18], lightColors0[19], lightColors0[20]);
+  // printf("lightColorsf R: %f G: %f B: %f\r\n", lightColorsf[18], lightColorsf[19], lightColorsf[20]);
   skyInterpolator->colorInterpolator->updateFinalColorValues(lightColors0, lightColorsf);
 
   skyInterpolator->lightingTInitial = t_0;

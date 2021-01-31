@@ -20,27 +20,53 @@ void ColorInterpolator::updateFinalColorValues(float* rgb0, float* rgbf){
     hsl0[bChannel] = threeVector[2];
     //printf("R: %f G: %f B: %f\r\n", hsl0[rChannel], hsl0[gChannel], hsl0[bChannel]);
     convertRGBToHSL(rgbf[rChannel], rgbf[gChannel], rgbf[bChannel]);
-    deltaHSL[rChannel] = fmod((threeVector[0] - hsl0[rChannel]), 1.0f);
-    if(deltaHSL[rChannel] < 0.0){
-      deltaHSL[rChannel] += 1.0f;
-    }
+    deltaHSL[rChannel] = threeVector[0];
     deltaHSL[gChannel] = fmin(fmax(threeVector[1] - hsl0[gChannel], 0.0f), 1.0f);
     deltaHSL[bChannel] = fmin(fmax(threeVector[2] - hsl0[bChannel], 0.0f), 1.0f);
+  }
+
+  for(int rChannel = 0; rChannel < 18; rChannel += 3){
+    int gChannel = rChannel + 1;
+    int bChannel = rChannel + 2;
+    interpolatedMeteringAndLightingValues[rChannel] = rgbf[rChannel];
+    interpolatedMeteringAndLightingValues[gChannel] = rgbf[gChannel];
+    interpolatedMeteringAndLightingValues[bChannel] = rgbf[bChannel];
   }
 }
 
 void ColorInterpolator::updateLightingLinearInterpolations(float tFractional){
   //Interpolate our values, clamping saturation and brightness
   //converting our
-  for(int rChannel = 0; rChannel < NUMBER_OF_INTERPOLATED_COLOR_CHANNELS; rChannel += 3){
+  for(int rChannel = 18; rChannel < NUMBER_OF_INTERPOLATED_COLOR_CHANNELS; rChannel += 3){
     int gChannel = rChannel + 1;
     int bChannel = rChannel + 2;
 
-    //Interpolate our HSL
-    float hue = fmod((hsl0[rChannel] + tFractional * deltaHSL[rChannel]), 1.0f);
-    if(hue < 0.0f){
-      hue = 1.0f + hue;
+    //Interpolate our hue as per help from
+    //https://www.alanzucconi.com/2016/01/06/colour-interpolation/
+    float hue = 0.0f;
+    float hue0 = hsl0[rChannel];
+    float huef = deltaHSL[rChannel];
+    float d = huef - hue0;
+    float t = tFractional;
+    if (hue0 > huef){
+      // Swap (hue0, huef)
+      float h3 = huef;
+      huef = hue0;
+      hue0 = h3;
+
+      d = -d;
+      t = 1.0f - tFractional;
     }
+
+    if (d > 0.5){
+      hue0 = hue0 + 1.0f;
+      hue = fmod((hue0 + t * (huef - hue0)), 1.0);
+    }
+    if (d <= 0.5){
+      hue = hue0 + t * d;
+    }
+
+    //Normal interpolation for our brightness and saturation
     float saturation = fmin(fmax(hsl0[gChannel] + tFractional * deltaHSL[gChannel], 0.0f), 1.0f);
     float lightness = fmin(fmax(hsl0[bChannel] + tFractional * deltaHSL[bChannel], 0.0f), 1.0f);
 

@@ -358,7 +358,7 @@ StarrySky.SkyDirector = function(parentComponent){
       //Setting this buffer is deffered until our lighting worker is complete
       self.lightingColorValues_0_ptr = Module._malloc(NUMBER_OF_LIGHTING_COLOR_CHANNELS * BYTES_PER_32_BIT_FLOAT);
       self.lightingColorValues_f_ptr = Module._malloc(NUMBER_OF_LIGHTING_COLOR_CHANNELS * BYTES_PER_32_BIT_FLOAT);
-      self.lightingColorValues_ptr = Module._malloc((NUMBER_OF_LIGHTING_OUT_VALUES) * BYTES_PER_32_BIT_FLOAT);
+      self.lightingColorValues_ptr = Module._malloc(NUMBER_OF_LIGHTING_OUT_VALUES * BYTES_PER_32_BIT_FLOAT);
 
       //Attach references to our interpolated values
       self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATION_OUTPUT_VALUES);
@@ -614,38 +614,8 @@ StarrySky.SkyDirector = function(parentComponent){
       self.dominantLightYf = moonYPosf;
     }
 
-    //Predict the camera position 0.5 seconds from now
-    //AVENGE ME!!!
-    //Avenged
-    self.currentCameraLookAtTarget.set(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
-    self.currentCameraLookAtTarget.normalize();
-    // self.lookAtInterpolationQuaternion.setFromUnitVectors(self.clonedPreviousCameraLookAtVector, self.currentCameraLookAtTarget);
-    // const estNumberOfFramesUntilNextUpdate = Math.ceil(0.5 / deltaT);
-    // if(estNumberOfFramesUntilNextUpdate & 1){
-    //   self.lookAtInterpolatedQuaternion.setFromUnitVectors(self.clonedPreviousCameraLookAtVector, self.currentCameraLookAtTarget);
-    // }
-    // else{
-    //   self.lookAtInterpolatedQuaternion.setFromUnitVectors(self.clonedPreviousCameraLookAtVector, self.clonedPreviousCameraLookAtVector);
-    // }
-    // let frameNumberBinaryIndex = 1;
-    // //From page 11 of Hacker's Delight, 2nd Ed. By Henry S. Warren Jr.
-    // //Gets converts the first 0 in a word to 1 and the rest of the numbers to 0
-    // //so that you have a power of 2 limit showing the number of multiplications needed
-    // const maxPowerOfTwo = ~estNumberOfFramesUntilNextUpdate & (estNumberOfFramesUntilNextUpdate + 1);
-    // for(let i = 2; i < maxPowerOfTwo; i = i >> 1){
-    //   //We build up the quaternion rotations by using the binary representation of the number
-    //   //The binary operation below grabs the bit at the given location in the binary word
-    //   if((estNumberOfFramesUntilNextUpdate >> frameNumberBinaryIndex) & 1){
-    //     self.lookAtInterpolatedQuaternion.multiplyQuaternions(self.lookAtInterpolatedQuaternion, self.lookAtInterpolationQuaternion);
-    //   }
-    //
-    //   //Either way, we multiply our base rotation quaternion
-    //   self.lookAtInterpolationQuaternion.multiplyQuaternions(self.lookAtInterpolationQuaternion, self.lookAtInterpolationQuaternion);
-    //   ++frameNumberBinaryIndex;
-    // }
-    // self.currentCameraLookAtTarget.applyQuaternion(self.lookAtInterpolatedQuaternion);
-    self.currentCameraLookAtTarget.x = 0.0;
-    self.currentCameraLookAtTarget.z = 0.0;
+    //Just use the current cameras position as an estimate for where the camera will be in 0.5 seconds
+    self.camera.getWorldDirection( self.currentCameraLookAtTarget );
 
     //Pass this information to our web worker to get our exposure value
     //This is a dummy post for above

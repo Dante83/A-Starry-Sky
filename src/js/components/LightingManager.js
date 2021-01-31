@@ -23,21 +23,26 @@ StarrySky.LightingManager = function(parentComponent){
   this.targetScalar = 0.5 * totalDistance - lightingData.shadowDrawBehindDistance;
   this.shadowTarget = new THREE.Vector3();
   this.shadowTargetOffset = new THREE.Vector3();
-  this.skyColorVector = new THREE.Vector3();
+  this.skyColorVector = new THREE.Color();
   //shadow.radius = 4.0;
 
   //AVENGE ME!
-  // this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
-  // this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
-  // this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0);
-  // this.xAxisHemisphericalLight.position = new THREE.Vector3(1, 0, 0);
-  // this.yAxisHemisphericalLight.position = new THREE.Vector3(0, 1, 0);
-  // this.zAxisHemisphericalLight.position = new THREE.Vector3(0, 0, 1);
+  this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
+  this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
+  this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
+  this.xAxisHemisphericalLight.position = new THREE.Vector3(1, 0, 0);
+  this.yAxisHemisphericalLight.position = new THREE.Vector3(0, 1, 0);
+  this.zAxisHemisphericalLight.position = new THREE.Vector3(0, 0, 1);
 
   //AVENGE ME!
+  const color = 0xFFFFFF;
+  const density = 0.007;
+  this.fog = new THREE.FogExp2(color, density);
+  parentComponent.scene.fog = this.fog;
   // if(lightingData.atmosphericPerspectiveEnabled){
-  //   this.fog = new THREE.FogExp2(0x000000, 0);
-  //   this.maxFogDensity = lightingData.atmosphericPerspectiveMaxFogDensity;
+  //   this.fog = new THREE.FogExp2(color, density);
+  //   // this.maxFogDensity = lightingData.atmosphericPerspectiveMaxFogDensity;
+  //   // this.maxFogDensity = 10000.0;
   //   parentComponent.scene.fog = this.fog;
   // }
 
@@ -45,9 +50,9 @@ StarrySky.LightingManager = function(parentComponent){
   scene.add(this.sourceLight);
   //scene.add(this.sourceLight.target)
   //AVENGE ME!
-  // scene.add(this.xAxisHemisphericalLight);
-  // scene.add(this.yAxisHemisphericalLight);
-  // scene.add(this.zAxisHemisphericalLight);
+  scene.add(this.xAxisHemisphericalLight);
+  scene.add(this.yAxisHemisphericalLight);
+  scene.add(this.zAxisHemisphericalLight);
 
   let helper = new THREE.DirectionalLightHelper(this.sourceLight, 5 , 0xffffff);
   let shadowHelper = new THREE.CameraHelper( this.sourceLight.shadow.camera, 5, 0xffffff);
@@ -69,17 +74,17 @@ StarrySky.LightingManager = function(parentComponent){
     //I also need to hook in the code from our tags for fog density under
     //sky-atmospheric-parameters and hook that value into this upon starting.
     //And drive the shadow type based on the shadow provided in sky-lighting.
-    if(this.skyDirector.assetManager.data.skyLighting.atmosphericPerspectiveEnabled){
+    //if(this.skyDirector.assetManager.data.skyLighting.atmosphericPerspectiveEnabled){
       self.skyColorVector.fromArray(lightingState, 21);
-      const magnitudeOfSkySquared = self.skyColorVector.lengthSquared();
-      self.skyColorVector.divideScalar(Math.sqrt(magnitudeOfSkySquared));
-      self.fog.density = magnitudeOfSkySquared * self.maxFogDensity;
+      // const magnitudeOfSkySquared = self.skyColorVector.lengthSquared();
+      // self.skyColorVector.divideScalar(Math.sqrt(magnitudeOfSkySquared));
+      //self.fog.density = magnitudeOfSkySquared * self.maxFogDensity;
 
       //The fog color is taken from sky color hemispherical data alone (excluding ground color)
       //and is the color taken by dotting the camera direction with the colors of our
       //hemispherical lighting along the x, z axis.
       self.fog.color.copy(self.skyColorVector);
-    }
+    //}
 
     //We update our directional light so that it's always targetting the camera.
     //We originally were going to target a point in front of the camera
@@ -95,17 +100,21 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];
     self.sourceLight.position.z = -RADIUS_OF_SKY * lightingState[25];
     self.sourceLight.color.fromArray(lightingState, 18);
-    self.sourceLight.intensity = lightingState[24];
+    self.sourceLight.intensity = lightingState[24] * 0.35;
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
     //directions of x, y and z.
     //AVENGE ME!!!
-    // self.xAxisHemisphericalLight.color.fromArray(lightingState, 0);
-    // self.yAxisHemisphericalLight.color.fromArray(lightingState, 3);
-    // self.zAxisHemisphericalLight.color.fromArray(lightingState, 6);
-    // self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
-    // self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
-    // self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
+    self.xAxisHemisphericalLight.color.fromArray(lightingState, 0);
+    self.yAxisHemisphericalLight.color.fromArray(lightingState, 3);
+    self.zAxisHemisphericalLight.color.fromArray(lightingState, 6);
+    self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
+    self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
+    self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
+
+    self.xAxisHemisphericalLight.intensity = 0.2;
+    self.yAxisHemisphericalLight.intensity = 0.2;
+    self.zAxisHemisphericalLight.intensity = 0.2;
   }
 };

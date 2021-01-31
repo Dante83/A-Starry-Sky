@@ -44,13 +44,13 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
 
   float normalizationConstantForHMD = sqrt(fmax(hmdViewX * hmdViewX + hmdViewZ * hmdViewZ, 0.0f));
   normalizationConstantForHMD = normalizationConstantForHMD > 0.0f ? normalizationConstantForHMD : 1.0f;
-  normalizationConstantForHMD = 1.0f / normalizationConstantForHMD;
-  float normalizedHMDViewX = hmdViewX * normalizationConstantForHMD;
-  float normalizedHMDViewY = hmdViewZ * normalizationConstantForHMD;
-  if((normalizedHMDViewX * normalizedHMDViewX + normalizedHMDViewY * normalizedHMDViewY) <= 0.0f){
-    normalizedHMDViewY = 1.0;
+  if((hmdViewX * hmdViewX + hmdViewZ * hmdViewZ) <= 0.0f){
+    hmdViewZ = 1.0;
   }
   float fogTotalWeight = 0.0f;
+  for(int i = 0; i < 3; ++i){
+    fogColor[i] = 0.0f;
+  }
   for(int i = 0; i < numberOfPixels; ++i){
     int iTimes4 = i * 4;
     int iTimes3 = i * 3;
@@ -63,20 +63,21 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
     };
     //Calculate the luminance
     float rgbSky[3] = {
-      skyColorIntensitiesPtr[iTimes4],
-      skyColorIntensitiesPtr[iTimes4 + 1],
-      skyColorIntensitiesPtr[iTimes4 + 2]
+      pow(skyColorIntensitiesPtr[iTimes4], 2.2f),
+      pow(skyColorIntensitiesPtr[iTimes4 + 1], 2.2f),
+      pow(skyColorIntensitiesPtr[iTimes4 + 2], 2.2f)
     };
 
+    //Because this is used throughout the next section
+    float pixelWeight = pixelWeights[i];
+    float fogWeight = fmax(hmdViewX * skyDirectionX + hmdViewZ * skyDirectionZ, 0.0f);
+    fogWeight = exp(10.0f * fogWeight);
+    fogTotalWeight += fogWeight;
     for(int j = 0; j < 3; ++j){
-      //Because this is used throughout this
-      float pixelWeight = pixelWeights[i];
-      float linearColor = pow(rgbSky[j], 2.2f);
+      float linearColor = rgbSky[j];
 
       //For fog, we presume that the y of the look direction is zero, and we just dot each of our
       //directional vectors with our hmd x and y values to decide the contribution.
-      float fogWeight = fmax(normalizedHMDViewX * skyDirectionX + normalizedHMDViewY * skyDirectionY, 0.0f) * pixelWeight;
-      fogTotalWeight += fogWeight;
       fogColor[j] += fogWeight * linearColor;
 
       for(int k = 0; k < 6; ++k){
@@ -87,7 +88,9 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
 
   //Normalize our results
   fogTotalWeight = fogTotalWeight > 0.0f ? fogTotalWeight : 1.0f;
+  printf("Total weight: %f\r\n", fogTotalWeight);
   for(int i = 0; i < 3; ++i){
+    printf("Fog Color: %f\r\n", fogColor[i]);
     fogColor[i] = pow(fogColor[i] / fogTotalWeight, ONE_OVER_TWO_POINT_TWO);
     float linearGroundColor = linearGroundColors[i];
     for(int j = 0; j < 6; ++j){
