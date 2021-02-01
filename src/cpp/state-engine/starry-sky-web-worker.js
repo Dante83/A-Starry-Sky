@@ -252,7 +252,7 @@ onmessage = function(e){
 
     // console.log(`Metering in the web worker: ${lightingColorArrayf}`);
     // console.log("Values in web worker");
-    console.log(lightingColorArrayf);
+    //console.log(lightingColorArrayf);
 
     postMessage({
       eventType: EVENT_RETURN_AUTOEXPOSURE,

@@ -21,8 +21,8 @@ void ColorInterpolator::updateFinalColorValues(float* rgb0, float* rgbf){
     //printf("R: %f G: %f B: %f\r\n", hsl0[rChannel], hsl0[gChannel], hsl0[bChannel]);
     convertRGBToHSL(rgbf[rChannel], rgbf[gChannel], rgbf[bChannel]);
     deltaHSL[rChannel] = threeVector[0];
-    deltaHSL[gChannel] = fmin(fmax(threeVector[1] - hsl0[gChannel], 0.0f), 1.0f);
-    deltaHSL[bChannel] = fmin(fmax(threeVector[2] - hsl0[bChannel], 0.0f), 1.0f);
+    deltaHSL[gChannel] = threeVector[1] - hsl0[gChannel];
+    deltaHSL[bChannel] = threeVector[2] - hsl0[bChannel];
   }
 
   for(int rChannel = 0; rChannel < 18; rChannel += 3){
@@ -119,7 +119,7 @@ void ColorInterpolator::convertRGBToHSL(float r, float g, float b){
     }
   }
 
-  float hue;
+  float hue = 0.0f;
   float saturation;
   float lightness = (maxColorChannel + minColorChannel) * 0.5f;
   float delta = maxColorChannel - minColorChannel;

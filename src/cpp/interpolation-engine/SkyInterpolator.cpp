@@ -171,7 +171,7 @@ void EMSCRIPTEN_KEEPALIVE initializeLightingValues(float* lightingDataInterpolat
 
 void EMSCRIPTEN_KEEPALIVE denormalizeSkyIntensity0(){
   float dominantLightIntensity0 = skyInterpolator->interpolatedMeteringAndLightingValues[24];
-  float intensityFactors[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, dominantLightIntensity0};
+  float intensityFactors[7] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, dominantLightIntensity0};
   for(int i = 0; i < 7; ++i){
     int offset = i * 3;
     float intensityFactor = intensityFactors[i];
@@ -229,8 +229,8 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
 
   //Normalize our light colors
   //Also if we want to convert from 0-1 to 0-255, this is where we want to do it
-  printf("color 0 R: %f G: %f B: %f\r\n", lightColors0[0], lightColors0[1], lightColors0[2]);
-  printf("color f R: %f G: %f B: %f\r\n", lightColorsf[0], lightColorsf[1], lightColorsf[2]);
+  // printf("color 0 R: %f G: %f B: %f\r\n", lightColors0[0], lightColors0[1], lightColors0[2]);
+  // printf("color f R: %f G: %f B: %f\r\n", lightColorsf[0], lightColorsf[1], lightColorsf[2]);
   // printf("dominantLightIntensity0: %f\r\n", maxColorChannel0);
   float normalization0Factors[7] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, maxColorChannel0};
   float normalizationfFactors[7] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, maxColorChannelf};
