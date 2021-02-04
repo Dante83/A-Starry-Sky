@@ -26,7 +26,6 @@ StarrySky.LightingManager = function(parentComponent){
   this.fogColorVector = new THREE.Color();
   //shadow.radius = 4.0;
 
-  //AVENGE ME!
   this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
   this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
   this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
@@ -34,7 +33,6 @@ StarrySky.LightingManager = function(parentComponent){
   this.yAxisHemisphericalLight.position = new THREE.Vector3(0, 1, 0);
   this.zAxisHemisphericalLight.position = new THREE.Vector3(0, 0, 1);
 
-  //AVENGE ME!
   const color = 0xFFFFFF;
   const density = 0.007;
   this.fog = new THREE.FogExp2(color, density);
@@ -49,7 +47,6 @@ StarrySky.LightingManager = function(parentComponent){
   const scene = parentComponent.scene;
   scene.add(this.sourceLight);
   //scene.add(this.sourceLight.target)
-  //AVENGE ME!
   scene.add(this.xAxisHemisphericalLight);
   scene.add(this.yAxisHemisphericalLight);
   scene.add(this.zAxisHemisphericalLight);
@@ -94,8 +91,6 @@ StarrySky.LightingManager = function(parentComponent){
     //LUT and is done in WASM, while the intensity is determined by whether the sun
     //or moon is in use and transitions between the two.
     //The target is a position weighted by the
-    //console.log(`x: ${this.shadowTarget.x} y: ${this.shadowTarget.y} z: ${this.shadowTarget.z}`);
-    //console.log(`R: ${lightingState[18]} G: ${lightingState[19]} B: ${lightingState[20]}`);
     self.sourceLight.position.x = -RADIUS_OF_SKY * lightingState[27];
     self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];
     self.sourceLight.position.z = -RADIUS_OF_SKY * lightingState[25];
@@ -105,19 +100,14 @@ StarrySky.LightingManager = function(parentComponent){
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
     //directions of x, y and z.
-    //AVENGE ME!!!
     self.xAxisHemisphericalLight.color.fromArray(lightingState, 0);
     self.yAxisHemisphericalLight.color.fromArray(lightingState, 3);
     self.zAxisHemisphericalLight.color.fromArray(lightingState, 6);
     self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
     self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
-    self.yAxisHemisphericalLight.groundColor.r = 0.7;
-    self.yAxisHemisphericalLight.groundColor.g = 0.4;
-    self.yAxisHemisphericalLight.groundColor.b = 0.1;
     self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-
-    self.xAxisHemisphericalLight.intensity = 0.15;
-    self.yAxisHemisphericalLight.intensity = 0.15;
-    self.zAxisHemisphericalLight.intensity = 0.15;
+    self.xAxisHemisphericalLight.intensity = 0.2;
+    self.yAxisHemisphericalLight.intensity = 0.2;
+    self.zAxisHemisphericalLight.intensity = 0.2;
   }
 };

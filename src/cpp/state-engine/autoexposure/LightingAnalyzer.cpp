@@ -88,15 +88,16 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
 
   //Normalize our results
   fogTotalWeight = fogTotalWeight > 0.0f ? fogTotalWeight : 1.0f;
-  //printf("Total weight: %f\r\n", fogTotalWeight);
   for(int i = 0; i < 3; ++i){
-    //printf("Fog Color: %f\r\n", fogColor[i]);
     fogColor[i] = pow(fogColor[i] / fogTotalWeight, ONE_OVER_TWO_POINT_TWO);
     float linearGroundColor = linearGroundColors[i];
     for(int j = 0; j < 6; ++j){
       arrayOfHemisphericalLights[j][i] *= oneOverSumOfDirectionalWeights[j];
     }
   }
+  negativeYHemisphericalLightColor[0] = rGround;
+  negativeYHemisphericalLightColor[1] = gGround;
+  negativeYHemisphericalLightColor[2] = bGround;
 
   //Half the sky for our x,z values are our ground lighting, so we will average those two, now, too.
   for(int i = 0; i < 3; ++i){

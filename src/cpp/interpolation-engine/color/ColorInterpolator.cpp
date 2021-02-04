@@ -18,26 +18,17 @@ void ColorInterpolator::updateFinalColorValues(float* rgb0, float* rgbf){
     hsl0[rChannel] = threeVector[0];
     hsl0[gChannel] = threeVector[1];
     hsl0[bChannel] = threeVector[2];
-    //printf("R: %f G: %f B: %f\r\n", hsl0[rChannel], hsl0[gChannel], hsl0[bChannel]);
     convertRGBToHSL(rgbf[rChannel], rgbf[gChannel], rgbf[bChannel]);
     deltaHSL[rChannel] = threeVector[0];
     deltaHSL[gChannel] = threeVector[1] - hsl0[gChannel];
     deltaHSL[bChannel] = threeVector[2] - hsl0[bChannel];
-  }
-
-  for(int rChannel = 0; rChannel < 18; rChannel += 3){
-    int gChannel = rChannel + 1;
-    int bChannel = rChannel + 2;
-    interpolatedMeteringAndLightingValues[rChannel] = rgbf[rChannel];
-    interpolatedMeteringAndLightingValues[gChannel] = rgbf[gChannel];
-    interpolatedMeteringAndLightingValues[bChannel] = rgbf[bChannel];
   }
 }
 
 void ColorInterpolator::updateLightingLinearInterpolations(float tFractional){
   //Interpolate our values, clamping saturation and brightness
   //converting our
-  for(int rChannel = 18; rChannel < NUMBER_OF_INTERPOLATED_COLOR_CHANNELS; rChannel += 3){
+  for(int rChannel = 0; rChannel < NUMBER_OF_INTERPOLATED_COLOR_CHANNELS; rChannel += 3){
     int gChannel = rChannel + 1;
     int bChannel = rChannel + 2;
 
@@ -71,6 +62,7 @@ void ColorInterpolator::updateLightingLinearInterpolations(float tFractional){
     float lightness = fmin(fmax(hsl0[bChannel] + tFractional * deltaHSL[bChannel], 0.0f), 1.0f);
 
     //Convert our values back into RGB
+
     convertHSLToRGB(hue, saturation, lightness);
     interpolatedMeteringAndLightingValues[rChannel] = threeVector[0];
     interpolatedMeteringAndLightingValues[gChannel] = threeVector[1];

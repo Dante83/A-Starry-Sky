@@ -90,14 +90,10 @@ float EMSCRIPTEN_KEEPALIVE updateMeteringData(float* skyColorIntensitiesPtr){
 }
 
 void EMSCRIPTEN_KEEPALIVE updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewZ){
-  //AVENGE ME!!!!
-  //AVENGED
   skyState->lightingAnalyzer->updateHemisphericalLightingData(skyColorIntensitiesPtr, hemisphericalAndDirectSkyLightPtr, hmdViewX, hmdViewZ);
 }
 
 float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer){
-  //AVENGE ME!
-  //AVENGED
   //Determine whether sun or moon is dominant based on the height
   float dominantLightRadius = sunRadius;
   float dominantLightY = sunYPosition;

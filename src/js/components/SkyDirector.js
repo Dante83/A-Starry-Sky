@@ -251,43 +251,27 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Interpolate our log average of the sky intensity
       Module._tick_lightingInterpolations(self.time);
-      //console.log(self.lightingColorValues);
       self.interpolatedSkyIntensityMagnitude = self.lightingColorValues[28];
-      //console.log(self.interpolatedSkyIntensityMagnitude);
-      //console.log(self.interpolatedSkyIntensityMagnitude);
       self.exposureVariables.starsExposure = Math.min(6.8 - self.interpolatedSkyIntensityMagnitude, 3.7);
 
       //Tick our light positions before we might just use them to set up the next interpolation
-      //AVENGE ME!!!
       self.lightingManager.tick(self.lightingColorValues);
-
-
 
       //Check if we need to update our auto-exposure final state again
       if(self.exposureT >= HALF_A_SECOND && self.transferableSkyFinalLightingBuffer.byteLength !== 0){
         self.exposureT = 0.0;
-
-        //AVENGE ME!!!
-        //AVENGED
         //Our colors are normalized and the brightnesses pulled out of them
         //so we need to inject those values back in before updating all of our colors again
         Module._denormalizeSkyIntensity0();
-        // console.log('Update');
-        // console.log(self.lightingColorValues.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS));
-        // console.log(self.lightingColorArrayf.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS));
-        // console.log(self.lightingColorValues);
         Module.HEAPF32.set(self.lightingColorValues.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS), self.lightingColorValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
         Module.HEAPF32.set(self.lightingColorArrayf.slice(0, NUMBER_OF_LIGHTING_COLOR_CHANNELS), self.lightingColorValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
 
         //While we are still on this thread, we need to copy the previous look up vector before it
         //gets changed below, as the upcoming methods invoke async
-        //AVENGE ME!!!
         this.clonedPreviousCameraLookAtVector.copy(this.previousCameraLookAtVector);
         this.clonedPreviousCameraLookAtVector.normalize();
 
         //We should also save the last position for the sun to determine if the dominant light is the sun or not
-        //AVENGE ME!!!
-        //AVENGED
         const sunRadiusf = Math.sin(self.renderers.sunRenderer.sunAngularRadiusInRadians * self.skyState.sun.scale);
         self.dominantLightIsSun0 = true;
         let dominantLightY0 = sp.y;
@@ -296,18 +280,10 @@ StarrySky.SkyDirector = function(parentComponent){
           dominantLightY0 = mp.y;
         }
 
-        //AVENGE ME!!!
         //Is this what they mean by dependency injection overload?
         //void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0,
         //bool dominantLightIsSunf, float dominantLightY0, float dominantLightf, float dominantLightIntensity0,
         //float dominantLightIntensityf, float* lightColors0, float* lightColorsf, float t_0, float t_f);
-        // console.log(`initial magnitude: ${self.interpolatedSkyIntensityMagnitude}`);
-        // console.log(`final magnitude: ${self.exposureVariables.exposureCoefficientf}`);
-        // console.log(`dominantLight is sun 0: ${self.dominantLightIsSun0}`);
-        // console.log(`dominantLight is sun f: ${self.dominantLightIsSunf}`);
-        // console.log(`spy: ${sp.y}`);
-        // console.log(`dominantLightYf: ${self.dominantLightYf}`);
-        // console.log(self.time);
         Module._updateLightingValues(self.interpolatedSkyIntensityMagnitude, self.exposureVariables.exposureCoefficientf,
           self.dominantLightIsSun0, self.dominantLightIsSunf,
           dominantLightY0, self.dominantLightYf,
@@ -317,7 +293,6 @@ StarrySky.SkyDirector = function(parentComponent){
         self.updateAutoExposure(timeDeltaInSeconds);
 
         //Set our previous lookup target
-        //AVENGE ME!!!
         const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
         this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
         this.previousCameraHeight = self.camera.position.y;
@@ -409,26 +384,16 @@ StarrySky.SkyDirector = function(parentComponent){
     }
     else if(postObject.eventType === self.EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE){
       //Hook up our intial color buffers that were created on the web worker
-      //AVENGE ME!!!!
-      //AVENGED
       const lightingColorArray0 = postObject.lightingColorArray0;
       self.lightingColorArrayf = postObject.lightingColorArrayf;
 
       //Set up our lighting color values for the first time
-      //AVENGE ME!!!
-      //AVENGED
-      //console.log("bookmark");
-      // console.log(lightingColorArray0);
-      // console.log(self.lightingColorArrayf);
       Module.HEAPF32.set(lightingColorArray0, self.lightingColorValues_0_ptr / BYTES_PER_32_BIT_FLOAT);
       Module.HEAPF32.set(self.lightingColorArrayf, self.lightingColorValues_f_ptr / BYTES_PER_32_BIT_FLOAT);
       self.lightingColorValues = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_ptr, NUMBER_OF_LIGHTING_OUT_VALUES);
 
       //Hook up our output lighting value array so we can get back multiple values from interpolating our lighting
       Module._initializeLightingValues(self.lightingColorValues_ptr);
-
-      //AVENGE ME!!!
-      //AVENGED
       Module._updateLightingValues(postObject.exposureCoefficient0,  postObject.exposureCoefficientf,
         self.dominantLightIsSun0, self.dominantLightIsSunf,
         postObject.dominantLightY0, postObject.dominantLightYf,
@@ -454,12 +419,7 @@ StarrySky.SkyDirector = function(parentComponent){
     }
     else if(postObject.eventType === self.EVENT_RETURN_AUTOEXPOSURE){
       ///Hook up our intial color buffers that were created on the web worker
-      //AVENGED
       self.lightingColorArrayf = postObject.lightingColorArrayf;
-
-      //Hook up the next float array that will drive the next interpolation time span
-      //AVENGE ME!!!
-      //AVENGED
       self.lightingColorValuesf = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_f_ptr, NUMBER_OF_LIGHTING_COLOR_CHANNELS);
 
       //Hook up our results to our interpolator for constant exposure variation
@@ -476,8 +436,6 @@ StarrySky.SkyDirector = function(parentComponent){
       const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
       const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize;
       const numberOfColorChannelsInMeteringPixel = 4;
-      //AVENGE ME!!!
-      //Avenged
       const groundColorRef = self.assetManager.data.skyLighting.groundColor;
       const groundColorArray = new Float32Array(3);
       groundColorArray[0] = groundColorRef.red / 255.0;
@@ -489,8 +447,6 @@ StarrySky.SkyDirector = function(parentComponent){
       Module._setSunAndMoonTimeTo(0.0);
       self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
       self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
-      //AVENGE ME!!!
-      //AVENGED!
       const sunYPos0 = self.rotatedAstroPositions[1];
       const moonYPos0 = self.rotatedAstroPositions[4];
       const sunRadius0 = Math.sin(self.renderers.sunRenderer.sunAngularRadiusInRadians * self.astronomicalLinearValues[1]);
@@ -505,8 +461,6 @@ StarrySky.SkyDirector = function(parentComponent){
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, transferableIntialSkyLightingFloat32Array);
 
       //Determine if our sun is the dominant light source when we start
-      //AVENGE ME!!!
-      //AVENGED
       self.dominantLightIsSun0 = true;
       self.dominantLightY0 = sunYPos0;
       if(sunYPos0 < -sunRadius0){
@@ -518,8 +472,6 @@ StarrySky.SkyDirector = function(parentComponent){
       Module._setSunAndMoonTimeTo(HALF_A_SECOND * self.speed);
       self.exposureVariables.sunPosition.fromArray(self.rotatedAstroPositions.slice(0, 3));
       self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
-      //AVENGE ME!!!
-      //AVENGED
       const sunYPosf = self.rotatedAstroPositions[1];
       const moonYPosf = self.rotatedAstroPositions[4];
       const sunRadiusf = Math.sin(self.renderers.sunRenderer.sunAngularRadiusInRadians * self.astronomicalLinearValues[1]);
@@ -534,15 +486,11 @@ StarrySky.SkyDirector = function(parentComponent){
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transferableSkyFinalLightingFloat32Array);
 
       //Get the look at target for our camera to see where we are looking
-      //AVENGE ME!!!
-      //Avenged
       const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
       this.previousCameraHeight = self.camera.position.y;
       this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
 
       //Determine if our sun is the dominant light source when we end this interpolation
-      //AVENGE ME!!!
-      //AVENGED
       self.dominantLightIsSunf = true;
       self.dominantLightYf = sunYPosf;
       if(sunYPosf < -sunRadiusf){
@@ -551,7 +499,6 @@ StarrySky.SkyDirector = function(parentComponent){
       }
 
       //Pass this information to our web worker to get our exposure value
-      //AVENGE ME!!!
       self.webAssemblyWorker.postMessage({
         eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
         heightOfCamera: this.previousCameraHeight,
@@ -591,8 +538,6 @@ StarrySky.SkyDirector = function(parentComponent){
     self.exposureVariables.moonPosition.fromArray(self.rotatedAstroPositions.slice(3, 6));
     self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
     self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
-    //AVENGE ME!!!!
-    //AVENGED
     const sunYPosf = self.rotatedAstroPositions[1];
     const moonYPosf = self.rotatedAstroPositions[4];
     const sunRadiusf = Math.sin(self.renderers.sunRenderer.sunAngularRadiusInRadians * self.astronomicalLinearValues[1]);
@@ -605,8 +550,6 @@ StarrySky.SkyDirector = function(parentComponent){
 
     //Once we know what the final estimated position will be, we determine if the final dominant light will be the sun
     //or not
-    //AVENGE ME!!!
-    //AVENGED
     self.dominantLightIsSunf = true;
     self.dominantLightYf = sunYPosf;
     if(sunYPosf < -sunRadiusf){
