@@ -28,7 +28,7 @@ extern "C" {
   void initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int transmittanceTextureSize, float* xyzPtr, float* pixelWeightsPtr, float* groundColorPtr, float* transmittanceLUTPtr, float* fogColorPtr);
   float updateMeteringData(float* skyColorIntensitiesPtr);
   void updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewZ);
-  float updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer);
+  float updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer, float* indirectLightingPointer);
 }
 
 void SkyState::updateHeap32Memory(){
@@ -93,7 +93,7 @@ void EMSCRIPTEN_KEEPALIVE updateHemisphericalLightingData(float* skyColorIntensi
   skyState->lightingAnalyzer->updateHemisphericalLightingData(skyColorIntensitiesPtr, hemisphericalAndDirectSkyLightPtr, hmdViewX, hmdViewZ);
 }
 
-float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer){
+float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer, float* indirectLightingPointer){
   //Determine whether sun or moon is dominant based on the height
   float dominantLightRadius = sunRadius;
   float dominantLightY = sunYPosition;
@@ -182,14 +182,14 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
   float oneOverTotalWeight = 1.0 / totalWeight;
   for(int i = 0; i < 3; ++i){
     //The first three items tell us the color of the light
-    directLightingPointer[i] = transmittance[i] * lightIntensity * oneOverTotalWeight;
+    directLightingPointer[i] = fmin(fmax(transmittance[i] * lightIntensity * oneOverTotalWeight, 0.0f), 1.0f);
 
     //In the event that we fall out of range, just zero everything out
     if(isnan(directLightingPointer[i])){
       directLightingPointer[i] = 0.0f;
     }
+    indirectLightingPointer[i] = fmax(1.0f - directLightingPointer[i], 0.0f);
   }
-
   skyState->lightingAnalyzer->yComponentOfDirectLighting = dominantLightY;
   skyState->lightingAnalyzer->directLightingColor[0] = directLightingPointer[0];
   skyState->lightingAnalyzer->directLightingColor[1] = directLightingPointer[1];
@@ -244,7 +244,7 @@ void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfM
     sumOfPixelDirectionalWeights[1] += fmax(y3, 0.0f) * thisPixelsWeight;
     sumOfPixelDirectionalWeights[2] += fmax(z3, 0.0f) * thisPixelsWeight;
     sumOfPixelDirectionalWeights[3] += fmax(-x3, 0.0f) * thisPixelsWeight;
-    sumOfPixelDirectionalWeights[4] += fmax(y3, 0.0f) * thisPixelsWeight;
+    sumOfPixelDirectionalWeights[4] += fmax(-y3, 0.0f) * thisPixelsWeight;
     sumOfPixelDirectionalWeights[5] += fmax(-z3, 0.0f) * thisPixelsWeight;
   }
   skyState->lightingAnalyzer->oneOverSumOfWeightWeights = 1.0f / sumOfPixelWeights;

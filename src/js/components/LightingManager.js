@@ -2,7 +2,7 @@
 //with shadows enabled. The shadow enabled directional light is shared between the sun
 //and the moon in order to reduce the rendering load.
 StarrySky.LightingManager = function(parentComponent){
-  const RADIUS_OF_SKY = 4990.0;
+  const RADIUS_OF_SKY = 5000.0;
   this.skyDirector = parentComponent;
   const lightingData = this.skyDirector.assetManager.data.skyLighting;
   this.sourceLight = new THREE.DirectionalLight(0xffffff, 4.0);
@@ -10,22 +10,19 @@ StarrySky.LightingManager = function(parentComponent){
   this.sourceLight.castShadow = true;
   shadow.mapSize.width = lightingData.shadowCameraResolution;
   shadow.mapSize.height = lightingData.shadowCameraResolution;
-  shadow.camera.near = RADIUS_OF_SKY - 128.0;
+  shadow.camera.near = 128.0;
   shadow.camera.far = RADIUS_OF_SKY * 2.0;
-  shadow.camera.left = -32.0;
-  shadow.camera.right = 32.0;
-  shadow.camera.bottom = -32.0;
-  shadow.camera.top = 32.0;
-  shadow.bias = -0.0003;
+  const directLightingCameraSize = lightingData.shadowCameraSize;
+  shadow.camera.left = -directLightingCameraSize;
+  shadow.camera.right = directLightingCameraSize;
+  shadow.camera.bottom = -directLightingCameraSize;
+  shadow.camera.top = directLightingCameraSize;
   this.sourceLight.target = this.skyDirector.camera;
-  //shadow.normalBias = 0.0001;
   const  totalDistance = lightingData.shadowDrawDistance + lightingData.shadowDrawBehindDistance;
   this.targetScalar = 0.5 * totalDistance - lightingData.shadowDrawBehindDistance;
   this.shadowTarget = new THREE.Vector3();
   this.shadowTargetOffset = new THREE.Vector3();
   this.fogColorVector = new THREE.Color();
-  //shadow.radius = 4.0;
-
   this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
   this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
   this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
@@ -34,28 +31,19 @@ StarrySky.LightingManager = function(parentComponent){
   this.zAxisHemisphericalLight.position = new THREE.Vector3(0, 0, 1);
 
   const color = 0xFFFFFF;
-  const density = 0.007;
-  this.fog = new THREE.FogExp2(color, density);
+  // const density = 0.007;
+  // this.fog = new THREE.FogExp2(color, density);
   parentComponent.scene.fog = this.fog;
-  // if(lightingData.atmosphericPerspectiveEnabled){
-  //   this.fog = new THREE.FogExp2(color, density);
-  //   // this.maxFogDensity = lightingData.atmosphericPerspectiveMaxFogDensity;
-  //   // this.maxFogDensity = 10000.0;
-  //   parentComponent.scene.fog = this.fog;
-  // }
+  if(lightingData.atmosphericPerspectiveEnabled){
+    this.fog = new THREE.FogExp2(color, lightingData.atmosphericPerspectiveDensity);
+    parentComponent.scene.fog = this.fog;
+  }
 
   const scene = parentComponent.scene;
   scene.add(this.sourceLight);
-  //scene.add(this.sourceLight.target)
   scene.add(this.xAxisHemisphericalLight);
   scene.add(this.yAxisHemisphericalLight);
   scene.add(this.zAxisHemisphericalLight);
-
-  // let helper = new THREE.DirectionalLightHelper(this.sourceLight, 5 , 0xffffff);
-  // let shadowHelper = new THREE.CameraHelper( this.sourceLight.shadow.camera, 5, 0xffffff);
-  // scene.add(helper);
-  // scene.add(shadowHelper);
-
   this.cameraRef = parentComponent.camera;
   const self = this;
   this.tick = function(lightingState){
@@ -71,17 +59,20 @@ StarrySky.LightingManager = function(parentComponent){
     //I also need to hook in the code from our tags for fog density under
     //sky-atmospheric-parameters and hook that value into this upon starting.
     //And drive the shadow type based on the shadow provided in sky-lighting.
-    //if(this.skyDirector.assetManager.data.skyLighting.atmosphericPerspectiveEnabled){
+    if(lightingData.atmosphericPerspectiveEnabled){
       self.fogColorVector.fromArray(lightingState, 21);
-      // const magnitudeOfSkySquared = self.fogColorVector.lengthSquared();
-      // self.fogColorVector.divideScalar(Math.sqrt(magnitudeOfSkySquared));
-      //self.fog.density = magnitudeOfSkySquared * self.maxFogDensity;
+      const maxVal = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
+      // const inverseMagnitudeOfSky = 1.0 / maxVal;
+      // self.fogColorVector.r *= inverseMagnitudeOfSky;
+      // self.fogColorVector.g *= inverseMagnitudeOfSky;
+      // self.fogColorVector.b *= inverseMagnitudeOfSky;
+      // self.fog.density = maxVal * self.maxFogDensity;
 
       //The fog color is taken from sky color hemispherical data alone (excluding ground color)
       //and is the color taken by dotting the camera direction with the colors of our
       //hemispherical lighting along the x, z axis.
       self.fog.color.copy(self.fogColorVector);
-    //}
+    }
 
     //We update our directional light so that it's always targetting the camera.
     //We originally were going to target a point in front of the camera
@@ -95,7 +86,7 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];
     self.sourceLight.position.z = -RADIUS_OF_SKY * lightingState[25];
     self.sourceLight.color.fromArray(lightingState, 18);
-    self.sourceLight.intensity = lightingState[24] * 0.35;
+    self.sourceLight.intensity = lightingState[24] * 0.75;
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
@@ -106,8 +97,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
     self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
     self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    self.xAxisHemisphericalLight.intensity = 0.2;
-    self.yAxisHemisphericalLight.intensity = 0.2;
-    self.zAxisHemisphericalLight.intensity = 0.2;
+    self.xAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
+    self.yAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
+    self.zAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
   }
 };

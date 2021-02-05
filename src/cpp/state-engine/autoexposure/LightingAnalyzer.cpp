@@ -70,8 +70,7 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
 
     //Because this is used throughout the next section
     float pixelWeight = pixelWeights[i];
-    float fogWeight = fmax(hmdViewX * skyDirectionX + hmdViewZ * skyDirectionZ, 0.0f);
-    fogWeight = exp(10.0f * fogWeight);
+    float fogWeight = fmax(-hmdViewX * skyDirectionZ - hmdViewZ * skyDirectionX, 0.0f);
     fogTotalWeight += fogWeight;
     for(int j = 0; j < 3; ++j){
       float linearColor = rgbSky[j];

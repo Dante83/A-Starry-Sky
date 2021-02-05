@@ -21,6 +21,8 @@ public:
   float deltaDominantLightY;
   float dominantLightIntensity0;
   float deltaDominantLightIntensity;
+  float indirectLightIntensity0;
+  float deltaIndirectLightIntensity;
   float initialSkyHemisphericalLightingColor[3];
   float estimatedFinalSkyHemisphericalLightingColor[3];
   float deltaPositions[14];

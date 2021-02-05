@@ -153,6 +153,7 @@ function initializeHemisphericalLighting(postObject){
   lightingState.groundColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT);
   Module.HEAPF32.set(postObject.groundColor.slice(), lightingState.groundColorPtr / BYTES_PER_32_BIT_FLOAT);
   lightingState.fogColorPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT);
+  lightingState.indirectLightingColorIntensityPtr = Module._malloc(3 * BYTES_PER_32_BIT_FLOAT);
 
   //Start by intializing our masks and directional vectors
   //void initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int transmittanceTextureSize,
@@ -166,30 +167,37 @@ function initializeHemisphericalLighting(postObject){
   const exposureCoefficient0 = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
   const dominantLightY0 = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPosition0,
     postObject.sunRadius0, postObject.moonRadius0, postObject.moonYPosition0, postObject.sunIntensity0 * 0.01,
-    postObject.moonIntensity0, exposureCoefficient0, lightingState.directLightingColorPtr);
+    postObject.moonIntensity0, exposureCoefficient0, lightingState.directLightingColorPtr, lightingState.indirectLightingColorPtr);
   Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
   //Copy our results into a new transferrable buffer that we will pass back to CPU 0
   const directLightingPointerStart = lightingState.directLightingColorPtr / BYTES_PER_32_BIT_FLOAT;
   const hemisphericalLightingPointerStart = lightingState.skyHemisphericalLightColorPtr / BYTES_PER_32_BIT_FLOAT;
   const fogColorPointerStart = lightingState.fogColorPtr / BYTES_PER_32_BIT_FLOAT;
-  let lightingColorArray0 = new Float32Array(24);
+  let lightingColorArray0 = new Float32Array(25);
   lightingColorArray0.set(Module.HEAPF32.slice(hemisphericalLightingPointerStart, hemisphericalLightingPointerStart + 18), 0);
   lightingColorArray0.set(Module.HEAPF32.slice(directLightingPointerStart, directLightingPointerStart + 3), 18);
   lightingColorArray0.set(Module.HEAPF32.slice(fogColorPointerStart, fogColorPointerStart + 3), 21);
+
+  const indirectLightingColorIntensityPtrStart = lightingState.indirectLightingColorIntensityPtr / BYTES_PER_32_BIT_FLOAT;
+  let indirectLightingColor = Module.HEAPF32.slice(indirectLightingColorIntensityPtrStart, indirectLightingColorIntensityPtrStart + 3);
+  lightingColorArray0[25] = Math.max(...indirectLightingColor);
 
   Module.HEAPF32.set(postObject.meteringSurveyFloatArrayf, lightingState.skyMeteringSurveyMemoryPtr / BYTES_PER_32_BIT_FLOAT);
   const exposureCoefficientf = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
   const dominantLightYf = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf,
     postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf * 0.01,
-    postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr);
+    postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr, lightingState.indirectLightingColorIntensityPtr);
   Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
   //Copy our results into a new transferrable buffer that we will pass back to CPU 0
-  let lightingColorArrayf = new Float32Array(24);
+  let lightingColorArrayf = new Float32Array(25);
   lightingColorArrayf.set(Module.HEAPF32.slice(hemisphericalLightingPointerStart, hemisphericalLightingPointerStart + 18), 0);
   lightingColorArrayf.set(Module.HEAPF32.slice(directLightingPointerStart, directLightingPointerStart + 3), 18);
   lightingColorArrayf.set(Module.HEAPF32.slice(fogColorPointerStart, fogColorPointerStart + 3), 21);
+
+  indirectLightingColor = Module.HEAPF32.slice(indirectLightingColorIntensityPtrStart, indirectLightingColorIntensityPtrStart + 3);
+  lightingColorArrayf[24] = Math.max(...indirectLightingColor);
 
   //The code below has been borked to allow us to pass back null things
   postMessage({
@@ -215,17 +223,21 @@ onmessage = function(e){
     let directLightingColorf = new Float32Array(3);
     const dominantLightYf = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf,
       postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf * 0.01,
-      postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr);
+      postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr, lightingState.indirectLightingColorIntensityPtr);
     Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr, postObject.hmdViewX, postObject.hmdViewZ);
     //
     // //Copy our results into a new transferrable buffer that we will pass back to CPU 0
     const directLightingPointerStart = lightingState.directLightingColorPtr / BYTES_PER_32_BIT_FLOAT;
     const hemisphericalLightingPointerStart = lightingState.skyHemisphericalLightColorPtr / BYTES_PER_32_BIT_FLOAT;
     const fogColorPointerStart = lightingState.fogColorPtr / BYTES_PER_32_BIT_FLOAT;
-    let lightingColorArrayf = new Float32Array(24);
+    let lightingColorArrayf = new Float32Array(25);
     lightingColorArrayf.set(Module.HEAPF32.slice(hemisphericalLightingPointerStart, hemisphericalLightingPointerStart + 18), 0);
     lightingColorArrayf.set(Module.HEAPF32.slice(directLightingPointerStart, directLightingPointerStart + 3), 18);
     lightingColorArrayf.set(Module.HEAPF32.slice(fogColorPointerStart, fogColorPointerStart + 3), 21);
+
+    const indirectLightingColorIntensityPtrStart = lightingState.indirectLightingColorIntensityPtr / BYTES_PER_32_BIT_FLOAT;
+    let indirectLightingColor = Module.HEAPF32.slice(indirectLightingColorIntensityPtrStart, indirectLightingColorIntensityPtrStart + 3);
+    lightingColorArrayf[24] = Math.max(...indirectLightingColor);
 
     postMessage({
       eventType: EVENT_RETURN_AUTOEXPOSURE,
