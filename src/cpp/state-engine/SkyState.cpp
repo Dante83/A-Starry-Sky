@@ -216,8 +216,8 @@ void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfM
   const float radiusOfSkyCircle = halfWidthOfTexture * halfWidthOfTexture;
   const int numberOfPixels = widthOfMeteringTexture * widthOfMeteringTexture;
   for(int i = 0; i < numberOfPixels; ++i){
-    float x = (i % widthOfMeteringTexture) - halfWidthOfTexture;
-    float y = floor(i / widthOfMeteringTexture) - halfWidthOfTexture;
+    float x = ((i % widthOfMeteringTexture) - halfWidthOfTexture) / halfWidthOfTexture;
+    float y = (floor(i / widthOfMeteringTexture) - halfWidthOfTexture) / halfWidthOfTexture;
 
     //Use this to set the x y and z coordinates of our pixel
     float rhoSquared = x * x + y * y;
@@ -239,13 +239,15 @@ void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfM
     float pixelRadius = x * x + y * y;
     float thisPixelsWeight = pixelRadius < radiusOfSkyCircle ? 1.0f : 0.0f;
     skyState->lightingAnalyzer->pixelWeights[i] = thisPixelsWeight;
-    sumOfPixelWeights += thisPixelsWeight;
-    sumOfPixelDirectionalWeights[0] += fmax(x3, 0.0f) * thisPixelsWeight;
-    sumOfPixelDirectionalWeights[1] += fmax(y3, 0.0f) * thisPixelsWeight;
-    sumOfPixelDirectionalWeights[2] += fmax(z3, 0.0f) * thisPixelsWeight;
-    sumOfPixelDirectionalWeights[3] += fmax(-x3, 0.0f) * thisPixelsWeight;
-    sumOfPixelDirectionalWeights[4] += fmax(-y3, 0.0f) * thisPixelsWeight;
-    sumOfPixelDirectionalWeights[5] += fmax(-z3, 0.0f) * thisPixelsWeight;
+    if(!isnan(x3) && !isnan(y3) && !isnan(z3)){
+      sumOfPixelWeights += thisPixelsWeight;
+      sumOfPixelDirectionalWeights[0] += fmax(x3, 0.0f) * thisPixelsWeight;
+      sumOfPixelDirectionalWeights[1] += fmax(y3, 0.0f) * thisPixelsWeight;
+      sumOfPixelDirectionalWeights[2] += fmax(z3, 0.0f) * thisPixelsWeight;
+      sumOfPixelDirectionalWeights[3] += fmax(-x3, 0.0f) * thisPixelsWeight;
+      sumOfPixelDirectionalWeights[4] += fmax(-y3, 0.0f) * thisPixelsWeight;
+      sumOfPixelDirectionalWeights[5] += fmax(-z3, 0.0f) * thisPixelsWeight;
+    }
   }
   skyState->lightingAnalyzer->oneOverSumOfWeightWeights = 1.0f / sumOfPixelWeights;
   for(int i = 0; i < 6; ++i){

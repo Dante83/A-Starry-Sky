@@ -24,18 +24,15 @@ StarrySky.LightingManager = function(parentComponent){
   this.shadowTargetOffset = new THREE.Vector3();
   this.fogColorVector = new THREE.Color();
   this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
-  this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
+  this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
   this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
-  this.xAxisHemisphericalLight.position = new THREE.Vector3(1, 0, 0);
-  this.yAxisHemisphericalLight.position = new THREE.Vector3(0, 1, 0);
-  this.zAxisHemisphericalLight.position = new THREE.Vector3(0, 0, 1);
+  this.xAxisHemisphericalLight.position.set(1,0,0);
+  this.yAxisHemisphericalLight.position.set(0,1,0);
+  this.zAxisHemisphericalLight.position.set(0,0,1);
 
-  const color = 0xFFFFFF;
-  // const density = 0.007;
-  // this.fog = new THREE.FogExp2(color, density);
   parentComponent.scene.fog = this.fog;
   if(lightingData.atmosphericPerspectiveEnabled){
-    this.fog = new THREE.FogExp2(color, lightingData.atmosphericPerspectiveDensity);
+    this.fog = new THREE.FogExp2(0xFFFFFF, lightingData.atmosphericPerspectiveDensity);
     parentComponent.scene.fog = this.fog;
   }
 
@@ -86,7 +83,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];
     self.sourceLight.position.z = -RADIUS_OF_SKY * lightingState[25];
     self.sourceLight.color.fromArray(lightingState, 18);
-    self.sourceLight.intensity = lightingState[24] * 0.75;
+    self.sourceLight.intensity = lightingState[24] * 0.45;
+    //self.sourceLight.intensity = 0.0;
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
@@ -100,5 +98,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.xAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
     self.yAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
     self.zAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
+    self.xAxisHemisphericalLight.intensity = 0.15;
+    self.yAxisHemisphericalLight.intensity = 0.15;
+    self.zAxisHemisphericalLight.intensity = 0.15;
   }
 };

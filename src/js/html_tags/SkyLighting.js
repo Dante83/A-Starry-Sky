@@ -26,7 +26,7 @@ class SkyLighting extends HTMLElement {
 
     //Check if there are any child elements. Otherwise set them to the default.
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.lightingParameters;
+    this.data = StarrySky.DefaultData.lighting;
   }
 
   connectedCallback(){
@@ -41,14 +41,14 @@ class SkyLighting extends HTMLElement {
       let shadowCameraSizeTags = self.getElementsByTagName('sky-shadow-camera-size');
       let shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
 
-      [groundColorTags, atmosphericPerspectiveDisabledTags, shadowCameraSizeTags, shadowCameraResolutionTags].forEach(function(tags){
+      [groundColorTags, atmosphericPerspectiveDensityTags, shadowCameraSizeTags, shadowCameraResolutionTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-lighting-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
       });
 
       //With special subcases for our ground color tags
-      [groundColor].forEach(function(tags){
+      [groundColorTags].forEach(function(tags){
         if(tags.length === 1){
           //Check that it only contains one of each of the following child tags
           let redTags = tags[0].getElementsByTagName('sky-ground-color-red');
@@ -86,15 +86,16 @@ class SkyLighting extends HTMLElement {
       self.data.shadowCameraResolution = clampAndWarn(self.data.shadowCameraResolution, 32, 15360, '<sky-shadow-camera-resolution>');
 
       //Parse our ground color
-      if(groundColor.length === 1){
-        if(groundColor.getElementsByTagName('sky-ground-color-red').length > 0){
-          self.data.groundColor.red = clampAndWarn(parseInt(solarIntensityTags.getElementsByTagName('sky-ground-color-red')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+      if(groundColorTags.length === 1){
+        const firstGroundColorTagGroup = groundColorTags[0];
+        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red').length > 0){
+          self.data.groundColor.red = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red')[0].innerHTML), 0, 255, 'sky-ground-color-red');
         }
-        if(groundColor.getElementsByTagName('sky-ground-color-green').length > 0){
-          self.data.groundColor.green = clampAndWarn(parseInt(solarIntensityTags.getElementsByTagName('sky-ground-color-green')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green').length > 0){
+          self.data.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML), 0, 255, 'sky-ground-color-red');
         }
-        if(groundColor.getElementsByTagName('sky-ground-color-blue').length > 0){
-          self.data.groundColor.blue = clampAndWarn(parseInt(solarIntensityTags.getElementsByTagName('sky-ground-color-blue')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue').length > 0){
+          self.data.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML), 0, 255, 'sky-ground-color-red');
         }
       }
 

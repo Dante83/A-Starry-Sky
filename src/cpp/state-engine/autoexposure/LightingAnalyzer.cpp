@@ -51,36 +51,43 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
   for(int i = 0; i < 3; ++i){
     fogColor[i] = 0.0f;
   }
+  int numXNANs = 0;
+  int numYNANS = 0;
+  int numZNANS = 0;
+  int totalNumber = 0;
   for(int i = 0; i < numberOfPixels; ++i){
     int iTimes4 = i * 4;
     int iTimes3 = i * 3;
     float skyDirectionX = xyzCoordinatesOfPixel[iTimes3];
     float skyDirectionY = xyzCoordinatesOfPixel[iTimes3 + 1];
     float skyDirectionZ = xyzCoordinatesOfPixel[iTimes3 + 2];
-    float hemisphericalLightingMagnitude[6] = {
-      skyDirectionX, skyDirectionY, skyDirectionZ,
-      -skyDirectionX, -skyDirectionY, -skyDirectionZ
-    };
-    //Calculate the luminance
-    float rgbSky[3] = {
-      pow(skyColorIntensitiesPtr[iTimes4], 2.2f),
-      pow(skyColorIntensitiesPtr[iTimes4 + 1], 2.2f),
-      pow(skyColorIntensitiesPtr[iTimes4 + 2], 2.2f)
-    };
 
-    //Because this is used throughout the next section
-    float pixelWeight = pixelWeights[i];
-    float fogWeight = fmax(-hmdViewX * skyDirectionZ - hmdViewZ * skyDirectionX, 0.0f);
-    fogTotalWeight += fogWeight;
-    for(int j = 0; j < 3; ++j){
-      float linearColor = rgbSky[j];
+    if(!isnan(skyDirectionX) && !isnan(skyDirectionY) && !isnan(skyDirectionZ)){
+      float hemisphericalLightingMagnitude[6] = {
+        skyDirectionX, skyDirectionY, skyDirectionZ,
+        -skyDirectionX, -skyDirectionY, -skyDirectionZ
+      };
+      //Calculate the luminance
+      float rgbSky[3] = {
+        pow(skyColorIntensitiesPtr[iTimes4], 2.2f),
+        pow(skyColorIntensitiesPtr[iTimes4 + 1], 2.2f),
+        pow(skyColorIntensitiesPtr[iTimes4 + 2], 2.2f)
+      };
 
-      //For fog, we presume that the y of the look direction is zero, and we just dot each of our
-      //directional vectors with our hmd x and y values to decide the contribution.
-      fogColor[j] += fogWeight * linearColor;
+      //Because this is used throughout the next section
+      float pixelWeight = pixelWeights[i];
+      float fogWeight = fmax(hmdViewX * skyDirectionX + hmdViewZ * skyDirectionZ, 0.0f);
+      fogTotalWeight += fogWeight;
+      for(int j = 0; j < 3; ++j){
+        float linearColor = rgbSky[j];
 
-      for(int k = 0; k < 6; ++k){
-        arrayOfHemisphericalLights[k][j] += fmax(hemisphericalLightingMagnitude[k], 0.0f) * linearColor;
+        //For fog, we presume that the y of the look direction is zero, and we just dot each of our
+        //directional vectors with our hmd x and y values to decide the contribution.
+        fogColor[j] += fogWeight * linearColor;
+
+        for(int k = 0; k < 6; ++k){
+          arrayOfHemisphericalLights[k][j] += fmax(hemisphericalLightingMagnitude[k], 0.0f) * linearColor;
+        }
       }
     }
   }
