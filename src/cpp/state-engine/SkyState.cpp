@@ -143,7 +143,7 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
   int widthOfTransmittanceTexture = skyState->lightingAnalyzer->widthOfTransmittanceTexture;
   float xPosition = 0.5f * (1.0f + dominantLightY) * static_cast<float>(widthOfTransmittanceTexture);
   float r = heightOfCamera + RADIUS_OF_EARTH;
-  float yPosition = 1.0 - sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED) * static_cast<float>(widthOfTransmittanceTexture);
+  float yPosition = sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED) * static_cast<float>(widthOfTransmittanceTexture);
 
   //Get the look-up color for the LUT for the weighted nearest 4 colors
   float transmittance[3] = {0.0, 0.0, 0.0};
@@ -191,9 +191,14 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
     indirectLightingPointer[i] = fmax(1.0f - directLightingPointer[i], 0.0f);
   }
   skyState->lightingAnalyzer->yComponentOfDirectLighting = dominantLightY;
-  skyState->lightingAnalyzer->directLightingColor[0] = directLightingPointer[0];
-  skyState->lightingAnalyzer->directLightingColor[1] = directLightingPointer[1];
-  skyState->lightingAnalyzer->directLightingColor[2] = directLightingPointer[2];
+
+  float directLightMeteringScalar = skyState->lightingAnalyzer->meteringValue;
+  skyState->lightingAnalyzer->directLightingColor[0] = directLightMeteringScalar * directLightingPointer[0];
+  skyState->lightingAnalyzer->directLightingColor[1] = directLightMeteringScalar * directLightingPointer[1];
+  skyState->lightingAnalyzer->directLightingColor[2] = directLightMeteringScalar * directLightingPointer[2];
+  directLightingPointer[0] = skyState->lightingAnalyzer->directLightingColor[0];
+  directLightingPointer[1] = skyState->lightingAnalyzer->directLightingColor[1];
+  directLightingPointer[2] = skyState->lightingAnalyzer->directLightingColor[2];
 
   //Apply this LUT transmittance to our direct lighting
   return dominantLightY;
@@ -237,7 +242,7 @@ void EMSCRIPTEN_KEEPALIVE initializeMeteringAndLightingDependencies(int widthOfM
     xyzPtr[i * 3 + 2] = z3;
 
     float pixelRadius = x * x + y * y;
-    float thisPixelsWeight = pixelRadius < radiusOfSkyCircle ? 1.0f : 0.0f;
+    float thisPixelsWeight = pixelRadius < 1.0 ? 1.0f : 0.0f;
     skyState->lightingAnalyzer->pixelWeights[i] = thisPixelsWeight;
     if(!isnan(x3) && !isnan(y3) && !isnan(z3)){
       sumOfPixelWeights += thisPixelsWeight;

@@ -9,9 +9,9 @@ window.customElements.define('sky-shadow-camera-resolution', class extends HTMLE
 
 StarrySky.DefaultData.lighting = {
   groundColor: {
-    red: 101,
-    green: 67,
-    blue: 3
+    red: 33,
+    green: 22,
+    blue: 1
   },
   atmosphericPerspectiveEnabled: true,
   atmosphericPerspectiveDensity: 0.007,

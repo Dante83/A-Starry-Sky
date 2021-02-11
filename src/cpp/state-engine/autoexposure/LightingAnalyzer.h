@@ -6,6 +6,7 @@ public:
   int widthOfTransmittanceTexture;
   float oneOverSumOfWeightWeights;
   float yComponentOfDirectLighting;
+  float meteringValue;
   float directLightingColor[3];
   float oneOverSumOfDirectionalWeights[6];
   float* transmittanceLUT;

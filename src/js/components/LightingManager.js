@@ -83,8 +83,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];
     self.sourceLight.position.z = -RADIUS_OF_SKY * lightingState[25];
     self.sourceLight.color.fromArray(lightingState, 18);
-    self.sourceLight.intensity = lightingState[24] * 0.45;
-    //self.sourceLight.intensity = 0.0;
+    self.sourceLight.intensity = lightingState[24];
+    self.sourceLight.intensity = 0.3;
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
@@ -95,11 +95,11 @@ StarrySky.LightingManager = function(parentComponent){
     self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
     self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
     self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    self.xAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
-    self.yAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
-    self.zAxisHemisphericalLight.intensity = lightingState[25] * 0.75;
-    self.xAxisHemisphericalLight.intensity = 0.15;
-    self.yAxisHemisphericalLight.intensity = 0.15;
-    self.zAxisHemisphericalLight.intensity = 0.15;
+    self.xAxisHemisphericalLight.intensity = lightingState[25];
+    self.yAxisHemisphericalLight.intensity = lightingState[25];
+    self.zAxisHemisphericalLight.intensity = lightingState[25];
+    self.xAxisHemisphericalLight.intensity = 0.2;
+    self.yAxisHemisphericalLight.intensity = 0.2;
+    self.zAxisHemisphericalLight.intensity = 0.2;
   }
 };

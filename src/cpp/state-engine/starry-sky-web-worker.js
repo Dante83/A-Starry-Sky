@@ -139,9 +139,12 @@ function initializeHemisphericalLighting(postObject){
   for(let i = 0; i < numPixelsInTransmittanceTexture; ++i){
     const iTimes4 = i * 4;
     const iTimes3 = i * 3;
-    transmittanceRGB[iTimes3] = postObject.transmittanceTextureLUT[iTimes4];
-    transmittanceRGB[iTimes3 + 1] = postObject.transmittanceTextureLUT[iTimes4 + 1];
-    transmittanceRGB[iTimes3 + 2] = postObject.transmittanceTextureLUT[iTimes4 + 2];
+    const r = postObject.transmittanceTextureLUT[iTimes4];
+    const g = postObject.transmittanceTextureLUT[iTimes4 + 1];
+    const b = postObject.transmittanceTextureLUT[iTimes4 + 2];
+    transmittanceRGB[iTimes3] = Number.isNaN(r) ? 0.0 : r;
+    transmittanceRGB[iTimes3 + 1] = Number.isNaN(g) ? 0.0 : g;
+    transmittanceRGB[iTimes3 + 2] = Number.isNaN(b) ? 0.0 : b;
   }
   lightingState.skyMeteringSurveyMemoryPtr = Module._malloc(meteringSurveyBufferLength * BYTES_PER_32_BIT_FLOAT);
   lightingState.skyDirectionalVectorMemoryPtr = Module._malloc(directionalSurveyBufferLength * BYTES_PER_32_BIT_FLOAT);

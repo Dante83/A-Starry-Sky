@@ -149,5 +149,9 @@ float LightingAnalyzer::updateMeteringData(float* skyColorIntensitiesPtr){
 
   //But really we're just using hacky functions that I figured out over like months.
   //I don't think I have the above code understood at all - it's just a reference for the future.
-  return 0.2f * pow(fmax(logAverageOfLuminance * oneOverSumOfWeightWeights, 0.0), 2.4f);
+  meteringValue = 0.2f * pow(fmax(logAverageOfLuminance * oneOverSumOfWeightWeights, 0.0), 2.4f);
+
+  //printf("logAverageOfLuminance: %f\r\n", logAverageOfLuminance);
+
+  return meteringValue;
 }

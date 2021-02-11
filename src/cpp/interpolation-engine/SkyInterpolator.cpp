@@ -135,7 +135,6 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
     //Moon x z position
     directLightingX = skyInterpolator->rotatedAstroPositions[3];
     directLightingZ = skyInterpolator->rotatedAstroPositions[5];
-    directLightIntensity *= pow(100.0, fmin(6.8 - meteringValue, 3.7) * 0.2);
     indirectLightIntensity *= skyInterpolator->rotationallyDepedentAstroValues[START_OF_HORIZON_FADE_INDEX + 1];
   }
   float directLightingY = skyInterpolator->dominantLightY0 + tFractional * skyInterpolator->deltaDominantLightY;
@@ -174,15 +173,12 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
   skyInterpolator->deltaLogAverageOfSkyIntensity = skyIntensityf - skyIntensity0;
   skyInterpolator->indirectLightIntensity0 = lightColors0[24];
   skyInterpolator->deltaIndirectLightIntensity = lightColorsf[24] - skyInterpolator->indirectLightIntensity0;
-  float color0 = lightColorsf[18];
-  float color1 = lightColorsf[19];
-  float color2 = lightColorsf[20];
-  float maxColorChannel0 = fmax(fmax(color0, color1), color2);
-  color0 = lightColorsf[18];
-  color1 = lightColorsf[19];
-  color2 = lightColorsf[20];
-  float maxColorChannelf = fmax(fmax(color0, color1), color2);
 
+  //This is the blue light color off our direct lighting in the array - because damn magic numbers.
+  //Damn you WASM for using magic numbers for everything, I want a damn object not some giant array.
+  float maxColorChannel0 = fmax(lightColors0[18], fmax(lightColors0[19], lightColors0[20]));
+  float maxColorChannelf = fmax(lightColorsf[18], fmax(lightColorsf[19], lightColorsf[20]));
+  float finalDominantLightIntensity = maxColorChannelf;
   if(dominantLightIsSun0 != dominantLightIsSunf){
     //This is either the transition to night time or day time
     //in which case we always have the sun dominate
@@ -195,11 +191,13 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
       //Sun is setting, in which case fade out the entire brightness by the time it's set
       skyInterpolator->dominantLightIntensity0 = maxColorChannel0;
       skyInterpolator->deltaDominantLightIntensity = -maxColorChannel0;
+      finalDominantLightIntensity = 0.0;
     }
     else{
       //Sun is rising, in which case, ramp it up to full by the time it is visible
       skyInterpolator->dominantLightIntensity0 = 0.0;
       skyInterpolator->deltaDominantLightIntensity = maxColorChannelf;
+      finalDominantLightIntensity = maxColorChannelf;
     }
   }
   else{
@@ -208,6 +206,7 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
     skyInterpolator->deltaDominantLightY = dominantLightYf - dominantLightY0;
     skyInterpolator->dominantLightIntensity0 = maxColorChannel0;
     skyInterpolator->deltaDominantLightIntensity = maxColorChannelf - maxColorChannel0;
+    finalDominantLightIntensity = maxColorChannelf;
   }
 
   //Normalize our light colors
@@ -216,8 +215,8 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
   float normalizationfFactors[7] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, maxColorChannelf};
   for(int i = 0; i < 7; ++i){
     int offset = i * 3;
-    float normalizationFactor0 = normalization0Factors[i] > 0.0f ? 1.0f / normalization0Factors[i] : 0.0f;
-    float normalizationFactorf = normalizationfFactors[i] > 0.0f ? 1.0f / normalizationfFactors[i] : 0.0f;
+    float normalizationFactor0 = normalization0Factors[i] > 0.0f ? 1.0f / normalization0Factors[i] : 1.0f;
+    float normalizationFactorf = normalizationfFactors[i] > 0.0f ? 1.0f / normalizationfFactors[i] : 1.0f;
     for(int j = 0; j < 3; ++j){
       lightColors0[offset + j] *= normalizationFactor0;
       lightColorsf[offset + j] *= normalizationFactorf;
