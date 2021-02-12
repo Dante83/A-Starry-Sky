@@ -163,6 +163,7 @@ void Moon::updatePosition(double trueObliquityOfEclipticInRads){
   #define FULL_EARTHSHINE 0.19
   earthShineIntensity = abs(0.5 * FULL_EARTHSHINE * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(1.0 / tan(0.5 * phiOverTwo))));
   irradianceFromEarth = illuminationOfMoonCoefficient * (earthShineIntensity + sun->irradianceFromEarth) * (1.0 - sin(phiOverTwo) * tan(phiOverTwo) * log(1.0 / tan(0.5 * phiOverTwo)));
+  illuminatedFractionOfMoon = (1.0 + cos(lunarPhaseAngleInRads)) * 0.5;
 
   //Update the paralactic angle
   updateParalacticAngle();

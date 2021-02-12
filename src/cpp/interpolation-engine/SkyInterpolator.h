@@ -23,10 +23,11 @@ public:
   float deltaDominantLightIntensity;
   float indirectLightIntensity0;
   float deltaIndirectLightIntensity;
+  float twiceTheSinOfSolarRadius;
   float initialSkyHemisphericalLightingColor[3];
   float estimatedFinalSkyHemisphericalLightingColor[3];
   float deltaPositions[14];
-  float deltaLinearValues[11];
+  float deltaLinearValues[12];
   float* astroPositions_0;
   float* linearValues_0;
   float* rotatedAstroPositions;

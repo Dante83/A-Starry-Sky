@@ -16,7 +16,7 @@ SkyInterpolator* skyInterpolator;
 
 extern "C" {
   int main();
-  void setupInterpolators(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
+  void setupInterpolators(float latitude, float twiceTheSinOfSolarRadius, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
   void updateFinalAstronomicalValues(float* astroPositions_f, float* linearValues_f);
   void updateAstronomicalTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
   float tick_astronomicalInterpolations(float t);
@@ -29,12 +29,13 @@ extern "C" {
   float luminosityToAtmosphericIntensity(float x);
 }
 
-void EMSCRIPTEN_KEEPALIVE setupInterpolators(float latitude, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
+void EMSCRIPTEN_KEEPALIVE setupInterpolators(float latitude, float twiceTheSinOfSolarRadius, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
   //Set up our color interpolator for for animating colors of our lights
   ColorInterpolator* colorInterpolator = new ColorInterpolator();
   skyInterpolator = new SkyInterpolator(colorInterpolator);
 
   //Set up our astronomical values
+  skyInterpolator->twiceTheSinOfSolarRadius = twiceTheSinOfSolarRadius;
   skyInterpolator->sinOfLatitude = -sin(latitude * DEG_2_RAD);
   skyInterpolator->cosOfLatitude = cos(latitude * DEG_2_RAD);
   skyInterpolator->tanOfLatitude = skyInterpolator->sinOfLatitude / skyInterpolator->cosOfLatitude;
@@ -117,7 +118,17 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
   float meteringValue = skyInterpolator->initialLogAverageOfSkyIntensity + tFractional * skyInterpolator->deltaLogAverageOfSkyIntensity;
 
   //Interpolate the direct light brightness
-  float directLightIntensity = skyInterpolator->dominantLightIntensity0 + tFractional * skyInterpolator->deltaDominantLightIntensity;
+  float sunYPosition = skyInterpolator->rotatedAstroPositions[1];
+  float sunRadius = 0.5f * skyInterpolator->linearValues[1] * skyInterpolator->twiceTheSinOfSolarRadius;
+  float directLightIntensity = 1.0f;
+  if(sunYPosition < -sunRadius){
+    //Moon is the dominant light source
+    //Fade out from the sun
+    directLightIntensity = fmax(fmin(-4.0f * sunYPosition - 0.2f, 1.0f), 0.0f);
+
+    //Use the percent of visibility of the moon to modify the brightness
+    directLightIntensity *= skyInterpolator->linearValues[11]; //The fractional illumination of the moon
+  }
 
   //Interpolate the indirect light brightness
   float indirectLightIntensity = skyInterpolator->indirectLightIntensity0 + tFractional * skyInterpolator->deltaIndirectLightIntensity;

@@ -7,7 +7,7 @@ importScripts('./state-engine.js');
 //and so anarcho-communism still works perfectly fine... for now.
 //
 const BYTES_PER_32_BIT_FLOAT = 4;
-const NUMBER_OF_ASTRONOMICAL_FLOATS = 26;
+const NUMBER_OF_ASTRONOMICAL_FLOATS = 27;
 
 const EVENT_INITIALIZE_SKY_STATE = 0;
 const EVENT_INITIALIZATION_SKY_STATE_RESPONSE = 1;

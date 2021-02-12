@@ -19,14 +19,14 @@ StarrySky.SkyDirector = function(parentComponent){
   //1 (LSRT) is a rotational interpolation
   const RADIUS_OF_SKY = 5000.0;
   const BYTES_PER_32_BIT_FLOAT = 4;
-  const NUMBER_OF_FLOATS = 26;
+  const NUMBER_OF_FLOATS = 27;
   const NUMBER_OF_ROTATIONAL_OBJECTS = 7;
   const NUMBER_OF_HORIZON_FADES = 2;
   const NUMBER_OF_PARALLACTIC_ANGLES = 1;
   const NUMBER_OF_ROTATIONAL_TRANSFORMATIONS = NUMBER_OF_ROTATIONAL_OBJECTS * 2;
   const NUMBER_OF_ROTATION_OUTPUT_VALUES = NUMBER_OF_ROTATIONAL_OBJECTS * 3;
   const NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES = NUMBER_OF_HORIZON_FADES + NUMBER_OF_PARALLACTIC_ANGLES;
-  const NUMBER_OF_LINEAR_INTERPOLATIONS = 11;
+  const NUMBER_OF_LINEAR_INTERPOLATIONS = 12;
   const NUMBER_OF_LIGHTING_COLOR_CHANNELS = 25;
   const NUMBER_OF_LIGHTING_OUT_VALUES = 35;
   const LINEAR_ARRAY_START = NUMBER_OF_ROTATIONAL_TRANSFORMATIONS + 1;
@@ -342,7 +342,8 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Run our sky interpolator to determine our azimuth, altitude and other variables
       let latitude = self.assetManager.data.skyLocationData.latitude;
-      Module._setupInterpolators(latitude, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.astronomicalLinearValues_0_ptr, self.astronomicalLinearValues_ptr, self.rotatedAstroDepedentValues_ptr);
+      const twiceTheSinOfSolarRadius = 2.0 * Math.sin(self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
+      Module._setupInterpolators(latitude, twiceTheSinOfSolarRadius, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.astronomicalLinearValues_0_ptr, self.astronomicalLinearValues_ptr, self.rotatedAstroDepedentValues_ptr);
       Module._updateFinalAstronomicalValues(self.astroPositions_f_ptr, self.astronomicalLinearValues_f_ptr);
       self.finalLSRT = self.finalStateFloat32Array[14];
       Module._updateAstronomicalTimeData(self.interpolationT, self.interpolationT + TWENTY_MINUTES, initialStateFloat32Array[14], self.finalLSRT);
