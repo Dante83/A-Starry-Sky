@@ -1,5 +1,6 @@
 varying vec3 vWorldPosition;
 varying vec3 galacticCoordinates;
+varying vec2 screenPosition;
 uniform float latitude;
 uniform float localSiderealTime;
 const float northGalaticPoleRightAscension = 3.36601290657539744989;
@@ -36,5 +37,8 @@ void main() {
   galacticCoordinates.y = cos(galaticLatitude);
   galacticCoordinates.z = sin(galaticLatitude) * sin(galaticLongitude);
 
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;
+  screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;
+  gl_Position = projectionPosition;
 }

@@ -16,6 +16,8 @@
 * Added VSOP87 Planet support for Mercury, Venus, Mars, Jupiter and Saturn using the terms from Appendix II of Meeus' Astronomical Algorithms with variable magnitudes.
 * Implemented dynamic switching between sun and moon direct lighting to reduce overhead calculations and changed the lighting color method from an analytic solution to a transmittance LUT interpolated result with HSL based interpolation.
 * Added support for dynamic, single-color, atmospheric perspective using the current sky lighting conditions and the camera vector with HSL based interpolation.
+* Switched ambient lighting model with a 3 orthogonal axis hemispherical lighting model with support for a user defined ground color.
+* Replaced Bayer Matrix dithering method with time dependent, tiling blue noise textures provided by [Moments in Graphics  by Christoph Peters](http://momentsingraphics.de/BlueNoise.html).
 
 **Version 0.3.0**
 * **!Important:** In version 0.3.0 and above, you should no longer include the  ```material="shader: sky;"``` attribute as all of our shaders have been internalized.

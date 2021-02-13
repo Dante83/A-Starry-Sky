@@ -3,7 +3,8 @@ StarrySky.AssetManager = function(skyDirector){
   this.data = {};
   this.images = {
     moonImages: {},
-    starImages: {}
+    starImages: {},
+    blueNoiseImages: {}
   };
   const starrySkyComponent = skyDirector.parentComponent;
 
@@ -63,7 +64,8 @@ StarrySky.AssetManager = function(skyDirector){
     const moonFormats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
     const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures;
+    const numberOfBlueNoiseTextures = 5;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -335,6 +337,39 @@ StarrySky.AssetManager = function(skyDirector){
           if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
             self.hasLoadedImages = true;
           }
+        }
+      }, function(err){
+        console.error(err);
+      });
+    })(0);
+
+    //Load blue noise textures
+    //Recursive based functional for loop, with asynchronous execution because
+    //Each iteration is not dependent upon the last, but it's just a set of similiar code
+    //that can be run in parallel.
+    (async function createNewBlueNoiseTexturePromise(i){
+      let next = i + 1;
+      if(next < numberOfBlueNoiseTextures){
+        createNewBlueNoiseTexturePromise(next);
+      }
+
+      let texturePromise = new Promise(function(resolve, reject){
+        textureLoader.load(StarrySky.assetPaths['blueNoiseMaps'][i], function(texture){resolve(texture);});
+      });
+      texturePromise.then(function(texture){
+        //Fill in the details of our texture
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.magFilter = THREE.Linear;
+        texture.minFilter = THREE.LinearMipmapLinear;
+        texture.encoding = THREE.LinearEncoding;
+        texture.format = THREE.RGBFormat;
+        texture.generateMipmaps = true;
+        self.images.blueNoiseImages[i] = texture;
+
+        self.numberOfTexturesLoaded += 1;
+        if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+          self.hasLoadedImages = true;
         }
       }, function(err){
         console.error(err);

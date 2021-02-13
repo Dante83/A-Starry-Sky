@@ -55,6 +55,9 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
     self.atmosphereMaterial.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.atmosphereMaterial.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
+
+    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
+    self.atmosphereMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
   }
 
   //Upon completion, this method self destructs

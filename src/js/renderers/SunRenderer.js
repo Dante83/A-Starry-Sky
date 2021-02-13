@@ -106,6 +106,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.uTime.value = t;
     self.baseSunVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.baseSunVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
+    self.baseSunVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();
@@ -144,7 +145,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
     }
 
-    self.baseSunVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
+    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
+    self.combinationPassMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
   }
 
   //Upon completion, this method self destructs

@@ -18,6 +18,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {type: 'f', value: 1.4}
     }
 
+    if(!isSunShader && !isMoonShader && !isMeteringShader){
+      uniforms.blueNoiseTexture = {type: 't', value: null};
+    }
+
     //Pass our specific uniforms in here.
     if(isSunShader){
       uniforms.sunAngularDiameterCos = {type: 'f', value: 1.0};
@@ -73,6 +77,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   vertexShader: [
     'varying vec3 vWorldPosition;',
     'varying vec3 galacticCoordinates;',
+    'varying vec2 screenPosition;',
     'uniform float latitude;',
     'uniform float localSiderealTime;',
     'const float northGalaticPoleRightAscension = 3.36601290657539744989;',
@@ -109,7 +114,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'galacticCoordinates.y = cos(galaticLatitude);',
       'galacticCoordinates.z = sin(galaticLatitude) * sin(galaticLongitude);',
 
-      'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
+      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
+      'gl_Position = projectionPosition;',
     '}',
   ].join('\n'),
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
@@ -118,6 +126,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     'varying vec3 vWorldPosition;',
     'varying vec3 galacticCoordinates;',
+    'varying vec2 screenPosition;',
 
     'uniform float uTime;',
     'uniform vec3 sunPosition;',
@@ -129,6 +138,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform sampler2D mieInscatteringSum;',
     'uniform sampler2D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
+
+    '#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)',
+    'uniform sampler2D blueNoiseTexture;',
+    '#endif',
 
     '#if(!$isSunPass && !$isMeteringPass)',
       'uniform samplerCube starHashCubemap;',
@@ -470,12 +483,14 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '//Now apply the ACESFilmicTonemapping',
         'combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);',
 
-        '//Triangular Blue Noise Dithering Pass',
+        '//Now apply the blue noise',
+        'combinedPass += ((texture2D(blueNoiseTexture, screenPosition.xy * 5.0).rgb - vec3(0.5)) / vec3(128.0));',
       '#endif',
 
       '#if($isMeteringPass)',
         'gl_FragColor = vec4(combinedPass, intensityPass);',
       '#else',
+        '//Triangular Blue Noise Dithering Pass',
         'gl_FragColor = vec4(combinedPass, 1.0);',
       '#endif',
     '}',

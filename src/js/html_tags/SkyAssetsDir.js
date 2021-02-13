@@ -11,6 +11,7 @@ window.customElements.define('sky-dim-star-maps', class extends HTMLElement{});
 window.customElements.define('sky-med-star-maps', class extends HTMLElement{});
 window.customElements.define('sky-bright-star-maps', class extends HTMLElement{});
 window.customElements.define('sky-star-color-map', class extends HTMLElement{});
+window.customElements.define('sky-blue-noise-maps', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.webp',
@@ -44,7 +45,14 @@ StarrySky.DefaultData.fileNames = {
     'bright-star-data-b-channel.png',
     'bright-star-data-a-channel.png'
   ],
-  starColorMap: 'star-color-map.png'
+  starColorMap: 'star-color-map.png',
+  blueNoiseMaps:[
+    'blue-noise-0.png',
+    'blue-noise-1.png',
+    'blue-noise-2.png',
+    'blue-noise-3.png',
+    'blue-noise-4.png'
+  ]
 };
 
 StarrySky.DefaultData.assetPaths = {
@@ -60,6 +68,7 @@ StarrySky.DefaultData.assetPaths = {
   medStarDataMaps: StarrySky.DefaultData.fileNames.medStarDataMaps.map(x => './assets/star_data/' + x),
   brightStarDataMaps: StarrySky.DefaultData.fileNames.brightStarDataMaps.map(x => './assets/star_data/' + x),
   starColorMap: './assets/star_data/' + StarrySky.DefaultData.fileNames.starColorMap,
+  blueNoiseMaps: StarrySky.DefaultData.fileNames.blueNoiseMaps.map(x => './assets/blue_noise/' + x)
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
@@ -133,13 +142,14 @@ class SkyAssetsDir extends HTMLElement {
       const medStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-med-star-map');
       const brightStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-bright-star-map');
       const starColorMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-color-map');
+      const blueNoiseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-blue-noise-maps');
 
       const objectProperties = ['skyStateEngine', 'skyInterpolationEngine','moonDiffuseMap', 'moonNormalMap',
         'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'starHashCubemap',
-        'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap']
+        'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps']
       const tagsList = [skyStateEngineTags, skyInterpolationEngineTags, moonDiffuseMapTags, moonNormalMapTags,
         moonRoughnessMapTags, moonAperatureSizeMapTags, moonAperatureOrientationMapTags, starCubemapTags,
-        medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags];
+        medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags];
       const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
         const wasmKeys = ['skyStateEngine', 'skyInterpolationEngine'];
@@ -153,7 +163,8 @@ class SkyAssetsDir extends HTMLElement {
       else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
         'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'starColorMap'];
-        const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps'];
+        const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
+        'blueNoiseMaps'];
 
         //Process single texture keys
         for(let i = 0; i < singleTextureKeys.length; ++i){
@@ -185,6 +196,12 @@ class SkyAssetsDir extends HTMLElement {
         }
 
         StarrySky.assetPaths['starColorMap'] = path + '/' + StarrySky.DefaultData.fileNames['starColorMap'];
+      }
+      else if(self.hasAttribute('blue-noise-path') && self.getAttribute('blue-noise-path').toLowerCase() !== 'false'){
+        for(let i = 0; i < 5; ++i){
+          let blueNoiseFileNames =  StarrySky.DefaultData.fileNames['blue-noise-' + i];
+          StarrySky.assetPaths['blueNoiseMaps'][i] = path + '/' + StarrySky.DefaultData.fileNames['blueNoiseMaps'][i];
+        }
       }
       else{
         console.warn("Invalid code path detected for the sky assets dirs. This should not happen.");

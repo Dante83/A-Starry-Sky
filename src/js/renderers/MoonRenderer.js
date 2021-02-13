@@ -171,6 +171,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
       self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
     }
+
+    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
+    self.combinationPassMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
   }
 
   //Upon completion, this method self destructs

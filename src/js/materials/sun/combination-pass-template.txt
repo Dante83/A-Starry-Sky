@@ -11,7 +11,8 @@ StarrySky.Materials.Sun.combinationPass = {
     blurTexture4: {type: 't', 'value': null},
     blurTexture5: {type: 't', 'value': null},
     bloomStrength: {type: 'f', 'value': null},
-    bloomRadius: {type: 'f', 'value': null}
+    bloomRadius: {type: 'f', 'value': null},
+    blueNoiseTexture: {type: 't', 'value': null}
   },
   vertexShader: [
     {vertex_glsl}

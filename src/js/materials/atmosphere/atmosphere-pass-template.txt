@@ -18,6 +18,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {type: 'f', value: 1.4}
     }
 
+    if(!isSunShader && !isMoonShader && !isMeteringShader){
+      uniforms.blueNoiseTexture = {type: 't', value: null};
+    }
+
     //Pass our specific uniforms in here.
     if(isSunShader){
       uniforms.sunAngularDiameterCos = {type: 'f', value: 1.0};

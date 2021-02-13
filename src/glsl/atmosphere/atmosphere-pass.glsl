@@ -2,6 +2,7 @@ precision mediump float;
 
 varying vec3 vWorldPosition;
 varying vec3 galacticCoordinates;
+varying vec2 screenPosition;
 
 uniform float uTime;
 uniform vec3 sunPosition;
@@ -13,6 +14,10 @@ uniform float scatteringSunIntensity;
 uniform sampler2D mieInscatteringSum;
 uniform sampler2D rayleighInscatteringSum;
 uniform sampler2D transmittance;
+
+#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)
+uniform sampler2D blueNoiseTexture;
+#endif
 
 #if(!$isSunPass && !$isMeteringPass)
   uniform samplerCube starHashCubemap;
@@ -354,12 +359,14 @@ void main(){
     //Now apply the ACESFilmicTonemapping
     combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);
 
-    //Triangular Blue Noise Dithering Pass
+    //Now apply the blue noise
+    combinedPass += ((texture2D(blueNoiseTexture, screenPosition.xy * 5.0).rgb - vec3(0.5)) / vec3(128.0));
   #endif
 
   #if($isMeteringPass)
     gl_FragColor = vec4(combinedPass, intensityPass);
   #else
+    //Triangular Blue Noise Dithering Pass
     gl_FragColor = vec4(combinedPass, 1.0);
   #endif
 }

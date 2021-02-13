@@ -7,11 +7,13 @@ uniform sampler2D blurTexture2;
 uniform sampler2D blurTexture3;
 uniform sampler2D blurTexture4;
 uniform sampler2D blurTexture5;
+uniform sampler2D blueNoiseTexture;
 
 uniform float bloomStrength;
 uniform float bloomRadius;
 
 varying vec2 vUv;
+varying vec2 screenPosition;
 
 float lerpBloomFactor(float factor){
   return mix(factor, 1.2 - factor, bloomRadius);
@@ -38,6 +40,7 @@ void main(){
   }
 
   //Late triangular blue noise
+  combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 5.0).rgb - vec3(0.5)) / vec3(128.0));
 
   //Return our tone mapped color when everything else is done
   gl_FragColor = vec4(combinedLight, falloffDisk);

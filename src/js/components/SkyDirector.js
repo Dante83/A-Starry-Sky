@@ -100,6 +100,7 @@ StarrySky.SkyDirector = function(parentComponent){
   this.previousCameraHeight = 0.0;
   this.lookAtInterpolationQuaternion = new THREE.Quaternion();
   this.lookAtInterpolatedQuaternion = new THREE.Quaternion();
+  this.randomBlueNoiseTexture = 0;
 
   //Set up our web assembly hooks
   let self = this;
@@ -256,6 +257,9 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Tick our light positions before we might just use them to set up the next interpolation
       self.lightingManager.tick(self.lightingColorValues);
+
+      //Update our random blue noise texture
+      self.randomBlueNoiseTexture = Math.floor(Math.random() * 4.9999);
 
       //Check if we need to update our auto-exposure final state again
       if(self.exposureT >= HALF_A_SECOND && self.transferableSkyFinalLightingBuffer.byteLength !== 0){

@@ -11,18 +11,23 @@ StarrySky.Materials.Moon.combinationPass = {
     blurTexture4: {type: 't', 'value': null},
     blurTexture5: {type: 't', 'value': null},
     bloomStrength: {type: 'f', 'value': null},
-    bloomRadius: {type: 'f', 'value': null}
+    bloomRadius: {type: 'f', 'value': null},
+    blueNoiseTexture: {type: 't', 'value': null}
   },
   vertexShader: [
     'varying vec3 vWorldPosition;',
     'varying vec2 vUv;',
+    'varying vec2 screenPosition;',
 
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
       'vWorldPosition = worldPosition.xyz;',
       'vUv = uv;',
 
-      'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
+      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
+      'gl_Position = projectionPosition;',
 
       '//We offset our moon z-position by 0.01 to avoid Z-Fighting with the back sky plane',
       'gl_Position.z -= 0.01;',
@@ -38,11 +43,13 @@ StarrySky.Materials.Moon.combinationPass = {
     'uniform sampler2D blurTexture3;',
     'uniform sampler2D blurTexture4;',
     'uniform sampler2D blurTexture5;',
+    'uniform sampler2D blueNoiseTexture;',
 
     'uniform float bloomStrength;',
     'uniform float bloomRadius;',
 
     'varying vec2 vUv;',
+    'varying vec2 screenPosition;',
 
     'float lerpBloomFactor(float factor){',
       'return mix(factor, 1.2 - factor, bloomRadius);',
@@ -69,6 +76,7 @@ StarrySky.Materials.Moon.combinationPass = {
       '}',
 
       '//Late triangular blue noise',
+      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 5.0).rgb - vec3(0.5)) / vec3(128.0));',
 
       '//Return our tone mapped color when everything else is done',
       'gl_FragColor = vec4(combinedLight, falloffDisk);',
