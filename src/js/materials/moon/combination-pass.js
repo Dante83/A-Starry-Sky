@@ -76,7 +76,7 @@ StarrySky.Materials.Moon.combinationPass = {
       '}',
 
       '//Late triangular blue noise',
-      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 5.0).rgb - vec3(0.5)) / vec3(128.0));',
+      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
 
       '//Return our tone mapped color when everything else is done',
       'gl_FragColor = vec4(combinedLight, falloffDisk);',

@@ -360,7 +360,7 @@ void main(){
     combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);
 
     //Now apply the blue noise
-    combinedPass += ((texture2D(blueNoiseTexture, screenPosition.xy * 5.0).rgb - vec3(0.5)) / vec3(128.0));
+    combinedPass += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));
   #endif
 
   #if($isMeteringPass)

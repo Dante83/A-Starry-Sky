@@ -47,11 +47,11 @@ StarrySky.DefaultData.fileNames = {
   ],
   starColorMap: 'star-color-map.png',
   blueNoiseMaps:[
-    'blue-noise-0.png',
-    'blue-noise-1.png',
-    'blue-noise-2.png',
-    'blue-noise-3.png',
-    'blue-noise-4.png'
+    'blue-noise-0.bmp',
+    'blue-noise-1.bmp',
+    'blue-noise-2.bmp',
+    'blue-noise-3.bmp',
+    'blue-noise-4.bmp'
   ]
 };
 

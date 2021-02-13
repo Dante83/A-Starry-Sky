@@ -6,7 +6,8 @@
 * Converted all astronomical calculations to web assembly on a separate thread through web workers and moved primary calculations on the main thread to web assembly for reduce CPU load.
 * Switched to procedurally generated sun disk with solar limb darkening, using the parameterization from [Joseph Bayley's Solar Limb Darkening](https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf)
 * Implemented  multi-pass bloom effect for the sun and moon.
-* Moved normal mapping from fragment shader to vertex shader with improved diffuse and height maps from the [NASA CGI Moon Kit](https://svs.gsfc.nasa.gov/4720), with direct baking of the lunar normal map in Blender. Switched from a regular Lambertian shader to an [Oren Nayar Material](https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4) driven by roughness data from [LOLA](https://sos.noaa.gov/datasets/moon-surface-roughness/).
+* Moved normal mapping from fragment shader to vertex shader with improved diffuse and height maps from the [NASA CGI Moon Kit](https://svs.gsfc.nasa.gov/4720), with direct baking of the lunar normal map in Blender.
+* Switched from a regular Lambertian shader to an [Oren Nayar Material](https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4) driven by roughness data from [LOLA](https://sos.noaa.gov/datasets/moon-surface-roughness/).
 * Added parallactic rotations for the moon.
 * Implemented solar area lighting via [Christopher Oat and Pedro Sanders'](https://www.cse.ust.hk/~psander/docs/aperture.pdf) *Ambient Aperture Lighting* model for improved smooth shadows on lunar surface.
 * Switched from PNG to WebP format where such files reduce file download times.
@@ -17,7 +18,8 @@
 * Implemented dynamic switching between sun and moon direct lighting to reduce overhead calculations and changed the lighting color method from an analytic solution to a transmittance LUT interpolated result with HSL based interpolation.
 * Added support for dynamic, single-color, atmospheric perspective using the current sky lighting conditions and the camera vector with HSL based interpolation.
 * Switched ambient lighting model with a 3 orthogonal axis hemispherical lighting model with support for a user defined ground color.
-* Replaced Bayer Matrix dithering method with time dependent, tiling blue noise textures provided by [Moments in Graphics  by Christoph Peters](http://momentsingraphics.de/BlueNoise.html).
+* Replaced Bayer Matrix dithering method with time dependent, tiling blue noise textures provided by [Moments in Graphics  by Christoph Peters](http://momentsingraphics.de/BlueNoise.html). Switched the file format to raw bitmap, which strangely has the smallest download footprint.
+* Added a corona around the solar eclipse using the NASA photograph by [Carla Thomas](https://www.nasa.gov/centers/armstrong/multimedia/imagegallery/2017_total_solar_eclipse/AFRC2017-0233-006.html).
 
 **Version 0.3.0**
 * **!Important:** In version 0.3.0 and above, you should no longer include the  ```material="shader: sky;"``` attribute as all of our shaders have been internalized.
