@@ -11,6 +11,7 @@ uniform float sunHorizonFade;
 uniform float moonHorizonFade;
 uniform float scatteringMoonIntensity;
 uniform float scatteringSunIntensity;
+uniform vec3 moonLightColor;
 uniform sampler2D mieInscatteringSum;
 uniform sampler2D rayleighInscatteringSum;
 uniform sampler2D transmittance;
@@ -68,6 +69,9 @@ const vec3 gamma = vec3(2.2);
   uniform float moonExposure;
   uniform float moonAngularDiameterCos;
   uniform float sunRadius;
+  uniform float distanceToEarthsShadowSquared;
+  uniform float oneOverNormalizedLunarDiameter;
+  uniform vec3 earthsShadowPosition;
   uniform sampler2D moonDiffuseMap;
   uniform sampler2D moonNormalMap;
   uniform sampler2D moonRoughnessMap;
@@ -208,7 +212,27 @@ $atmosphericFunctions
   }
 #endif
 
-vec3 linearAtmosphericPass(vec3 sourcePosition, float sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){
+#if($isMoonPass)
+vec3 getLunarEcclipseShadow(vec3 sphericalPosition){
+  //Determine the distance from this pixel to the center of the sun.
+  float distanceToPixel = distance(sphericalPosition, earthsShadowPosition);
+  float pixelToCenterDistanceInMoonDiameter = distanceToPixel * oneOverNormalizedLunarDiameter;
+  float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter;
+  float pUmbDistSq = umbDistSq * 0.25;
+  float umbraBrightness = 0.15 + 0.85 * clamp(umbDistSq, 0.0, 1.0);
+  float penumbraBrightness = 0.5 + 0.5 * clamp(pUmbDistSq, 0.0, 1.0);
+  float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);
+
+  //Get color intensity based on distance from penumbra
+  vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);
+  float colorIntensity = clamp(distanceToEarthsShadowSquared * oneOverNormalizedLunarDiameter * oneOverNormalizedLunarDiameter, 0.0, 1.0);
+  colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);
+
+  return totalBrightness * colorOfLunarEcclipse;
+}
+#endif
+
+vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){
   float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);
   float cosOFAngleBetweenZenithAndSource = sourcePosition.y;
   vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));
@@ -260,8 +284,8 @@ void main(){
   #endif
 
   //Atmosphere
-  vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);
-  vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);
+  vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);
+  vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);
 
   //This stuff never shows up near our sun, so we can exclude it
   #if(!$isSunPass && !$isMeteringPass)
@@ -333,6 +357,7 @@ void main(){
     combinedPass = pow(ACESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);
   #elif($isMoonPass)
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;
+    vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);
 
     $draw_moon_pass
 

@@ -9,6 +9,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       latitude: {type: 'f', value: 0.0},
       sunPosition: {type: 'vec3', value: new THREE.Vector3()},
       moonPosition: {type: 'vec3', value: new THREE.Vector3()},
+      moonLightColor: {type: 'vec3', value: new THREE.Vector3()},
       mieInscatteringSum: {type: 't', value: null},
       rayleighInscatteringSum: {type: 't', value: null},
       transmittance: {type: 't', value: null},
@@ -36,8 +37,11 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonAngularDiameterCos = {type: 'f', value: 1.0};
       uniforms.sunRadius = {type: 'f', value: 1.0};
       uniforms.radiusOfMoonPlane = {type: 'f', value: 1.0};
+      uniforms.distanceToEarthsShadowSquared = {type: 'f', value: 1.0};
+      uniforms.oneOverNormalizedLunarDiameter = {type: 'f', value: 1.0};
       uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
       uniforms.sunLightDirection = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.earthsShadowPosition = {type: 'vec3', value: new THREE.Vector3()};
       uniforms.moonDiffuseMap = {type: 't', value: null};
       uniforms.moonNormalMap = {type: 't', value: null};
       uniforms.moonRoughnessMap = {type: 't', value: null};

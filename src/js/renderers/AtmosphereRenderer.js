@@ -55,6 +55,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
     self.atmosphereMaterial.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.atmosphereMaterial.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
+    self.atmosphereMaterial.uniforms.moonLightColor.needsUpdate = true;
 
     const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
     self.atmosphereMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
@@ -78,6 +79,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     self.atmosphereMaterial.uniforms.marsBrightness.value = self.skyDirector.skyState.mars.intensity;
     self.atmosphereMaterial.uniforms.jupiterBrightness.value = self.skyDirector.skyState.jupiter.intensity;
     self.atmosphereMaterial.uniforms.saturnBrightness.value = self.skyDirector.skyState.saturn.intensity;
+    self.atmosphereMaterial.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
 
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager){

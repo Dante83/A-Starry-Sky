@@ -110,6 +110,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
     self.baseSunVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
     self.baseSunVar.material.uniforms.moonRadius.value = self.skyDirector.skyState.moon.scale * baseRadiusOfTheMoon;
+    self.baseSunVar.material.uniforms.moonLightColor.needsUpdate = true;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();
@@ -158,6 +159,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
     self.baseSunVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
     self.baseSunVar.material.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+    self.baseSunVar.material.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
+
     self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade >= 0.95;
     self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
 

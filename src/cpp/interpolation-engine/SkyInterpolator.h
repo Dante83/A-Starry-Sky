@@ -44,4 +44,5 @@ public:
   void getLunarParallacticAngle(float* interpolatedAstroPositions, float interpolatedLSRT);
   void updateSunAndMoonRADecAndScale(float fractOfFinalPosition);
   void rotateSunAndMoon(float fractOfFinalPosition);
+  void getLunarEclipseState();
 };

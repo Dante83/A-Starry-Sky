@@ -5,6 +5,7 @@ StarrySky.LightingManager = function(parentComponent){
   const RADIUS_OF_SKY = 5000.0;
   this.skyDirector = parentComponent;
   const lightingData = this.skyDirector.assetManager.data.skyLighting;
+  const lunarEclipseLightingModifier = this.skyDirector.skyState.moon.lightingModifier;
   this.sourceLight = new THREE.DirectionalLight(0xffffff, 4.0);
   const shadow = this.sourceLight.shadow;
   this.sourceLight.castShadow = true;
@@ -82,7 +83,9 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.position.x = -RADIUS_OF_SKY * lightingState[27];
     self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];
     self.sourceLight.position.z = -RADIUS_OF_SKY * lightingState[25];
-    self.sourceLight.color.fromArray(lightingState, 18);
+    self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
+    self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
+    self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
     self.sourceLight.intensity = lightingState[24] * 0.3;
 
     //The hemispherical light colors replace ambient lighting and are calculated

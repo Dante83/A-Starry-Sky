@@ -23,9 +23,11 @@ StarrySky.SkyDirector = function(parentComponent){
   const NUMBER_OF_ROTATIONAL_OBJECTS = 7;
   const NUMBER_OF_HORIZON_FADES = 2;
   const NUMBER_OF_PARALLACTIC_ANGLES = 1;
+  const NUMBER_OF_LUNAR_ECLIPSE_UNIFORMS = 8;
   const NUMBER_OF_ROTATIONAL_TRANSFORMATIONS = NUMBER_OF_ROTATIONAL_OBJECTS * 2;
   const NUMBER_OF_ROTATION_OUTPUT_VALUES = NUMBER_OF_ROTATIONAL_OBJECTS * 3;
-  const NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES = NUMBER_OF_HORIZON_FADES + NUMBER_OF_PARALLACTIC_ANGLES;
+  const START_OF_LUNAR_ECLIPSE_INDEX = NUMBER_OF_HORIZON_FADES + NUMBER_OF_PARALLACTIC_ANGLES;
+  const NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES = NUMBER_OF_HORIZON_FADES + NUMBER_OF_PARALLACTIC_ANGLES + NUMBER_OF_LUNAR_ECLIPSE_UNIFORMS;
   const NUMBER_OF_LINEAR_INTERPOLATIONS = 12;
   const NUMBER_OF_LIGHTING_COLOR_CHANNELS = 25;
   const NUMBER_OF_LIGHTING_OUT_VALUES = 35;
@@ -88,7 +90,7 @@ StarrySky.SkyDirector = function(parentComponent){
     starsExposure: 0.0,
     moonExposure: 0.0,
     exposureCoefficientf: 0.0,
-  }
+  };
   let transferableIntialLightingFloat32Array;
   this.transferableSkyFinalLightingBuffer;
   this.transferableSkyFinalLightingFloat32Array;
@@ -252,6 +254,12 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.jupiter.intensity = self.astronomicalLinearValues[9];
       self.skyState.saturn.intensity = self.astronomicalLinearValues[10];
 
+      //Update values associated with lunar eclipses
+      self.skyState.moon.distanceToEarthsShadowSquared = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX];
+      self.skyState.moon.oneOverNormalizedLunarDiameter = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX + 1];
+      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 2, START_OF_LUNAR_ECLIPSE_INDEX + 5));
+      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 5, START_OF_LUNAR_ECLIPSE_INDEX + 8));
+
       //Check if we need to update our final state again
       if(self.interpolationT >= self.finalAstronomicalT){
         self.updateFinalSkyState(self.finalLSRT, self.finalStateFloat32Array[14]);
@@ -368,6 +376,10 @@ StarrySky.SkyDirector = function(parentComponent){
         moon: {
           position: new THREE.Vector3(),
           quadOffset: new THREE.Vector3(),
+          distanceToEarthsShadowSquared: 0.0,
+          oneOverNormalizedLunarDiameter: 0.0,
+          earthsShadowPosition: new THREE.Vector3(),
+          lightingModifier: new THREE.Vector3()
         },
         mercury: {
           position: new THREE.Vector3()

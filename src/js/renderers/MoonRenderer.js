@@ -140,6 +140,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
     self.baseMoonVar.material.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
     self.baseMoonVar.material.uniforms.moonExposure.value = self.skyDirector.exposureVariables.moonExposure;
+    self.baseMoonVar.material.uniforms.distanceToEarthsShadowSquared.value = self.skyDirector.skyState.moon.distanceToEarthsShadowSquared;
+    self.baseMoonVar.material.uniforms.oneOverNormalizedLunarDiameter.value = self.skyDirector.skyState.moon.oneOverNormalizedLunarDiameter;
+    self.baseMoonVar.material.uniforms.earthsShadowPosition.needsUpdate = true;
+    self.baseMoonVar.material.uniforms.moonLightColor.needsUpdate = true;
 
     //Run our float shaders shaders
     self.moonRenderer.compute();
@@ -204,6 +208,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.marsBrightness.value = self.skyDirector.skyState.mars.intensity;
     self.baseMoonVar.material.uniforms.jupiterBrightness.value = self.skyDirector.skyState.jupiter.intensity;
     self.baseMoonVar.material.uniforms.saturnBrightness.value = self.skyDirector.skyState.saturn.intensity;
+    self.baseMoonVar.material.uniforms.earthsShadowPosition.value = self.skyDirector.skyState.moon.earthsShadowPosition;
+    self.baseMoonVar.material.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
 
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager){

@@ -29,7 +29,8 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.meteringSurveyVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.meteringSurveyVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.meteringSurveyVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.meteringSurveyVar.material.uniforms.latitude.value = this.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+  this.meteringSurveyVar.material.uniforms.latitude.value = skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+  this.meteringSurveyVar.material.uniforms.moonLightColor.value = skyDirector.skyState.moon.lightingModifier;
 
   this.meteringSurveyVar.minFilter = THREE.NearestFilter;
   this.meteringSurveyVar.magFilter = THREE.NearestFilter;
