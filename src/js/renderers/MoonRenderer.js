@@ -7,6 +7,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   this.moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(this.moonAngularRadiusInRadians) * 2.0;
   const diameterOfMoonPlane = 2.0 * radiusOfMoonPlane;
+  const blinkOutDistance = Math.SQRT2 * diameterOfMoonPlane;
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
   this.bloomEnabled = false;
   this.parallacticAxis = new THREE.Vector3();
@@ -107,6 +108,14 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   this.setBloomRadius(0.7);
 
   this.tick = function(t){
+    const distanceFromSunToMoon = self.skyDirector.skyState.sun.position.distanceTo(self.skyDirector.skyState.moon.position) * RADIUS_OF_SKY;
+    if(distanceFromSunToMoon < blinkOutDistance && this.moonMesh.visible){
+      this.moonMesh.visible = false;
+    }
+    else if(distanceFromSunToMoon >= blinkOutDistance && !this.moonMesh.visible){
+      this.moonMesh.visible = true;
+    }
+
     //Update the position of our mesh
     let cameraPosition = skyDirector.camera.position;
     let quadOffset = skyDirector.skyState.moon.quadOffset;

@@ -101,6 +101,9 @@ StarrySky.SkyDirector = function(parentComponent){
   this.lookAtInterpolationQuaternion = new THREE.Quaternion();
   this.lookAtInterpolatedQuaternion = new THREE.Quaternion();
   this.randomBlueNoiseTexture = 0;
+  this.sunRadius;
+  this.moonRadius;
+  this.distanceForSolarEclipse;
 
   //Set up our web assembly hooks
   let self = this;
@@ -111,6 +114,10 @@ StarrySky.SkyDirector = function(parentComponent){
   this.initializeSkyDirectorWebWorker = function(){
     //Attach our asset manager if it has been passed over
     if(self.assetManagerInitialized && self.skyInterpolatorWASMIsReady){
+      self.sunRadius = Math.sin(this.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
+      self.moonRadius = Math.sin(this.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
+      self.distanceForSolarEclipse = 2.0 * Math.SQRT2 * Math.max(self.sunRadius, self.moonRadius);
+
       //Post our message to the web worker to get the initial state of our sky
       self.webAssemblyWorker.postMessage({
         eventType: self.EVENT_INITIALIZE_SKY_STATE,
@@ -347,7 +354,9 @@ StarrySky.SkyDirector = function(parentComponent){
       //Run our sky interpolator to determine our azimuth, altitude and other variables
       let latitude = self.assetManager.data.skyLocationData.latitude;
       const twiceTheSinOfSolarRadius = 2.0 * Math.sin(self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
-      Module._setupInterpolators(latitude, twiceTheSinOfSolarRadius, self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.astronomicalLinearValues_0_ptr, self.astronomicalLinearValues_ptr, self.rotatedAstroDepedentValues_ptr);
+      Module._setupInterpolators(latitude, twiceTheSinOfSolarRadius, self.sunRadius, self.moonRadius, self.distanceForSolarEclipse,
+        self.astroPositions_0_ptr, self.rotatedAstroPositions_ptr, self.astronomicalLinearValues_0_ptr,
+        self.astronomicalLinearValues_ptr, self.rotatedAstroDepedentValues_ptr);
       Module._updateFinalAstronomicalValues(self.astroPositions_f_ptr, self.astronomicalLinearValues_f_ptr);
       self.finalLSRT = self.finalStateFloat32Array[14];
       Module._updateAstronomicalTimeData(self.interpolationT, self.interpolationT + TWENTY_MINUTES, initialStateFloat32Array[14], self.finalLSRT);

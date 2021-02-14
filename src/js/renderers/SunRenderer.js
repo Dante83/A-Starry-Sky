@@ -3,6 +3,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   let assetManager = skyDirector.assetManager;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
+  const moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const baseRadiusOfTheMoon = Math.sin(moonAngularRadiusInRadians)
   this.sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(this.sunAngularRadiusInRadians) * 2.0;
   const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
@@ -107,6 +109,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.baseSunVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
     self.baseSunVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
+    self.baseSunVar.material.uniforms.moonRadius.value = self.skyDirector.skyState.moon.scale * baseRadiusOfTheMoon;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();

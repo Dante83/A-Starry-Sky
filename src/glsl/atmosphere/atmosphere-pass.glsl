@@ -53,6 +53,7 @@ const vec3 gamma = vec3(2.2);
 
 #if($isSunPass)
   uniform float sunAngularDiameterCos;
+  uniform float moonRadius;
   uniform sampler2D moonDiffuseMap;
   varying vec2 vUv;
   const float sunDiskIntensity = 30.0;

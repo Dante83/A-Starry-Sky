@@ -24,7 +24,13 @@ StarrySky.Materials.Sun.baseSunPartial = {
     'float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);',
 
     '//Apply transmittance to our sun disk direct lighting',
-    'vec3 sunTexel = sundisk * sunDiskIntensity * transmittanceFade * limbDarkening;',
+    'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
+    'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
+    'float distanceBetweenPixelAndMoon = dot(vectorBetweenMoonAndPixel, vectorBetweenMoonAndPixel);',
+    'vec3 sunTexel = vec3(0.0);',
+    'if(distanceBetweenPixelAndMoon > (moonRadius * moonRadius)){',
+      'sunTexel = sundisk * sunDiskIntensity * limbDarkening * transmittanceFade;',
+    '}',
     ];
 
     let updatedLines = [];
@@ -45,6 +51,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
     'void main() {',
       'vec4 worldPosition = worldMatrix * vec4(position * radiusOfSunPlane, 1.0);',
       'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
+
       'vUv = uv;',
 
       'gl_Position = vec4(position, 1.0);',

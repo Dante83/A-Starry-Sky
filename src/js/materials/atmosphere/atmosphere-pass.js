@@ -26,6 +26,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     if(isSunShader){
       uniforms.sunAngularDiameterCos = {type: 'f', value: 1.0};
       uniforms.radiusOfSunPlane = {type: 'f', value: 1.0};
+      uniforms.moonRadius = {type: 'f', value: 1.0};
       uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
       uniforms.moonDiffuseMap = {type: 't', value: null};
     }
@@ -177,6 +178,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     '#if($isSunPass)',
       'uniform float sunAngularDiameterCos;',
+      'uniform float moonRadius;',
       'uniform sampler2D moonDiffuseMap;',
       'varying vec2 vUv;',
       'const float sunDiskIntensity = 30.0;',

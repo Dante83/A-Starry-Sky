@@ -16,7 +16,7 @@ SkyInterpolator* skyInterpolator;
 
 extern "C" {
   int main();
-  void setupInterpolators(float latitude, float twiceTheSinOfSolarRadius, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
+  void setupInterpolators(float latitude, float twiceTheSinOfSolarRadius, float solarRadius, float moonRadius, float distanceForSolarEclipse, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues);
   void updateFinalAstronomicalValues(float* astroPositions_f, float* linearValues_f);
   void updateAstronomicalTimeData(float t_0, float t_f, float initialLSRT, float finalLSRT);
   float tick_astronomicalInterpolations(float t);
@@ -29,7 +29,7 @@ extern "C" {
   float luminosityToAtmosphericIntensity(float x);
 }
 
-void EMSCRIPTEN_KEEPALIVE setupInterpolators(float latitude, float twiceTheSinOfSolarRadius, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
+void EMSCRIPTEN_KEEPALIVE setupInterpolators(float latitude, float twiceTheSinOfSolarRadius, float solarRadius, float moonRadius, float distanceForSolarEclipse, float* astroPositions_0, float* rotatedAstroPositions, float* linearValues_0, float* linearValues, float* rotationallyDepedentAstroValues){
   //Set up our color interpolator for for animating colors of our lights
   ColorInterpolator* colorInterpolator = new ColorInterpolator();
   skyInterpolator = new SkyInterpolator(colorInterpolator);
@@ -44,6 +44,9 @@ void EMSCRIPTEN_KEEPALIVE setupInterpolators(float latitude, float twiceTheSinOf
   skyInterpolator->linearValues_0 = linearValues_0;
   skyInterpolator->linearValues = linearValues;
   skyInterpolator->rotationallyDepedentAstroValues = rotationallyDepedentAstroValues;
+  skyInterpolator->solarRadius = solarRadius;
+  skyInterpolator->moonRadius = moonRadius;
+  skyInterpolator->distanceForSolarEclipse = distanceForSolarEclipse;
 }
 
 void EMSCRIPTEN_KEEPALIVE updateFinalAstronomicalValues(float* astroPositions_f, float* linearValues_f){
@@ -100,6 +103,35 @@ float EMSCRIPTEN_KEEPALIVE tick_astronomicalInterpolations(float t){
 
   //Update our rotation of our astronomical objects in the sky
   float interpolatedLSRT = skyInterpolator->rotateAstroObjects(tFractional);
+
+  //Check if we are having a solar eclipse. If so, then modify the light intensity from the sun
+  //by modifying linearValue[0] which is the solar intensity.
+  float sunPositionX = skyInterpolator->rotatedAstroPositions[0];
+  float sunPositionY = skyInterpolator->rotatedAstroPositions[1];
+  float sunPositionZ = skyInterpolator->rotatedAstroPositions[2];
+  float moonPositionX = skyInterpolator->rotatedAstroPositions[3];
+  float moonPositionY = skyInterpolator->rotatedAstroPositions[4];
+  float moonPositionZ = skyInterpolator->rotatedAstroPositions[5];
+  float diffX = sunPositionX - moonPositionX;
+  float diffY = sunPositionY - moonPositionY;
+  float diffZ = sunPositionZ - moonPositionZ;
+  float distanceFromMoonToSunSquared = diffX * diffX + diffY * diffY + diffZ * diffZ;
+  float solarEclipseDistance = skyInterpolator->distanceForSolarEclipse;
+  if(distanceFromMoonToSunSquared <= (solarEclipseDistance * solarEclipseDistance)){
+    float scaledSunRadius = skyInterpolator->solarRadius * skyInterpolator->linearValues[1];
+    float sunArea = PI * scaledSunRadius * scaledSunRadius;
+    float scaledMoonRadius = skyInterpolator->moonRadius * skyInterpolator->linearValues[3];
+    float d = sqrt(distanceFromMoonToSunSquared);
+    float areaIntersectedByMoon = scaledMoonRadius * scaledMoonRadius * acos((d * d + scaledMoonRadius * scaledMoonRadius - scaledSunRadius * scaledSunRadius) / (2.0f * d * scaledMoonRadius));
+    areaIntersectedByMoon += scaledSunRadius * scaledSunRadius * acos((d * d + scaledSunRadius * scaledSunRadius - scaledMoonRadius * scaledMoonRadius) / (2.0f * d * scaledSunRadius));
+    areaIntersectedByMoon -= 0.5f * sqrt((scaledMoonRadius - d - scaledSunRadius) * (scaledSunRadius - scaledMoonRadius - d) * (scaledSunRadius + scaledMoonRadius - d) * (scaledSunRadius + scaledMoonRadius + d));
+    if(!isnan(areaIntersectedByMoon)){
+      float remainingArea = fmin(fmax(sunArea - areaIntersectedByMoon, 0.0f), 1.0f);
+      float fractionOfTotalArea = remainingArea / sunArea;
+
+      skyInterpolator->linearValues[0] *= fractionOfTotalArea;
+    }
+  }
 
   //Get the horizon fade of our sun and moon
   skyInterpolator->getHorizonFades();

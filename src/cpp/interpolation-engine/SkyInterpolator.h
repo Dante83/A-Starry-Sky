@@ -24,6 +24,9 @@ public:
   float indirectLightIntensity0;
   float deltaIndirectLightIntensity;
   float twiceTheSinOfSolarRadius;
+  float solarRadius;
+  float moonRadius;
+  float distanceForSolarEclipse;
   float initialSkyHemisphericalLightingColor[3];
   float estimatedFinalSkyHemisphericalLightingColor[3];
   float deltaPositions[14];
