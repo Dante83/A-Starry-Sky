@@ -28,6 +28,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.radiusOfSunPlane = {type: 'f', value: 1.0};
       uniforms.moonRadius = {type: 'f', value: 1.0};
       uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
+      uniforms.solarEclipseMap = {type: 't', value: null};
       uniforms.moonDiffuseMap = {type: 't', value: null};
     }
     else if(isMoonShader){

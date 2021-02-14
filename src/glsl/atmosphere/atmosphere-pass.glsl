@@ -55,6 +55,7 @@ const vec3 gamma = vec3(2.2);
   uniform float sunAngularDiameterCos;
   uniform float moonRadius;
   uniform sampler2D moonDiffuseMap;
+  uniform sampler2D solarEclipseMap;
   varying vec2 vUv;
   const float sunDiskIntensity = 30.0;
 

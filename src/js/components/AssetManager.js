@@ -4,7 +4,8 @@ StarrySky.AssetManager = function(skyDirector){
   this.images = {
     moonImages: {},
     starImages: {},
-    blueNoiseImages: {}
+    blueNoiseImages: {},
+    solarEclipseImage: null
   };
   const starrySkyComponent = skyDirector.parentComponent;
 
@@ -65,7 +66,8 @@ StarrySky.AssetManager = function(skyDirector){
     const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures;
+    const oneSolarEclipseImage = 1;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -375,6 +377,35 @@ StarrySky.AssetManager = function(skyDirector){
         console.error(err);
       });
     })(0);
+
+    let solarEclipseTexturePromise = new Promise(function(resolve, reject){
+      textureLoader.load(StarrySky.assetPaths.solarEclipseMap, function(texture){resolve(texture);});
+    });
+    solarEclipseTexturePromise.then(function(texture){
+      //Fill in the details of our texture
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.magFilter = THREE.LinearFilter;
+      texture.minFilter = THREE.LinearMipmapLinear;
+      texture.encoding = THREE.LinearEncoding;
+      texture.format = THREE.LuminanceFormat;
+      texture.generateMipmaps = true;
+      self.images.solarEclipseImage = texture;
+
+      //If the renderer already exists, go in and update the uniform
+      //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
+      if(self.skyDirector?.renderers?.SunRenderer !== undefined){
+        const atmosphereTextureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.solarEclipseMap;
+        atmosphereTextureRef.value = texture;
+      }
+
+      self.numberOfTexturesLoaded += 1;
+      if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+        self.hasLoadedImages = true;
+      }
+    }, function(err){
+      console.error(err);
+    });
 
     //Load any additional textures
   }

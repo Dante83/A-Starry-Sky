@@ -23,5 +23,5 @@ vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;
 float distanceBetweenPixelAndMoon = dot(vectorBetweenMoonAndPixel, vectorBetweenMoonAndPixel);
 vec3 sunTexel = vec3(0.0);
 if(distanceBetweenPixelAndMoon > (moonRadius * moonRadius)){
-  sunTexel = sundisk * sunDiskIntensity * limbDarkening * transmittanceFade;
+  sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv).r)* transmittanceFade;
 }
