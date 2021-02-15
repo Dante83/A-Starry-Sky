@@ -66,7 +66,7 @@ class SkyLocation extends HTMLElement {
       self.data.latitude = self.data.latitude ? clampAndWarn(self.data.latitude, -90.0, 90.0, '<sky-latitude>') : null;
       self.data.longitude = self.data.longitude ? clampAndWarn(self.data.longitude, -180.0, 180.0, '<sky-longitude>') : null;
       self.skyDataLoaded = true;
-      self.dispatchEvent(new Event('Sky-Data-Loaded'));
+      document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });
   };
 }

@@ -633,10 +633,16 @@ StarrySky.SkyDirector = function(parentComponent){
     }
   }
 
-  window.addEventListener('DOMContentLoaded', function(){
+  if(document.readyState === "complete" || document.readyState === "loaded"){
     //Grab all of our assets
     self.assetManager = new StarrySky.AssetManager(self);
-  });
+  }
+  else{
+    window.addEventListener('DOMContentLoaded', function(){
+      //Grab all of our assets
+      self.assetManager = new StarrySky.AssetManager(self);
+    });
+  }
 
   //
   //These hooks are here as user functions because users may wish to

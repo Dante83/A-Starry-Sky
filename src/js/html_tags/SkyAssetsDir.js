@@ -212,7 +212,7 @@ class SkyAssetsDir extends HTMLElement {
       }
 
       self.skyDataLoaded = true;
-      self.dispatchEvent(new Event('Sky-Data-Loaded'));
+      document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });
 
     this.loaded = true;
