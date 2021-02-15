@@ -3,7 +3,6 @@
 #include "color/ColorInterpolator.h"
 #include <emscripten/emscripten.h>
 #include <cmath>
-#include <stdio.h>
 
 //
 //Constructor

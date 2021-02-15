@@ -71,20 +71,15 @@
   </head>
   <body>
     <a-scene physics light="defaultLightsEnabled: false" shadow="type: pcfsoft">
-      <a-assets>
-        <a-asset-item id="low-poly-desert" src="./assets/3d-models/low-poly-desert.glb" ></a-asset-item>
-      </a-assets>
-
       <!-- Sky Setup -->
       <a-starry-sky>
         <sky-location>
-        	<sky-latitude>30.05</sky-latitude>
-        	<sky-longitude>-99.18</sky-longitude>
+        	<sky-latitude>38</sky-latitude>
+        	<sky-longitude>-122</sky-longitude>
         </sky-location>
         <sky-time>
-        	<sky-date>2024-04-07 11:00:00</sky-date>
-        	<sky-utc-offset>7</sky-utc-offset>
-        	<sky-speed>100.0</sky-speed>
+        	<sky-utc-offset>-7</sky-utc-offset>
+        	<sky-speed>200.0</sky-speed>
         </sky-time>
         <sky-assets-dir>
           <sky-assets-dir dir="assets">
@@ -106,10 +101,9 @@
         </sky-lighting>
       </a-starry-sky>
 
-      <a-box depth="4" height="4" width="4" position="-5 2 1" shadow="cast: true"
-      material="color: #ffffff; roughness: 0.7; metalness: 0"></a-box>
-      <a-sphere radius="2" position="-25 2 8" shadow="cast: true"
-      material="color: #ffffff; roughness: 0.7; metalness: 0"></a-sphere>
+      <a-assets>
+        <a-asset-item id="low-poly-desert" src="./assets/3d-models/low-poly-desert.glb" ></a-asset-item>
+      </a-assets>
 
       <a-entity camera look-controls wasd-controls="acceleration: 300"></a-entity>
 

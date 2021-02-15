@@ -2,7 +2,6 @@
 #include <stdbool.h>
 #include <cmath>
 #include "../Constants.h"
-#include <stdio.h>
 
 void LightingAnalyzer::setTransmittance(int x, int y, float weight, float* transmittance){
   int clampedX = fmin(fmax(x, 0), widthOfTransmittanceTexture);
@@ -150,8 +149,6 @@ float LightingAnalyzer::updateMeteringData(float* skyColorIntensitiesPtr){
   //But really we're just using hacky functions that I figured out over like months.
   //I don't think I have the above code understood at all - it's just a reference for the future.
   meteringValue = 0.2f * pow(fmax(logAverageOfLuminance * oneOverSumOfWeightWeights, 0.0), 2.4f);
-
-  //printf("logAverageOfLuminance: %f\r\n", logAverageOfLuminance);
 
   return meteringValue;
 }

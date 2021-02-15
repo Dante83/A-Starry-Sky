@@ -6,7 +6,6 @@
 #include "autoexposure/LightingAnalyzer.h"
 #include <emscripten/emscripten.h>
 #include <cmath>
-#include <stdio.h>
 
 //
 //Constructor

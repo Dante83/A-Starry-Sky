@@ -63,7 +63,7 @@ function initializeSkyAstronomicalState(){
   if(wasmIsReady && initialSkyDateReceived){
     //Set the current date time.
     const dateAtLocation = new Date(initialAstronomicalPostObject.date);
-    let dateAtUTC = new Date(dateAtLocation.getTime() + (initialAstronomicalPostObject.utcOffset * 3600.0) * 1000.0);
+    dateAtUTC = new Date(dateAtLocation.getTime() + (initialAstronomicalPostObject.utcOffset * 3600.0) * 1000.0);
 
     //Construct the initial sky state
     skyState = {
@@ -98,6 +98,14 @@ function initializeSkyAstronomicalState(){
       skyState.minute,
       skyState.second,
       skyState.memoryPtr
+    );
+    Module._updateSky(
+      skyState.year,
+      skyState.month,
+      skyState.day,
+      skyState.hour,
+      skyState.minute,
+      skyState.second
     );
     let initialStateFloat32Array = new Float32Array(initialStateBuffer);
     skyState.astroValuesFloat32Array = new Float32Array(Module.HEAPF32.buffer, skyState.memoryPtr, NUMBER_OF_ASTRONOMICAL_FLOATS);

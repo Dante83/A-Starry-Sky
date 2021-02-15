@@ -1,7 +1,6 @@
 #include "ColorInterpolator.h"
 #include "../Constants.h"
 #include <cmath>
-#include <stdio.h>
 
 ColorInterpolator::ColorInterpolator(){
   //

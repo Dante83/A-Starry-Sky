@@ -49,23 +49,24 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   let test = this.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar).texture;
 
   //Let's test this out by adding it to a plane in the scene
-  let plane = new THREE.PlaneBufferGeometry(2.0, 2.0, 1);
+  //let plane = new THREE.PlaneBufferGeometry(2.0, 2.0, 1);
 
-  //Create our material late
-  let material = new THREE.MeshBasicMaterial({
-    side: THREE.DoubleSide,
-    blending: THREE.NormalBlending,
-    transparent: true,
-    flatShading: true,
-    map: test,
-  });
-
-  //Attach the material to our geometry
-  let testMesh = new THREE.Mesh(plane, material);
-  testMesh.position.set(0.0, 2.0, -2.0);
+  // //Create our material late
+  //This is useful for debugging metering and other textures
+  // let material = new THREE.MeshBasicMaterial({
+  //   side: THREE.DoubleSide,
+  //   blending: THREE.NormalBlending,
+  //   transparent: true,
+  //   flatShading: true,
+  //   map: test,
+  // });
+  //
+  // //Attach the material to our geometry
+  // let testMesh = new THREE.Mesh(plane, material);
+  // testMesh.position.set(0.0, 2.0, -2.0);
 
   //Inject this mesh into our scene
-  this.skyDirector.scene.add(testMesh);
+  //this.skyDirector.scene.add(testMesh);
 
   let self = this;
   this.render = function(sunPosition, moonPosition, sunFade, moonFade){

@@ -12,11 +12,6 @@ StarrySky.SkyDirector = function(parentComponent){
   this.EVENT_INITIALIZATION_AUTOEXPOSURE_RESPONSE = 5;
   this.EVENT_UPDATE_AUTOEXPOSURE = 6;
   this.EVENT_RETURN_AUTOEXPOSURE = 7;
-  //7 Astronomical RAs and Decs (14), 7(21) brightnesses, Lunar Parallactic Angle(22)
-  //Earthshine Intensity(23), Solar and Lunar Scale Multiplier(25) or 25 variables
-  //14 of these require rotational transformations
-  //10 are linear interpolations
-  //1 (LSRT) is a rotational interpolation
   const RADIUS_OF_SKY = 5000.0;
   const BYTES_PER_32_BIT_FLOAT = 4;
   const NUMBER_OF_FLOATS = 27;
@@ -262,7 +257,7 @@ StarrySky.SkyDirector = function(parentComponent){
 
       //Check if we need to update our final state again
       if(self.interpolationT >= self.finalAstronomicalT){
-        self.updateFinalSkyState(self.finalLSRT, self.finalStateFloat32Array[14]);
+        self.updateFinalSkyState(self.skyState.LSRT, self.finalStateFloat32Array[14]);
       }
 
       //Interpolate our log average of the sky intensity
@@ -367,7 +362,9 @@ StarrySky.SkyDirector = function(parentComponent){
         self.astronomicalLinearValues_ptr, self.rotatedAstroDepedentValues_ptr);
       Module._updateFinalAstronomicalValues(self.astroPositions_f_ptr, self.astronomicalLinearValues_f_ptr);
       self.finalLSRT = self.finalStateFloat32Array[14];
-      Module._updateAstronomicalTimeData(self.interpolationT, self.interpolationT + TWENTY_MINUTES, initialStateFloat32Array[14], self.finalLSRT);
+      self.finalAstronomicalT = self.interpolationT + TWENTY_MINUTES;
+      Module._updateAstronomicalTimeData(self.interpolationT, self.finalAstronomicalT, initialStateFloat32Array[14], self.finalLSRT);
+
       self.skyState = {
         sun: {
           position: new THREE.Vector3(),
