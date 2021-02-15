@@ -392,13 +392,13 @@ void SkyInterpolator::getLunarParallacticAngle(float* interpolatedAstroPositions
 }
 
 void SkyInterpolator::getLunarEclipseState(){
-  float earthsShadowX = -rotationallyDepedentAstroValues[0];
-  float earthsShadowY = -rotationallyDepedentAstroValues[1];
-  float earthsShadowZ = -rotationallyDepedentAstroValues[2];
+  float earthsShadowX = -rotatedAstroPositions[0];
+  float earthsShadowY = -rotatedAstroPositions[1];
+  float earthsShadowZ = -rotatedAstroPositions[2];
 
-  float moonX = rotationallyDepedentAstroValues[0];
-  float moonY = rotationallyDepedentAstroValues[1];
-  float moonZ = rotationallyDepedentAstroValues[2];
+  float moonX = rotatedAstroPositions[3];
+  float moonY = rotatedAstroPositions[4];
+  float moonZ = rotatedAstroPositions[5];
 
   float diffX = earthsShadowX - moonX;
   float diffY = earthsShadowY - moonY;
@@ -408,20 +408,20 @@ void SkyInterpolator::getLunarEclipseState(){
   //the haversine distance
   float distanceToEarthsShadowSquared = diffX * diffX + diffY * diffY + diffZ * diffZ;
   float distanceToEarthsShadow = sqrt(distanceToEarthsShadowSquared);
+  float normalizedDistanceToEarthsShadow = distanceToEarthsShadow / (skyInterpolator->moonRadius * 0.2);
 
-  float oneOverNormalizedLunarDiameter = 1.0f / skyInterpolator->moonRadius * 2.0f;
+  float oneOverNormalizedLunarDiameter = 1.0f / (skyInterpolator->moonRadius * 2.0f);
 
-  float colorIntensity = fmin(fmax(distanceToEarthsShadowSquared / oneOverNormalizedLunarDiameter, 0.0), 1.0);
-  colorIntensity *= (0.2f + fmax(colorIntensity, 0.8f));
+  float colorIntensity = fmax(normalizedDistanceToEarthsShadow, 0.0f);
 
   skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX] = distanceToEarthsShadowSquared;
   skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 1] = oneOverNormalizedLunarDiameter;
   skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 2] = earthsShadowX;
   skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 3] = earthsShadowY;
   skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 4] = earthsShadowZ;
-  skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 5] = colorIntensity; // * 1.0f
-  skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 6] = 0.5f * colorIntensity;
-  skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 7] = 0.1f * colorIntensity;
+  skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 5] = fmin(colorIntensity, 1.0f); // * 1.0f
+  skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 6] = fmin(0.5f * colorIntensity, 1.0f);
+  skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 7] = fmin(0.3f * colorIntensity, 1.0f);
 }
 
 int main(){
