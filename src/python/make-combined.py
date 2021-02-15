@@ -5,14 +5,48 @@ import tempfile
 def main():
     #Useful constants, what we probably want to modify in order to write out the right file names
     output_dir = '../../dist/'
-    relative_dir = output_dir + "askyforge.master.js"
+    relative_dir = output_dir + "a-starry-sky.master.js"
     file_dir = os.path.abspath(relative_dir)
-    minified_file_dir = os.path.abspath(output_dir + "askyforge.master.min.js")
+    minified_file_dir = os.path.abspath(output_dir + "a-starry-sky.master.min.js")
 
     #Directy and ordered list of files to load
     js_dir = '../js/'
-    js_fil_names = ['cloner.js', 'sky-shader.js', 'a-sky-forge.js', 'a-dynamic-sky-entity-methods.js',\
-    'a-frame-components.js', 'a-sky-interpolator.js']
+    js_fil_names = ['three_js_extensions/BufferGeometryUtils.js',\
+    'three_js_extensions/StarrySkyGPUComputeRenderer.js',\
+    'three_js_extensions/StarrySkyGPUComputeRenderer.js',\
+    'StarrySky.js',\
+    'materials/atmosphere/atmosphere-functions.js',\
+    'materials/atmosphere/transmittance.js',\
+    'materials/atmosphere/single-scattering.js',\
+    'materials/atmosphere/inscattering-sum.js',\
+    'materials/atmosphere/kth-inscattering.js',\
+    'materials/atmosphere/atmosphere-pass.js',\
+    'materials/postprocessing/high-pass-filter.js',\
+    'materials/postprocessing/seperable-blur-filter.js',\
+    'materials/sun/combination-pass.js',\
+    'materials/sun/base-sun-partial.js',\
+    'materials/moon/combination-pass.js',\
+    'materials/moon/base-moon-partial.js',\
+    'materials/stars/star-data-map.js',\
+    'materials/autoexposure/metering-survey.js',\
+    'materials/autoexposure/test-pass.js',\
+    'html_tags/SkyAssetsDir.js',\
+    'html_tags/SkyAtmosphericParameters.js',\
+    'html_tags/SkyLocation.js',\
+    'html_tags/SkyTime.js',\
+    'html_tags/SkyLighting.js',\
+    'lut_libraries/AtmosphericLUTLibrary.js',\
+    'lut_libraries/StellarLUTLibrary.js',\
+    'renderers/AtmosphereRenderer.js',\
+    'renderers/BloomRenderer.js',\
+    'renderers/SunRenderer.js',\
+    'renderers/MoonRenderer.js',\
+    'renderers/MeteringSurveyRenderer.js',\
+    'components/LightingManager.js',\
+    'components/AssetManager.js',\
+    'components/SkyDirector.js',\
+    'primitives/a-starry-sky.js',\
+    'components/starry-sky-wrapper.js']
 
     #Grab the strings for each of these files, and pull out any branches of code related to if(typeof exports !== 'undefined') {..}
     code_blocks = []
@@ -50,7 +84,7 @@ def main():
         tmp.seek(0)
 
         #Use that temporary file in our sub process
-        proc = subprocess.Popen(['uglifyjs', tmp.name], stdout=subprocess.PIPE, shell=True)
+        proc = subprocess.Popen(['terser', tmp.name], stdout=subprocess.PIPE, shell=True)
         (uglified_js, err) = proc.communicate()
         if err == None:
             with open(minified_file_dir, 'w') as w:
