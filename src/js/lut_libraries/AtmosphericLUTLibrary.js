@@ -6,13 +6,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.lunarEcclipseLUTs = [];
 
   //Enable the OES_texture_float_linear extension
-  if(!renderer.extensions.get("OES_texture_float_linear")){
+  if(!renderer.capabilities.isWebGL2 && !renderer.extensions.get("OES_texture_float_linear")){
     console.error("No linear interpolation of OES textures allowed.");
     return false;
   }
 
   //Enable 32 bit float textures
-  if(!renderer.extensions.get("WEBGL_color_buffer_float")){
+  if(!renderer.capabilities.isWebGL2 && !renderer.extensions.get("WEBGL_color_buffer_float")){
     console.error("No float WEBGL color buffers allowed.");
     return false;
   }

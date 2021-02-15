@@ -46,6 +46,7 @@ void EMSCRIPTEN_KEEPALIVE setupInterpolators(float latitude, float twiceTheSinOf
   skyInterpolator->rotationallyDepedentAstroValues = rotationallyDepedentAstroValues;
   skyInterpolator->solarRadius = solarRadius;
   skyInterpolator->moonRadius = moonRadius;
+  skyInterpolator->distanceForSolarEclipse = distanceForSolarEclipse;
 }
 
 void EMSCRIPTEN_KEEPALIVE updateFinalAstronomicalValues(float* astroPositions_f, float* linearValues_f){

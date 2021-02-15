@@ -71,16 +71,20 @@
   </head>
   <body>
     <a-scene physics light="defaultLightsEnabled: false" shadow="type: pcfsoft">
+      <a-assets>
+        <a-asset-item id="low-poly-desert" src="./assets/3d-models/low-poly-desert.glb" ></a-asset-item>
+      </a-assets>
+
       <!-- Sky Setup -->
       <a-starry-sky>
         <sky-location>
-          <sky-latitude>-40.9</sky-latitude>
-          <sky-longitude>174.9</sky-longitude>
+        	<sky-latitude>30.05</sky-latitude>
+        	<sky-longitude>-99.18</sky-longitude>
         </sky-location>
         <sky-time>
-          <sky-date>2018-01-30 19:00:00</sky-date>
-          <sky-utc-offset>-13</sky-utc-offset>
-          <sky-speed>1200.0</sky-speed>
+        	<sky-date>2024-04-07 11:00:00</sky-date>
+        	<sky-utc-offset>7</sky-utc-offset>
+        	<sky-speed>100.0</sky-speed>
         </sky-time>
         <sky-assets-dir>
           <sky-assets-dir dir="assets">
@@ -101,10 +105,6 @@
           <sky-shadow-camera-resolution>1024</sky-shadow-camera-resolution>
         </sky-lighting>
       </a-starry-sky>
-
-      <a-assets>
-        <a-asset-item id="low-poly-desert" src="./assets/3d-models/low-poly-desert.glb" ></a-asset-item>
-      </a-assets>
 
       <a-box depth="4" height="4" width="4" position="-5 2 1" shadow="cast: true"
       material="color: #ffffff; roughness: 0.7; metalness: 0"></a-box>

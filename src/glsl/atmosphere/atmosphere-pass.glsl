@@ -246,6 +246,11 @@ vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 spher
   return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);
 }
 
+//Including this because someone removed this in a future versio of THREE. Why?!
+vec3 MyAESFilmicToneMapping(vec3 color) {
+  return clamp((color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14), 0.0, 1.0);
+}
+
 void main(){
 
   #if($isMeteringPass)
@@ -354,7 +359,7 @@ void main(){
 
     $draw_sun_pass
 
-    combinedPass = pow(ACESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);
+    combinedPass = pow(MyAESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);
   #elif($isMoonPass)
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;
     vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);
@@ -365,7 +370,7 @@ void main(){
     combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);
 
     //And bring it back to the normal gamma afterwards
-    combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);
+    combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
   #elif($isMeteringPass)
     //Cut this down to the circle of the sky ignoring the galatic lighting
     float circularMask = 1.0 - step(1.0, rho);
@@ -378,13 +383,13 @@ void main(){
     float intensityPass = (0.3 * intensityPassColors.r + 0.59 * intensityPassColors.g + 0.11 * intensityPassColors.b) * circularMask;
 
     //Now apply the ACESFilmicTonemapping
-    combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);
+    combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
   #else
     //Regular atmospheric pass
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting;
 
     //Now apply the ACESFilmicTonemapping
-    combinedPass = pow(ACESFilmicToneMapping(combinedPass), inverseGamma);
+    combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
 
     //Now apply the blue noise
     combinedPass += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));

@@ -157,6 +157,8 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 
 	this.init = function () {
 
+    console.log(renderer.capabilities.isWebGL2);
+
 		if ( ! renderer.capabilities.isWebGL2 &&
 			 ! renderer.extensions.get( "OES_texture_float" ) ) {
 
