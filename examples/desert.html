@@ -10,25 +10,26 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no,user-scalable=no,maximum-scale=1">
 
     <!-- Built for A-Frame -->
-    <script src="https://aframe.io/releases/1.1.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <!--This commented out code is the unfurled stack which I use for debugging-->
 
     <!-- A-Starry-Sky Version 1.0 -->
-    <script src="../dist/copy_me_to_js_dir/a-starry-sky.v1.0.0.min.js"></script>
+    <!-- <script src="../dist/copy_me_to_js_dir/a-starry-sky.v1.0.0.min.js"></script> -->
 
     <!-- Sky Interpolator -->
     <script src="../dist/copy_me_to_js_dir/interpolation-engine.js"></script>
 
     <!-- The below are used for development purposes, it is advised that you use the files in the dist folder -->
     <!-- Three.js extensions -->
-    <!-- <script src="../src/js/three_js_extensions/BufferGeometryUtils.js"></script>
-    <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script> -->
+    <script src="../src/js/three_js_extensions/BufferGeometryUtils.js"></script>
+    <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script>
 
     <!-- Namespace -->
-    <!-- <script src="../src/js/StarrySky.js"></script> -->
+    <script src="../src/js/StarrySky.js"></script>
 
     <!-- Materials -->
-    <!-- <script src="../src/js/materials/atmosphere/atmosphere-functions.js"></script>
+    <script src="../src/js/materials/atmosphere/atmosphere-functions.js"></script>
     <script src="../src/js/materials/atmosphere/transmittance.js"></script>
     <script src="../src/js/materials/atmosphere/single-scattering.js"></script>
     <script src="../src/js/materials/atmosphere/inscattering-sum.js"></script>
@@ -42,34 +43,34 @@
     <script src="../src/js/materials/moon/base-moon-partial.js"></script>
     <script src="../src/js/materials/stars/star-data-map.js"></script>
     <script src="../src/js/materials/autoexposure/metering-survey.js"></script>
-    <script src="../src/js/materials/autoexposure/test-pass.js"></script> -->
+    <script src="../src/js/materials/autoexposure/test-pass.js"></script>
 
     <!--- Custom HTML Tags -->
-    <!-- <script src="../src/js/html_tags/SkyAssetsDir.js"></script>
+    <script src="../src/js/html_tags/SkyAssetsDir.js"></script>
     <script src="../src/js/html_tags/SkyAtmosphericParameters.js"></script>
     <script src="../src/js/html_tags/SkyLocation.js"></script>
     <script src="../src/js/html_tags/SkyTime.js"></script>
-    <script src="../src/js/html_tags/SkyLighting.js"></script> -->
+    <script src="../src/js/html_tags/SkyLighting.js"></script>
 
     <!-- LUT Libraries -->
-    <!-- <script src="../src/js/lut_libraries/AtmosphericLUTLibrary.js"></script>
-    <script src="../src/js/lut_libraries/StellarLUTLibrary.js"></script> -->
+    <script src="../src/js/lut_libraries/AtmosphericLUTLibrary.js"></script>
+    <script src="../src/js/lut_libraries/StellarLUTLibrary.js"></script>
 
     <!-- Renderers -->
-    <!-- <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
+    <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
     <script src="../src/js/renderers/BloomRenderer.js"></script>
     <script src="../src/js/renderers/SunRenderer.js"></script>
     <script src="../src/js/renderers/MoonRenderer.js"></script>
-    <script src="../src/js/renderers/MeteringSurveyRenderer.js"></script> -->
+    <script src="../src/js/renderers/MeteringSurveyRenderer.js"></script>
 
     <!--Players -->
-    <!-- <script src="../src/js/components/LightingManager.js"></script>
+    <script src="../src/js/components/LightingManager.js"></script>
     <script src="../src/js/components/AssetManager.js"></script>
-    <script src="../src/js/components/SkyDirector.js"></script> -->
+    <script src="../src/js/components/SkyDirector.js"></script>
 
     <!-- A-Frame Hooks -->
-    <!-- <script src="../src/js/primitives/a-starry-sky.js"></script>
-    <script src="../src/js/components/starry-sky-wrapper.js"></script> -->
+    <script src="../src/js/primitives/a-starry-sky.js"></script>
+    <script src="../src/js/components/starry-sky-wrapper.js"></script>
 
   <!--Scene Scripts-->
   </head>
@@ -82,9 +83,19 @@
         	<sky-longitude>-122</sky-longitude>
         </sky-location>
         <sky-time>
-        	<sky-utc-offset>-7</sky-utc-offset>
+          <sky-date>2021-2-20 7:00:00</sky-date>
+        	<sky-utc-offset>7</sky-utc-offset>
         	<sky-speed>200.0</sky-speed>
         </sky-time>
+        <!-- <sky-location>
+                  <sky-latitude>-40.9</sky-latitude>
+                  <sky-longitude>174.9</sky-longitude>
+        </sky-location>
+        <sky-time>
+        	<sky-date>2018-01-30 19:00:00</sky-date>
+        	<sky-utc-offset>-13</sky-utc-offset>
+        	<sky-speed>200.0</sky-speed>
+        </sky-time> -->
         <sky-assets-dir>
           <sky-assets-dir dir="assets">
             <sky-assets-dir dir="moon" moon-path></sky-assets-dir>
@@ -97,8 +108,8 @@
           <sky-assets-dir dir="wasm" wasm-path></sky-assets-dir>
         </sky-assets-dir>
         <sky-atmospheric-parameters>
-          <sky-moon-angular-diameter>4.2</sky-moon-angular-diameter>
-          <sky-sun-angular-diameter>4.0</sky-sun-angular-diameter>
+          <sky-moon-angular-diameter>3.1</sky-moon-angular-diameter>
+          <sky-sun-angular-diameter>3.0</sky-sun-angular-diameter>
         </sky-atmospheric-parameters>
         <sky-lighting>
           <sky-shadow-camera-resolution>1024</sky-shadow-camera-resolution>
@@ -109,10 +120,19 @@
         <a-asset-item id="low-poly-desert" src="./assets/3d-models/low-poly-desert.glb" ></a-asset-item>
       </a-assets>
 
-      <a-entity camera look-controls wasd-controls="acceleration: 300"></a-entity>
+      <a-entity id="rig" movement-controls position="25 0 25">
+        <a-entity camera look-controls wasd-controls="acceleration: 30"></a-entity>
+      </a-entity>
+
+      <!-- <a-ocean width="200" depth="200" position="-100 -8 -50" density="200" opacity="0.2"></a-ocean> -->
 
       <!-- Scene Setup-->
       <a-entity gltf-model="#low-poly-desert" position="0 0 0" shadow="cast: false"></a-entity>
+
+      <a-box depth="4" height="4" width="4" position="-5 2 1" shadow="cast: true"
+      material="color: #ffffff; roughness: 0.7; metalness: 0"></a-box>
+      <a-sphere radius="2" position="-25 2 8" shadow="cast: true"
+      material="color: #ffffff; roughness: 0.7; metalness: 0"></a-sphere>
     </a-scene>
   </body>
 </html>

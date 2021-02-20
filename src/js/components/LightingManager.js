@@ -86,7 +86,7 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
     self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
     self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
-    self.sourceLight.intensity = lightingState[24] * 0.3;
+    self.sourceLight.intensity = lightingState[24] * 0.5;
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the

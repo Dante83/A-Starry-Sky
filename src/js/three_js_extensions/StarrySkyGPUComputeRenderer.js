@@ -356,7 +356,12 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 
 		mesh.material = material;
 		renderer.setRenderTarget( output );
-		renderer.render( scene, camera );
+    const webXROriginallEnabled = renderer.xr.enabled;
+    if(webXROriginallEnabled){
+      renderer.xr.enabled = false;
+    }
+    renderer.render( scene, camera );
+    renderer.xr.enabled = webXROriginallEnabled;
 		mesh.material = passThruShader;
 
 		renderer.setRenderTarget( currentRenderTarget );

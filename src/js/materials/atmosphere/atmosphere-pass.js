@@ -321,7 +321,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         "//Use the distance to the star to determine it's perceived twinkling",
         'float starBrightness = pow(100.0, (-starData.a + starAndSkyExposureReduction) * 0.2);',
-        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1400.0;',
+        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;',
 
         '//Modify the intensity and color of this star using approximation of stellar scintillation',
         'vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));',
@@ -421,6 +421,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//Atmosphere',
       'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
       'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
+      '//vec3 baseSkyLighting = 2.0 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
+      'vec3 baseSkyLighting = vec3(0.0);',
 
       '//This stuff never shows up near our sun, so we can exclude it',
       '#if(!$isSunPass && !$isMeteringPass)',
@@ -485,13 +487,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
 
         '$draw_sun_pass',
 
         'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);',
       '#elif($isMoonPass)',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
         'vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);',
 
         '$draw_moon_pass',
@@ -504,7 +506,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#elif($isMeteringPass)',
         '//Cut this down to the circle of the sky ignoring the galatic lighting',
         'float circularMask = 1.0 - step(1.0, rho);',
-        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass) * circularMask;',
+        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting) * circularMask;',
 
         '//Combine the colors together and apply a transformation from the scattering intensity to the moon luminosity',
         'vec3 intensityPassColors = lunarAtmosphericPass * (moonLuminosity / scatteringMoonIntensity) + solarAtmosphericPass * (sunLuminosity / scatteringSunIntensity);',
@@ -516,7 +518,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
       '#else',
         '//Regular atmospheric pass',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting;',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting;',
 
         '//Now apply the ACESFilmicTonemapping',
         'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
