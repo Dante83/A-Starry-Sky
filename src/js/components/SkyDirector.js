@@ -249,12 +249,6 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.jupiter.intensity = self.astronomicalLinearValues[9];
       self.skyState.saturn.intensity = self.astronomicalLinearValues[10];
 
-      //Update values associated with lunar eclipses
-      self.skyState.moon.distanceToEarthsShadowSquared = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX];
-      self.skyState.moon.oneOverNormalizedLunarDiameter = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX + 1];
-      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 2, START_OF_LUNAR_ECLIPSE_INDEX + 5));
-      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 5, START_OF_LUNAR_ECLIPSE_INDEX + 8));
-
       //Check if we need to update our final state again
       if(self.interpolationT >= self.finalAstronomicalT){
         self.updateFinalSkyState(self.skyState.LSRT, self.finalStateFloat32Array[14]);
@@ -264,6 +258,12 @@ StarrySky.SkyDirector = function(parentComponent){
       Module._tick_lightingInterpolations(self.time);
       self.interpolatedSkyIntensityMagnitude = self.lightingColorValues[28];
       self.exposureVariables.starsExposure = Math.min(6.8 - self.interpolatedSkyIntensityMagnitude, 3.7);
+
+      //Update values associated with lunar eclipses
+      self.skyState.moon.distanceToEarthsShadowSquared = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX];
+      self.skyState.moon.oneOverNormalizedLunarDiameter = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX + 1];
+      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 2, START_OF_LUNAR_ECLIPSE_INDEX + 5));
+      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 5, START_OF_LUNAR_ECLIPSE_INDEX + 8));
 
       //Tick our light positions before we might just use them to set up the next interpolation
       self.lightingManager.tick(self.lightingColorValues);
@@ -293,6 +293,7 @@ StarrySky.SkyDirector = function(parentComponent){
           self.dominantLightIsSun0 = false;
           dominantLightY0 = mp.y;
         }
+        self.dominantLightY0 = dominantLightY0;
 
         //Is this what they mean by dependency injection overload?
         //void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0,
@@ -300,7 +301,7 @@ StarrySky.SkyDirector = function(parentComponent){
         //float dominantLightIntensityf, float* lightColors0, float* lightColorsf, float t_0, float t_f);
         Module._updateLightingValues(self.interpolatedSkyIntensityMagnitude, self.exposureVariables.exposureCoefficientf,
           self.dominantLightIsSun0, self.dominantLightIsSunf,
-          dominantLightY0, self.dominantLightYf,
+          self.dominantLightY0, self.dominantLightYf,
           self.lightingColorValues_ptr, self.lightingColorValues_f_ptr,
           self.time, self.time + HALF_A_SECOND);
 

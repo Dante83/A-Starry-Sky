@@ -190,7 +190,7 @@ $atmosphericFunctions
     float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);
 
     //Use the distance to the star to determine it's perceived twinkling
-    float starBrightness = pow(100.0, (-starData.a + starAndSkyExposureReduction) * 0.2);
+    float starBrightness = pow(100.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.2);
     float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;
 
     //Modify the intensity and color of this star using approximation of stellar scintillation
@@ -291,7 +291,7 @@ void main(){
   //Atmosphere
   vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);
   vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);
-  vec3 baseSkyLighting = 2.0 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;
+  vec3 baseSkyLighting = 0.4 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;
 
   //This stuff never shows up near our sun, so we can exclude it
   #if(!$isSunPass && !$isMeteringPass)

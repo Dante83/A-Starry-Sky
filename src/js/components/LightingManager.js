@@ -32,8 +32,9 @@ StarrySky.LightingManager = function(parentComponent){
   this.zAxisHemisphericalLight.position.set(0,0,1);
 
   parentComponent.scene.fog = this.fog;
+  const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
   if(lightingData.atmosphericPerspectiveEnabled){
-    this.fog = new THREE.FogExp2(0xFFFFFF, lightingData.atmosphericPerspectiveDensity);
+    this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
     parentComponent.scene.fog = this.fog;
   }
 
@@ -59,16 +60,12 @@ StarrySky.LightingManager = function(parentComponent){
     //And drive the shadow type based on the shadow provided in sky-lighting.
     if(lightingData.atmosphericPerspectiveEnabled){
       self.fogColorVector.fromArray(lightingState, 21);
-      const maxVal = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
-      // const inverseMagnitudeOfSky = 1.0 / maxVal;
-      // self.fogColorVector.r *= inverseMagnitudeOfSky;
-      // self.fogColorVector.g *= inverseMagnitudeOfSky;
-      // self.fogColorVector.b *= inverseMagnitudeOfSky;
-      // self.fog.density = maxVal * self.maxFogDensity;
+      const maxColor = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
 
       //The fog color is taken from sky color hemispherical data alone (excluding ground color)
       //and is the color taken by dotting the camera direction with the colors of our
       //hemispherical lighting along the x, z axis.
+      self.fog.density = Math.pow(maxColor, 0.3) * maxFogDensity;
       self.fog.color.copy(self.fogColorVector);
     }
 
@@ -86,7 +83,9 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
     self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
     self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
-    self.sourceLight.intensity = lightingState[24] * 0.6;
+    const intensityModifier = Math.min(Math.max(self.sourceLight.position.y + 0.1, 0.0), 0.1) / 0.1;
+    self.sourceLight.intensity = intensityModifier * lightingState[24] * 0.5;
+    console.log(lunarEclipseLightingModifier.x);
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
@@ -97,7 +96,7 @@ StarrySky.LightingManager = function(parentComponent){
     self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
     self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
     self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    const indirectLightIntensity = 0.1 + Math.max(lightingState[24] * 0.15, 0.0);
+    const indirectLightIntensity = 0.02 + intensityModifier * 0.15;
     self.xAxisHemisphericalLight.intensity = indirectLightIntensity
     self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.zAxisHemisphericalLight.intensity = indirectLightIntensity;

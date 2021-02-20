@@ -152,16 +152,23 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
   float sunYPosition = skyInterpolator->rotatedAstroPositions[1];
   float sunRadius = 0.5f * skyInterpolator->linearValues[1] * skyInterpolator->twiceTheSinOfSolarRadius;
   float directLightIntensity = 1.0f;
+  skyInterpolator->getLunarEclipseState();
   if(sunYPosition < -sunRadius){
     //Moon is the dominant light source
     //Fade out from the sun
     directLightIntensity = fmax(fmin(-4.0f * sunYPosition - 0.2f, 1.0f), 0.0f);
 
+    //And no matter what, it's value is 1/3 the brightness of the sun.
+    directLightIntensity *= 0.5f;
+
     //Use the percent of visibility of the moon to modify the brightness
     directLightIntensity *= skyInterpolator->linearValues[11]; //The fractional illumination of the moon
-
-    //As above the moon is the dominant light source here
-    skyInterpolator->getLunarEclipseState();
+  }
+  else{
+    //Sun is the dominant light source here
+    skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 5] = 1.0f;
+    skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 6] = 1.0f;
+    skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 7] = 1.0f;
   }
 
   //Interpolate the indirect light brightness

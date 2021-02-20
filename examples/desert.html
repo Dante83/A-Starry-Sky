@@ -18,7 +18,8 @@
     <!-- <script src="../dist/copy_me_to_js_dir/a-starry-sky.v1.0.0.min.js"></script> -->
 
     <!-- Sky Interpolator -->
-    <script src="../dist/copy_me_to_js_dir/interpolation-engine.js"></script>
+    <!-- <script src="../dist/copy_me_to_js_dir/interpolation-engine.js"></script> -->
+    <script src="../src/cpp/interpolation-engine/interpolation-engine.js"></script>
 
     <!-- The below are used for development purposes, it is advised that you use the files in the dist folder -->
     <!-- Three.js extensions -->
@@ -78,24 +79,24 @@
     <a-scene physics light="defaultLightsEnabled: false" shadow="type: pcfsoft">
       <!-- Sky Setup -->
       <a-starry-sky>
-        <sky-location>
+        <!-- <sky-location>
         	<sky-latitude>38</sky-latitude>
         	<sky-longitude>-122</sky-longitude>
         </sky-location>
         <sky-time>
-          <sky-date>2021-2-20 5:00:00</sky-date>
-        	<sky-utc-offset>7</sky-utc-offset>
-        	<sky-speed>200.0</sky-speed>
-        </sky-time>
-        <!-- <sky-location>
-                  <sky-latitude>-40.9</sky-latitude>
-                  <sky-longitude>174.9</sky-longitude>
-        </sky-location>
-        <sky-time>
-        	<sky-date>2018-01-30 19:00:00</sky-date>
-        	<sky-utc-offset>-13</sky-utc-offset>
+          <sky-date>2021-2-20 15:00:00</sky-date>
+        	<sky-utc-offset>7</sky-utc-offset>6
         	<sky-speed>200.0</sky-speed>
         </sky-time> -->
+        <sky-location>
+        	<sky-latitude>30.05</sky-latitude>
+        	<sky-longitude>-99.18</sky-longitude>
+        </sky-location>
+        <sky-time>
+        	<sky-date>2024-04-07 5:00:00</sky-date>
+        	<sky-utc-offset>7</sky-utc-offset>
+        	<sky-speed>50.0</sky-speed>
+        </sky-time>
         <sky-assets-dir>
           <sky-assets-dir dir="assets">
             <sky-assets-dir dir="moon" moon-path></sky-assets-dir>
@@ -124,7 +125,7 @@
         <a-entity camera look-controls wasd-controls="acceleration: 30"></a-entity>
       </a-entity>
 
-      <a-ocean width="200" depth="200" position="-100 -8 -50" density="200" opacity="0.4"></a-ocean>
+      <a-ocean width="200" depth="200" position="-100 -8 -50" density="200" opacity="0.2"></a-ocean>
 
       <!-- Scene Setup-->
       <a-entity gltf-model="#low-poly-desert" position="0 0 0" shadow="cast: false"></a-entity>
