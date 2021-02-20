@@ -421,8 +421,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//Atmosphere',
       'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
       'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
-      '//vec3 baseSkyLighting = 2.0 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
-      'vec3 baseSkyLighting = vec3(0.0);',
+      'vec3 baseSkyLighting = 2.0 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
 
       '//This stuff never shows up near our sun, so we can exclude it',
       '#if(!$isSunPass && !$isMeteringPass)',
