@@ -151,20 +151,34 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
   //Interpolate the direct light brightness
   float sunYPosition = skyInterpolator->rotatedAstroPositions[1];
   float sunRadius = 0.5f * skyInterpolator->linearValues[1] * skyInterpolator->twiceTheSinOfSolarRadius;
+  float nightTimeTrigger = -3.0f * sunRadius;
   float directLightIntensity = 1.0f;
   skyInterpolator->getLunarEclipseState();
-  if(sunYPosition < -sunRadius){
-    //Moon is the dominant light source
-    //Fade out from the sun
-    directLightIntensity = fmax(fmin(-4.0f * sunYPosition - 0.2f, 1.0f), 0.0f);
+  if(sunYPosition < nightTimeTrigger){
+    skyInterpolator->dominantLightIsSun = false;
 
-    //And no matter what, it's value is 1/3 the brightness of the sun.
-    directLightIntensity *= 0.5f;
+    //Our maximum brightness is at max a third the brightness of the sun times the visible percent of the moon
+    float maxValue = 0.3f * skyInterpolator->linearValues[11];
 
-    //Use the percent of visibility of the moon to modify the brightness
-    directLightIntensity *= skyInterpolator->linearValues[11]; //The fractional illumination of the moon
+    //It fades out over a range of sun heights to twice the night trigger range
+    float x0 = nightTimeTrigger;
+    float xf = 2.0f * nightTimeTrigger;
+    float slope = maxValue / (xf - x0);
+
+    directLightIntensity = fmax(fmin(slope * (sunYPosition - nightTimeTrigger), maxValue), 0.0f);
   }
   else{
+    skyInterpolator->dominantLightIsSun = true;
+
+    //Our maximum brightness is just the fractional part of the sun times the area of the solar eclipse
+    float maxValue = 1.0f;
+
+    //It fades out over a range of sun heights to twice the night trigger range
+    //float x0 = 0.0;
+    float xf = nightTimeTrigger;
+    float slope = -maxValue / xf;
+
+    directLightIntensity = fmax(fmin(slope * sunYPosition + maxValue, maxValue), 0.0f);
     //Sun is the dominant light source here
     skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 5] = 1.0f;
     skyInterpolator->rotationallyDepedentAstroValues[START_OF_LUNAR_ECLIPSE_INDEX + 6] = 1.0f;
@@ -176,20 +190,20 @@ void EMSCRIPTEN_KEEPALIVE tick_lightingInterpolations(float t){
 
   //Interpolate direct light y position
   float directLightingX;
+  float directLightingY;
   float directLightingZ;
   if(skyInterpolator->dominantLightIsSun){
     //Sun x z position
     directLightingX = skyInterpolator->rotatedAstroPositions[0];
+    directLightingY = skyInterpolator->rotatedAstroPositions[1];
     directLightingZ = skyInterpolator->rotatedAstroPositions[2];
-    indirectLightIntensity *= skyInterpolator->rotationallyDepedentAstroValues[START_OF_HORIZON_FADE_INDEX];
   }
   else{
     //Moon x z position
     directLightingX = skyInterpolator->rotatedAstroPositions[3];
+    directLightingY = skyInterpolator->rotatedAstroPositions[4];
     directLightingZ = skyInterpolator->rotatedAstroPositions[5];
-    indirectLightIntensity *= skyInterpolator->rotationallyDepedentAstroValues[START_OF_HORIZON_FADE_INDEX + 1];
   }
-  float directLightingY = skyInterpolator->dominantLightY0 + tFractional * skyInterpolator->deltaDominantLightY;
 
   //Interpolate our light colors
   skyInterpolator->colorInterpolator->updateLightingLinearInterpolations(tFractional);
@@ -231,35 +245,35 @@ void EMSCRIPTEN_KEEPALIVE updateLightingValues(float skyIntensity0, float skyInt
   float maxColorChannel0 = fmax(lightColors0[18], fmax(lightColors0[19], lightColors0[20]));
   float maxColorChannelf = fmax(lightColorsf[18], fmax(lightColorsf[19], lightColorsf[20]));
   float finalDominantLightIntensity = maxColorChannelf;
-  if(dominantLightIsSun0 != dominantLightIsSunf){
+  //if(dominantLightIsSun0 != dominantLightIsSunf){
     //This is either the transition to night time or day time
     //in which case we always have the sun dominate
-    skyInterpolator->dominantLightIsSun = true;
+    //skyInterpolator->dominantLightIsSun = true;
 
     //Which ever light is sun gives it's direction to the dominant light y in this case
-    skyInterpolator->dominantLightY0 = dominantLightIsSun0 ? dominantLightY0 : dominantLightYf;
-    skyInterpolator->deltaDominantLightY = 0.0; //No changes in altitude occur on this first cycle
-    if(dominantLightIsSun0){
-      //Sun is setting, in which case fade out the entire brightness by the time it's set
-      skyInterpolator->dominantLightIntensity0 = maxColorChannel0;
-      skyInterpolator->deltaDominantLightIntensity = -maxColorChannel0;
-      finalDominantLightIntensity = 0.0;
-    }
-    else{
-      //Sun is rising, in which case, ramp it up to full by the time it is visible
-      skyInterpolator->dominantLightIntensity0 = 0.0;
-      skyInterpolator->deltaDominantLightIntensity = maxColorChannelf;
-      finalDominantLightIntensity = maxColorChannelf;
-    }
-  }
-  else{
-    skyInterpolator->dominantLightIsSun = dominantLightIsSun0;
-    skyInterpolator->dominantLightY0 = dominantLightY0;
-    skyInterpolator->deltaDominantLightY = dominantLightYf - dominantLightY0;
-    skyInterpolator->dominantLightIntensity0 = maxColorChannel0;
-    skyInterpolator->deltaDominantLightIntensity = maxColorChannelf - maxColorChannel0;
-    finalDominantLightIntensity = maxColorChannelf;
-  }
+    //skyInterpolator->dominantLightY0 = dominantLightIsSun0 ? dominantLightY0 : dominantLightYf;
+    // skyInterpolator->deltaDominantLightY = 0.0; //No changes in altitude occur on this first cycle
+    // if(dominantLightIsSun0){
+    //   //Sun is setting, in which case fade out the entire brightness by the time it's set
+    //   skyInterpolator->dominantLightIntensity0 = maxColorChannel0;
+    //   skyInterpolator->deltaDominantLightIntensity = -maxColorChannel0;
+    //   finalDominantLightIntensity = 0.0;
+    // }
+    // else{
+    //   //Sun is rising, in which case, ramp it up to full by the time it is visible
+    //   skyInterpolator->dominantLightIntensity0 = 0.0;
+    //   skyInterpolator->deltaDominantLightIntensity = maxColorChannelf;
+    //   finalDominantLightIntensity = maxColorChannelf;
+    // }
+  // }
+  // else{
+  //   skyInterpolator->dominantLightIsSun = dominantLightIsSun0;
+  //   skyInterpolator->dominantLightY0 = dominantLightY0;
+  //   skyInterpolator->deltaDominantLightY = dominantLightYf - dominantLightY0;
+  //   skyInterpolator->dominantLightIntensity0 = maxColorChannel0;
+  //   skyInterpolator->deltaDominantLightIntensity = maxColorChannelf - maxColorChannel0;
+  //   finalDominantLightIntensity = maxColorChannelf;
+  // }
 
   //Normalize our light colors
   //Also if we want to convert from 0-1 to 0-255, this is where we want to do it

@@ -96,10 +96,11 @@ void EMSCRIPTEN_KEEPALIVE updateHemisphericalLightingData(float* skyColorIntensi
 float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer, float* indirectLightingPointer){
   //Determine whether sun or moon is dominant based on the height
   float dominantLightRadius = sunRadius;
+  float nightTimeTrigger = -3.0f * sunRadius;
   float dominantLightY = sunYPosition;
   bool sunIsDominantLightSource = true;
   float dominantLightIntensity = sunIntensity;
-  if(sunYPosition < -sunRadius){
+  if(sunYPosition < nightTimeTrigger){
     dominantLightRadius = moonRadius;
     dominantLightY = moonYPosition;
     sunIsDominantLightSource = false;
@@ -111,32 +112,33 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
   //accurate solution which would require summing over the intensities of
   //all pixels on a image of the sun or moon - this is just a point source
   //approximation.
-  float totalLightSourceArea = PI * dominantLightRadius * dominantLightRadius;
-  float visibleAreaOfLightSource = 0.0f;
-  if(dominantLightY >= dominantLightRadius){
-    visibleAreaOfLightSource = totalLightSourceArea;
-  }
-  else if(dominantLightY > -dominantLightRadius){
-    //LightSource is above horizon, we automatically get half of our sphere
-    if(dominantLightY >= 0.0f){
-      visibleAreaOfLightSource = PI_OVER_TWO * dominantLightRadius * dominantLightRadius;
-    }
-    if(dominantLightY != 0.0f){
-      float h = dominantLightRadius - abs(dominantLightY);
-      float gamma = acos(h / dominantLightRadius);
-      float areaOfSegment = 2.0f * dominantLightRadius * dominantLightRadius * gamma;
-      float areaOfTriangle = 0.5f * dominantLightRadius * sin(gamma) * h;
-      visibleAreaOfLightSource += (areaOfSegment - areaOfTriangle);
-    }
-  }
+  // float totalLightSourceArea = PI * dominantLightRadius * dominantLightRadius;
+  // float visibleAreaOfLightSource = 1.0f;
+  // if(dominantLightY >= dominantLightRadius){
+  //   visibleAreaOfLightSource = totalLightSourceArea;
+  // }
+  // else if(dominantLightY > -dominantLightRadius){
+  //   //LightSource is above horizon, we automatically get half of our sphere
+  //   if(dominantLightY >= 0.0f){
+  //     visibleAreaOfLightSource = PI_OVER_TWO * dominantLightRadius * dominantLightRadius;
+  //   }
+  //   if(dominantLightY != 0.0f){
+  //     float h = dominantLightRadius - abs(dominantLightY);
+  //     float gamma = acos(h / dominantLightRadius);
+  //     float areaOfSegment = 2.0f * dominantLightRadius * dominantLightRadius * gamma;
+  //     float areaOfTriangle = 0.5f * dominantLightRadius * sin(gamma) * h;
+  //     visibleAreaOfLightSource += (areaOfSegment - areaOfTriangle);
+  //   }
+  // }
   float lightIntensity = sunIsDominantLightSource ? sunIntensity : moonIntensity;
-  lightIntensity *= visibleAreaOfLightSource / totalLightSourceArea;
-  lightIntensity = pow(lightIntensity, ONE_OVER_TWO_POINT_TWO);
+  // lightIntensity *= visibleAreaOfLightSource / totalLightSourceArea;
+  // lightIntensity = pow(lightIntensity, ONE_OVER_TWO_POINT_TWO);
+  //float lightIntensity = 1.0f;
 
   //Not sure if this is accurate, but a nice linear transition works to keep us in the transmittance between
   //these two points. Maybe come back here at a later time and do the calculus to get the perfect
   //answer. We're getting rusty at calculus anyways.
-  dominantLightY += dominantLightRadius * (1.0 - (visibleAreaOfLightSource / totalLightSourceArea));
+  //dominantLightY += dominantLightRadius * (1.0 - (visibleAreaOfLightSource / totalLightSourceArea));
 
   //Once we have the base source light, we need to apply the transmittance to this light
   //Use this height information to acquire the appropriate position on the transmittance LUT

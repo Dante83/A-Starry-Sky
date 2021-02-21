@@ -83,9 +83,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
     self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
     self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
-    const intensityModifier = Math.min(Math.max(self.sourceLight.position.y + 0.1, 0.0), 0.1) / 0.1;
-    self.sourceLight.intensity = intensityModifier * lightingState[24] * 0.5;
-    console.log(lunarEclipseLightingModifier.x);
+    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) / 0.1;
+    self.sourceLight.intensity = lightingState[24] * 0.5;
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
@@ -96,8 +95,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
     self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
     self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    const indirectLightIntensity = 0.02 + intensityModifier * 0.15;
-    self.xAxisHemisphericalLight.intensity = indirectLightIntensity
+    const indirectLightIntensity = 0.01 + intensityModifier * 0.15;
+    self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.zAxisHemisphericalLight.intensity = indirectLightIntensity;
   }

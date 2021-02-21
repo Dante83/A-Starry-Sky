@@ -175,8 +175,16 @@ $atmosphericFunctions
     float zCoordinate = floor(sqrt((temperature - 2000.0) * (961.0 / 15000.0)));//range: [0-31]
     vec2 uv = getUV2OffsetFromStarColorTemperature(zCoordinate, normalizedYPosition, noise);
 
+    vec3 starColor = texture2D(starColorMap, uv).rgb;
+    //TODO: Vary these to change the color colors
+    // starColor *= starColor;
+    // starColor.r *= max((zCoordinate / 31.0), 1.0);
+    // starColor.g *= max((zCoordinate / 31.0), 1.0);
+    // starColor.b *= max((zCoordinate / 10.0), 1.0);
+    // starColor = sqrt(starColor);
+
     //Interpolate between the 2 colors (ZCoordinateC and zCoordinate are never more then 1 apart)
-    return texture2D(starColorMap, uv).rgb;
+    return starColor;
   }
 
   vec3 drawStarLight(vec4 starData, vec3 galacticSphericalPosition, vec3 skyPosition, float starAndSkyExposureReduction){
@@ -190,7 +198,7 @@ $atmosphericFunctions
     float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);
 
     //Use the distance to the star to determine it's perceived twinkling
-    float starBrightness = pow(100.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.2);
+    float starBrightness = pow(150.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);
     float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;
 
     //Modify the intensity and color of this star using approximation of stellar scintillation
@@ -198,7 +206,7 @@ $atmosphericFunctions
 
     //Pass this brightness into the fast Airy function to make the star glow
     starBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0) * twinkleFactor(normalizedStarPosition, distanceToEdgeOfSky, sqrt(starBrightness) + 3.0);
-    return sqrt(vec3(starBrightness)) * starColor;
+    return vec3(sqrt(starBrightness)) * pow(starColor, vec3(1.2));
   }
 
   vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){
@@ -291,7 +299,7 @@ void main(){
   //Atmosphere
   vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);
   vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);
-  vec3 baseSkyLighting = 0.4 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;
+  vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;
 
   //This stuff never shows up near our sun, so we can exclude it
   #if(!$isSunPass && !$isMeteringPass)
