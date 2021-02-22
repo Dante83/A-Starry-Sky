@@ -75,8 +75,8 @@ const vec3 gamma = vec3(2.2);
   uniform sampler2D moonDiffuseMap;
   uniform sampler2D moonNormalMap;
   uniform sampler2D moonRoughnessMap;
-  uniform sampler2D moonAperatureSizeMap;
-  uniform sampler2D moonAperatureOrientationMap;
+  uniform sampler2D moonApertureSizeMap;
+  uniform sampler2D moonApertureOrientationMap;
   varying vec2 vUv;
 
   //Tangent space lighting

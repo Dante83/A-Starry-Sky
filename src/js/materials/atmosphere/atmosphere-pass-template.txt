@@ -45,8 +45,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonDiffuseMap = {type: 't', value: null};
       uniforms.moonNormalMap = {type: 't', value: null};
       uniforms.moonRoughnessMap = {type: 't', value: null};
-      uniforms.moonAperatureSizeMap = {type: 't', value: null};
-      uniforms.moonAperatureOrientationMap = {type: 't', value: null};
+      uniforms.moonApertureSizeMap = {type: 't', value: null};
+      uniforms.moonApertureOrientationMap = {type: 't', value: null};
     }
 
     if(!isSunShader){

@@ -78,44 +78,7 @@
   <body>
     <a-scene physics light="defaultLightsEnabled: false" shadow="type: pcfsoft">
       <!-- Sky Setup -->
-      <a-starry-sky>
-        <sky-location>
-        	<sky-latitude>38</sky-latitude>
-        	<sky-longitude>-122</sky-longitude>
-        </sky-location>
-        <sky-time>
-          <sky-date>2021-02-28 17:00:00</sky-date>
-        	<sky-utc-offset>7</sky-utc-offset>6
-        	<sky-speed>200.0</sky-speed>
-        </sky-time>
-        <!-- <sky-location>
-        	<sky-latitude>30.05</sky-latitude>
-        	<sky-longitude>-99.18</sky-longitude>
-        </sky-location>
-        <sky-time>
-        	<sky-date>2024-04-07 5:30:00</sky-date>
-        	<sky-utc-offset>7</sky-utc-offset>
-        	<sky-speed>50.0</sky-speed>
-        </sky-time> -->
-        <sky-assets-dir>
-          <sky-assets-dir dir="assets">
-            <sky-assets-dir dir="moon" moon-path></sky-assets-dir>
-            <sky-assets-dir dir="star_data" star-path></sky-assets-dir>
-            <sky-assets-dir dir="blue_noise" blue-noise-path></sky-assets-dir>
-            <sky-assets-dir dir="solar_eclipse">
-              <sky-solar-eclipse-map></sky-solar-eclipse-map>
-            </sky-assets-dir>
-          </sky-assets-dir>
-          <sky-assets-dir dir="wasm" wasm-path></sky-assets-dir>
-        </sky-assets-dir>
-        <sky-atmospheric-parameters>
-          <sky-moon-angular-diameter>3.1</sky-moon-angular-diameter>
-          <sky-sun-angular-diameter>3.0</sky-sun-angular-diameter>
-        </sky-atmospheric-parameters>
-        <sky-lighting>
-          <sky-shadow-camera-resolution>1024</sky-shadow-camera-resolution>
-        </sky-lighting>
-      </a-starry-sky>
+      <a-starry-sky></a-starry-sky>
 
       <a-assets>
         <a-asset-item id="low-poly-desert" src="./assets/3d-models/low-poly-desert.glb" ></a-asset-item>
@@ -125,15 +88,8 @@
         <a-entity camera look-controls wasd-controls="acceleration: 30"></a-entity>
       </a-entity>
 
-      <a-ocean width="200" depth="200" position="-100 -8 -50" density="200" opacity="0.2"></a-ocean>
-
       <!-- Scene Setup-->
       <a-entity gltf-model="#low-poly-desert" position="0 0 0" shadow="cast: false"></a-entity>
-
-      <a-box depth="4" height="4" width="4" position="-5 2 1" shadow="cast: true"
-      material="color: #ffffff; roughness: 0.7; metalness: 0"></a-box>
-      <a-sphere radius="2" position="-25 2 8" shadow="cast: true"
-      material="color: #ffffff; roughness: 0.7; metalness: 0"></a-sphere>
     </a-scene>
   </body>
 </html>

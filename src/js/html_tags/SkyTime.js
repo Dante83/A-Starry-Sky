@@ -6,9 +6,9 @@ window.customElements.define('sky-utc-offset', class extends HTMLElement{});
 let hideStarrySkyTemplate = document.createElement('template');
 hideStarrySkyTemplate.innerHTML = `<style display="none;">{ ... }</style>`;
 
-StarrySky.DefaultData.skyTime = {
+StarrySky.DefaultData.time = {
   date: (new Date()).toLocaleDateString(),
-  utcOffset: -7,
+  utcOffset: 7,
   speed: 1.0
 };
 
@@ -18,7 +18,7 @@ class SkyTime extends HTMLElement {
     super();
 
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.skyTime;
+    this.data = StarrySky.DefaultData.time;
   };
 
   connectedCallback(){
@@ -40,7 +40,7 @@ class SkyTime extends HTMLElement {
 
       //Set the params to appropriate values or default
       self.data.date = skyDateTags.length > 0 ? skyDateTags[0].innerHTML : null;
-      self.data.utcOffset = utcOffsetTags.length > 0 ? parseFloat(utcOffsetTags[0].innerHTML) : null;
+      self.data.utcOffset = utcOffsetTags.length > 0 ? -parseFloat(utcOffsetTags[0].innerHTML) : null;
       self.data.speed = speedTags.length > 0 ? parseFloat(speedTags[0].innerHTML) : null;
 
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){
@@ -55,7 +55,7 @@ class SkyTime extends HTMLElement {
       };
 
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
-      self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, -12.0, 14.0, '<sky-utc-offset>') : null;
+      self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, 12.0, -14.0, '<sky-utc-offset>') : null;
       self.data.speed = self.data.speed ? clampAndWarn(self.data.speed, 0.0, 1000.0, '<sky-speed>') :null;
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));

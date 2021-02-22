@@ -52,7 +52,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
   //If our images have finished loading, update our uniforms
   if(this.skyDirector.assetManager.hasLoadedImages){
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
     for(let i = 0; i < moonTextures.length; ++i){
       let moonTextureProperty = moonTextures[i];
       this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];

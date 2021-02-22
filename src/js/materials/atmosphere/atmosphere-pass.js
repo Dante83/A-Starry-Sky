@@ -45,8 +45,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonDiffuseMap = {type: 't', value: null};
       uniforms.moonNormalMap = {type: 't', value: null};
       uniforms.moonRoughnessMap = {type: 't', value: null};
-      uniforms.moonAperatureSizeMap = {type: 't', value: null};
-      uniforms.moonAperatureOrientationMap = {type: 't', value: null};
+      uniforms.moonApertureSizeMap = {type: 't', value: null};
+      uniforms.moonApertureOrientationMap = {type: 't', value: null};
     }
 
     if(!isSunShader){
@@ -205,8 +205,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform sampler2D moonDiffuseMap;',
       'uniform sampler2D moonNormalMap;',
       'uniform sampler2D moonRoughnessMap;',
-      'uniform sampler2D moonAperatureSizeMap;',
-      'uniform sampler2D moonAperatureOrientationMap;',
+      'uniform sampler2D moonApertureSizeMap;',
+      'uniform sampler2D moonApertureOrientationMap;',
       'varying vec2 vUv;',
 
       '//Tangent space lighting',

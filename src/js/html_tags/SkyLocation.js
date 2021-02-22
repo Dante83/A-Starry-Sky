@@ -2,9 +2,9 @@
 window.customElements.define('sky-latitude', class extends HTMLElement{});
 window.customElements.define('sky-longitude', class extends HTMLElement{});
 
-StarrySky.DefaultData.skyLocation = {
-  latitude: 37,
-  longitude: 112
+StarrySky.DefaultData.location = {
+  latitude: 38,
+  longitude: -122
 };
 
 //Parent method
@@ -15,7 +15,7 @@ class SkyLocation extends HTMLElement {
     //Get the child values and make sure both are present or default to San Francisco
     //And throw a console warning
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.skyLocation;
+    this.data = StarrySky.DefaultData.location;
   }
 
   connectedCallback(){
