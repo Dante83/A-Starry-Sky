@@ -72,7 +72,7 @@ def CPPWatcher():
                     print 'Change found in file {}, updating.'.format(file)
                     cpp_update_date[file] = os.path.getmtime(absolute_file_path)
                     os.chdir(cpp_directory)
-                    os.system("emcc {} -s WASM=1 -s EXPORTED_FUNCTIONS='[{}]' -o {} -s ALLOW_MEMORY_GROWTH=1;".format(' '.join(cpp_files[i]), ', '.join(exported_functions[i]), module_file[i]))
+                    os.system("emcc {} -s WASM=1 -s EXPORTED_FUNCTIONS='[{}]' -O3 {} -s ALLOW_MEMORY_GROWTH=1;".format(' '.join(cpp_files[i]), ', '.join(exported_functions[i]), module_file[i]))
                     os.chdir('../../python')
                     print "WASM update at: {}".format(time.strftime('%H:%M %Y-%m-%d'))
                     print "-"*15

@@ -1144,7 +1144,12 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 
 		mesh.material = material;
 		renderer.setRenderTarget( output );
-		renderer.render( scene, camera );
+    const webXROriginallEnabled = renderer.xr.enabled;
+    if(webXROriginallEnabled){
+      renderer.xr.enabled = false;
+    }
+    renderer.render( scene, camera );
+    renderer.xr.enabled = webXROriginallEnabled;
 		mesh.material = passThruShader;
 
 		renderer.setRenderTarget( currentRenderTarget );
@@ -1537,7 +1542,12 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 
 		mesh.material = material;
 		renderer.setRenderTarget( output );
-		renderer.render( scene, camera );
+    const webXROriginallEnabled = renderer.xr.enabled;
+    if(webXROriginallEnabled){
+      renderer.xr.enabled = false;
+    }
+    renderer.render( scene, camera );
+    renderer.xr.enabled = webXROriginallEnabled;
 		mesh.material = passThruShader;
 
 		renderer.setRenderTarget( currentRenderTarget );
@@ -2274,8 +2284,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonDiffuseMap = {type: 't', value: null};
       uniforms.moonNormalMap = {type: 't', value: null};
       uniforms.moonRoughnessMap = {type: 't', value: null};
-      uniforms.moonAperatureSizeMap = {type: 't', value: null};
-      uniforms.moonAperatureOrientationMap = {type: 't', value: null};
+      uniforms.moonApertureSizeMap = {type: 't', value: null};
+      uniforms.moonApertureOrientationMap = {type: 't', value: null};
     }
 
     if(!isSunShader){
@@ -2434,8 +2444,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform sampler2D moonDiffuseMap;',
       'uniform sampler2D moonNormalMap;',
       'uniform sampler2D moonRoughnessMap;',
-      'uniform sampler2D moonAperatureSizeMap;',
-      'uniform sampler2D moonAperatureOrientationMap;',
+      'uniform sampler2D moonApertureSizeMap;',
+      'uniform sampler2D moonApertureOrientationMap;',
       'varying vec2 vUv;',
 
       '//Tangent space lighting',
@@ -2534,8 +2544,16 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'float zCoordinate = floor(sqrt((temperature - 2000.0) * (961.0 / 15000.0)));//range: [0-31]',
         'vec2 uv = getUV2OffsetFromStarColorTemperature(zCoordinate, normalizedYPosition, noise);',
 
+        'vec3 starColor = texture2D(starColorMap, uv).rgb;',
+        '//TODO: Vary these to change the color colors',
+        '// starColor *= starColor;',
+        '// starColor.r *= max((zCoordinate / 31.0), 1.0);',
+        '// starColor.g *= max((zCoordinate / 31.0), 1.0);',
+        '// starColor.b *= max((zCoordinate / 10.0), 1.0);',
+        '// starColor = sqrt(starColor);',
+
         '//Interpolate between the 2 colors (ZCoordinateC and zCoordinate are never more then 1 apart)',
-        'return texture2D(starColorMap, uv).rgb;',
+        'return starColor;',
       '}',
 
       'vec3 drawStarLight(vec4 starData, vec3 galacticSphericalPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
@@ -2549,15 +2567,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);',
 
         "//Use the distance to the star to determine it's perceived twinkling",
-        'float starBrightness = pow(100.0, (-starData.a + starAndSkyExposureReduction) * 0.2);',
-        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1400.0;',
+        'float starBrightness = pow(150.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);',
+        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;',
 
         '//Modify the intensity and color of this star using approximation of stellar scintillation',
         'vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));',
 
         '//Pass this brightness into the fast Airy function to make the star glow',
         'starBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0) * twinkleFactor(normalizedStarPosition, distanceToEdgeOfSky, sqrt(starBrightness) + 3.0);',
-        'return sqrt(vec3(starBrightness)) * starColor;',
+        'return vec3(sqrt(starBrightness)) * pow(starColor, vec3(1.2));',
       '}',
 
       'vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
@@ -2650,6 +2668,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//Atmosphere',
       'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
       'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
+      'vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
 
       '//This stuff never shows up near our sun, so we can exclude it',
       '#if(!$isSunPass && !$isMeteringPass)',
@@ -2714,13 +2733,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
 
         '$draw_sun_pass',
 
         'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);',
       '#elif($isMoonPass)',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass;',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
         'vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);',
 
         '$draw_moon_pass',
@@ -2733,7 +2752,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#elif($isMeteringPass)',
         '//Cut this down to the circle of the sky ignoring the galatic lighting',
         'float circularMask = 1.0 - step(1.0, rho);',
-        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass) * circularMask;',
+        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting) * circularMask;',
 
         '//Combine the colors together and apply a transformation from the scattering intensity to the moon luminosity',
         'vec3 intensityPassColors = lunarAtmosphericPass * (moonLuminosity / scatteringMoonIntensity) + solarAtmosphericPass * (sunLuminosity / scatteringSunIntensity);',
@@ -2745,7 +2764,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
       '#else',
         '//Regular atmospheric pass',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting;',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting;',
 
         '//Now apply the ACESFilmicTonemapping',
         'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
@@ -3172,24 +3191,24 @@ StarrySky.Materials.Moon.baseMoonPartial = {
 
     '//Implmentatation of the Ambient Appeture Lighting Equation',
     'float sunArea = pi * sunRadius * sunRadius;',
-    'float aperatureRadius = acos(1.0 - texture2D(moonAperatureSizeMap, offsetUV).r);',
-    'vec3 aperatureOrientation = normalize(2.0 * texture2D(moonAperatureOrientationMap, offsetUV).rgb - 1.0);',
-    'float aperatureToSunHaversineDistance = acos(dot(aperatureOrientation, tangentSpaceSunLightDirection));',
+    'float apertureRadius = acos(1.0 - texture2D(moonApertureSizeMap, offsetUV).r);',
+    'vec3 apertureOrientation = normalize(2.0 * texture2D(moonApertureOrientationMap, offsetUV).rgb - 1.0);',
+    'float apertureToSunHaversineDistance = acos(dot(apertureOrientation, tangentSpaceSunLightDirection));',
 
     'float observableSunFraction;',
     'vec3 test = vec3(0.0);',
-    'if(aperatureToSunHaversineDistance >= (aperatureRadius + sunRadius)){',
+    'if(apertureToSunHaversineDistance >= (apertureRadius + sunRadius)){',
       'observableSunFraction = 0.0;',
     '}',
-    'else if(aperatureToSunHaversineDistance <= (aperatureRadius - sunRadius)){',
+    'else if(apertureToSunHaversineDistance <= (apertureRadius - sunRadius)){',
       'observableSunFraction = 1.0;',
     '}',
     'else{',
-      'float absOfRpMinusRl = abs(aperatureRadius - sunRadius);',
-      'observableSunFraction = smoothstep(0.0, 1.0, 1.0 - ((aperatureToSunHaversineDistance - absOfRpMinusRl) / (aperatureRadius + sunRadius - absOfRpMinusRl)));',
+      'float absOfRpMinusRl = abs(apertureRadius - sunRadius);',
+      'observableSunFraction = smoothstep(0.0, 1.0, 1.0 - ((apertureToSunHaversineDistance - absOfRpMinusRl) / (apertureRadius + sunRadius - absOfRpMinusRl)));',
     '}',
-    'float omega = (sunRadius - aperatureRadius + aperatureToSunHaversineDistance) / (2.0 * aperatureToSunHaversineDistance);',
-    'vec3 bentTangentSpaceSunlightDirection = normalize(mix(tangentSpaceSunLightDirection, aperatureOrientation, omega));',
+    'float omega = (sunRadius - apertureRadius + apertureToSunHaversineDistance) / (2.0 * apertureToSunHaversineDistance);',
+    'vec3 bentTangentSpaceSunlightDirection = normalize(mix(tangentSpaceSunLightDirection, apertureOrientation, omega));',
 
     '//I opt to use the Oren-Nayar model over Hapke-Lommel-Seeliger',
     '//As Oren-Nayar lacks a lunar phase component and is more extensible for',
@@ -3375,8 +3394,8 @@ window.customElements.define('sky-interpolation-engine-path', class extends HTML
 window.customElements.define('sky-moon-diffuse-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-normal-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-roughness-map', class extends HTMLElement{});
-window.customElements.define('sky-moon-aperature-size-map', class extends HTMLElement{});
-window.customElements.define('sky-moon-aperature-orientation-map', class extends HTMLElement{});
+window.customElements.define('sky-moon-aperture-size-map', class extends HTMLElement{});
+window.customElements.define('sky-moon-aperture-orientation-map', class extends HTMLElement{});
 window.customElements.define('sky-star-cubemap-maps', class extends HTMLElement{});
 window.customElements.define('sky-dim-star-maps', class extends HTMLElement{});
 window.customElements.define('sky-med-star-maps', class extends HTMLElement{});
@@ -3389,8 +3408,8 @@ StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.webp',
   moonNormalMap: 'lunar-normal-map.webp',
   moonRoughnessMap: 'lunar-roughness-map.webp',
-  moonAperatureSizeMap: 'lunar-aperature-size-map.webp',
-  moonAperatureOrientationMap: 'lunar-aperature-orientation-map.webp',
+  moonApertureSizeMap: 'lunar-aperture-size-map.webp',
+  moonApertureOrientationMap: 'lunar-aperture-orientation-map.webp',
   starHashCubemap: [
     'star-dictionary-cubemap-px.png',
     'star-dictionary-cubemap-nx.png',
@@ -3431,11 +3450,11 @@ StarrySky.DefaultData.fileNames = {
 StarrySky.DefaultData.assetPaths = {
   skyStateEnginePath: './wasm/',
   skyInterpolationEnginePath: './wasm/',
-  moonDiffuseMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
-  moonNormalMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonNormalMap,
-  moonRoughnessMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
-  moonAperatureSizeMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonAperatureSizeMap,
-  moonAperatureOrientationMap: './assets/moon/webp_files/' + StarrySky.DefaultData.fileNames.moonAperatureOrientationMap,
+  moonDiffuseMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
+  moonNormalMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonNormalMap,
+  moonRoughnessMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
+  moonApertureSizeMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonApertureSizeMap,
+  moonApertureOrientationMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonApertureOrientationMap,
   solarEclipseMap: './assets/solar_eclipse/' + StarrySky.DefaultData.fileNames.solarEclipseMap,
   starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubemap.map(x => './assets/star_data/' + x),
   dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarDataMaps.map(x => './assets/star_data/' + x),
@@ -3509,9 +3528,9 @@ class SkyAssetsDir extends HTMLElement {
       const moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
       const moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
       const moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
-      const moonAperatureSizeMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-size-map');
+      const moonApertureSizeMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperture-size-map');
       const solarEclipseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-solar-eclipse-map');
-      const moonAperatureOrientationMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperature-orientation-map');
+      const moonApertureOrientationMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperture-orientation-map');
       const starCubemapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-cubemap-map');
       const dimStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-dim-star-map');
       const medStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-med-star-map');
@@ -3520,10 +3539,10 @@ class SkyAssetsDir extends HTMLElement {
       const blueNoiseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-blue-noise-maps');
 
       const objectProperties = ['skyStateEngine', 'skyInterpolationEngine','moonDiffuseMap', 'moonNormalMap',
-        'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'starHashCubemap',
+        'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap', 'starHashCubemap',
         'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap']
       const tagsList = [skyStateEngineTags, skyInterpolationEngineTags, moonDiffuseMapTags, moonNormalMapTags,
-        moonRoughnessMapTags, moonAperatureSizeMapTags, moonAperatureOrientationMapTags, starCubemapTags,
+        moonRoughnessMapTags, moonApertureSizeMapTags, moonApertureOrientationMapTags, starCubemapTags,
         medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags];
       const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
@@ -3537,7 +3556,7 @@ class SkyAssetsDir extends HTMLElement {
       }
       else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
-        'moonAperatureSizeMap', 'moonAperatureOrientationMap', 'starColorMap', 'solarEclipseMap'];
+        'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap'];
         const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
         'blueNoiseMaps'];
 
@@ -3556,7 +3575,7 @@ class SkyAssetsDir extends HTMLElement {
       }
       else if(self.hasAttribute('moon-path') && self.getAttribute('moon-path').toLowerCase() !== 'false'){
         const moonTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
-        'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
+        'moonApertureSizeMap', 'moonApertureOrientationMap'];
         for(let i = 0; i < moonTextureKeys.length; ++i){
           StarrySky.assetPaths[moonTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[moonTextureKeys[i]];
         }
@@ -3592,28 +3611,13 @@ class SkyAssetsDir extends HTMLElement {
 window.customElements.define('sky-assets-dir', SkyAssetsDir);
 
 //Child tags
-window.customElements.define('sky-solar-intensity', class extends HTMLElement{});
-window.customElements.define('sky-lunar-max-intensity', class extends HTMLElement{});
-window.customElements.define('sky-rayleigh-molecular-density', class extends HTMLElement{});
-window.customElements.define('sky-air-index-of-refraction', class extends HTMLElement{});
-window.customElements.define('sky-solar-color', class extends HTMLElement{});
-window.customElements.define('sky-lunar-color', class extends HTMLElement{});
-window.customElements.define('sky-color-red', class extends HTMLElement{});
-window.customElements.define('sky-color-green', class extends HTMLElement{});
-window.customElements.define('sky-color-blue', class extends HTMLElement{});
 window.customElements.define('sky-mie-directional-g', class extends HTMLElement{});
-window.customElements.define('sky-number-of-ray-steps', class extends HTMLElement{});
-window.customElements.define('sky-number-of-gathering-steps', class extends HTMLElement{});
-window.customElements.define('sky-ozone-enabled', class extends HTMLElement{});
 window.customElements.define('sky-sun-angular-diameter', class extends HTMLElement{});
 window.customElements.define('sky-moon-angular-diameter', class extends HTMLElement{});
-window.customElements.define('sky-max-atmospheric-perspective', class extends HTMLElement{});
 
 StarrySky.DefaultData.skyAtmosphericParameters = {
   solarIntensity: 1367.0,
   lunarMaxIntensity: 29,
-  rayleighMolecularDensity: 2.545E25,
-  indexOfRefractionofAir: 1.0003,
   solarColor: {
     red: 6.5E-7,
     green: 5.1E-7,
@@ -3635,8 +3639,6 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
   ozoneEnabled: true,
   sunAngularDiameter: 3.38,
   moonAngularDiameter: 3.15,
-  atmosphericPerspectiveEnabled: true,
-  atmosphericPerspectiveMaxFogDensity: 0.00025
 };
 
 //Parent tag
@@ -3656,76 +3658,20 @@ class SkyAtmosphericParameters extends HTMLElement {
     let self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
       //Get child tags and acquire their values.
-      let solarIntensityTags = self.getElementsByTagName('sky-solar-intensity');
-      let lunarMaxIntensityTags = self.getElementsByTagName('sky-lunar-max-intensity');
-      let rayleighMolecularDensityTags = self.getElementsByTagName('sky-rayleigh-molecular-density');
-      let airIndexOfRefractionTags = self.getElementsByTagName('sky-air-index-of-refraction');
-      let solarColorTags = self.getElementsByTagName('sky-solar-color');
-      let lunarColorTags = self.getElementsByTagName('sky-lunar-color');
-      let mieBetaTags = self.getElementsByTagName('sky-lunar-color');
       let mieDirectionalGTags = self.getElementsByTagName('sky-mie-directional-g');
-      let numberOfRayStepsTags = self.getElementsByTagName('sky-number-of-ray-steps');
-      let numberOfGatheringStepsTags = self.getElementsByTagName('sky-number-of-gathering-steps');
-      let ozoneEnabledTags = self.getElementsByTagName('sky-ozone-enabled');
       let sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
       let moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
-      let atmosphericPerspectiveMaxFogDensityTags = self.getElementsByTagName('sky-max-atmospheric-perspective');
 
-      [solarIntensityTags, lunarMaxIntensityTags, rayleighMolecularDensityTags, airIndexOfRefractionTags,
-      solarColorTags, lunarColorTags, mieBetaTags, mieDirectionalGTags, numberOfRayStepsTags,
-      numberOfGatheringStepsTags, ozoneEnabledTags, sunAngularDiameterTags, moonAngularDiameterTags,
-      atmosphericPerspectiveMaxFogDensityTags].forEach(function(tags){
+      [mieDirectionalGTags, sunAngularDiameterTags, moonAngularDiameterTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
       });
 
-      //With special subcases for our solar and color tags
-      [solarColorTags, lunarColorTags, mieBetaTags].forEach(function(tags){
-        if(tags.length === 1){
-          //Check that it only contains one of each of the following child tags
-          let redTags = tags[0].getElementsByTagName('sky-color-red');
-          let greenTags = tags[0].getElementsByTagName('sky-color-green');
-          let blueTags = tags[0].getElementsByTagName('sky-color-blue');
-          [redTags, greenTags, blueTags].forEach(function(colorTags){
-            if(tags.length !== 1){
-              console.error(`The <${tags[0].tagName}> tag must contain 1 and only 1 tag of type <${colorTags[0].tagName}>. ${colorTags.length} found.`);
-            }
-          });
-        }
-      });
-
       //Set the params to appropriate values or default
-      self.data.solarIntensity = solarIntensityTags.length > 0 ? parseFloat(solarIntensityTags[0].innerHTML) : self.data.solarIntensity;
-      self.data.lunarMaxIntensity = lunarMaxIntensityTags.length > 0 ? parseFloat(lunarMaxIntensityTags[0].innerHTML) : self.data.lunarMaxIntensity;
-      self.data.rayleighMolecularDensity = rayleighMolecularDensityTags.length > 0 ? parseFloat(rayleighMolecularDensityTags[0].innerHTML) : self.data.rayleighMolecularDensity;
-      self.data.indexOfRefractionofAir = airIndexOfRefractionTags.length > 0 ? parseFloat(airIndexOfRefractionTags[0].innerHTML) : self.data.indexOfRefractionofAir;
       self.data.mieDirectionalG = mieDirectionalGTags.length > 0 ? parseFloat(mieDirectionalGTags[0].innerHTML) : self.data.mieDirectionalG;
-      self.data.numberOfRaySteps = numberOfRayStepsTags.length > 0 ? parseFloat(numberOfRayStepsTags[0].innerHTML) : self.data.numberOfRaySteps;
-      self.data.numberOfGatheringSteps = numberOfGatheringStepsTags.length > 0 ? parseFloat(numberOfGatheringStepsTags[0].innerHTML) : self.data.numberOfGatheringSteps;
-      self.data.ozoneEnabled = ozoneEnabledTags.length > 0 ? JSON.parse(ozoneEnabledTags[0].innerHTML.toLowerCase()) === true : self.data.ozoneEnabled;
       self.data.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFloat(sunAngularDiameterTags[0].innerHTML) : self.data.sunAngularDiameter;
       self.data.moonAngularDiameter = moonAngularDiameterTags.length > 0 ? parseFloat(moonAngularDiameterTags[0].innerHTML) : self.data.moonAngularDiameter;
-      self.data.atmosphericPerspectiveMaxFogDensity = atmosphericPerspectiveMaxFogDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveMaxFogDensityTags[0].innerHTML) : self.data.atmosphericPerspectiveMaxFogDensity;
-
-      let listOfColorBasedTags = [solarColorTags, lunarColorTags, mieBetaTags];
-      let listOfDatas = [self.data.solarColor, self.data.lunarColor, self.data.mieBeta]
-
-      for(let i = 0; i < listOfColorBasedTags.length; ++i){
-        let colorBasedTags = listOfColorBasedTags[i];
-        let correspondingData = listOfDatas[i];
-        if(colorBasedTags.length === 1){
-          if(colorBasedTags.getElementsByTagName('sky-color-red').length > 0){
-            correspondingData.red = parseFloat(solarIntensityTags.getElementsByTagName('sky-color-red')[0].innerHTML);
-          }
-          if(colorBasedTags.getElementsByTagName('sky-color-green').length > 0){
-            correspondingData.green = parseFloat(solarIntensityTags.getElementsByTagName('sky-color-green')[0].innerHTML);
-          }
-          if(colorBasedTags.getElementsByTagName('sky-color-blue').length > 0){
-            correspondingData.blue = parseFloat(solarIntensityTags.getElementsByTagName('sky-color-blue')[0].innerHTML);
-          }
-        }
-      }
 
       //Clamp our results to the appropriate ranges
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){
@@ -3739,21 +3685,9 @@ class SkyAtmosphericParameters extends HTMLElement {
         return result;
       };
 
-      self.data.solarIntensity = clampAndWarn(self.data.solarIntensity, 0.0, 10000.0, '<sky-solar-intensity>');
-      self.data.lunarMaxIntensity = clampAndWarn(self.data.solarIntensity, 0.0, 10000.0, '<sky-lunar-max-intensity>');
-      self.data.rayleighMolecularDensity = clampAndWarn(self.data.rayleighMolecularDensity, 2.545E21, 2.545E34, '<sky-rayleigh-molecular-density>');
-      self.data.indexOfRefractionofAir = clampAndWarn(self.data.indexOfRefractionofAir, 1.0, 2.5, '<sky-air-index-of-refraction>');
       self.data.mieDirectionalG = clampAndWarn(self.data.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
-      self.data.numberOfRaySteps = clampAndWarn(self.data.numberOfRaySteps, 2, 1000, '<sky-number-of-ray-steps>');
-      self.data.numberOfGatheringSteps = clampAndWarn(self.data.numberOfGatheringSteps, 2, 1000, '<sky-number-of-gathering-steps>');
       self.data.sunAngularDiameter = clampAndWarn(self.data.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
       self.data.moonAngularDiameter = clampAndWarn(self.data.moonAngularDiameter, 0.1, 90.0, '<sky-moon-angular-diameter>');
-      self.data.atmosphericPerspectiveMaxFogDensity = clampAndWarn(self.data.atmosphericPerspectiveMaxFogDensity, 0.0, Infinity, '<sky-max-atmospheric-perspective>');
-      self.data.atmosphericPerspectiveEnabled = self.data.atmosphericPerspectiveMaxFogDensity > 0.0;
-
-      //
-      //TODO: Clamp and warn each of our color systems.
-      //
 
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
@@ -3766,9 +3700,9 @@ window.customElements.define('sky-atmospheric-parameters', SkyAtmosphericParamet
 window.customElements.define('sky-latitude', class extends HTMLElement{});
 window.customElements.define('sky-longitude', class extends HTMLElement{});
 
-StarrySky.DefaultData.skyLocation = {
-  latitude: 37,
-  longitude: 112
+StarrySky.DefaultData.location = {
+  latitude: 38,
+  longitude: -122
 };
 
 //Parent method
@@ -3779,7 +3713,7 @@ class SkyLocation extends HTMLElement {
     //Get the child values and make sure both are present or default to San Francisco
     //And throw a console warning
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.skyLocation;
+    this.data = StarrySky.DefaultData.location;
   }
 
   connectedCallback(){
@@ -3844,9 +3778,9 @@ window.customElements.define('sky-utc-offset', class extends HTMLElement{});
 let hideStarrySkyTemplate = document.createElement('template');
 hideStarrySkyTemplate.innerHTML = `<style display="none;">{ ... }</style>`;
 
-StarrySky.DefaultData.skyTime = {
+StarrySky.DefaultData.time = {
   date: (new Date()).toLocaleDateString(),
-  utcOffset: -7,
+  utcOffset: 7,
   speed: 1.0
 };
 
@@ -3856,7 +3790,7 @@ class SkyTime extends HTMLElement {
     super();
 
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.skyTime;
+    this.data = StarrySky.DefaultData.time;
   };
 
   connectedCallback(){
@@ -3878,7 +3812,7 @@ class SkyTime extends HTMLElement {
 
       //Set the params to appropriate values or default
       self.data.date = skyDateTags.length > 0 ? skyDateTags[0].innerHTML : null;
-      self.data.utcOffset = utcOffsetTags.length > 0 ? parseFloat(utcOffsetTags[0].innerHTML) : null;
+      self.data.utcOffset = utcOffsetTags.length > 0 ? -parseFloat(utcOffsetTags[0].innerHTML) : null;
       self.data.speed = speedTags.length > 0 ? parseFloat(speedTags[0].innerHTML) : null;
 
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){
@@ -3893,7 +3827,7 @@ class SkyTime extends HTMLElement {
       };
 
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
-      self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, -12.0, 14.0, '<sky-utc-offset>') : null;
+      self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, 12.0, -14.0, '<sky-utc-offset>') : null;
       self.data.speed = self.data.speed ? clampAndWarn(self.data.speed, 0.0, 1000.0, '<sky-speed>') :null;
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
@@ -3913,9 +3847,9 @@ window.customElements.define('sky-shadow-camera-resolution', class extends HTMLE
 
 StarrySky.DefaultData.lighting = {
   groundColor: {
-    red: 33,
-    green: 22,
-    blue: 1
+    red: 66,
+    green: 44,
+    blue: 2
   },
   atmosphericPerspectiveEnabled: true,
   atmosphericPerspectiveDensity: 0.007,
@@ -4883,7 +4817,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
   //If our images have finished loading, update our uniforms
   if(this.skyDirector.assetManager.hasLoadedImages){
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
     for(let i = 0; i < moonTextures.length; ++i){
       let moonTextureProperty = moonTextures[i];
       this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];
@@ -5188,8 +5122,9 @@ StarrySky.LightingManager = function(parentComponent){
   this.zAxisHemisphericalLight.position.set(0,0,1);
 
   parentComponent.scene.fog = this.fog;
+  const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
   if(lightingData.atmosphericPerspectiveEnabled){
-    this.fog = new THREE.FogExp2(0xFFFFFF, lightingData.atmosphericPerspectiveDensity);
+    this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
     parentComponent.scene.fog = this.fog;
   }
 
@@ -5215,16 +5150,12 @@ StarrySky.LightingManager = function(parentComponent){
     //And drive the shadow type based on the shadow provided in sky-lighting.
     if(lightingData.atmosphericPerspectiveEnabled){
       self.fogColorVector.fromArray(lightingState, 21);
-      const maxVal = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
-      // const inverseMagnitudeOfSky = 1.0 / maxVal;
-      // self.fogColorVector.r *= inverseMagnitudeOfSky;
-      // self.fogColorVector.g *= inverseMagnitudeOfSky;
-      // self.fogColorVector.b *= inverseMagnitudeOfSky;
-      // self.fog.density = maxVal * self.maxFogDensity;
+      const maxColor = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
 
       //The fog color is taken from sky color hemispherical data alone (excluding ground color)
       //and is the color taken by dotting the camera direction with the colors of our
       //hemispherical lighting along the x, z axis.
+      self.fog.density = Math.pow(maxColor, 0.3) * maxFogDensity;
       self.fog.color.copy(self.fogColorVector);
     }
 
@@ -5242,7 +5173,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
     self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
     self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
-    self.sourceLight.intensity = lightingState[24] * 0.3;
+    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) / 0.1;
+    self.sourceLight.intensity = lightingState[24] * 0.5;
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
@@ -5253,9 +5185,10 @@ StarrySky.LightingManager = function(parentComponent){
     self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
     self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
     self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    self.xAxisHemisphericalLight.intensity = 0.2;
-    self.yAxisHemisphericalLight.intensity = 0.2;
-    self.zAxisHemisphericalLight.intensity = 0.2;
+    const indirectLightIntensity = 0.01 + intensityModifier * 0.15;
+    self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
+    self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
+    self.zAxisHemisphericalLight.intensity = indirectLightIntensity;
   }
 };
 
@@ -5322,7 +5255,7 @@ StarrySky.AssetManager = function(skyDirector){
     const numberOfStarTextures = 4;
 
     //Load all of our moon textures
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonAperatureSizeMap', 'moonAperatureOrientationMap'];
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
     const moonFormats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
     const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
@@ -6005,12 +5938,6 @@ StarrySky.SkyDirector = function(parentComponent){
       self.skyState.jupiter.intensity = self.astronomicalLinearValues[9];
       self.skyState.saturn.intensity = self.astronomicalLinearValues[10];
 
-      //Update values associated with lunar eclipses
-      self.skyState.moon.distanceToEarthsShadowSquared = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX];
-      self.skyState.moon.oneOverNormalizedLunarDiameter = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX + 1];
-      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 2, START_OF_LUNAR_ECLIPSE_INDEX + 5));
-      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 5, START_OF_LUNAR_ECLIPSE_INDEX + 8));
-
       //Check if we need to update our final state again
       if(self.interpolationT >= self.finalAstronomicalT){
         self.updateFinalSkyState(self.skyState.LSRT, self.finalStateFloat32Array[14]);
@@ -6020,6 +5947,12 @@ StarrySky.SkyDirector = function(parentComponent){
       Module._tick_lightingInterpolations(self.time);
       self.interpolatedSkyIntensityMagnitude = self.lightingColorValues[28];
       self.exposureVariables.starsExposure = Math.min(6.8 - self.interpolatedSkyIntensityMagnitude, 3.7);
+
+      //Update values associated with lunar eclipses
+      self.skyState.moon.distanceToEarthsShadowSquared = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX];
+      self.skyState.moon.oneOverNormalizedLunarDiameter = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX + 1];
+      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 2, START_OF_LUNAR_ECLIPSE_INDEX + 5));
+      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 5, START_OF_LUNAR_ECLIPSE_INDEX + 8));
 
       //Tick our light positions before we might just use them to set up the next interpolation
       self.lightingManager.tick(self.lightingColorValues);
@@ -6049,6 +5982,7 @@ StarrySky.SkyDirector = function(parentComponent){
           self.dominantLightIsSun0 = false;
           dominantLightY0 = mp.y;
         }
+        self.dominantLightY0 = dominantLightY0;
 
         //Is this what they mean by dependency injection overload?
         //void updateLightingValues(float skyIntensity0, float skyIntensityf, bool dominantLightIsSun0,
@@ -6056,7 +5990,7 @@ StarrySky.SkyDirector = function(parentComponent){
         //float dominantLightIntensityf, float* lightColors0, float* lightColorsf, float t_0, float t_f);
         Module._updateLightingValues(self.interpolatedSkyIntensityMagnitude, self.exposureVariables.exposureCoefficientf,
           self.dominantLightIsSun0, self.dominantLightIsSunf,
-          dominantLightY0, self.dominantLightYf,
+          self.dominantLightY0, self.dominantLightYf,
           self.lightingColorValues_ptr, self.lightingColorValues_f_ptr,
           self.time, self.time + HALF_A_SECOND);
 

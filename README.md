@@ -1,17 +1,14 @@
 # A-Starry-Sky
-======
 
 A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It aims to provide a simple, drop-in component that you can use to create beautiful day-night cycles in your creations. Click [here](http://code-panda.com/pages/projects/v1_0_0/a_sky_forge_example) to see this project in action (**Warning: requires a powerful GPU - do not open on a mobile phone**).
 
 ## Prerequisites
-======
 
 This is built for the [A-Frame Web Framework](https://aframe.io/).
 
 `https://aframe.io/releases/1.2.0/aframe.min.js`
 
 ## Installing
-======
 
 When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.0.0.min.js* file, along with the *assets** and *wasm* folders into their own directory in your JavaScript folder. Afterwards, add the minified file into a script tag in your html, along with a reference to the interpolation engine JavaScript file in the WASM folder. You should not add a reference to the state-engine JavaScript bootstrap file, however as this module is loaded internally by the code.
 
@@ -32,8 +29,9 @@ Once these references are set up, add the `<a-starry-sky>` component into your `
 This barebones code will provide you with a sky that moves in real time at the latitude and longitude of San Francisco, California. However, we can do much more then this. A-Starry-Sky comes with a host of custom html tags to help customize
 your sky state.
 
+**NOTE: This sky box is immutable. That means that the settings you start with will remain constant on any given page. Unfortunately, at this time, it is just too difficult to make the code mutable.**
+
 ##Setting The Location
-======
 
 **Tag** | **Description**
 :--- | :---
@@ -70,7 +68,6 @@ Ok, but what about Perth Australia?
 One important thing to notice is that our `<sky-latitude>` and `<sky-longitude>` tags all live inside of a `<sky-location>` tag. This keeps our code organized by giving different sections for different property groups of our sky. It might not seem important now, but it will help provide a clean coding experience as you wish to add more and more properties to your sky. Additionally, I should point out that longitudes west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian) are negative, like New York or Beaunos Aires.
 
 ##Setting The Time
-======
 
 **Tag** | **Description**
 :--- | :---
@@ -145,27 +142,16 @@ This time travel is fun, but you might also be interested in change the *speed* 
 </a-scene>
 ```
 
-Of course, if you're doing this in a persistent world, make sure to take the accelerated flow of time into account.
+Of course, if you're doing this in a persistent world, make sure to take the accelerated flow of time into account when creating your HTML. Setting up dynamic HTML for your sky is up to you however.
 
 ##Modifying Atmospheric Settings
-======
 
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
 `<sky-atmospheric-parameters>` | Parent tag. Contains all child tags related to atmospheric settings. | N/A
 `<sky-sun-angular-diameter>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 `<sky-moon-angular-diameter>` | The angular diameter of the moon as it appears in the sky.  | 3.15 degrees
-`<sky-rayleigh-molecular-density>` | Describes how the density of smaller particles in the air responcible for the 'blues' and 'reds' seen in the sky in the middle of the day and at night. | 2.545E25
 `<sky-mie-directional-g>` | Describes how much light is forward scattered by mie scattering, which is the whitish halo seen around the sun caused by larger particles in the atmosphere. The higher the mie-directional G, the dustier the atmosphere appears. | 0.8
-`<sky-air-index-of-refraction>` | Describes how light beds as it is bent after entering the atmosphere. | 1.0003
-`<sky-solar-color>` | Parent tag. Contains `<sky-color-{color-channel}>` tags to describe the base color of the sun. | rgb()
-`<sky-lunar-color>` | Parent tag. Contains `<sky-color-{color-channel}>` tags to describe the base color of the moon. | rgb()
-`<sky-color-red>` | Used to describe **red** color channel changes to `<sky-solar-color>` and `<sky-solar-color>` tags. | See parent tag.
-`<sky-color-green>` | Used to describe **green** color channel changes to `<sky-solar-color>` and `<sky-solar-color>` tags. | See parent tag.
-`<sky-color-blue>` | Used to describe **blue** color channel changes to `<sky-solar-color>` and `<sky-solar-color>` tags. | See parent tag.
-`<sky-number-of-ray-steps>` | The number of points between the top of the atmosphere and the ground to simulate along each ray when building the atmospheric scattering LUT. | 30
-`<sky-number-of-gathering-steps>` | The number of rotational angles to simulate when simulating secondary scattering in the atmospheric scattering LUT. | 30
-`<sky-ozone-enabled>` | Enables to disables Ozone simulation in the atmospheric simulation. | true
 
 The atmospheric parameters has one of the most extensive API in the entire code base. While these values can be used to create custom skies for the skilled developer most users will want to stick with the defaults. A few values in here are particularly useful however and fairly easy to understand.
 
@@ -182,10 +168,8 @@ One of the most likely elements you might want to change is the size of the sun 
 </a-scene>
 ```
 
-
-
 ##Modifying Lighting Defaults
-======
+
 **Tag** | **Description**
 :--- | :---
 `<sky-lighting>` | Parent tag. Contains all child tags related to the lighting of the scene.
@@ -197,10 +181,116 @@ One of the most likely elements you might want to change is the size of the sun 
 `<sky-shadow-camera-size>` | The size of the camera area used to cast shadows. Larger sizes result in more area covered by shadows, but also causes aliasing issues by spreading each pixel of the camera over a wider area.
 `<sky-shadow-camera-resolution>` | The resolution, in pixels, of the direct lighting camera used to produce shadows. Higher values produce higher quality shadows at an increased cost in code.
 
+The sky lighting tags are useful for controlling attributes of the direct and indirect lighting in the scene. In version 1.0.0, the sky has reduced the number of direction lights from 2 (sun and moon) to 1 (just one for the most dominant light source). The directional light is always focused on the users camera and creates shadows around this camera. While the directional light can support various shadow types, this library actually isn't the place to control this. Instead, the shadow type is set in the `<a-scene>` tag, as described [here](https://aframe.io/docs/1.2.0/components/light.html#adding-real-time-shadows). That is, you can set the values to any of the following.
 
+```html
+<a-scene shadow="type: pcfsoft">
+  <a-starry-sky></a-starry-sky>
+</a-scene>
+```
+
+```html
+<a-scene shadow="type: pcf">
+  <a-starry-sky></a-starry-sky>
+</a-scene>
+```
+
+```html
+<a-scene shadow="type: basic">
+  <a-starry-sky></a-starry-sky>
+</a-scene>
+```
+
+Unfortunately, at the time of writing this, A-Frame does not yet support variance shadow maps, though there is an open issue for this. Also, the shadow type you choose for your sun and moon lighting will also be the shadow type for all other lights within your scene, so take this into account when choosing your shadows.
+
+While changing the shadow type is done in A-Frame at the scene level, you can still impact the quality of your shadows by changing the size and resolution of your shadow camera. Because the shadow cameras are orthographic, all direct lighting cameras are set to the distance of the sun and moons location for casting shadows. However, this does not result in shadows infinitely far away, nor does it result in infinitely crisp shadows. Unfortunately, to draw objects further away, you must increase the size of the camera frustum like so,
+
+```html
+<a-scene shadow="type: pcfsoft">
+  <a-starry-sky>
+    <sky-lighting>
+      <sky-shadow-camera-size>
+        <!-- Let's set the minimum forward draw distance to 120m -->
+        120
+      <sky-shadow-camera-size>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+However, if you do increase the size of your frustum to allow more things to cast shadows, you might soon find a problem. Your shadows may start to become pixelated. This is a bit troubling, but we can solve this issue as well. Just increase the resolution of your camera!
+
+```html
+<a-scene shadow="type: pcfsoft">
+  <a-starry-sky>
+    <sky-lighting>
+      <sky-shadow-camera-size>
+        <!-- Let's set the minimum forward draw distance to 120m -->
+        120
+      <sky-shadow-camera-size>
+      <sky-shadow-camera-resolution>
+        <!-- As our resolution is square we only have to set one of these values -->
+        4096
+      </sky-shadow-camera-resolution>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+There. Nice crisp shadows. Unfortunately, this introduces another problem. The higher the resolution on your shadow camera, the more weight it produces on your GPU. While cascading shadow maps would be an ideal solution for this, they were not available at this iteration of the code. Therefore, the best way to approach this problem is to balance the size and resolution of your camera frustum. Another thing you may wish to do is disable shadows on your environment mesh as it's large size means that most of it will likely be outside of the frustum no matter how large you make it resulting in an odd square shadow edge.
+
+Once you have the shadows in your scene just right, you will probably also wish to adjust the color of your 'ground'. A-Starry-Sky now supports a triple hemispherical lighting setup that uses a convolution over the colors of the sky combined with a ground light scattering model on a separate CPU thread via web workers. However, the default color of the ground is brown. You might have a grassy field or a cerulean ocean. To set the color of your ground, you can use the `<sky-ground-color>` tag along with its child ground color channel tags. Let's say we wanted to set the ground to a brilliant green for a lush field of grass.
+
+```html
+<a-scene>
+  <a-starry-sky>
+    <sky-lighting>
+      <sky-ground-color>
+        <sky-ground-color-red>85</sky-ground-color-red>
+        <sky-ground-color-green>231</sky-ground-color-green>
+        <sky-ground-color-blue>5</sky-ground-color-blue>
+      </sky-ground-color>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+Notice that the values above are normalized between values of 0 and 255. So, the r, g, b combo 0, 0, 0 is black and 255, 255, 255 is white. The above color might also be a bit bright making the ground appear to 'glow' with the slightest bit of light. To dim this effect, you can just dim the color a bit.
+
+```html
+<a-scene>
+  <a-starry-sky>
+    <sky-lighting>
+      <sky-ground-color>
+        <sky-ground-color-red>33</sky-ground-color-red>
+        <sky-ground-color-green>90</sky-ground-color-green>
+        <sky-ground-color-blue>2</sky-ground-color-blue>
+      </sky-ground-color>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+That said, if any of your color channels go over 255, there is no way to 'strengthen the color' or to make the ground appear to 'glow in the dark' at this time, unfortunately. Furthermore, the ground color is a constant at all points, so if you have multiple colors in your scene it's probably best to choose one that exists in the middle of all the other colors.
+
+The final element of the sky lighting you will likely want to change is the atmospheric perspective density. Atmospheric perspective is the effect that causes distant mountains to turn blue with distance on a clear day. The effect is not constant, as more light is scattered back to the camera during the day then the night and the color of the distant mountains varies based on the overall lighting conditions in the sky and calculated on a separate web worker every half a second in user time. However, the effects chosen for the current atmospheric perspective tends to be a bit strong to insure that the effect is visible even in small scenes. That said, atmospheric perspective is typically visible over very long distances so you may wish to reduce the effect to provide a more realistic experience.
+
+```html
+<a-scene>
+  <a-starry-sky>
+    <sky-lighting>
+      <sky-ground-color>
+        <!-- while the default is 0.007 the atmospheric perspective density is very
+        tempermental to change so only small changes are needed. -->
+        <sky-atmospheric-perspective-density>0.003</sky-atmospheric-perspective-density>
+      </sky-ground-color>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
 
 ##Setting The Asset Directories
-======
+
 **Tag** | **Description**
 :--- | :---
 `<sky-assets-dir>` | Parent tag. Contains all child tags related to asset locations. Can contain *dir*, *texture-path*, *moon-path*, *star-path* and *wasm-path* attributes to guide the system to entire groups of data at a time.
@@ -329,14 +419,17 @@ In addition to having images, there is also a JavaScript file to the web-worker 
 Using the above methods, you should be able to direct A-Starry-Sky to your assets no matter where they live in your application.
 
 ## Author
-======
 * **David Evans / Dante83** - *Main Developer*
 
 ## References & Special Thanks
-======
-* **Jean Meeus / [Astronomical Algorithms](http://www.willbell.com/math/mc1.htm)** - *Abso-frigging-lutely esential for positioning astronomical bodies*
-* *And plenty of other websites and individuals. Thank you for giving us the opportunity to stand on your giant-like shoulders.*
+* **Jean Meeus / [Astronomical Algorithms](http://www.willbell.com/math/mc1.htm)** - *Abso-frigging-lutely essential for positioning astronomical bodies*
+* [Oskar Elek's Sky Model](http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf) *Rendering Parametrizable Planetary Atmospheres with Multiple Scattering in Real-Time* which was so helpful in creating this new amazing LUT based sky.
+* [Efficient and Dynamic Atmospheric Scattering ](https://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf), which was super helpful in figuring out the details implementing the LUT code and to help determine if I was on the write path with how those LUTs looked.
+* The [Colour-Science Library](https://www.colour-science.org/) library for better star color LUTs.
+* The great blue noise textures by [Moments in Graphics  by Christoph Peters](http://momentsingraphics.de/BlueNoise.html).
+* The solar corona texture by [Carla Thomas](https://www.nasa.gov/centers/armstrong/multimedia/imagegallery/2017_total_solar_eclipse/AFRC2017-0233-006.html).
+* All the amazing work that has gone into [THREE.JS](https://threejs.org/), [A-Frame](https://aframe.io/) and [Emscripten](https://emscripten.org/).
+* *And so so many other websites and individuals. Thank you for giving us the opportunity to stand on your giant-like shoulders.*
 
 ## License
-======
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
