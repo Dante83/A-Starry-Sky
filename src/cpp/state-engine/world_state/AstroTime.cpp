@@ -31,8 +31,8 @@ void AstroTime::setAstroTimeFromYMDHMSTZ(int yr, int mnth, int d, int h, int m, 
     year = yr;
     dblYear = static_cast<double>(year);
   }
-  if(d != (day - 1)){
-    day = (d + 1);
+  if(d != day){
+    day = d;
   }
   updateJulianDayAndCentury();
 }

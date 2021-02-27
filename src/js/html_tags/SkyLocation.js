@@ -47,8 +47,8 @@ class SkyLocation extends HTMLElement {
       }
 
       //Set the params to appropriate values or default
-      self.data.latitude = latitudeTags.length > 0 ? parseFloat(latitudeTags[0].innerHTML) : null;
-      self.data.longitude = longitudeTags.length > 0 ? parseFloat(longitudeTags[0].innerHTML) : null;
+      self.data.latitude = latitudeTags.length > 0 ? parseFloat(latitudeTags[0].innerHTML) : self.data.latitude;
+      self.data.longitude = longitudeTags.length > 0 ? parseFloat(longitudeTags[0].innerHTML) : self.data.longitude;
 
       //Clamp the results
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){

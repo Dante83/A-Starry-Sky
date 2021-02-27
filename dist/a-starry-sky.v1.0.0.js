@@ -3745,8 +3745,8 @@ class SkyLocation extends HTMLElement {
       }
 
       //Set the params to appropriate values or default
-      self.data.latitude = latitudeTags.length > 0 ? parseFloat(latitudeTags[0].innerHTML) : null;
-      self.data.longitude = longitudeTags.length > 0 ? parseFloat(longitudeTags[0].innerHTML) : null;
+      self.data.latitude = latitudeTags.length > 0 ? parseFloat(latitudeTags[0].innerHTML) : self.data.latitude;
+      self.data.longitude = longitudeTags.length > 0 ? parseFloat(longitudeTags[0].innerHTML) : self.data.longitude;
 
       //Clamp the results
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){
@@ -3778,11 +3778,21 @@ window.customElements.define('sky-utc-offset', class extends HTMLElement{});
 let hideStarrySkyTemplate = document.createElement('template');
 hideStarrySkyTemplate.innerHTML = `<style display="none;">{ ... }</style>`;
 
-StarrySky.DefaultData.time = {
-  date: (new Date()).toLocaleDateString(),
-  utcOffset: 7,
-  speed: 1.0
-};
+StarrySky.DefaultData.time;
+(function setupAStarrySkyDefaultTimeData(){
+  //Using https://stackoverflow.com/questions/10632346/how-to-format-a-date-in-mm-dd-yyyy-hhmmss-format-in-javascript
+  const now = new Date();
+  StarrySky.DefaultData.time = {
+    date: [now.getMonth()+1,
+               now.getDate(),
+               now.getFullYear()].join('/')+' '+
+              [now.getHours(),
+               now.getMinutes(),
+               now.getSeconds()].join(':'),
+    utcOffset: 7,
+    speed: 1.0
+  };
+})();
 
 //Parent tag
 class SkyTime extends HTMLElement {
@@ -3811,9 +3821,9 @@ class SkyTime extends HTMLElement {
       });
 
       //Set the params to appropriate values or default
-      self.data.date = skyDateTags.length > 0 ? skyDateTags[0].innerHTML : null;
-      self.data.utcOffset = utcOffsetTags.length > 0 ? -parseFloat(utcOffsetTags[0].innerHTML) : null;
-      self.data.speed = speedTags.length > 0 ? parseFloat(speedTags[0].innerHTML) : null;
+      self.data.date = skyDateTags.length > 0 ? skyDateTags[0].innerHTML : self.data.date;
+      self.data.utcOffset = utcOffsetTags.length > 0 ? -parseFloat(utcOffsetTags[0].innerHTML) : self.data.utcOffset;
+      self.data.speed = speedTags.length > 0 ? parseFloat(speedTags[0].innerHTML) : self.data.speed;
 
       let clampAndWarn = function(inValue, minValue, maxValue, tagName){
         let result = Math.min(Math.max(inValue, minValue), maxValue);
@@ -3827,7 +3837,7 @@ class SkyTime extends HTMLElement {
       };
 
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
-      self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, 12.0, -14.0, '<sky-utc-offset>') : null;
+      self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, -14.0, 12.0, '<sky-utc-offset>') : null;
       self.data.speed = self.data.speed ? clampAndWarn(self.data.speed, 0.0, 1000.0, '<sky-speed>') :null;
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));

@@ -31,7 +31,7 @@ your sky state.
 
 **NOTE: This sky box is immutable. That means that the settings you start with will remain constant on any given page. Unfortunately, at this time, it is just too difficult to make the code mutable.**
 
-##Setting The Location
+## Setting The Location
 
 **Tag** | **Description**
 :--- | :---
@@ -67,7 +67,7 @@ Ok, but what about Perth Australia?
 
 One important thing to notice is that our `<sky-latitude>` and `<sky-longitude>` tags all live inside of a `<sky-location>` tag. This keeps our code organized by giving different sections for different property groups of our sky. It might not seem important now, but it will help provide a clean coding experience as you wish to add more and more properties to your sky. Additionally, I should point out that longitudes west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian) are negative, like New York or Beaunos Aires.
 
-##Setting The Time
+## Setting The Time
 
 **Tag** | **Description**
 :--- | :---
@@ -76,7 +76,7 @@ One important thing to notice is that our `<sky-latitude>` and `<sky-longitude>`
 `<sky-utc-offset>` | The UTC-Offset for this location. Negative values are west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian), contrary to longitude values. **Note that UTC Time does not follow DST**
 `<sky-speed>` | The time multiplier used to speed up the astronomical calculations, or slow them down.
 
-The sister setting to the location tag is the time tag. At the very least, you will want to use this tag with the above tag to set the UTC offset of your location, which you can get with a simple google search, e.g. [What is the UTC offset of New York](https://www.google.com/search?q=what+is+the+utc+offset+of+new+york). Notice that the UTC offset for times west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian) are negative, as opposed to positive.
+The sister setting to the location tag is the time tag. There are two strategies here. Either you wish to set the sky-time to UTC time and the sky-utc-offset to 0, or you wish to set the sky-time to your users location and set the UTC time to match. For instance, if you were setting up a user known to be in New York City, the local time on their machine is expected to be 4 hours behind UTC time. Furthermore, to match their location, you would also need to set their latitude and longitude to the location of New York City.
 
 ```html
 <a-scene>
@@ -97,33 +97,30 @@ The sister setting to the location tag is the time tag. At the very least, you w
 
 Notice that you will once again add in parent `<sky-time>` tag that contains all the relevant child tags for our time settings.
 
-The UTC-Offset is pretty boring. Why don't we do something a bit more interesting, like time travel! I heard there will be an exciting [solar eclipse](https://eclipse.gsfc.nasa.gov/SEgoogle/SEgoogle2001/SE2024Apr08Tgoogle.html) on April 8th of 2024. Let's go check it out!
+That said, you don't just have to stick with the local machines time. Why don't we do something a bit more interesting, like time travel! I heard there will be an exciting [solar eclipse](https://eclipse.gsfc.nasa.gov/SEgoogle/SEgoogle2001/SE2024Apr08Tgoogle.html) on [April 8th of 2024 at 1:27PM (13:27 24 hour time) in Del Rio Texas](https://nationaleclipse.com/cities_total.html). Let's go check it out!
 
 ```html
 <a-scene>
   <a-starry-sky>
-    <!-- It looks like there will be some good viewing in Texas! -->
     <sky-location>
-      <sky-latitude>30.05</sky-latitude>
-      <sky-longitude>-99.18</sky-longitude>
+      <sky-latitude>29.3709</sky-latitude>
+      <sky-longitude>-100.8959</sky-longitude>
     </sky-location>
-
-    <!-- Let's get there just in time to have a look :D -->
     <sky-time>
-      <sky-date>2024-04-08 8:00:00</sky-date>
-      <sky-utc-offset>-6</sky-utc-offset>
+      <sky-date>2024-04-08 13:27:00</sky-date>
+      <sky-utc-offset>-5</sky-utc-offset>
     </sky-time>
   </a-starry-sky>
 </a-scene>
 ```
 
-Did you miss the [Christmas Star](https://www.nasa.gov/feature/the-great-conjunction-of-jupiter-and-saturn)? No, no. Not that one. The one in the year 1226. Well, it's a good thing we have a time machine and A-Starry-Sky now supports planets :D.
+Did you miss the [Christmas Star](https://www.nasa.gov/feature/the-great-conjunction-of-jupiter-and-saturn)? No, no. Not that one. The one in the year 1226 AD. Well, it's a good thing we have a time machine and A-Starry-Sky now supports planets :D.
 
 ```html
 <a-scene>
   <a-starry-sky>
     <sky-time>
-      <sky-date>1226-12-18 17:00:00</sky-date>
+      <sky-date>1226-12-26 21:00:00</sky-date>
     </sky-time>
   </a-starry-sky>
 </a-scene>
@@ -144,7 +141,7 @@ This time travel is fun, but you might also be interested in change the *speed* 
 
 Of course, if you're doing this in a persistent world, make sure to take the accelerated flow of time into account when creating your HTML. Setting up dynamic HTML for your sky is up to you however.
 
-##Modifying Atmospheric Settings
+## Modifying Atmospheric Settings
 
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
@@ -168,7 +165,7 @@ One of the most likely elements you might want to change is the size of the sun 
 </a-scene>
 ```
 
-##Modifying Lighting Defaults
+## Modifying Lighting Defaults
 
 **Tag** | **Description**
 :--- | :---
@@ -289,7 +286,7 @@ The final element of the sky lighting you will likely want to change is the atmo
 </a-scene>
 ```
 
-##Setting The Asset Directories
+## Setting The Asset Directories
 
 **Tag** | **Description**
 :--- | :---
