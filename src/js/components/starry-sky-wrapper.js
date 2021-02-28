@@ -3,7 +3,7 @@ AFRAME.registerComponent('starryskywrapper', {
   skyDirector: null,
   initialized: false,
   init: function(){
-    this.skyDirector = new StarrySky.SkyDirector(this);
+    this.skyDirector = new StarrySky.SkyDirector(this, this.el.getAttribute('web-worker-src'));
   },
   tick: function(time, timeDelta){
     /*Do Nothing*/

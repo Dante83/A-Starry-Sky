@@ -3389,8 +3389,6 @@ StarrySky.Materials.Autoexposure.testPass = {
 }
 
 //Child classes
-window.customElements.define('sky-state-engine-path', class extends HTMLElement{});
-window.customElements.define('sky-interpolation-engine-path', class extends HTMLElement{});
 window.customElements.define('sky-moon-diffuse-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-normal-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-roughness-map', class extends HTMLElement{});
@@ -3448,8 +3446,6 @@ StarrySky.DefaultData.fileNames = {
 };
 
 StarrySky.DefaultData.assetPaths = {
-  skyStateEnginePath: './wasm/',
-  skyInterpolationEnginePath: './wasm/',
   moonDiffuseMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonDiffuseMap,
   moonNormalMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonNormalMap,
   moonRoughnessMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonRoughnessMap,
@@ -3523,8 +3519,6 @@ class SkyAssetsDir extends HTMLElement {
 
       //Get child tags and acquire their values.
       const childNodes = Array.from(self.children);
-      const skyStateEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-state-engine-path');
-      const skyInterpolationEngineTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-interpolation-engine-path');
       const moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
       const moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
       const moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
@@ -3538,23 +3532,14 @@ class SkyAssetsDir extends HTMLElement {
       const starColorMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-color-map');
       const blueNoiseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-blue-noise-maps');
 
-      const objectProperties = ['skyStateEngine', 'skyInterpolationEngine','moonDiffuseMap', 'moonNormalMap',
+      const objectProperties = ['moonDiffuseMap', 'moonNormalMap',
         'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap', 'starHashCubemap',
         'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap']
-      const tagsList = [skyStateEngineTags, skyInterpolationEngineTags, moonDiffuseMapTags, moonNormalMapTags,
+      const tagsList = [moonDiffuseMapTags, moonNormalMapTags,
         moonRoughnessMapTags, moonApertureSizeMapTags, moonApertureOrientationMapTags, starCubemapTags,
         medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags];
       const numberOfTagTypes = tagsList.length;
-      if(self.hasAttribute('wasm-path') && self.getAttribute('wasm-path').toLowerCase() !== 'false'){
-        const wasmKeys = ['skyStateEngine', 'skyInterpolationEngine'];
-        for(let i = 0; i < wasmKeys.length; ++i){
-          //Must end with a / because basis texture loader will eventually just append the file name
-          //We want to use .BASIS in the future, but right now it lacks the quality desired for our target
-          //platform of medium to high powered desktops.
-          StarrySky.assetPaths[wasmKeys[i]] = path + '/';
-        }
-      }
-      else if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
+      if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
         'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap'];
         const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
@@ -3597,8 +3582,8 @@ class SkyAssetsDir extends HTMLElement {
           StarrySky.assetPaths['blueNoiseMaps'][i] = path + '/' + StarrySky.DefaultData.fileNames['blueNoiseMaps'][i];
         }
       }
-      else{
-        console.warn("Invalid code path detected for the sky assets dirs. This should not happen.");
+      else if(self.hasAttribute('solar-eclipse-path') && self.getAttribute('solar-eclipse-path').toLowerCase() !== 'false'){
+        StarrySky.assetPaths['solarEclipseMap'] = path + '/' + StarrySky.DefaultData.fileNames['solarEclipseMap'];
       }
 
       self.skyDataLoaded = true;
@@ -5697,7 +5682,7 @@ StarrySky.AssetManager = function(skyDirector){
   }
 };
 
-StarrySky.SkyDirector = function(parentComponent){
+StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.skyDirectorWASMIsReady = false;
   this.skyInterpolatorWASMIsReady = false;
   this.assetManagerInitialized = false;
@@ -6015,7 +6000,8 @@ StarrySky.SkyDirector = function(parentComponent){
   }
 
   //Prepare our WASM Modules
-  this.webAssemblyWorker = new Worker("../src/cpp/state-engine/starry-sky-web-worker.js");
+  console.log(webWorkerURI);
+  this.webAssemblyWorker = new Worker(webWorkerURI);
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
     if(postObject.eventType === self.EVENT_RETURN_LATEST_SKY_STATE){
@@ -6374,7 +6360,7 @@ AFRAME.registerComponent('starryskywrapper', {
   skyDirector: null,
   initialized: false,
   init: function(){
-    this.skyDirector = new StarrySky.SkyDirector(this);
+    this.skyDirector = new StarrySky.SkyDirector(this, this.el.getAttribute('web-worker-src'));
   },
   tick: function(time, timeDelta){
     /*Do Nothing*/
