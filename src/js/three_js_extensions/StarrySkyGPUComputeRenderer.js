@@ -355,13 +355,22 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 		var currentRenderTarget = renderer.getRenderTarget();
 
 		mesh.material = material;
+
+		//Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
+		var currentXrEnabled = renderer.xr.enabled;
+		var currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
+
+		renderer.xr.enabled = false;
+		renderer.shadowMap.autoUpdate = false;
+
 		renderer.setRenderTarget( output );
-    const webXROriginallEnabled = renderer.xr.enabled;
-    if(webXROriginallEnabled){
-      renderer.xr.enabled = false;
-    }
+		renderer.clear();
+
     renderer.render( scene, camera );
-    renderer.xr.enabled = webXROriginallEnabled;
+
+		renderer.xr.enabled = currentXrEnabled;
+		renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
+
 		mesh.material = passThruShader;
 
 		renderer.setRenderTarget( currentRenderTarget );
