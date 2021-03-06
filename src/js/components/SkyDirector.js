@@ -1,4 +1,4 @@
-StarrySky.SkyDirector = function(parentComponent){
+StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.skyDirectorWASMIsReady = false;
   this.skyInterpolatorWASMIsReady = false;
   this.assetManagerInitialized = false;
@@ -316,7 +316,8 @@ StarrySky.SkyDirector = function(parentComponent){
   }
 
   //Prepare our WASM Modules
-  this.webAssemblyWorker = new Worker("../src/cpp/state-engine/starry-sky-web-worker.js");
+  console.log(webWorkerURI);
+  this.webAssemblyWorker = new Worker(webWorkerURI);
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
     if(postObject.eventType === self.EVENT_RETURN_LATEST_SKY_STATE){

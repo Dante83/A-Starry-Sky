@@ -1,16 +1,20 @@
 # A-Starry-Sky
 
-A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It aims to provide a simple, drop-in component that you can use to create beautiful day-night cycles in your creations. Click [here](http://code-panda.com/pages/projects/v1_0_0/a_sky_forge_example) to see this project in action (**Warning: requires a powerful GPU - do not open on a mobile phone**).
+A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It aims to provide a simple, drop-in component that you can use to create beautiful day-night cycles in your creations. Click [here](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_example) to see this project in action (**Warning: requires a powerful GPU - do not open on a mobile phone**).
+
+[Solar Eclipse Example](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_solar_eclipse_example)
+[Lunar Eclipse Example](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_lunar_eclipse_example)
+[Christmas Star Example](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_christmas_star_example)
 
 ## Prerequisites
 
-This is built for the [A-Frame Web Framework](https://aframe.io/).
+This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.2.0+. It also requires a Web XR compatible web browser.
 
 `https://aframe.io/releases/1.2.0/aframe.min.js`
 
 ## Installing
 
-When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.0.0.min.js* file, along with the *assets** and *wasm* folders into their own directory in your JavaScript folder. Afterwards, add the minified file into a script tag in your html, along with a reference to the interpolation engine JavaScript file in the WASM folder. You should not add a reference to the state-engine JavaScript bootstrap file, however as this module is loaded internally by the code.
+When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.0.0.min.js* file, along with the *assets** and *wasm* folders into their own directory in your JavaScript folder. Afterwards, add the minified file into a script tag in your html, along with a reference to the interpolation engine JavaScript file in the WASM folder. You should not add a reference to the starry-sky-web-worker or state-engine JavaScript bootstrap file, here, however, but instead inject this into the `<a-starry-sky>` tag.
 
 ```html
 <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
@@ -18,11 +22,11 @@ When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.0.0.min.j
 <script src="{PATH_TO_JS_FOLDER}/wasm/interpolation-engine.js"></script>
 ```
 
-Once these references are set up, add the `<a-starry-sky>` component into your `<a-scene>` tag from A-Frame.
+Once these references are set up, add the `<a-starry-sky>` component into your `<a-scene>` tag from A-Frame with a reference to your sky-state web worker url like so.
 
 ```html
 <a-scene>
-  <a-starry-sky></a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js"></a-starry-sky>
 </a-scene>
 ```
 
@@ -44,7 +48,7 @@ You can set your sky to any latitude and longitude on planet Earth. Locations ar
 Let's go to New York!
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-location>
       <sky-latitude>40.7</sky-latitude>
       <sky-longitude>-74.0</sky-longitude>
@@ -56,7 +60,7 @@ Let's go to New York!
 Ok, but what about Perth Australia?
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-location>
       <sky-latitude>-32</sky-latitude>
       <sky-longitude>116</sky-longitude>
@@ -80,7 +84,7 @@ The sister setting to the location tag is the time tag. There are two strategies
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <!-- Previous Location Seetings -->
     <sky-location>
       <sky-latitude>40.7</sky-latitude>
@@ -101,7 +105,7 @@ That said, you don't just have to stick with the local machines time. Why don't 
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-location>
       <sky-latitude>29.3709</sky-latitude>
       <sky-longitude>-100.8959</sky-longitude>
@@ -118,7 +122,7 @@ Did you miss the [Christmas Star](https://www.nasa.gov/feature/the-great-conjunc
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-time>
       <sky-date>1226-12-26 21:00:00</sky-date>
     </sky-time>
@@ -130,7 +134,7 @@ This time travel is fun, but you might also be interested in change the *speed* 
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-time>
       <!-- There will now be eight in-world days for every real life day.-->
       <sky-speed>8</sky-speed>
@@ -156,7 +160,7 @@ One of the most likely elements you might want to change is the size of the sun 
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-atmospheric-parameters>
       <sky-sun-angular-diameter>0.53</sky-sun-angular-diameter>
       <sky-moon-angular-diameter>0.5</sky-moon-angular-diameter>
@@ -182,19 +186,19 @@ The sky lighting tags are useful for controlling attributes of the direct and in
 
 ```html
 <a-scene shadow="type: pcfsoft">
-  <a-starry-sky></a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js"></a-starry-sky>
 </a-scene>
 ```
 
 ```html
 <a-scene shadow="type: pcf">
-  <a-starry-sky></a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js"></a-starry-sky>
 </a-scene>
 ```
 
 ```html
 <a-scene shadow="type: basic">
-  <a-starry-sky></a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js"></a-starry-sky>
 </a-scene>
 ```
 
@@ -204,7 +208,7 @@ While changing the shadow type is done in A-Frame at the scene level, you can st
 
 ```html
 <a-scene shadow="type: pcfsoft">
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
       <sky-shadow-camera-size>
         <!-- Let's set the minimum forward draw distance to 120m -->
@@ -219,7 +223,7 @@ However, if you do increase the size of your frustum to allow more things to cas
 
 ```html
 <a-scene shadow="type: pcfsoft">
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
       <sky-shadow-camera-size>
         <!-- Let's set the minimum forward draw distance to 120m -->
@@ -240,7 +244,7 @@ Once you have the shadows in your scene just right, you will probably also wish 
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
       <sky-ground-color>
         <sky-ground-color-red>85</sky-ground-color-red>
@@ -256,7 +260,7 @@ Notice that the values above are normalized between values of 0 and 255. So, the
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
       <sky-ground-color>
         <sky-ground-color-red>33</sky-ground-color-red>
@@ -274,7 +278,7 @@ The final element of the sky lighting you will likely want to change is the atmo
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
       <sky-ground-color>
         <!-- while the default is 0.007 the atmospheric perspective density is very
@@ -291,7 +295,6 @@ The final element of the sky lighting you will likely want to change is the atmo
 **Tag** | **Description**
 :--- | :---
 `<sky-assets-dir>` | Parent tag. Contains all child tags related to asset locations. Can contain *dir*, *texture-path*, *moon-path*, *star-path* and *wasm-path* attributes to guide the system to entire groups of data at a time.
-`<sky-state-engine-path>` | The location of the WASM state engine JavaScript file, which runs on a separate CPU core via a web worker. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-moon-diffuse-map>` | Defines a moon diffuse map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-moon-normal-map>` | Defines a moon normal map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-moon-roughness-map>` | Defines a moon roughness map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
@@ -311,7 +314,7 @@ Let's start by attempting to navigate to *../../precompiled_assets/my_images/a-s
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-assets-dir>
       <sky-assets-dir dir="../../precompiled_assets/my_images/a-starry-sky-images" wasm-path>
         <!-- This is the folder where all of our images live -->
@@ -325,7 +328,7 @@ Once we've gotten to the folder, we have several ways to specify where our image
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-assets-dir>
       <sky-assets-dir dir="../../precompiled_assets/my_images/a-starry-sky-images" wasm-path>
         <!-- Note that 'moon_images', 'star_images', 'blue_noise_maps' and 'solar_eclipse_picture'
@@ -346,7 +349,7 @@ As you might notice, we could have also provided links to each of the individual
 
 ```html
 <a-scene>
-  <a-starry-sky>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-assets-dir>
       <sky-assets-dir dir="../../precompiled_assets/my_images/3d-textures" wasm-path>
         <!-- Someone likes folders X_X -->
@@ -379,33 +382,6 @@ As you might notice, we could have also provided links to each of the individual
           <!--Even though this a single tag, all the files associated
           with this tag are expected to live in this folder-->
           <sky-blue-noise-maps></sky-blue-noise-maps>
-        </sky-assets-dir>
-      </sky-assets-dir>
-    </sky-assets-dir>
-  </a-starry-sky>
-</a-scene>
-```
-
-In addition to having images, there is also a JavaScript file to the web-worker WASM controller. If we suppose this lives at *../../precompiled_assets/custom_js/wasm/starry-sky-wasm* then we might note that there is a split at precompiled assets and the rest of our folder. We can actually use the xml structure of our tags to our advantage, first navigating to the *../../precompiled_assets* in one `<sky-assets-dir>` and then to the other paths in seperate code branches.
-
-```html
-<a-scene>
-  <a-starry-sky>
-    <sky-assets-dir>
-      <sky-assets-dir dir="../../precompiled_assets/">
-        <!--This is our new WASM path, it starts at precompiled assets above and we can work from here -->
-        <sky-assets-dir dir="custom_js/wasm/">
-          <sky-assets-dir dir="starry-sky-wasm" wasm-path></sky-assets-dir>
-        </sky-assets-dir>
-
-        <!--Our images directory is still sitting at precompiled assets and we can start from that directory here -->
-        <sky-assets-dir dir="my_images/a-starry-sky-images">
-          <sky-assets-dir dir="moon_images" moon-path></sky-assets-dir>
-          <sky-assets-dir dir="star_images" star-path></sky-assets-dir>
-          <sky-assets-dir dir="blue_noise_maps" blue-noise-path></sky-assets-dir>
-          <sky-assets-dir dir="solar_eclipse_picture">
-            <sky-solar-eclipse-map></sky-solar-eclipse-map>
-          </sky-assets-dir>
         </sky-assets-dir>
       </sky-assets-dir>
     </sky-assets-dir>

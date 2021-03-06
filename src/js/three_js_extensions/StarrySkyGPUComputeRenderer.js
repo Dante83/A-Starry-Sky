@@ -374,7 +374,6 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 		mesh.material = passThruShader;
 
 		renderer.setRenderTarget( currentRenderTarget );
-
 	};
 
 	// Shaders
