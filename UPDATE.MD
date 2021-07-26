@@ -1,3 +1,6 @@
+**Version 1.1.0**
+
+
 **Version 1.0.0**
 * **!Important:** In version 1.0.0 and above, you must use a new XML based syntax to control the state of your sky. Variables have also changed to reflect updates to brand new engine architecture.
 * Swapped out property based syntax with XML based value syntax with custom HTML components for a more organized developer experience.

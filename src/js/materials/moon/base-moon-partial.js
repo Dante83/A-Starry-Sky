@@ -100,8 +100,7 @@ StarrySky.Materials.Moon.baseMoonPartial = {
       'vec3 b = (worldMatrix * vec4(bitangent.xyz, 0.0)).xyz;',
       'vec3 n = (worldMatrix * vec4(normal.xyz, 0.0)).xyz;',
 
-      '//There is no matrix transpose, so we will do this ourselves',
-      'mat3 TBNMatrix = mat3(vec3(cameraSpaceTangent.x, b.x, n.x), vec3(cameraSpaceTangent.y, b.y, n.y), vec3(cameraSpaceTangent.z, b.z, n.z));',
+      'mat3 TBNMatrix = transpose(mat3(cameraSpaceTangent, b, n));',
       'tangentSpaceSunLightDirection = normalize(TBNMatrix * sunLightDirection);',
       'tangentSpaceViewDirection = normalize(TBNMatrix * -normalizedWorldPosition);',
 

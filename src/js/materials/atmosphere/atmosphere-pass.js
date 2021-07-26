@@ -142,8 +142,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform float scatteringMoonIntensity;',
     'uniform float scatteringSunIntensity;',
     'uniform vec3 moonLightColor;',
-    'uniform sampler2D mieInscatteringSum;',
-    'uniform sampler2D rayleighInscatteringSum;',
+    'uniform sampler3D mieInscatteringSum;',
+    'uniform sampler3D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
 
     '#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)',
