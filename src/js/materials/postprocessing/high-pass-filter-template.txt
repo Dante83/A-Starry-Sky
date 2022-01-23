@@ -1,12 +1,11 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Postprocessing.highPassFilter = {
-  uniforms: {
-    sourceTexture: {type: 't', 'value': null},
-    luminosityThreshold: {type: 'f', 'value': null},
-  },
-  fragmentShader: [
-    {fragment_glsl}
-  ].join('\n')
+export default function HighPassFilter(){
+  reuturn ({
+    uniforms: {
+      sourceTexture: {'value': null},
+      luminosityThreshold: {'value': null},
+    },
+    fragmentShader: [
+      {fragment_glsl}
+    ].join('\n')
+  });
 };

@@ -1,22 +1,21 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Sun.baseSunPartial = {
-  fragmentShader: function(sunAngularDiameter){
-    let originalGLSL = [
-      {fragment_glsl}
-    ];
+export default function BaseSunPartial(){
+  return ({
+    fragmentShader: function(sunAngularDiameter){
+      let originalGLSL = [
+        {fragment_glsl}
+      ];
 
-    let updatedLines = [];
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$sunAngularDiameter/g, sunAngularDiameter.toFixed(5));
+      const updatedLines = [];
+      for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+        let updatedGLSL = originalGLSL[i].replace(/\$sunAngularDiameter/g, sunAngularDiameter.toFixed(5));
 
-      updatedLines.push(updatedGLSL);
-    }
+        updatedLines.push(updatedGLSL);
+      }
 
-    return updatedLines.join('\n');
-  },
-  vertexShader: [
-    {vertex_glsl}
-  ].join('\n'),
+      return updatedLines.join('\n');
+    },
+    vertexShader: [
+      {vertex_glsl}
+    ].join('\n'),
+  });
 }

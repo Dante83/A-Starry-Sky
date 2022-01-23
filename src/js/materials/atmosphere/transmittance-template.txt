@@ -1,24 +1,22 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-//Currently has no uniforms, but might get them in the future
-StarrySky.Materials.Atmosphere.transmittanceMaterial = {
-  uniforms: {},
-  fragmentShader: function(numberOfPoints, atmosphereFunctions){
-    let originalGLSL = [
-      {fragment_glsl}
-    ];
+export default function TransmittanceMaterial(){
+  return({
+    uniforms: {},
+    fragmentShader: function(numberOfPoints, atmosphereFunctions){
+      let originalGLSL = [
+        {fragment_glsl}
+      ];
 
-    let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
-      updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
+      const updatedLines = [];
+      const numberOfChunks = numberOfPoints - 1;
+      for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+        let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+        updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
+        updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
 
-      updatedLines.push(updatedGLSL);
+        updatedLines.push(updatedGLSL);
+      }
+
+      return updatedLines.join('\n');
     }
-
-    return updatedLines.join('\n');
-  }
+  });
 };

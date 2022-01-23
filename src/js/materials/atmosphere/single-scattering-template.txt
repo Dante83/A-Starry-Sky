@@ -1,29 +1,25 @@
-StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
-  uniforms: {
-    transmittanceTexture: {value: null},
-    uvz: {value: 0.0}
-  },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions){
-    let originalGLSL = [
-      {fragment_glsl}
-    ];
+export default function SingleScatteringMaterial(){
+  reuturn({
+    uniforms: {
+      transmittanceTexture: {value: null},
+      uvz: {value: 0.0}
+    },
+    fragmentShader: function(numberOfPoints, atmosphereFunctions){
+      let originalGLSL = [
+        {fragment_glsl}
+      ];
 
-    let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
-      updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
-      updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
+      const updatedLines = [];
+      const numberOfChunks = numberOfPoints - 1;
+      for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+        let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+        updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
+        updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
 
-      //Texture depth is packingWidth * packingHeight
-      updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+        updatedLines.push(updatedGLSL);
+      }
 
-      updatedLines.push(updatedGLSL);
+      return updatedLines.join('\n');
     }
-
-    return updatedLines.join('\n');
-  }
+  });
 };

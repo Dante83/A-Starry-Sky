@@ -1,73 +1,114 @@
-StarrySky.AssetManager = function(skyDirector){
-  this.skyDirector = skyDirector;
-  this.data = {};
-  this.images = {
-    moonImages: {},
-    starImages: {},
-    blueNoiseImages: {},
-    solarEclipseImage: null
-  };
-  const starrySkyComponent = skyDirector.parentComponent;
+import RGBAFormat, LuminanceFormat, sRGBEncoding, LinearEncoding, LinearMipmapLinear,
+Linear, ClampToEdgeWrapping, LinearFilter, NearestFilter, TextureLoader, RepeatWrapping,
+CubeTextureLoader from THREE;
+import StellarLUTLibrary from '../lut_libraries/StellarLUTLibrary.js'
 
-  //------------------------
-  //Capture all the information from our child elements for our usage here.
-  //------------------------
-  //Get all of our tags
-  var tagLists = [];
-  const skyLocationTags = starrySkyComponent.el.getElementsByTagName('sky-location');
-  tagLists.push(skyLocationTags);
-  const skyTimeTags = starrySkyComponent.el.getElementsByTagName('sky-time');
-  tagLists.push(skyTimeTags);
-  const skyAtmosphericParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
-  tagLists.push(skyAtmosphericParametersTags);
-  tagLists.forEach(function(tags){
-    if(tags.length > 1){
-      console.error(`The <a-starry-sky> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+export default class AssetManager{
+  constructor(){
+    this.data = {};
+    this.images = {
+      moonImages: {},
+      starImages: {},
+      blueNoiseImages: {},
+      solarEclipseImage: null
+    };
+    this.hasLoadedImages = false;
+  }
+
+  init(skyDirector){
+    const starrySkyComponent = skyDirector.parentComponent;
+
+    //------------------------
+    //Capture all the information from our child elements for our usage here.
+    //------------------------
+    //Get all of our tags
+    const skyLocationTags = starrySkyComponent.el.getElementsByTagName('sky-location');
+    const skyTimeTags = starrySkyComponent.el.getElementsByTagName('sky-time');
+    const skyAtmosphericParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
+    ([skyLocationTags, skyTimeTags, skyAtmosphericParametersTags]).forEach(function(tags){
+      if(tags.length > 1){
+        console.error(`The <a-starry-sky> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+      }
+    });
+    const skyLightingTags = starrySkyComponent.el.getElementsByTagName('sky-lighting');
+    const skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
+
+    //Now grab each of or our elements and check for events.
+    let skyDataSetsLoaded = 0;
+    let skyDataSetsLength = 0;
+    let skyLocationTag;
+    let skyTimeTag;
+    let skyAtmosphericParametersTag;
+    let skyLightingTag;
+    let loadSkyDataHasNotRun = true;
+    let numberOfTexturesLoaded = 0;
+    let totalNumberOfTextures;
+
+    const activeTags = [];
+    if(skyLocationTags.length === 1){
+      ++skyDataSetsLength;
+      skyLocationTag = skyLocationTags[0];
+      hasSkyDataLoadedEventListener = false;
+      activeTags.push(skyLocationTag);
     }
-  });
-  const skyLightingTags = starrySkyComponent.el.getElementsByTagName('sky-lighting');
-  tagLists.push(skyLightingTags);
-  //These are excluded from our search above :D
-  const skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
+    if(skyTimeTags.length === 1){
+      ++skyDataSetsLength;
+      skyTimeTag = skyTimeTags[0];
+      activeTags.push(skyTimeTag);
+    }
+    if(skyAtmosphericParametersTags.length === 1){
+      ++skyDataSetsLength;
+      skyAtmosphericParametersTag = skyAtmosphericParametersTags[0];
+      activeTags.push(skyAtmosphericParametersTag);
+    }
+    if(skyAssetsTags.length > 0){
+      skyDataSetsLength += skyAssetsTags.length;
+      activeTags.push(...skyAssetsTags);
+    }
+    if(skyLightingTags.length === 1){
+      ++skyDataSetsLength;
+      skyLightingTag = skyLightingTags[0];
+      activeTags.push(skyLightingTag);
+    }
+    for(activeTag of activeTags){
+      this.checkIfAllHTMLDataLoaded(activeTag);
+    }
 
-  //Now grab each of or our elements and check for events.
-  this.starrySkyComponent = starrySkyComponent;
-  this.skyDataSetsLoaded = 0;
-  this.skyDataSetsLength = 0;
-  this.skyLocationTag;
-  this.hasSkyLocationTag = false;
-  this.skyTimeTag;
-  this.hasSkyTimeTag = false;
-  this.skyAtmosphericParametersTag;
-  this.hasSkyAtmosphericParametersTag = false;
-  this.skyLightingTag;
-  this.hasSkyLightingTag = false;
-  this.skyAssetsTags;
-  this.hasSkyAssetsTag = false;
-  this.hasLoadedImages = false;
-  this.readyForTickTock = false;
-  this.loadSkyDataHasNotRun = true;
-  this.tickSinceLastUpdateRequest = 5;
-  this.numberOfTexturesLoaded = 0;
-  this.totalNumberOfTextures;
-  const self = this;
+    if(skyDataSetsLength === 0 || skyDataSetsLoaded === skyDataSetsLength){
+      if(loadSkyDataHasNotRun){
+        //Don't run this twice
+        loadSkyDataHasNotRun = false;
 
-  //Asynchronously load all of our images because, we don't care about when these load
-  this.loadImageAssets = async function(renderer){
+        //Now that we have verified our tags, let's grab the first one in each.
+        const defaultValues = starrySkyComponent.defaultValues;
+        this.data.skyLocationData = skyLocationTags.length === 1 ? skyLocationTag.data : defaultValues.location;
+        this.data.skyTimeData = skyTimeTags.length === 1 ? skyTimeTag.data : defaultValues.time;
+        this.data.skyAtmosphericParameters = skyAtmosphericParametersTags.length === 1 ? skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
+        this.data.skyLighting = skyLightingTags.length === 1 ? skyLightingTag.data : defaultValues.lighting;
+        this.data.skyAssetsData = skyAssetsTags.length > 0 ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
+        this.loadImageAssets(skyDirector.renderer);
+
+        skyDirector.assetManagerInitialized = true;
+        skyDirector.initializeSkyDirectorWebWorker();
+      }
+    }
+  }
+
+  loadImageAssets(renderer){
     //Just use our THREE Texture Loader for now
-    const textureLoader = new THREE.TextureLoader();
+    const textureLoader = new TextureLoader();
 
     //The amount of star texture data
     const numberOfStarTextures = 4;
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    const moonFormats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
-    const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
+    const moonFormats = [RGBAFormat, RGBAFormat, LuminanceFormat, LuminanceFormat, RGBAFormat];
+    const moonEncodings = [sRGBEncoding, LinearEncoding, LinearEncoding, LinearEncoding, LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
     const oneSolarEclipseImage = 1;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage;
+    totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -83,10 +124,10 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.magFilter = THREE.Linear;
-        texture.minFilter = THREE.LinearMipmapLinear;
+        texture.wrapS = ClampToEdgeWrapping;
+        texture.wrapT = ClampToEdgeWrapping;
+        texture.magFilter = Linear;
+        texture.minFilter = LinearMipmapLinear;
         texture.encoding = moonEncodings[i];
         texture.format = moonFormats[i];
         //Swap this tomorrow and implement custom mip-maps
@@ -115,20 +156,20 @@ StarrySky.AssetManager = function(skyDirector){
     });
     texturePromise.then(function(texture){
       //Fill in the details of our texture
-      texture.wrapS = THREE.ClampToEdgeWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.magFilter = THREE.LinearFilter;
-      texture.minFilter = THREE.LinearFilter;
-      texture.encoding = THREE.LinearEncoding;
-      texture.format = THREE.RGBFormat;
+      texture.wrapS = ClampToEdgeWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
+      texture.magFilter = LinearFilter;
+      texture.minFilter = LinearFilter;
+      texture.encoding = LinearEncoding;
+      texture.format = RGBAFormat;
       //Swap this tomorrow and implement custom mip-maps
       texture.generateMipmaps = true;
       self.images.starImages.starColorMap = texture;
 
       //If the renderer already exists, go in and update the uniform
       //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-        const atmosphereTextureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starColorMap;
+      if(skyDirector?.renderers?.moonRenderer !== undefined){
+        const atmosphereTextureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starColorMap;
         atmosphereTextureRef.value = texture;
 
         const moonTextureRef = skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.starColorMap;
@@ -144,7 +185,7 @@ StarrySky.AssetManager = function(skyDirector){
     });
 
     //Set up our star hash cube map
-    const loader = new THREE.CubeTextureLoader();
+    const loader = new CubeTextureLoader();
 
     let texturePromise2 = new Promise(function(resolve, reject){
       loader.load(StarrySky.assetPaths.starHashCubemap, function(cubemap){resolve(cubemap);});
@@ -152,10 +193,10 @@ StarrySky.AssetManager = function(skyDirector){
     texturePromise2.then(function(cubemap){
 
       //Make sure that our cubemap is using the appropriate settings
-      cubemap.magFilter = THREE.NearestFilter;
-      cubemap.minFilter = THREE.NearestFilter;
-      cubemap.format = THREE.RGBAFormat;
-      cubemap.encoding = THREE.LinearEncoding;
+      cubemap.magFilter = NearestFilter;
+      cubemap.minFilter = NearestFilter;
+      cubemap.format = RGBAFormat;
+      cubemap.encoding = LinearEncoding;
       cubemap.generateMipmaps = false;
 
       self.numberOfTexturesLoaded += 1;
@@ -191,21 +232,20 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
-        texture.encoding = THREE.LinearEncoding;
+        texture.wrapS = ClampToEdgeWrapping;
+        texture.wrapT = ClampToEdgeWrapping;
+        texture.magFilter = NearestFilter;
+        texture.minFilter = NearestFilter;
+        texture.format = RGBAFormat;
+        texture.encoding = LinearEncoding;
         texture.generateMipmaps = false;
         dimStarChannelImages[channels[i]] = texture;
 
         numberOfDimStarChannelsLoaded += 1;
         if(numberOfDimStarChannelsLoaded === 4){
           //Create our Star Library LUTs if it does not exists
-          let skyDirector = self.skyDirector;
           if(skyDirector.stellarLUTLibrary === undefined){
-            skyDirector.stellarLUTLibrary = new StarrySky.LUTlibraries.StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
+            skyDirector.stellarLUTLibrary = new StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
           }
 
           //Create our texture from these four textures
@@ -248,19 +288,18 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
-        texture.encoding = THREE.LinearEncoding;
+        texture.wrapS = ClampToEdgeWrapping;
+        texture.wrapT = ClampToEdgeWrapping;
+        texture.magFilter = NearestFilter;
+        texture.minFilter = NearestFilter;
+        texture.format = RGBAFormat;
+        texture.encoding = LinearEncoding;
         texture.generateMipmaps = false;
         medStarChannelImages[channels[i]] = texture;
 
         numberOfMedStarChannelsLoaded += 1;
         if(numberOfMedStarChannelsLoaded === 4){
           //Create our Star Library LUTs if it does not exists
-          let skyDirector = self.skyDirector;
           if(skyDirector.stellarLUTLibrary === undefined){
             skyDirector.stellarLUTLibrary = new StarrySky.LUTlibraries.StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
           }
@@ -305,12 +344,12 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
-        texture.wrapS = THREE.ClampToEdgeWrapping;
-        texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
-        texture.encoding = THREE.LinearEncoding;
+        texture.wrapS = ClampToEdgeWrapping;
+        texture.wrapT = ClampToEdgeWrapping;
+        texture.magFilter = NearestFilter;
+        texture.minFilter = NearestFilter;
+        texture.format = RGBAFormat;
+        texture.encoding = LinearEncoding;
         texture.generateMipmaps = false;
         brightStarChannelImages[channels[i]] = texture;
 
@@ -360,12 +399,12 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        texture.magFilter = THREE.Linear;
-        texture.minFilter = THREE.LinearMipmapLinear;
-        texture.encoding = THREE.LinearEncoding;
-        texture.format = THREE.RGBFormat;
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
+        texture.magFilter = Linear;
+        texture.minFilter = LinearMipmapLinear;
+        texture.encoding = LinearEncoding;
+        texture.format = RGBAFormat;
         texture.generateMipmaps = true;
         self.images.blueNoiseImages[i] = texture;
 
@@ -383,19 +422,19 @@ StarrySky.AssetManager = function(skyDirector){
     });
     solarEclipseTexturePromise.then(function(texture){
       //Fill in the details of our texture
-      texture.wrapS = THREE.ClampToEdgeWrapping;
-      texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.magFilter = THREE.LinearFilter;
-      texture.minFilter = THREE.LinearMipmapLinear;
-      texture.encoding = THREE.LinearEncoding;
-      texture.format = THREE.LuminanceFormat;
+      texture.wrapS = ClampToEdgeWrapping;
+      texture.wrapT = ClampToEdgeWrapping;
+      texture.magFilter = LinearFilter;
+      texture.minFilter = LinearMipmapLinear;
+      texture.encoding = LinearEncoding;
+      texture.format = LuminanceFormat;
       texture.generateMipmaps = true;
       self.images.solarEclipseImage = texture;
 
       //If the renderer already exists, go in and update the uniform
       //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-      if(self.skyDirector?.renderers?.SunRenderer !== undefined){
-        const atmosphereTextureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.solarEclipseMap;
+      if(skyDirector?.renderers?.SunRenderer !== undefined){
+        const atmosphereTextureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.solarEclipseMap;
         atmosphereTextureRef.value = texture;
       }
 
@@ -408,87 +447,36 @@ StarrySky.AssetManager = function(skyDirector){
     });
 
     //Load any additional textures
-  }
-
-  //Internal function for loading our sky data once the DOM is ready
-  this.loadSkyData = function(){
-    if(self.loadSkyDataHasNotRun){
-      //Don't run this twice
-      self.loadSkyDataHasNotRun = false;
-
-      //Now that we have verified our tags, let's grab the first one in each.
-      const defaultValues = self.starrySkyComponent.defaultValues;
-      self.data.skyLocationData = self.hasSkyLocationTag ? self.skyLocationTag.data : defaultValues.location;
-      self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
-      self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
-      self.data.skyLighting = self.hasSkyLightingTag ? self.skyLightingTag.data : defaultValues.lighting;
-      self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
-      self.loadImageAssets(self.skyDirector.renderer);
-
-      skyDirector.assetManagerInitialized = true;
-      skyDirector.initializeSkyDirectorWebWorker();
-    }
   };
 
-  //This is the function that gets called each time our data loads.
-  //In the event that we have loaded everything the number of tags should
-  //equal the number of events.
-  let checkIfNeedsToLoadSkyData = function(e = false){
-    self.skyDataSetsLoaded += 1;
-    if(self.skyDataSetsLoaded >= self.skyDataSetsLength){
-      if(!e || (e.nodeName.toLowerCase() !== "sky-assets-dir" || e.isRoot)){
-        self.loadSkyData();
+  checkIfAllHTMLDataLoaded(tag){
+    //This is the function that gets called each time our data loads.
+    //In the event that we have loaded everything the number of tags should
+    //equal the number of events.
+    let checkIfNeedsToLoadSkyData = (e = false) => {
+      ++skyDataSetsLoaded;
+      if(skyDataSetsLoaded >= skyDataSetsLength){
+        if(!e || (e.nodeName.toLowerCase() !== "sky-assets-dir" || e.isRoot)){
+          this.loadSkyData();
+        }
       }
-    }
-  };
+    };
 
-  //Closure to simplify our code below to avoid code duplication.
-  function checkIfAllHTMLDataLoaded(tag){
     if(!tag.skyDataLoaded || !checkIfNeedsToLoadSkyData()){
       //Tags still yet exist to be loaded? Add a listener for the next event
-      tag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
+      tag.addEventListener('Sky-Data-Loaded', (e) => checkIfNeedsToLoadSkyData(e));
     }
   }
 
-  let activeTags = [];
-  if(skyLocationTags.length === 1){
-    this.skyDataSetsLength += 1;
-    this.skyLocationTag = skyLocationTags[0];
-    this.hasSkyLocationTag = true;
-    hasSkyDataLoadedEventListener = false;
-    activeTags.push(this.skyLocationTag);
-  }
-  if(skyTimeTags.length === 1){
-    this.skyDataSetsLength += 1;
-    this.skyTimeTag = skyTimeTags[0];
-    this.hasSkyTimeTag = true;
-    activeTags.push(this.skyTimeTag);
-  }
-  if(skyAtmosphericParametersTags.length === 1){
-    this.skyDataSetsLength += 1;
-    this.skyAtmosphericParametersTag = skyAtmosphericParametersTags[0];
-    this.hasSkyAtmosphericParametersTag = true;
-    activeTags.push(this.skyAtmosphericParametersTag);
-  }
-  if(skyAssetsTags.length > 0){
-    this.skyDataSetsLength += skyAssetsTags.length;
-    this.skyAssetsTags = skyAssetsTags;
-    this.hasSkyAssetsTag = true;
-    for(let i = 0; i < skyAssetsTags.length; ++i){
-      activeTags.push(skyAssetsTags[i]);
-    }
-  }
-  if(skyLightingTags.length === 1){
-    this.skyDataSetsLength += 1;
-    this.skyLightingTag = skyLightingTags[0];
-    this.hasSkyLightingTag = true;
-    activeTags.push(this.skyLightingTag);
-  }
-  for(let i = 0; i < activeTags.length; ++i){
-    checkIfAllHTMLDataLoaded(activeTags[i]);
+  get data(){
+    return this.data;
   }
 
-  if(this.skyDataSetsLength === 0 || this.skyDataSetsLoaded === this.skyDataSetsLength){
-    this.loadSkyData();
+  get images(){
+    return this.images;
+  }
+
+  get hasLoadedImages(){
+    return this.hasLoadedImages
   }
 };

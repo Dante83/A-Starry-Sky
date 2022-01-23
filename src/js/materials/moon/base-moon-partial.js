@@ -1,7 +1,5 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Moon.baseMoonPartial = {
+export default function BaseMoonPartial(){
+  return({
   fragmentShader: function(moonAngularDiameter){
     let originalGLSL = [
     '//We enter and leave with additionalPassColor, which we add our moon direct',
@@ -55,7 +53,7 @@ StarrySky.Materials.Moon.baseMoonPartial = {
     'vec3 moonTexel = 2.0 * observableSunFraction * NDotL * (A + B * max(0.0, gamma) * C) * lunarDiffuseColor * transmittanceFade * earthsShadow;',
     ];
 
-    let updatedLines = [];
+    const updatedLines = [];
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$moonAngularDiameter/g, moonAngularDiameter.toFixed(5));
 
@@ -127,5 +125,5 @@ StarrySky.Materials.Moon.baseMoonPartial = {
 
       'gl_Position = vec4(position, 1.0);',
     '}',
-  ].join('\n'),
+  ].join('\n')});
 }

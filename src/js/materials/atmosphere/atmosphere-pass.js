@@ -1,81 +1,78 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Atmosphere.atmosphereShader = {
+const AtmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false){
     let uniforms = {
-      uTime: {type: 'f', value: 0.0},
-      localSiderealTime: {type: 'f', value: 0.0},
-      latitude: {type: 'f', value: 0.0},
-      sunPosition: {type: 'vec3', value: new THREE.Vector3()},
-      moonPosition: {type: 'vec3', value: new THREE.Vector3()},
-      moonLightColor: {type: 'vec3', value: new THREE.Vector3()},
-      mieInscatteringSum: {type: 't', value: null},
-      rayleighInscatteringSum: {type: 't', value: null},
-      transmittance: {type: 't', value: null},
-      sunHorizonFade: {type: 'f', value: 1.0},
-      moonHorizonFade: {type: 'f', value: 1.0},
-      scatteringSunIntensity: {type: 'f', value: 20.0},
-      scatteringMoonIntensity: {type: 'f', value: 1.4}
+      uTime: {value: 0.0},
+      localSiderealTime: {value: 0.0},
+      latitude: {value: 0.0},
+      sunPosition: {value: new THREE.Vector3()},
+      moonPosition: {value: new THREE.Vector3()},
+      moonLightColor: {value: new THREE.Vector3()},
+      mieInscatteringSum: {value: null},
+      rayleighInscatteringSum: {value: null},
+      transmittance: {value: null},
+      sunHorizonFade: {value: 1.0},
+      moonHorizonFade: {value: 1.0},
+      scatteringSunIntensity: {value: 20.0},
+      scatteringMoonIntensity: {value: 1.4}
     }
 
     if(!isSunShader && !isMoonShader && !isMeteringShader){
-      uniforms.blueNoiseTexture = {type: 't', value: null};
+      uniforms.blueNoiseTexture = {value: null};
     }
 
     //Pass our specific uniforms in here.
     if(isSunShader){
-      uniforms.sunAngularDiameterCos = {type: 'f', value: 1.0};
-      uniforms.radiusOfSunPlane = {type: 'f', value: 1.0};
-      uniforms.moonRadius = {type: 'f', value: 1.0};
-      uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
-      uniforms.solarEclipseMap = {type: 't', value: null};
-      uniforms.moonDiffuseMap = {type: 't', value: null};
+      uniforms.sunAngularDiameterCos = {value: 1.0};
+      uniforms.radiusOfSunPlane = {value: 1.0};
+      uniforms.moonRadius = {value: 1.0};
+      uniforms.worldMatrix = {value: new THREE.Matrix4()};
+      uniforms.solarEclipseMap = {value: null};
+      uniforms.moonDiffuseMap = {value: null};
     }
     else if(isMoonShader){
-      uniforms.moonExposure = {type: 'f', value: 1.0};
-      uniforms.moonAngularDiameterCos = {type: 'f', value: 1.0};
-      uniforms.sunRadius = {type: 'f', value: 1.0};
-      uniforms.radiusOfMoonPlane = {type: 'f', value: 1.0};
-      uniforms.distanceToEarthsShadowSquared = {type: 'f', value: 1.0};
-      uniforms.oneOverNormalizedLunarDiameter = {type: 'f', value: 1.0};
-      uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
-      uniforms.sunLightDirection = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.earthsShadowPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.moonDiffuseMap = {type: 't', value: null};
-      uniforms.moonNormalMap = {type: 't', value: null};
-      uniforms.moonRoughnessMap = {type: 't', value: null};
-      uniforms.moonApertureSizeMap = {type: 't', value: null};
-      uniforms.moonApertureOrientationMap = {type: 't', value: null};
+      uniforms.moonExposure = {value: 1.0};
+      uniforms.moonAngularDiameterCos = {value: 1.0};
+      uniforms.sunRadius = {value: 1.0};
+      uniforms.radiusOfMoonPlane = {value: 1.0};
+      uniforms.distanceToEarthsShadowSquared = {value: 1.0};
+      uniforms.oneOverNormalizedLunarDiameter = {value: 1.0};
+      uniforms.worldMatrix = {value: new THREE.Matrix4()};
+      uniforms.sunLightDirection = {value: new THREE.Vector3()};
+      uniforms.earthsShadowPosition = {value: new THREE.Vector3()};
+      uniforms.moonDiffuseMap = {value: null};
+      uniforms.moonNormalMap = {value: null};
+      uniforms.moonRoughnessMap = {value: null};
+      uniforms.moonApertureSizeMap = {value: null};
+      uniforms.moonApertureOrientationMap = {value: null};
     }
 
     if(!isSunShader){
-      uniforms.starHashCubemap = {type: 't', value: null};
-      uniforms.dimStarData = {type: 't', value: null};
-      uniforms.medStarData = {type: 't', value: null};
-      uniforms.brightStarData = {type: 't', value: null};
-      uniforms.starColorMap = {type: 't', value: null};
+      uniforms.starHashCubemap = {value: null};
+      uniforms.dimStarData = {value: null};
+      uniforms.medStarData = {value: null};
+      uniforms.brightStarData = {value: null};
+      uniforms.starColorMap = {value: null};
 
-      uniforms.mercuryPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.venusPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.marsPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.jupiterPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.saturnPosition = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.mercuryPosition = {value: new THREE.Vector3()};
+      uniforms.venusPosition = {value: new THREE.Vector3()};
+      uniforms.marsPosition = {value: new THREE.Vector3()};
+      uniforms.jupiterPosition = {value: new THREE.Vector3()};
+      uniforms.saturnPosition = {value: new THREE.Vector3()};
 
-      uniforms.mercuryBrightness = {type: 'f', value: 0.0};
-      uniforms.venusBrightness = {type: 'f', value: 0.0};
-      uniforms.marsBrightness = {type: 'f', value: 0.0};
-      uniforms.jupiterBrightness = {type: 'f', value: 0.0};
-      uniforms.saturnBrightness = {type: 'f', value: 0.0};
+      uniforms.mercuryBrightness = {value: 0.0};
+      uniforms.venusBrightness = {value: 0.0};
+      uniforms.marsBrightness = {value: 0.0};
+      uniforms.jupiterBrightness = {value: 0.0};
+      uniforms.saturnBrightness = {value: 0.0};
     }
 
     if(!isSunShader && !isMeteringShader){
-      uniforms.starsExposure = {type: 'f', value: -4.0};
+      uniforms.starsExposure = {value: -4.0};
     }
 
     if(isMeteringShader){
-      uniforms.sunLuminosity = {type: 'f', value: 20.0};
-      uniforms.moonLuminosity = {type: 'f', value: 1.4};
+      uniforms.sunLuminosity = {value: 20.0};
+      uniforms.moonLuminosity = {value: 1.4};
     }
 
     return uniforms;
@@ -126,8 +123,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'gl_Position = projectionPosition;',
     '}',
   ].join('\n'),
-  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
-    let originalGLSL = [
+  fragmentShader: function(mieG, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
+    const originalGLSL = [
     'precision mediump float;',
 
     'varying vec3 vWorldPosition;',
@@ -370,18 +367,14 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '}',
     '#endif',
 
-    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
+    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler3D mieLookupTable, sampler3D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
       'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);',
       'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
       'vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
-      'float depthInPixels = $textureDepth;',
-      'UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);',
+      'vec3 rayleighScattering = texture(rayleighLookupTable, uv3).rgb;',
+      'vec3 mieScattering = texture(mieLookupTable, uv3).rgb;',
 
-      '//Interpolated scattering values',
-      'vec3 interpolatedMieScattering = mix(texture2D(mieLookupTable, solarUVInterpolants.uv0).rgb, texture2D(mieLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
-      'vec3 interpolatedRayleighScattering = mix(texture2D(rayleighLookupTable, solarUVInterpolants.uv0).rgb, texture2D(rayleighLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
-
-      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
+      'return intensityFader * sourceIntensity * (rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * rayleighScattering + miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * mieScattering);',
     '}',
 
     '//Including this because someone removed this in a future versio of THREE. Why?!',
@@ -427,7 +420,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#endif',
 
       '//Atmosphere',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
+      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
       'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
       'vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
 
@@ -543,23 +536,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '}',
     ];
 
-    let mieGSquared = mieG * mieG;
-    let miePhaseFunctionCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared));
-    let textureDepth = packingWidth * packingHeight;
+    const mieGSquared = mieG * mieG;
+    const miePhaseFunctionCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared));
 
-    let updatedLines = [];
+    const updatedLines = [];
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseFunctionCoefficient.toFixed(16));
-
-      //Texture constants
-      updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
 
       //Additional injected code for sun and moon
       if(moonCode !== false){
@@ -597,3 +582,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     return updatedLines.join('\n');
   }
 }
+
+module.exports({
+  AtmosphereShader
+});

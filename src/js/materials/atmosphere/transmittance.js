@@ -1,11 +1,8 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-//Currently has no uniforms, but might get them in the future
-StarrySky.Materials.Atmosphere.transmittanceMaterial = {
-  uniforms: {},
-  fragmentShader: function(numberOfPoints, atmosphereFunctions){
-    let originalGLSL = [
+export default function TransmittanceMaterial(){
+  return({
+    uniforms: {},
+    fragmentShader: function(numberOfPoints, atmosphereFunctions){
+      let originalGLSL = [
     '//Based on the work of Oskar Elek',
     '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
     '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
@@ -67,18 +64,19 @@ StarrySky.Materials.Atmosphere.transmittanceMaterial = {
 
       'gl_FragColor = vec4(transmittance, 1.0);',
     '}',
-    ];
+      ];
 
-    let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
-      updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
+      const updatedLines = [];
+      const numberOfChunks = numberOfPoints - 1;
+      for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+        let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+        updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
+        updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
 
-      updatedLines.push(updatedGLSL);
+        updatedLines.push(updatedGLSL);
+      }
+
+      return updatedLines.join('\n');
     }
-
-    return updatedLines.join('\n');
-  }
+  });
 };

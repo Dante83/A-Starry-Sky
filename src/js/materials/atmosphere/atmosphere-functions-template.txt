@@ -1,30 +1,19 @@
-//This is not your usual file, instead it is a kind of fragment file that contains
-//a partial glsl fragment file with functions that are used in multiple locations
-StarrySky.Materials.Atmosphere.atmosphereFunctions = {
-  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, mieG){
-    let originalGLSL = [
-      {fragment_glsl}
-    ];
+export default function AtmosphereFunctions(mieG){
+  let originalGLSL = [
+    {fragment_glsl}
+  ];
 
-    const textureDepth = packingWidth * packingHeight;
-    const mieGSquared = mieG * mieG;
-    const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared))
+  const mieGSquared = (mieG * mieG).toFixed(16);
+  const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared)).toFixed(16);
 
-    let updatedLines = [];
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$textureWidth/g, textureWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+  let updatedLines = [];
+  for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+    let updatedGLSL = originalGLSL[i].replace(/\$mieGSquared/g, mieGSquared);
+    updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient);
+    updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
 
-      updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
-      updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient.toFixed(16));
-      updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
-
-      updatedLines.push(updatedGLSL);
-    }
-
-    return updatedLines.join('\n');
+    updatedLines.push(updatedGLSL);
   }
+
+  return updatedLines.join('\n');
 }

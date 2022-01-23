@@ -23,13 +23,13 @@
 
     <!-- The below are used for development purposes, it is advised that you use the files in the dist folder -->
     <!-- Three.js extensions -->
-    <script src="../src/js/three_js_extensions/BufferGeometryUtils.js"></script>
     <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script>
 
     <!-- Namespace -->
     <script src="../src/js/StarrySky.js"></script>
 
     <!-- Materials -->
+    <script src="../src/js/materials/PassThroughVertexShader.js"></script>
     <script src="../src/js/materials/atmosphere/atmosphere-functions.js"></script>
     <script src="../src/js/materials/atmosphere/transmittance.js"></script>
     <script src="../src/js/materials/atmosphere/single-scattering.js"></script>
@@ -55,10 +55,10 @@
 
     <!-- LUT Libraries -->
     <script src="../src/js/lut_libraries/LutScene.js"></script>
-    <script src="../src/js/lut_libraries/atmospheric_lut_libraries/AtmosphericData.js"></script>
-    <script src="../src/js/lut_libraries/atmospheric_lut_libraries/AtmosphericDataLUTDirector.js"></script>
-    <script src="../src/js/lut_libraries/atmospheric_lut_libraries/AtmosphericDataMRT.js"></script>
-    <script src="../src/js/lut_libraries/atmospheric_lut_libraries/AtmosphericLUTLibrary.js"></script>
+    <script type="module" src="../src/js/lut_libraries/atmospheric_lut_library/AtmosphericDataMRT.js"></script>
+    <script src="../src/js/lut_libraries/atmospheric_lut_library/AtmosphericDataLUT.js"></script>
+    <script type="module" src="../src/js/lut_libraries/atmospheric_lut_library/AtmosphericDataLUTDirector.js"></script>
+    <script type="module" src="../src/js/lut_libraries/atmospheric_lut_library/AtmosphericLUTLibrary.js"></script>
     <script src="../src/js/lut_libraries/StellarLUTLibrary.js"></script>
 
     <!-- Renderers -->
@@ -71,11 +71,11 @@
     <!--Players -->
     <script src="../src/js/components/LightingManager.js"></script>
     <script src="../src/js/components/AssetManager.js"></script>
-    <script src="../src/js/components/SkyDirector.js"></script>
+    <script type="module" src="../src/js/components/SkyDirector.js"></script>
 
     <!-- A-Frame Hooks -->
     <script src="../src/js/primitives/a-starry-sky.js"></script>
-    <script src="../src/js/components/starry-sky-wrapper.js"></script>
+    <script type="module" src="../src/js/components/starry-sky-wrapper.js"></script>
 
   <!--Scene Scripts-->
   </head>

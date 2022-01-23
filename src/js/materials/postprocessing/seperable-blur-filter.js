@@ -1,13 +1,11 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Postprocessing.seperableBlurFilter = {
-  uniforms: {
-    direction: {type: 'vec2', 'value': new THREE.Vector2(0.5, 0.5)},
-    sourceTexture: {type: 't', 'value': null}
-  },
-  fragmentShader: function(kernalRadius, textureSize){
-    let originalGLSL = [
+export default function SeperableBlurFilter(){
+  return({
+    uniforms: {
+      direction: {'value': new Vector2(0.5, 0.5)},
+      sourceTexture: {'value': null}
+    },
+    fragmentShader: function(kernalRadius, textureSize){
+      let originalGLSL = [
     '//Derivative of Unreal Bloom Pass from Three.JS',
     '//Thanks spidersharma / http://eduperiment.com/',
     '//',
@@ -26,46 +24,42 @@ StarrySky.Materials.Postprocessing.seperableBlurFilter = {
 
       'gl_FragColor = vec4(abs(diffuseSum/weightedSum), 1.0);',
     '}',
-    ];
+      ];
 
-    let oneOverSigmaSquared = 1.0 / kernalRadius * kernalRadius;
-    let inverseSigma = 1.0 / kernalRadius;
-    function gaussianPdf(x){
-      return 0.39894 * Math.exp(-0.5 * x * x * oneOverSigmaSquared) * inverseSigma;
+      function gaussianPdf(x){
+        return 0.39894 * Math.exp(-0.5 * x * x / (kernalRadius * kernalRadius)) / kernalRadius;
+      }
+
+      const invSize = 1.0 / textureSize;
+      const unrolledForLoop = [];
+
+      //loop 0 (defines variables)
+      const w = gaussianPdf(1.0).toFixed(16); //gaussianPdf(i), i = 1
+      unrolledForLoop.push(`vec2 uvOffset = direction * ${invSize.toFixed(16)};`);
+      unrolledForLoop.push(`vec3 sample1 = texture2D(sourceTexture, vUv + uvOffset).rgb;`);
+      unrolledForLoop.push(`vec3 sample2 = texture2D(sourceTexture, vUv - uvOffset).rgb;`);
+      unrolledForLoop.push(`diffuseSum += (sample1 + sample2) * ${w};`);
+      unrolledForLoop.push(`weightedSum += 2.0 * ${w};`);
+      //Unroll the rest of the for loop
+      for(let i = 2.0; i < kernalRadius; ++i){
+        const w = gaussianPdf(i).toFixed(16);
+        unrolledForLoop.push(`uvOffset = direction * ${(invSize * i).toFixed(16)};`);
+        unrolledForLoop.push(`sample1 = texture2D(sourceTexture, vUv + uvOffset).rgb;`);
+        unrolledForLoop.push(`sample2 = texture2D(sourceTexture, vUv - uvOffset).rgb;`);
+        unrolledForLoop.push(`diffuseSum += (sample1 + sample2) * ${w};`);
+        unrolledForLoop.push(`weightedSum += 2.0 * ${w};`);
+      }
+      const joinedUnrolledForLoop = unrolledForLoop.join('\n');
+
+      const updatedLines = [];
+      for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+        let updatedGLSL = originalGLSL[i].replace(/\$gaussian_pdf_at_x_0/g, gaussianPdf(0.0).toFixed(16));
+        updatedGLSL = updatedGLSL.replace(/\$unrolled_for_loop/g, joinedUnrolledForLoop);
+
+        updatedLines.push(updatedGLSL);
+      }
+
+      return updatedLines.join('\n');
     }
-
-    let invSize = 1.0 / textureSize;
-    let gaussianPdfAtX0 = gaussianPdf(0.0);
-    let unrolledForLoop = [];
-
-    //loop 0 (defines variables)
-    let w = gaussianPdf(1.0); //gaussianPdf(i), i = 1
-    let invSizeTimesI = invSize; //invSize * i, i = 1
-    unrolledForLoop.push(`vec2 uvOffset = direction * ${invSizeTimesI.toFixed(16)};`);
-    unrolledForLoop.push(`vec3 sample1 = texture2D(sourceTexture, vUv + uvOffset).rgb;`);
-    unrolledForLoop.push(`vec3 sample2 = texture2D(sourceTexture, vUv - uvOffset).rgb;`);
-    unrolledForLoop.push(`diffuseSum += (sample1 + sample2) * ${w.toFixed(16)};`);
-    unrolledForLoop.push(`weightedSum += 2.0 * ${w.toFixed(16)};`);
-    //Unroll the rest of the for loop
-    for(let i = 2.0; i < kernalRadius; ++i){
-      w = gaussianPdf(i);
-      invSizeTimesI = invSize * i;
-      unrolledForLoop.push(`uvOffset = direction * ${invSizeTimesI.toFixed(16)};`);
-      unrolledForLoop.push(`sample1 = texture2D(sourceTexture, vUv + uvOffset).rgb;`);
-      unrolledForLoop.push(`sample2 = texture2D(sourceTexture, vUv - uvOffset).rgb;`);
-      unrolledForLoop.push(`diffuseSum += (sample1 + sample2) * ${w.toFixed(16)};`);
-      unrolledForLoop.push(`weightedSum += 2.0 * ${w.toFixed(16)};`);
-    }
-    let joinedUnrolledForLoop = unrolledForLoop.join('\n');
-
-    let updatedLines = [];
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$gaussian_pdf_at_x_0/g, gaussianPdfAtX0.toFixed(16));
-      updatedGLSL = updatedGLSL.replace(/\$unrolled_for_loop/g, joinedUnrolledForLoop);
-
-      updatedLines.push(updatedGLSL);
-    }
-
-    return updatedLines.join('\n');
-  }
+  });
 };

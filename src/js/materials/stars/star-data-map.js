@@ -1,14 +1,12 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Stars.starDataMap = {
-  uniforms: {
-    textureRChannel: {type: 't', 'value': null},
-    textureGChannel: {type: 't', 'value': null},
-    textureBChannel: {type: 't', 'value': null},
-    textureAChannel: {type: 't', 'value': null},
-  },
-  fragmentShader: [
+export default function StarDataMap(){
+  return({
+    uniforms: {
+      textureRChannel: {'value': null},
+      textureGChannel: {'value': null},
+      textureBChannel: {'value': null},
+      textureAChannel: {'value': null},
+    },
+    fragmentShader: [
     'precision highp float;',
 
     'uniform sampler2D textureRChannel;',
@@ -36,5 +34,6 @@ StarrySky.Materials.Stars.starDataMap = {
 
       'gl_FragColor = vec4(r, g, b, a);',
     '}',
-  ].join('\n')
+    ].join('\n')
+  });
 }

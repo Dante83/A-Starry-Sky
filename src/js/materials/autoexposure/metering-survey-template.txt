@@ -1,8 +1,6 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Autoexposure.meteringSurvey = {
-  vertexShader: [
-    {vertex_glsl}
-  ].join('\n'),
+export default function MeteringSurvey(){
+  return({
+    vertexShader: [
+      {vertex_glsl}
+    ].join('\n')});
 }

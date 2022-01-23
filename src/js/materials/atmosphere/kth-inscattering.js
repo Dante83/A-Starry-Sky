@@ -1,13 +1,11 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
-  uniforms: {
-    transmittanceTexture: {type: 't', value: null},
-    inscatteredLightLUT: {type: 't', value: null},
-  },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
-    let originalGLSL = [
+export default function KthInscatteringMaterial(){
+  return({
+    uniforms: {
+      transmittanceTexture: {value: null},
+      inscatteredLightLUT: {value: null},
+    },
+    fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
+      const originalGLSL = [
     '//Based on the work of Oskar Elek',
     '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
     '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
@@ -152,31 +150,32 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
 
       'gl_FragColor = vec4(totalInscattering, 1.0);',
     '}',
-    ];
+      ];
 
-    let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
-    let textureDepth = packingWidth * packingHeight;
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
-      updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
-      updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, mieGCoefficient.toFixed(16));
+      const updatedLines = [];
+      const numberOfChunks = numberOfPoints - 1;
+      const textureDepth = packingWidth * packingHeight;
+      for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+        let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+        updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
+        updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
+        updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, mieGCoefficient.toFixed(16));
 
-      //Texture constants
-      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+        //Texture constants
+        updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
+        updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
+        updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
+        updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
+        updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
 
 
-      //Choose which texture to use
-      updatedGLSL = updatedGLSL.replace(/\$isRayleigh/g, isRayleigh ? '1' : '0');
+        //Choose which texture to use
+        updatedGLSL = updatedGLSL.replace(/\$isRayleigh/g, isRayleigh ? '1' : '0');
 
-      updatedLines.push(updatedGLSL);
+        updatedLines.push(updatedGLSL);
+      }
+
+      return updatedLines.join('\n');
     }
-
-    return updatedLines.join('\n');
-  }
+  });
 };

@@ -1,12 +1,10 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Postprocessing.highPassFilter = {
-  uniforms: {
-    sourceTexture: {type: 't', 'value': null},
-    luminosityThreshold: {type: 'f', 'value': null},
-  },
-  fragmentShader: [
+export default function HighPassFilter(){
+  reuturn ({
+    uniforms: {
+      sourceTexture: {'value': null},
+      luminosityThreshold: {'value': null},
+    },
+    fragmentShader: [
     'uniform sampler2D sourceTexture;',
     'uniform float luminosityThreshold;',
 
@@ -27,5 +25,6 @@ StarrySky.Materials.Postprocessing.highPassFilter = {
       '//from the HDR sun before passing it to our bloom filter.',
       'gl_FragColor = mix(outputColor, sourceTexture * 0.1, alpha);',
     '}',
-  ].join('\n')
+    ].join('\n')
+  });
 };

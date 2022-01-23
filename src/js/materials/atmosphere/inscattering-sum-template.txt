@@ -1,13 +1,12 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Atmosphere.inscatteringSumMaterial = {
-  uniforms: {
-    previousInscatteringSum: {type: 't', 'value': null},
-    inscatteringTexture : {type: 't', 'value': null},
-    isNotFirstIteration: {type: 'b', 'value': false}
-  },
-  fragmentShader: [
-    {fragment_glsl}
-  ].join('\n')
+export default function InscatteringSumMaterial(){
+  return({
+    uniforms: {
+      previousInscatteringSum: {'value': null},
+      inscatteringTexture : {'value': null},
+      isNotFirstIteration: {'value': false}
+    },
+    fragmentShader: [
+      {fragment_glsl}
+    ].join('\n')
+  });
 };

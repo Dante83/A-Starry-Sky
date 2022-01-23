@@ -1,13 +1,11 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Atmosphere.inscatteringSumMaterial = {
-  uniforms: {
-    previousInscatteringSum: {type: 't', 'value': null},
-    inscatteringTexture : {type: 't', 'value': null},
-    isNotFirstIteration: {type: 'b', 'value': false}
-  },
-  fragmentShader: [
+export default function InscatteringSumMaterial(){
+  return({
+    uniforms: {
+      previousInscatteringSum: {'value': null},
+      inscatteringTexture : {'value': null},
+      isNotFirstIteration: {'value': false}
+    },
+    fragmentShader: [
     '#version 300 es',
     'layout(location = 0) out vec4 inscatteringSumRayleigh_Color;',
     'layout(location = 1) out vec4 inscatteringSumMei_Color;',
@@ -35,5 +33,6 @@ StarrySky.Materials.Atmosphere.inscatteringSumMaterial = {
       'inscatteringSumRayleigh_Color = vec4(max(kthInscatteringRayleigh + texture(inscatteringRayleighTexture, uv).rgb, vec3(0.0)), 1.0);',
       'inscatteringSumMei_Color = vec4(max(kthInscatteringMei + texture(previousInscatteringMeiSum, uv).rgb, vec3(0.0)), 1.0);',
     '}',
-  ].join('\n')
+    ].join('\n')
+  });
 };

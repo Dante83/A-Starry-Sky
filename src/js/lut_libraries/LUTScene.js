@@ -1,4 +1,4 @@
-StarrySky.LUTlibraries.LUTScene = class LUTScene{
+StarrySky.LUTlibraries.LUTScene = class LUTScene {
   constructor(renderer){
     this.renderer = renderer;
     this.scene = new THREE.Scene();
@@ -12,11 +12,11 @@ StarrySky.LUTlibraries.LUTScene = class LUTScene{
   	this.scene.add(this.mesh);
   }
 
-  function setShaderMaterial(material){
-    this.mesh = material;
+  setShaderMaterial(material){
+    this.mesh.material = material;
   }
 
-  function renderTo(renderTarget){
+  renderTo(renderTarget){
   		mesh.material = material;
 
   		//Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
@@ -34,4 +34,4 @@ StarrySky.LUTlibraries.LUTScene = class LUTScene{
   		renderer.xr.enabled = xrEnabled;
   		renderer.shadowMap.autoUpdate = shadowMapAutoUpdates;
   }
-}
+};

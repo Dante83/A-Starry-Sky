@@ -1,4 +1,6 @@
-StarrySky.LUTlibraries.AtmosphericDataMRT = class AtmosphericDataMRT extends THREE.WebGLMultiRenderTarget{
+import { WebGLMultipleRenderTargets } from "../../../js/three_js_extensions/WebGLMultipleRenderTargets.js";
+
+class AtmosphericDataMRT extends WebGLMultipleRenderTargets{
   constructor(width, height){
     super(width, height);
 
@@ -8,3 +10,5 @@ StarrySky.LUTlibraries.AtmosphericDataMRT = class AtmosphericDataMRT extends THR
     this.wrapT = THREE.ClampToEdgeWrapping;
   }
 }
+
+export { AtmosphericDataMRT };

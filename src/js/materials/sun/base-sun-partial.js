@@ -1,9 +1,7 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Sun.baseSunPartial = {
-  fragmentShader: function(sunAngularDiameter){
-    let originalGLSL = [
+export default function BaseSunPartial(){
+  return ({
+    fragmentShader: function(sunAngularDiameter){
+      let originalGLSL = [
     '//We enter and leave with additionalPassColor, which we add our sun direct',
     '//lighting to, after it has been attenuated by our transmittance.',
 
@@ -29,18 +27,18 @@ StarrySky.Materials.Sun.baseSunPartial = {
     'float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);',
     'vec3 sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv).r)* transmittanceFade;',
     'sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);',
-    ];
+      ];
 
-    let updatedLines = [];
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$sunAngularDiameter/g, sunAngularDiameter.toFixed(5));
+      const updatedLines = [];
+      for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+        let updatedGLSL = originalGLSL[i].replace(/\$sunAngularDiameter/g, sunAngularDiameter.toFixed(5));
 
-      updatedLines.push(updatedGLSL);
-    }
+        updatedLines.push(updatedGLSL);
+      }
 
-    return updatedLines.join('\n');
-  },
-  vertexShader: [
+      return updatedLines.join('\n');
+    },
+    vertexShader: [
     'uniform float radiusOfSunPlane;',
     'uniform mat4 worldMatrix;',
     'varying vec3 vWorldPosition;',
@@ -54,5 +52,6 @@ StarrySky.Materials.Sun.baseSunPartial = {
 
       'gl_Position = vec4(position, 1.0);',
     '}',
-  ].join('\n'),
+    ].join('\n'),
+  });
 }

@@ -1,8 +1,6 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Autoexposure.meteringSurvey = {
-  vertexShader: [
+export default function MeteringSurvey(){
+  return({
+    vertexShader: [
     'varying vec3 vWorldPosition;',
     'varying vec2 vUv;',
 
@@ -12,5 +10,5 @@ StarrySky.Materials.Autoexposure.meteringSurvey = {
 
       'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
     '}',
-  ].join('\n'),
+    ].join('\n')});
 }

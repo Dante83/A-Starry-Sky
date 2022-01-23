@@ -1,18 +1,16 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Moon.combinationPass = {
+export default function CombinationPass(){
+  return({
   uniforms: {
-    baseTexture: {type: 't', 'value': null},
-    bloomEnabled: {type: 'i', 'value': 0},
-    blurTexture1: {type: 't', 'value': null},
-    blurTexture2: {type: 't', 'value': null},
-    blurTexture3: {type: 't', 'value': null},
-    blurTexture4: {type: 't', 'value': null},
-    blurTexture5: {type: 't', 'value': null},
-    bloomStrength: {type: 'f', 'value': null},
-    bloomRadius: {type: 'f', 'value': null},
-    blueNoiseTexture: {type: 't', 'value': null}
+    baseTexture: {'value': null},
+    bloomEnabled: {'value': 0},
+    blurTexture1: {'value': null},
+    blurTexture2: {'value': null},
+    blurTexture3: {'value': null},
+    blurTexture4: {'value': null},
+    blurTexture5: {'value': null},
+    bloomStrength: {'value': null},
+    bloomRadius: {'value': null},
+    blueNoiseTexture: {'value': null}
   },
   vertexShader: [
     'varying vec3 vWorldPosition;',
@@ -81,5 +79,5 @@ StarrySky.Materials.Moon.combinationPass = {
       '//Return our tone mapped color when everything else is done',
       'gl_FragColor = vec4(combinedLight, falloffDisk);',
     '}',
-  ].join('\n')
+  ].join('\n')});
 };

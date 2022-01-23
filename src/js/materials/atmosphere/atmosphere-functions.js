@@ -1,8 +1,5 @@
-//This is not your usual file, instead it is a kind of fragment file that contains
-//a partial glsl fragment file with functions that are used in multiple locations
-StarrySky.Materials.Atmosphere.atmosphereFunctions = {
-  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, mieG){
-    let originalGLSL = [
+export default function AtmosphereFunctions(mieG){
+  let originalGLSL = [
     '//Based on the work of Oskar Elek',
     '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
     '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
@@ -113,81 +110,20 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     '//Converts radius (r + R_e) to a y value between 0 and 1',
     'float parameterizationOfHeightToY(float r){',
       'return sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED);',
-    '}',
-
-    '//2D-3D texture conversion methods',
-    '//All of this stuff is zero-indexed',
-    'const float textureWidth = $textureWidth;',
-    'const float textureHeight = $textureHeight;',
-    'const float packingWidth = $packingWidth;',
-    'const float packingHeight = $packingHeight;',
-
-    'vec3 get3DUVFrom2DUV(vec2 uv2){',
-      'vec3 uv3;',
-      'vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);',
-      'vec2 pixelPosition = uv2 * parentTextureDimensions;',
-      'float row = floor(pixelPosition.y / textureHeight);',
-      'float column = floor(pixelPosition.x / textureWidth);',
-      'float rowRemainder = pixelPosition.y - row * textureHeight;',
-      'float columnRemainder = pixelPosition.x - column * textureWidth;',
-      'uv3.x = columnRemainder / textureWidth;',
-      'uv3.y = rowRemainder / textureHeight;',
-      'uv3.z = (row * packingWidth + column) / (packingWidth * packingHeight);',
-
-      'return uv3;',
-    '}',
-
-    'vec2 getUV2From3DUV(vec3 uv3){',
-      'vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);',
-      'float zIndex = uv3.z * packingHeight * packingWidth - 1.0;',
-      'float row = floor((zIndex + 1.0) / 2.0);',
-      'float column = (zIndex + 1.0) - row * packingWidth;',
-      'vec2 uv2;',
-      'uv2.x = ((column + uv3.x) * textureWidth) / parentTextureDimensions.x;',
-      'uv2.y = (((row + uv3.y - 1.0) * textureHeight)) / parentTextureDimensions.y;',
-
-      'return vec2(uv2);',
-    '}',
-
-    'struct UVInterpolatants{',
-      'vec2 uv0;',
-      'vec2 uvf;',
-      'float interpolationFraction;',
-    '};',
-
-    'UVInterpolatants getUVInterpolants(vec3 uv3, float depthInPixels){',
-      'uv3.y += 1.0/($textureHeight - 1.0);',
-      'uv3.x -= 1.0/($textureWidth - 1.0);',
-      'float medianValue = (floor(uv3.z * depthInPixels) + ceil(uv3.z * depthInPixels)) / 2.0;',
-      'float floorValue = clamp(floor(medianValue - 0.5) / depthInPixels, 0.0, 1.0);',
-      'float ceilingValue = clamp(floor(medianValue + 0.5) / depthInPixels, 0.0, 1.0);',
-      'vec2 uv2_0 = getUV2From3DUV(vec3(uv3.xy, floorValue));',
-      'vec2 uv2_f = getUV2From3DUV(vec3(uv3.xy, ceilingValue));',
-      'float interpolationFraction = clamp((uv3.z - floorValue) / (ceilingValue - floorValue), 0.0, 1.0);',
-
-      'return UVInterpolatants(uv2_0, uv2_f, interpolationFraction);',
     '}',
-    ];
+  ];
 
-    const textureDepth = packingWidth * packingHeight;
-    const mieGSquared = mieG * mieG;
-    const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared))
+  const mieGSquared = (mieG * mieG).toFixed(16);
+  const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared)).toFixed(16);
 
-    let updatedLines = [];
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$textureWidth/g, textureWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+  let updatedLines = [];
+  for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+    let updatedGLSL = originalGLSL[i].replace(/\$mieGSquared/g, mieGSquared);
+    updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient);
+    updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
 
-      updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
-      updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient.toFixed(16));
-      updatedGLSL = updatedGLSL.replace(/\$mieG/g, mieG.toFixed(16));
-
-      updatedLines.push(updatedGLSL);
-    }
-
-    return updatedLines.join('\n');
+    updatedLines.push(updatedGLSL);
   }
+
+  return updatedLines.join('\n');
 }
