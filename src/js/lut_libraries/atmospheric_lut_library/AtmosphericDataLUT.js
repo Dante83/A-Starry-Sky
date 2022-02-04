@@ -1,4 +1,6 @@
-StarrySky.LUTlibraries.AtmosphericDataTexture3D = class AtmosphericDataTexture3D extends THREE.DataTexture3D{
+import DataTexture3D from 'THREE';
+
+export default class AtmosphericDataTexture3D extends DataTexture3D{
   constructor(data, width, height, depth){
     super(data, width, height, depth);
 

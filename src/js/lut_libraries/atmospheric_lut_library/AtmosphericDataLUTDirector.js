@@ -1,6 +1,6 @@
 import { AtmosphericDataMRT } from "./AtmosphericDataMRT.js";
 
-class AtmosphericDataLUTDirector{
+export default class AtmosphericDataLUTDirector{
   constructor(scene, renderer, width, height, depth){
     this.scene = scene;
     this.renderer = renderer;
@@ -47,5 +47,3 @@ class AtmosphericDataLUTDirector{
     };
   }
 };
-
-export { AtmosphericDataLUTDirector };

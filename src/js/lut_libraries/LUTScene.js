@@ -1,14 +1,16 @@
-StarrySky.LUTlibraries.LUTScene = class LUTScene {
+import Scene, Camera, MeshBasicMaterial, PlaneBufferGeometry, Mesh, BufferGeometryUtils from 'THREE';
+
+export default class LUTScene {
   constructor(renderer){
     this.renderer = renderer;
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.Camera();
+    this.scene = new Scene();
+    this.camera = new Camera();
     this.camera.z = 1;
 
-    const basicMaterial = new THREE.MeshBasicMaterial({color: 0xffff00, side: THREE.FrontSide});
-    let planeGeometry = new THREE.PlaneBufferGeometry(2, 2);
-  	this.mesh = new THREE.Mesh(planeGeometry, basicMaterial);
-    THREE.BufferGeometryUtils.computeTangents(planeGeometry);
+    const basicMaterial = new MeshBasicMaterial({color: 0xffff00, side: FrontSide});
+    let planeGeometry = new PlaneBufferGeometry(2, 2);
+  	this.mesh = new Mesh(planeGeometry, basicMaterial);
+    BufferGeometryUtils.computeTangents(planeGeometry);
   	this.scene.add(this.mesh);
   }
 

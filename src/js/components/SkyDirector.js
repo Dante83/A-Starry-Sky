@@ -1,6 +1,6 @@
 import { AtmosphericLUTLibrary } from "../lut_libraries/atmospheric_lut_library/AtmosphericLUTLibrary.js";
 
-class SkyDirector{
+export default class SkyDirector{
   constructor(parentComponent, webWorkerURI){
     this.skyDirectorWASMIsReady = false;
     this.skyInterpolatorWASMIsReady = false;
@@ -665,5 +665,3 @@ class SkyDirector{
     Module['onRuntimeInitialized'] = onRuntimeInitialized;
   }
 }
-
-export { SkyDirector };

@@ -10,71 +10,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no,user-scalable=no,maximum-scale=1">
 
     <!-- Built for A-Frame -->
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script type="module" src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
     <!--This commented out code is the unfurled stack which I use for debugging-->
 
-    <!-- A-Starry-Sky Version 1.0 -->
-    <!-- <script src="../dist/a-starry-sky.v1.0.0.min.js"></script> -->
-
-    <!-- Sky Interpolator -->
-    <!-- <script src="../dist/wasm/interpolation-engine.js"></script> -->
-    <script src="../src/cpp/interpolation-engine/interpolation-engine.js"></script>
-
-    <!-- The below are used for development purposes, it is advised that you use the files in the dist folder -->
-    <!-- Three.js extensions -->
-    <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script>
-
-    <!-- Namespace -->
-    <script src="../src/js/StarrySky.js"></script>
-
-    <!-- Materials -->
-    <script src="../src/js/materials/PassThroughVertexShader.js"></script>
-    <script src="../src/js/materials/atmosphere/atmosphere-functions.js"></script>
-    <script src="../src/js/materials/atmosphere/transmittance.js"></script>
-    <script src="../src/js/materials/atmosphere/single-scattering.js"></script>
-    <script src="../src/js/materials/atmosphere/inscattering-sum.js"></script>
-    <script src="../src/js/materials/atmosphere/kth-inscattering.js"></script>
-    <script src="../src/js/materials/atmosphere/atmosphere-pass.js"></script>
-    <script src="../src/js/materials/postprocessing/high-pass-filter.js"></script>
-    <script src="../src/js/materials/postprocessing/seperable-blur-filter.js"></script>
-    <script src="../src/js/materials/sun/combination-pass.js"></script>
-    <script src="../src/js/materials/sun/base-sun-partial.js"></script>
-    <script src="../src/js/materials/moon/combination-pass.js"></script>
-    <script src="../src/js/materials/moon/base-moon-partial.js"></script>
-    <script src="../src/js/materials/stars/star-data-map.js"></script>
-    <script src="../src/js/materials/autoexposure/metering-survey.js"></script>
-    <script src="../src/js/materials/autoexposure/test-pass.js"></script>
-
-    <!--- Custom HTML Tags -->
-    <script src="../src/js/html_tags/SkyAssetsDir.js"></script>
-    <script src="../src/js/html_tags/SkyAtmosphericParameters.js"></script>
-    <script src="../src/js/html_tags/SkyLocation.js"></script>
-    <script src="../src/js/html_tags/SkyTime.js"></script>
-    <script src="../src/js/html_tags/SkyLighting.js"></script>
-
-    <!-- LUT Libraries -->
-    <script src="../src/js/lut_libraries/LutScene.js"></script>
-    <script type="module" src="../src/js/lut_libraries/atmospheric_lut_library/AtmosphericDataMRT.js"></script>
-    <script src="../src/js/lut_libraries/atmospheric_lut_library/AtmosphericDataLUT.js"></script>
-    <script type="module" src="../src/js/lut_libraries/atmospheric_lut_library/AtmosphericDataLUTDirector.js"></script>
-    <script type="module" src="../src/js/lut_libraries/atmospheric_lut_library/AtmosphericLUTLibrary.js"></script>
-    <script src="../src/js/lut_libraries/StellarLUTLibrary.js"></script>
-
-    <!-- Renderers -->
-    <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
-    <script src="../src/js/renderers/BloomRenderer.js"></script>
-    <script src="../src/js/renderers/SunRenderer.js"></script>
-    <script src="../src/js/renderers/MoonRenderer.js"></script>
-    <script src="../src/js/renderers/MeteringSurveyRenderer.js"></script>
-
-    <!--Players -->
-    <script src="../src/js/components/LightingManager.js"></script>
-    <script src="../src/js/components/AssetManager.js"></script>
-    <script type="module" src="../src/js/components/SkyDirector.js"></script>
-
     <!-- A-Frame Hooks -->
-    <script src="../src/js/primitives/a-starry-sky.js"></script>
     <script type="module" src="../src/js/components/starry-sky-wrapper.js"></script>
 
   <!--Scene Scripts-->

@@ -1,5 +1,6 @@
 **Version 1.1.0**
-
+* Updated code architecture to use JS modules instead of hash object based namespacing.
+* Reiterated graphics code to use WebGL 2 native features, such as 3D lookup tables, bitwise operations and multiple render targets.
 
 **Version 1.0.0**
 * **!Important:** In version 1.0.0 and above, you must use a new XML based syntax to control the state of your sky. Variables have also changed to reflect updates to brand new engine architecture.
@@ -17,7 +18,7 @@
 * Used nearest neighbor grouping to organize stars into two LUTs with x, y, z coordinates, driven by a bit-packed stellar lookup cubemap dramatically speeding up our stellar lighting calculations, while increasing the number of visible stars.
 * Switched stellar color model from single highest intensity model to a full spectrum model driven by the python [Colour-Science Library](https://www.colour-science.org/).
 * Switched from a position based fake HDR system to a periodic metering sky-survey based solution.
-* Added VSOP87 Planet support for Mercury, Venus, Mars, Jupiter and Saturn using the terms from Appendix II of Meeus' Astronomical Algorithms with variable magnitudes.
+* Added VSOP87 Planet support for Venus, Mars, Jupiter and Saturn using the terms from Appendix II of Meeus' Astronomical Algorithms with variable magnitudes.
 * Implemented dynamic switching between sun and moon direct lighting to reduce overhead calculations and changed the lighting color method from an analytic solution to a transmittance LUT interpolated result with HSL based interpolation.
 * Added support for dynamic, single-color, atmospheric perspective using the current sky lighting conditions and the camera vector with HSL based interpolation.
 * Switched ambient lighting model with a 3 orthogonal axis hemispherical lighting model with support for a user defined ground color.

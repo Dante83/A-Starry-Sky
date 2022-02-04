@@ -1,7 +1,9 @@
+import DefaultData from '../DefaultData.js'
 import {SkyDirector} from "./SkyDirector.js";
+import registerComponent from 'AFRAME';
 
-AFRAME.registerComponent('starryskywrapper', {
-  defaultValues: StarrySky.DefaultData,
+Aframe.registerComponent('starryskywrapper', {
+  defaultValues: DefaultData,
   skyDirector: null,
   initialized: false,
   init: function(){

@@ -1,94 +1,94 @@
-import OctahedronBufferGeometry from "THREE";
+import OctahedronBufferGeometry, Mesh, BackSide, NormalBlending from "THREE";
+import AtmosphereShader from '../materials/atmosphere/AtmosphereShader.js'
+import MieDirectionalG, DegreesToRadians from '../Constants.js'
 
-export default AtmosphereRenderer class{
-  constructor(){
+export default class AtmosphereRenderer{
+  constructor(skyDirector){
+    this.skyDirector = skyDirector;
     this.geometry = new OctahedronBufferGeometry(5000.0, 5);
 
     //Create our material late
+    const atmosphereShader = AtmosphereShader();
     this.atmosphereMaterial = new THREE.ShaderMaterial({
       uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms())),
-      side: THREE.BackSide,
-      blending: THREE.NormalBlending,
+      side: BackSide,
+      blending: NormalBlending,
       transparent: false,
       flatShading: true,
-      vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
-      fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-        skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG
-      )
+      vertexShader: atmosphereShader.vertexShader,
+      fragmentShader: atmosphereShader.fragmentShader(MieDirectionalG)
     });
-    this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-    this.atmosphereMaterial.uniforms.rayleighInscatteringSum.needsUpdate = true;
-    this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-    this.atmosphereMaterial.uniforms.mieInscatteringSum.needsUpdate = true;
-    this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-    this.atmosphereMaterial.uniforms.transmittance.needsUpdate = true;
+    const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
+    const atmosphericMaterialUniforms = this.atmosphereMaterial.uniforms;
+    atmosphericMaterialUniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
+    atmosphericMaterialUniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
+    atmosphericMaterialUniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
 
     if(this.skyDirector.assetManager.hasLoadedImages){
-      this.atmosphereMaterial.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
+      atmosphericMaterialUniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
     }
 
     //Attach the material to our geometry
-    this.skyMesh = new THREE.Mesh(this.geometry, this.atmosphereMaterial);
+    this.skyMesh = new Mesh(this.geometry, this.atmosphereMaterial);
     this.skyMesh.castShadow = false;
     this.skyMesh.receiveShadow = false;
     this.skyMesh.fog = false;
   }
 
   tick(t){
-    let cameraPosition = self.skyDirector.camera.position;
-    self.skyMesh.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-    self.skyMesh.updateMatrix();
-    self.skyMesh.updateMatrixWorld();
+    const skyDirector = this.skyDirector;
+    this.skyMesh.position.copy(skyDirector.camera.position.cameraWorldPosition);
 
     //Update the uniforms so that we can see where we are on this sky.
-    self.atmosphereMaterial.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.atmosphereMaterial.uniforms.sunHorizonFade.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.atmosphereMaterial.uniforms.moonHorizonFade.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.moonPosition.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.uTime.value = t;
-    self.atmosphereMaterial.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
-    self.atmosphereMaterial.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
-    self.atmosphereMaterial.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
-    self.atmosphereMaterial.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
-    self.atmosphereMaterial.uniforms.moonLightColor.needsUpdate = true;
+    const atmosphereMaterialUniforms = this.atmosphereMaterial.uniforms;
+    const skyState = skyDirector.skyState;
+    atmosphereMaterialUniforms.sunHorizonFade.value = skyState.sun.horizonFade;
+    atmosphereMaterialUniforms.moonHorizonFade.value = skyState.moon.horizonFade;
+    atmosphereMaterialUniforms.uTime.value = t;
+    atmosphereMaterialUniforms.localSiderealTime.value = skyState.LSRT;
+    atmosphereMaterialUniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
+    atmosphereMaterialUniforms.scatteringSunIntensity.value = skyState.sun.intensity;
+    atmosphereMaterialUniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
 
-    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
-    self.atmosphereMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+    const blueNoiseTextureRef = skyDirector.assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+    atmosphereMaterialUniforms.blueNoiseTexture.value = blueNoiseTextureRef;
   }
 
   firstTick(t){
+    const skyDirector = this.skyDirector;
+
     //Connect up our reference values
-    self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
-    self.atmosphereMaterial.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
-    self.atmosphereMaterial.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+    const atmosphereMaterialUniforms = this.atmosphereMaterial.uniforms;
+    const skyState = skyDirector.skyState;
+    atmosphereMaterialUniforms.sunPosition.value = skyState.sun.position;
+    atmosphereMaterialUniforms.moonPosition.value = skyState.moon.position;
+    atmosphereMaterialUniforms.latitude.value = skyDirector.assetManager.data.skyLocationData.latitude * DegreesToRadians;
 
-    self.atmosphereMaterial.uniforms.mercuryPosition.value = self.skyDirector.skyState.mercury.position;
-    self.atmosphereMaterial.uniforms.venusPosition.value = self.skyDirector.skyState.venus.position;
-    self.atmosphereMaterial.uniforms.marsPosition.value = self.skyDirector.skyState.mars.position;
-    self.atmosphereMaterial.uniforms.jupiterPosition.value = self.skyDirector.skyState.jupiter.position;
-    self.atmosphereMaterial.uniforms.saturnPosition.value = self.skyDirector.skyState.saturn.position;
+    atmosphereMaterialUniforms.mercuryPosition.value = skyState.mercury.position;
+    atmosphereMaterialUniforms.venusPosition.value = skyState.venus.position;
+    atmosphereMaterialUniforms.marsPosition.value = skyState.mars.position;
+    atmosphereMaterialUniforms.jupiterPosition.value = skyState.jupiter.position;
+    atmosphereMaterialUniforms.saturnPosition.value = skyState.saturn.position;
 
-    self.atmosphereMaterial.uniforms.mercuryBrightness.value = self.skyDirector.skyState.mercury.intensity;
-    self.atmosphereMaterial.uniforms.venusBrightness.value = self.skyDirector.skyState.venus.intensity;
-    self.atmosphereMaterial.uniforms.marsBrightness.value = self.skyDirector.skyState.mars.intensity;
-    self.atmosphereMaterial.uniforms.jupiterBrightness.value = self.skyDirector.skyState.jupiter.intensity;
-    self.atmosphereMaterial.uniforms.saturnBrightness.value = self.skyDirector.skyState.saturn.intensity;
-    self.atmosphereMaterial.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
+    atmosphereMaterialUniforms.mercuryBrightness.value = skyState.mercury.intensity;
+    atmosphereMaterialUniforms.venusBrightness.value = skyState.venus.intensity;
+    atmosphereMaterialUniforms.marsBrightness.value = skyState.mars.intensity;
+    atmosphereMaterialUniforms.jupiterBrightness.value = skyState.jupiter.intensity;
+    atmosphereMaterialUniforms.saturnBrightness.value = skyState.saturn.intensity;
+    atmosphereMaterialUniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
     //Connect up our images if they don't exist yet
-    if(self.skyDirector.assetManager){
-      self.atmosphereMaterial.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
-      self.atmosphereMaterial.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
-      self.atmosphereMaterial.uniforms.medStarData.value = self.skyDirector.stellarLUTLibrary.medStarDataMap;
-      self.atmosphereMaterial.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
+    if(skyDirector.assetManager){
+      atmosphereMaterialUniforms.starHashCubemap.value = skyDirector.assetManager.images.starImages.starHashCubemap;
+      atmosphereMaterialUniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
+      atmosphereMaterialUniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
+      atmosphereMaterialUniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
     }
 
     //Proceed with the first tick
-    self.tick(t);
+    this.tick(t);
 
     //Add this object to the scene
-    self.skyDirector.scene.add(self.skyMesh);
+    skyDirector.scene.add(this.skyMesh);
   }
 }
