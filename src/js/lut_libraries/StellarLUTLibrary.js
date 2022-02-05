@@ -26,7 +26,6 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.dimStarDataRenderer.setVariableDependencies(this.dimStarMapVar, []);
   this.dimStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
-  this.dimStarMapVar.format = THREE.RGBAFormat;
   this.dimStarMapVar.encoding = THREE.LinearEncoding;
   this.dimStarMapVar.minFilter = THREE.NearestFilter;
   this.dimStarMapVar.magFilter = THREE.NearestFilter;
@@ -47,7 +46,6 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.medStarDataRenderer.setVariableDependencies(this.medStarMapVar, []);
   this.medStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
-  this.medStarMapVar.format = THREE.RGBAFormat;
   this.medStarMapVar.encoding = THREE.LinearEncoding;
   this.medStarMapVar.minFilter = THREE.NearestFilter;
   this.medStarMapVar.magFilter = THREE.NearestFilter;
@@ -68,7 +66,6 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.brightStarDataRenderer.setVariableDependencies(this.brightStarMapVar, []);
   this.brightStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
-  this.brightStarMapVar.format = THREE.RGBAFormat;
   this.brightStarMapVar.encoding = THREE.LinearEncoding;
   this.brightStarMapVar.minFilter = THREE.NearestFilter;
   this.brightStarMapVar.magFilter = THREE.NearestFilter;
@@ -84,13 +81,9 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   let self = this;
   this.dimStarMapPass = function(rImg, gImg, bImg, aImg){
     self.dimStarMapVar.material.uniforms.textureRChannel.value = rImg;
-    self.dimStarMapVar.material.uniforms.textureRChannel.needsUpdate = true;
     self.dimStarMapVar.material.uniforms.textureGChannel.value = gImg;
-    self.dimStarMapVar.material.uniforms.textureGChannel.needsUpdate = true;
     self.dimStarMapVar.material.uniforms.textureBChannel.value = bImg;
-    self.dimStarMapVar.material.uniforms.textureBChannel.needsUpdate = true;
     self.dimStarMapVar.material.uniforms.textureAChannel.value = aImg;
-    self.dimStarMapVar.material.uniforms.textureAChannel.needsUpdate = true;
 
     self.dimStarDataRenderer.compute();
     self.dimStarDataMap = self.dimStarDataRenderer.getCurrentRenderTarget(self.dimStarMapVar).texture;
@@ -99,13 +92,9 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
 
   this.medStarMapPass = function(rImg, gImg, bImg, aImg){
     self.medStarMapVar.material.uniforms.textureRChannel.value = rImg;
-    self.medStarMapVar.material.uniforms.textureRChannel.needsUpdate = true;
     self.medStarMapVar.material.uniforms.textureGChannel.value = gImg;
-    self.medStarMapVar.material.uniforms.textureGChannel.needsUpdate = true;
     self.medStarMapVar.material.uniforms.textureBChannel.value = bImg;
-    self.medStarMapVar.material.uniforms.textureBChannel.needsUpdate = true;
     self.medStarMapVar.material.uniforms.textureAChannel.value = aImg;
-    self.medStarMapVar.material.uniforms.textureAChannel.needsUpdate = true;
 
     self.medStarDataRenderer.compute();
     self.medStarDataMap = self.medStarDataRenderer.getCurrentRenderTarget(self.medStarMapVar).texture;
@@ -114,13 +103,9 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
 
   this.brightStarMapPass = function(rImg, gImg, bImg, aImg){
     self.brightStarMapVar.material.uniforms.textureRChannel.value = rImg;
-    self.brightStarMapVar.material.uniforms.textureRChannel.needsUpdate = true;
     self.brightStarMapVar.material.uniforms.textureGChannel.value = gImg;
-    self.brightStarMapVar.material.uniforms.textureGChannel.needsUpdate = true;
     self.brightStarMapVar.material.uniforms.textureBChannel.value = bImg;
-    self.brightStarMapVar.material.uniforms.textureBChannel.needsUpdate = true;
     self.brightStarMapVar.material.uniforms.textureAChannel.value = aImg;
-    self.brightStarMapVar.material.uniforms.textureAChannel.needsUpdate = true;
 
     self.brightStarDataRenderer.compute();
     self.brightStarDataMap = self.brightStarDataRenderer.getCurrentRenderTarget(self.brightStarMapVar).texture;

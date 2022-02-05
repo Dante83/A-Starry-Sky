@@ -34,7 +34,6 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
 
   this.meteringSurveyVar.minFilter = THREE.NearestFilter;
   this.meteringSurveyVar.magFilter = THREE.NearestFilter;
-  this.meteringSurveyVar.format = THREE.RGBAFormat;
   this.meteringSurveyVar.wrapS = THREE.ClampToEdgeWrapping;
   this.meteringSurveyVar.wrapT = THREE.ClampToEdgeWrapping;
   this.meteringSurveyVar.generateMipmaps = false;
@@ -57,7 +56,6 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   //   side: THREE.DoubleSide,
   //   blending: THREE.NormalBlending,
   //   transparent: true,
-  //   flatShading: true,
   //   map: test,
   // });
   //

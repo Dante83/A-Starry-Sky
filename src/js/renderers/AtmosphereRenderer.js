@@ -8,7 +8,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
     transparent: false,
-    flatShading: true,
     vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
       skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
@@ -20,11 +19,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     )
   });
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.atmosphereMaterial.uniforms.rayleighInscatteringSum.needsUpdate = true;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.atmosphereMaterial.uniforms.mieInscatteringSum.needsUpdate = true;
   this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.atmosphereMaterial.uniforms.transmittance.needsUpdate = true;
 
   if(this.skyDirector.assetManager.hasLoadedImages){
     this.atmosphereMaterial.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
@@ -45,17 +41,12 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
 
     //Update the uniforms so that we can see where we are on this sky.
     self.atmosphereMaterial.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.atmosphereMaterial.uniforms.sunHorizonFade.needsUpdate = true;
     self.atmosphereMaterial.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.atmosphereMaterial.uniforms.moonHorizonFade.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.moonPosition.needsUpdate = true;
     self.atmosphereMaterial.uniforms.uTime.value = t;
     self.atmosphereMaterial.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
     self.atmosphereMaterial.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
     self.atmosphereMaterial.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.atmosphereMaterial.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
-    self.atmosphereMaterial.uniforms.moonLightColor.needsUpdate = true;
 
     const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
     self.atmosphereMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;

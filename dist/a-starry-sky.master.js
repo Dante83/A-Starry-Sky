@@ -1103,7 +1103,6 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 			wrapT: wrapT,
 			minFilter: minFilter,
 			magFilter: magFilter,
-			format: THREE.RGBAFormat,
 			type: ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) ? THREE.HalfFloatType : THREE.FloatType,
 			stencilBuffer: false,
 			depthBuffer: false
@@ -1121,7 +1120,7 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
     else{
       data = inData;
     }
-		return new THREE.DataTexture( data, sizeX, sizeY, THREE.RGBAFormat, THREE.FloatType );
+		return new THREE.DataTexture( data, sizeX, sizeY );
 	};
 
 	this.renderTexture = function ( input, output ) {
@@ -1509,7 +1508,6 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 			wrapT: wrapT,
 			minFilter: minFilter,
 			magFilter: magFilter,
-			format: THREE.RGBAFormat,
 			type: ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) ? THREE.HalfFloatType : THREE.FloatType,
 			stencilBuffer: false,
 			depthBuffer: false
@@ -1527,7 +1525,7 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
     else{
       data = inData;
     }
-		return new THREE.DataTexture( data, sizeX, sizeY, THREE.RGBAFormat, THREE.FloatType );
+		return new THREE.DataTexture( data, sizeX, sizeY );
 	};
 
 	this.renderTexture = function ( input, output ) {
@@ -1618,170 +1616,334 @@ StarrySky = {
 //a partial glsl fragment file with functions that are used in multiple locations
 StarrySky.Materials.Atmosphere.atmosphereFunctions = {
   partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, mieG){
-    let originalGLSL = [
-    '//Based on the work of Oskar Elek',
-    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
-    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
-    '//by Gustav Bodare and Edvard Sandberg',
-
-    'const float PI = 3.14159265359;',
-    'const float PI_TIMES_FOUR = 12.5663706144;',
-    'const float PI_TIMES_TWO = 6.28318530718;',
-    'const float PI_OVER_TWO = 1.57079632679;',
-    'const float RADIUS_OF_EARTH = 6366.7;',
-    'const float RADIUS_OF_EARTH_SQUARED = 40534868.89;',
-    'const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = 41559940.89;',
-    'const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = 1025072.0;',
-    'const float ATMOSPHERE_HEIGHT = 80.0;',
-    'const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;',
-    'const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333333333333333333333333333;',
-    'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
-    '//Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
-    '//const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;',
-    'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;',
-    'const float ELOK_Z_CONST = 0.9726762775527075;',
-    'const float ONE_OVER_EIGHT_PI = 0.039788735772973836;',
-
-    'const float MIE_G = $mieG;',
-    'const float MIE_G_SQUARED = $mieGSquared;',
-    'const float MIE_PHASE_FUNCTION_COEFFICIENT = $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))',
-
-    '//8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))',
-    '//I actually found the values from the ET Engine by Illation',
-    '//https://github.com/Illation/ETEngine',
-    '//Far more helpful for determining my mie and rayleigh values',
-    'const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);',
-
-    '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
-    'const float OZONE_PERCENT_OF_RAYLEIGH = 6e-7;',
-    'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
-
-    '//',
-    '//General methods',
-    '//',
-    'float fModulo(float a, float b){',
-      'return (a - (b * floor(a / b)));',
-    '}',
-
-    '//',
-    '//Scattering functions',
-    '//',
-    'float rayleighPhaseFunction(float cosTheta){',
-      'return 1.12 + 0.4 * cosTheta;',
-    '}',
-
-    'float miePhaseFunction(float cosTheta){',
-      'return MIE_PHASE_FUNCTION_COEFFICIENT * ((1.0 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2.0 * MIE_G * cosTheta, 1.5));',
-    '}',
-
-    '//',
-    '//Sphere Collision methods',
-    '//',
-    'vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection) {',
-        'float b = dot(rayDirection, rayOrigin);',
-        'float c = dot(rayOrigin, rayOrigin) - RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED;',
-        'float t = (-b + sqrt((b * b) - c));',
-        'return rayOrigin + t * rayDirection;',
-    '}',
-
-    '//From page 178 of Real Time Collision Detection by Christer Ericson',
-    'bool intersectsSphere(vec2 origin, vec2 direction, float radius){',
-      '//presume that the sphere is located at the origin (0,0)',
-      'bool collides = true;',
-      'float b = dot(origin, direction);',
-      'float c = dot(origin, origin) - radius * radius;',
-      'if(c > 0.0 && b > 0.0){',
-        'collides = false;',
-      '}',
-      'else{',
-        'collides = (b * b - c) < 0.0 ? false : true;',
-      '}',
-      'return collides;',
-    '}',
-
-    '//solar-zenith angle parameterization methods',
-    'float inverseParameterizationOfZToCosOfSourceZenith(float z){',
-        'return -(log(1.0 - z * ELOK_Z_CONST) + 0.8) / 2.8;',
-    '}',
-
-    'float parameterizationOfCosOfSourceZenithToZ(float cosOfSolarZenithAngle){',
-      'return (1.0 - exp(-2.8 * cosOfSolarZenithAngle - 0.8)) / ELOK_Z_CONST;',
-    '}',
-
-    '//view-zenith angle parameterization methods',
-    'float inverseParameterizationOfXToCosOfViewZenith(float x){',
-      'return 2.0 * x - 1.0;',
-    '}',
-
-    '//height parameterization methods',
-    '//[0, 1]',
-    'float parameterizationOfCosOfViewZenithToX(float cosOfTheViewAngle){',
-      'return 0.5 * (1.0 + cosOfTheViewAngle);',
-    '}',
-
-    '//',
-    '//Converts the parameterized y to a radius (r + R_e) between R_e and R_e + 80',
-    '//[R_earth, R_earth + 80km]',
-    'float inverseParameterizationOfYToRPlusRe(float y){',
-      'return sqrt(y * y * RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED + RADIUS_OF_EARTH_SQUARED);',
-    '}',
-
-    '//Converts radius (r + R_e) to a y value between 0 and 1',
-    'float parameterizationOfHeightToY(float r){',
-      'return sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED);',
-    '}',
-
-    '//2D-3D texture conversion methods',
-    '//All of this stuff is zero-indexed',
-    'const float textureWidth = $textureWidth;',
-    'const float textureHeight = $textureHeight;',
-    'const float packingWidth = $packingWidth;',
-    'const float packingHeight = $packingHeight;',
-
-    'vec3 get3DUVFrom2DUV(vec2 uv2){',
-      'vec3 uv3;',
-      'vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);',
-      'vec2 pixelPosition = uv2 * parentTextureDimensions;',
-      'float row = floor(pixelPosition.y / textureHeight);',
-      'float column = floor(pixelPosition.x / textureWidth);',
-      'float rowRemainder = pixelPosition.y - row * textureHeight;',
-      'float columnRemainder = pixelPosition.x - column * textureWidth;',
-      'uv3.x = columnRemainder / textureWidth;',
-      'uv3.y = rowRemainder / textureHeight;',
-      'uv3.z = (row * packingWidth + column) / (packingWidth * packingHeight);',
-
-      'return uv3;',
-    '}',
-
-    'vec2 getUV2From3DUV(vec3 uv3){',
-      'vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);',
-      'float zIndex = uv3.z * packingHeight * packingWidth - 1.0;',
-      'float row = floor((zIndex + 1.0) / 2.0);',
-      'float column = (zIndex + 1.0) - row * packingWidth;',
-      'vec2 uv2;',
-      'uv2.x = ((column + uv3.x) * textureWidth) / parentTextureDimensions.x;',
-      'uv2.y = (((row + uv3.y - 1.0) * textureHeight)) / parentTextureDimensions.y;',
-
-      'return vec2(uv2);',
-    '}',
-
-    'struct UVInterpolatants{',
-      'vec2 uv0;',
-      'vec2 uvf;',
-      'float interpolationFraction;',
-    '};',
-
-    'UVInterpolatants getUVInterpolants(vec3 uv3, float depthInPixels){',
-      'uv3.y += 1.0/($textureHeight - 1.0);',
-      'uv3.x -= 1.0/($textureWidth - 1.0);',
-      'float medianValue = (floor(uv3.z * depthInPixels) + ceil(uv3.z * depthInPixels)) / 2.0;',
-      'float floorValue = clamp(floor(medianValue - 0.5) / depthInPixels, 0.0, 1.0);',
-      'float ceilingValue = clamp(floor(medianValue + 0.5) / depthInPixels, 0.0, 1.0);',
-      'vec2 uv2_0 = getUV2From3DUV(vec3(uv3.xy, floorValue));',
-      'vec2 uv2_f = getUV2From3DUV(vec3(uv3.xy, ceilingValue));',
-      'float interpolationFraction = clamp((uv3.z - floorValue) / (ceilingValue - floorValue), 0.0, 1.0);',
-
-      'return UVInterpolatants(uv2_0, uv2_f, interpolationFraction);',
+    let originalGLSL = [
+
+    '//Based on the work of Oskar Elek',
+
+    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
+
+    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
+
+    '//by Gustav Bodare and Edvard Sandberg',
+
+
+
+    'const float PI = 3.14159265359;',
+
+    'const float PI_TIMES_FOUR = 12.5663706144;',
+
+    'const float PI_TIMES_TWO = 6.28318530718;',
+
+    'const float PI_OVER_TWO = 1.57079632679;',
+
+    'const float RADIUS_OF_EARTH = 6366.7;',
+
+    'const float RADIUS_OF_EARTH_SQUARED = 40534868.89;',
+
+    'const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = 41559940.89;',
+
+    'const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = 1025072.0;',
+
+    'const float ATMOSPHERE_HEIGHT = 80.0;',
+
+    'const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;',
+
+    'const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333333333333333333333333333;',
+
+    'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
+
+    '//Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
+
+    '//const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;',
+
+    'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;',
+
+    'const float ELOK_Z_CONST = 0.9726762775527075;',
+
+    'const float ONE_OVER_EIGHT_PI = 0.039788735772973836;',
+
+
+
+    'const float MIE_G = $mieG;',
+
+    'const float MIE_G_SQUARED = $mieGSquared;',
+
+    'const float MIE_PHASE_FUNCTION_COEFFICIENT = $miePhaseFunctionCoefficient; //(1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED))',
+
+
+
+    '//8 * (PI^3) *(( (n_air^2) - 1)^2) / (3 * N_atmos * ((lambda_color)^4))',
+
+    '//I actually found the values from the ET Engine by Illation',
+
+    '//https://github.com/Illation/ETEngine',
+
+    '//Far more helpful for determining my mie and rayleigh values',
+
+    'const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);',
+
+
+
+    '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
+
+    'const float OZONE_PERCENT_OF_RAYLEIGH = 6e-7;',
+
+    'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
+
+
+
+    '//',
+
+    '//General methods',
+
+    '//',
+
+    'float fModulo(float a, float b){',
+
+      'return (a - (b * floor(a / b)));',
+
+    '}',
+
+
+
+    '//',
+
+    '//Scattering functions',
+
+    '//',
+
+    'float rayleighPhaseFunction(float cosTheta){',
+
+      'return 1.12 + 0.4 * cosTheta;',
+
+    '}',
+
+
+
+    'float miePhaseFunction(float cosTheta){',
+
+      'return MIE_PHASE_FUNCTION_COEFFICIENT * ((1.0 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2.0 * MIE_G * cosTheta, 1.5));',
+
+    '}',
+
+
+
+    '//',
+
+    '//Sphere Collision methods',
+
+    '//',
+
+    'vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection) {',
+
+        'float b = dot(rayDirection, rayOrigin);',
+
+        'float c = dot(rayOrigin, rayOrigin) - RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED;',
+
+        'float t = (-b + sqrt((b * b) - c));',
+
+        'return rayOrigin + t * rayDirection;',
+
+    '}',
+
+
+
+    '//From page 178 of Real Time Collision Detection by Christer Ericson',
+
+    'bool intersectsSphere(vec2 origin, vec2 direction, float radius){',
+
+      '//presume that the sphere is located at the origin (0,0)',
+
+      'bool collides = true;',
+
+      'float b = dot(origin, direction);',
+
+      'float c = dot(origin, origin) - radius * radius;',
+
+      'if(c > 0.0 && b > 0.0){',
+
+        'collides = false;',
+
+      '}',
+
+      'else{',
+
+        'collides = (b * b - c) < 0.0 ? false : true;',
+
+      '}',
+
+      'return collides;',
+
+    '}',
+
+
+
+    '//solar-zenith angle parameterization methods',
+
+    'float inverseParameterizationOfZToCosOfSourceZenith(float z){',
+
+        'return -(log(1.0 - z * ELOK_Z_CONST) + 0.8) / 2.8;',
+
+    '}',
+
+
+
+    'float parameterizationOfCosOfSourceZenithToZ(float cosOfSolarZenithAngle){',
+
+      'return (1.0 - exp(-2.8 * cosOfSolarZenithAngle - 0.8)) / ELOK_Z_CONST;',
+
+    '}',
+
+
+
+    '//view-zenith angle parameterization methods',
+
+    'float inverseParameterizationOfXToCosOfViewZenith(float x){',
+
+      'return 2.0 * x - 1.0;',
+
+    '}',
+
+
+
+    '//height parameterization methods',
+
+    '//[0, 1]',
+
+    'float parameterizationOfCosOfViewZenithToX(float cosOfTheViewAngle){',
+
+      'return 0.5 * (1.0 + cosOfTheViewAngle);',
+
+    '}',
+
+
+
+    '//',
+
+    '//Converts the parameterized y to a radius (r + R_e) between R_e and R_e + 80',
+
+    '//[R_earth, R_earth + 80km]',
+
+    'float inverseParameterizationOfYToRPlusRe(float y){',
+
+      'return sqrt(y * y * RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED + RADIUS_OF_EARTH_SQUARED);',
+
+    '}',
+
+
+
+    '//Converts radius (r + R_e) to a y value between 0 and 1',
+
+    'float parameterizationOfHeightToY(float r){',
+
+      'return sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED);',
+
+    '}',
+
+
+
+    '//2D-3D texture conversion methods',
+
+    '//All of this stuff is zero-indexed',
+
+    'const float textureWidth = $textureWidth;',
+
+    'const float textureHeight = $textureHeight;',
+
+    'const float packingWidth = $packingWidth;',
+
+    'const float packingHeight = $packingHeight;',
+
+
+
+    'vec3 get3DUVFrom2DUV(vec2 uv2){',
+
+      'vec3 uv3;',
+
+      'vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);',
+
+      'vec2 pixelPosition = uv2 * parentTextureDimensions;',
+
+      'float row = floor(pixelPosition.y / textureHeight);',
+
+      'float column = floor(pixelPosition.x / textureWidth);',
+
+      'float rowRemainder = pixelPosition.y - row * textureHeight;',
+
+      'float columnRemainder = pixelPosition.x - column * textureWidth;',
+
+      'uv3.x = columnRemainder / textureWidth;',
+
+      'uv3.y = rowRemainder / textureHeight;',
+
+      'uv3.z = (row * packingWidth + column) / (packingWidth * packingHeight);',
+
+
+
+      'return uv3;',
+
+    '}',
+
+
+
+    'vec2 getUV2From3DUV(vec3 uv3){',
+
+      'vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);',
+
+      'float zIndex = uv3.z * packingHeight * packingWidth - 1.0;',
+
+      'float row = floor((zIndex + 1.0) / 2.0);',
+
+      'float column = (zIndex + 1.0) - row * packingWidth;',
+
+      'vec2 uv2;',
+
+      'uv2.x = ((column + uv3.x) * textureWidth) / parentTextureDimensions.x;',
+
+      'uv2.y = (((row + uv3.y - 1.0) * textureHeight)) / parentTextureDimensions.y;',
+
+
+
+      'return vec2(uv2);',
+
+    '}',
+
+
+
+    'struct UVInterpolatants{',
+
+      'vec2 uv0;',
+
+      'vec2 uvf;',
+
+      'float interpolationFraction;',
+
+    '};',
+
+
+
+    'UVInterpolatants getUVInterpolants(vec3 uv3, float depthInPixels){',
+
+      'uv3.y += 1.0/($textureHeight - 1.0);',
+
+      'uv3.x -= 1.0/($textureWidth - 1.0);',
+
+      'float medianValue = (floor(uv3.z * depthInPixels) + ceil(uv3.z * depthInPixels)) / 2.0;',
+
+      'float floorValue = clamp(floor(medianValue - 0.5) / depthInPixels, 0.0, 1.0);',
+
+      'float ceilingValue = clamp(floor(medianValue + 0.5) / depthInPixels, 0.0, 1.0);',
+
+      'vec2 uv2_0 = getUV2From3DUV(vec3(uv3.xy, floorValue));',
+
+      'vec2 uv2_f = getUV2From3DUV(vec3(uv3.xy, ceilingValue));',
+
+      'float interpolationFraction = clamp((uv3.z - floorValue) / (ceilingValue - floorValue), 0.0, 1.0);',
+
+
+
+      'return UVInterpolatants(uv2_0, uv2_f, interpolationFraction);',
+
     '}',
     ];
 
@@ -1815,67 +1977,128 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
 StarrySky.Materials.Atmosphere.transmittanceMaterial = {
   uniforms: {},
   fragmentShader: function(numberOfPoints, atmosphereFunctions){
-    let originalGLSL = [
-    '//Based on the work of Oskar Elek',
-    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
-    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
-    '//by Gustav Bodare and Edvard Sandberg',
-
-    '$atmosphericFunctions',
-
-    'void main(){',
-      'vec2 uv = gl_FragCoord.xy / resolution.xy;',
-      'float r = inverseParameterizationOfYToRPlusRe(uv.y);',
-      'float h = r - RADIUS_OF_EARTH;',
-      'vec2 pA = vec2(0.0, r);',
-      'vec2 p = pA;',
-      'float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);',
-      '//sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction',
-      'vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);',
-
-      '//Check if we intersect the earth. If so, return a transmittance of zero.',
-      '//Otherwise, intersect our ray with the atmosphere.',
-      'vec2 pB = intersectRaySphere(vec2(0.0, r), cameraDirection);',
-      'vec3 transmittance = vec3(0.0);',
-      'float distFromPaToPb = 0.0;',
-      'bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);',
-      'if(!intersectsEarth){',
-        'distFromPaToPb = distance(pA, pB);',
-        'float chunkLength = distFromPaToPb / $numberOfChunks;',
-        'vec2 direction = (pB - pA) / distFromPaToPb;',
-        'vec2 deltaP = direction * chunkLength;',
-
-        '//Prime our trapezoidal rule',
-        'float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
-        'float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
-        'float totalDensityMie = 0.0;',
-        'float totalDensityRayleigh = 0.0;',
-
-        '//Integrate from Pa to Pb to determine the total transmittance',
-        '//Using the trapezoidal rule.',
-        'float mieDensity;',
-        'float rayleighDensity;',
-        '#pragma unroll',
-        'for(int i = 1; i < $numberOfChunksInt; i++){',
-          'p += deltaP;',
-          'h = length(p) - RADIUS_OF_EARTH;',
-          'mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
-          'rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
-          'totalDensityMie += (previousMieDensity + mieDensity) * chunkLength;',
-          'totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength;',
-
-          '//Store our values for the next iteration',
-          'previousMieDensity = mieDensity;',
-          'previousRayleighDensity = rayleighDensity;',
-        '}',
-        'totalDensityMie *= 0.5;',
-        'totalDensityRayleigh *= 0.5;',
-
-        'float integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
-        'transmittance = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
-      '}',
-
-      'gl_FragColor = vec4(transmittance, 1.0);',
+    let originalGLSL = [
+
+    '//Based on the work of Oskar Elek',
+
+    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
+
+    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
+
+    '//by Gustav Bodare and Edvard Sandberg',
+
+
+
+    '$atmosphericFunctions',
+
+
+
+    'void main(){',
+
+      'vec2 uv = gl_FragCoord.xy / resolution.xy;',
+
+      'float r = inverseParameterizationOfYToRPlusRe(uv.y);',
+
+      'float h = r - RADIUS_OF_EARTH;',
+
+      'vec2 pA = vec2(0.0, r);',
+
+      'vec2 p = pA;',
+
+      'float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);',
+
+      '//sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction',
+
+      'vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);',
+
+
+
+      '//Check if we intersect the earth. If so, return a transmittance of zero.',
+
+      '//Otherwise, intersect our ray with the atmosphere.',
+
+      'vec2 pB = intersectRaySphere(vec2(0.0, r), cameraDirection);',
+
+      'vec3 transmittance = vec3(0.0);',
+
+      'float distFromPaToPb = 0.0;',
+
+      'bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);',
+
+      'if(!intersectsEarth){',
+
+        'distFromPaToPb = distance(pA, pB);',
+
+        'float chunkLength = distFromPaToPb / $numberOfChunks;',
+
+        'vec2 direction = (pB - pA) / distFromPaToPb;',
+
+        'vec2 deltaP = direction * chunkLength;',
+
+
+
+        '//Prime our trapezoidal rule',
+
+        'float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
+
+        'float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+
+        'float totalDensityMie = 0.0;',
+
+        'float totalDensityRayleigh = 0.0;',
+
+
+
+        '//Integrate from Pa to Pb to determine the total transmittance',
+
+        '//Using the trapezoidal rule.',
+
+        'float mieDensity;',
+
+        'float rayleighDensity;',
+
+        '#pragma unroll',
+
+        'for(int i = 1; i < $numberOfChunksInt; i++){',
+
+          'p += deltaP;',
+
+          'h = length(p) - RADIUS_OF_EARTH;',
+
+          'mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
+
+          'rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+
+          'totalDensityMie += (previousMieDensity + mieDensity) * chunkLength;',
+
+          'totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength;',
+
+
+
+          '//Store our values for the next iteration',
+
+          'previousMieDensity = mieDensity;',
+
+          'previousRayleighDensity = rayleighDensity;',
+
+        '}',
+
+        'totalDensityMie *= 0.5;',
+
+        'totalDensityRayleigh *= 0.5;',
+
+
+
+        'float integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
+
+        'transmittance = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
+
+      '}',
+
+
+
+      'gl_FragColor = vec4(transmittance, 1.0);',
+
     '}',
     ];
 
@@ -1901,116 +2124,226 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
     transmittanceTexture: {type: 't', value: null}
   },
   fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions){
-    let originalGLSL = [
-    '//Based on the work of Oskar Elek',
-    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
-    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
-    '//by Gustav Bodare and Edvard Sandberg',
-
-    'uniform sampler2D transmittanceTexture;',
-
-    '$atmosphericFunctions',
-
-    'void main(){',
-      '//This is actually a packed 3D Texture',
-      'vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy/resolution.xy);',
-      'vec2 uv2 = getUV2From3DUV(uv);',
-      'float r = inverseParameterizationOfYToRPlusRe(uv.y);',
-      'float h = r - RADIUS_OF_EARTH;',
-      'vec2 pA = vec2(0.0, r);',
-      'vec2 p = pA;',
-      'float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);',
-      'float cosOfSunZenith = inverseParameterizationOfZToCosOfSourceZenith(uv.z);',
-      '//sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction',
-      'vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);',
-      'vec2 sunDirection = vec2(sqrt(1.0 - cosOfSunZenith * cosOfSunZenith), cosOfSunZenith);',
-      'float initialSunAngle = atan(sunDirection.x, sunDirection.y);',
-
-      '//Check if we intersect the earth. If so, return a transmittance of zero.',
-      '//Otherwise, intersect our ray with the atmosphere.',
-      'vec2 pB = intersectRaySphere(pA, cameraDirection);',
-      'float distFromPaToPb = distance(pA, pB);',
-      'float chunkLength = distFromPaToPb / $numberOfChunks;',
-      'vec2 direction = (pB - pA) / distFromPaToPb;',
-      'vec2 deltaP = direction * chunkLength;',
-
-      'bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);',
-      'vec3 totalInscattering = vec3(0.0);',
-      'if(!intersectsEarth){',
-        '//Prime our trapezoidal rule',
-        'float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
-        'float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
-        'float totalDensityMie = 0.0;',
-        'float totalDensityRayleigh = 0.0;',
-
-        'vec3 transmittancePaToP = vec3(1.0);',
-        '//Was better when this was just the initial angle of the sun',
-        'vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));',
-        'vec3 transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;',
-
-        '#if($isRayleigh)',
-          'vec3 previousInscattering = previousMieDensity * transmittance;',
-        '#else',
-          'vec3 previousInscattering = previousRayleighDensity * transmittance;',
-        '#endif',
-
-        '//Integrate from Pa to Pb to determine the total transmittance',
-        '//Using the trapezoidal rule.',
-        'float mieDensity;',
-        'float rayleighDensity;',
-        'float integralOfOzoneDensityFunction;',
-        'float r_p;',
-        'float sunAngle;',
-        'vec3 inscattering;',
-        '#pragma unroll',
-        'for(int i = 1; i < $numberOfChunksInt; i++){',
-          'p += deltaP;',
-          'r_p = length(p);',
-          'h = r_p - RADIUS_OF_EARTH;',
-
-          '//Only inscatter if this point is outside of the earth',
-          '//otherwise it contributes nothing to the final result',
-          'if(h > 0.0){',
-            'sunAngle = initialSunAngle - atan(p.x, p.y);',
-
-            '//Iterate our progress through the transmittance along P',
-            '//We do this for both mie and rayleigh as we are reffering to the transmittance here',
-            'mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
-            'rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
-            'totalDensityMie += (previousMieDensity + mieDensity) * chunkLength * 0.5;',
-            'totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength * 0.5;',
-            'integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
-            'transmittancePaToP = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
-
-            '//Now that we have the transmittance from Pa to P, get the transmittance from P to Pc',
-            '//and combine them to determine the net transmittance',
-            'uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));',
-            'transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;',
-            '#if($isRayleigh)',
-              '//Is Rayleigh Scattering',
-              'inscattering = rayleighDensity * transmittance;',
-            '#else',
-              '//Is Mie Scattering',
-              'inscattering = mieDensity * transmittance;',
-            '#endif',
-            'totalInscattering += (previousInscattering + inscattering) * chunkLength;',
-
-            '//Store our values for the next iteration',
-            'previousInscattering = inscattering;',
-            'previousMieDensity = mieDensity;',
-            'previousRayleighDensity = rayleighDensity;',
-          '}',
-        '}',
-
-        '//Note that we ignore intensity until the final render as a multiplicative factor',
-        '#if($isRayleigh)',
-          'totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;',
-        '#else',
-          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;',
-        '#endif',
-      '}',
-
-      'gl_FragColor = vec4(totalInscattering, 1.0);',
+    let originalGLSL = [
+
+    '//Based on the work of Oskar Elek',
+
+    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
+
+    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
+
+    '//by Gustav Bodare and Edvard Sandberg',
+
+
+
+    'uniform sampler2D transmittanceTexture;',
+
+
+
+    '$atmosphericFunctions',
+
+
+
+    'void main(){',
+
+      '//This is actually a packed 3D Texture',
+
+      'vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy/resolution.xy);',
+
+      'vec2 uv2 = getUV2From3DUV(uv);',
+
+      'float r = inverseParameterizationOfYToRPlusRe(uv.y);',
+
+      'float h = r - RADIUS_OF_EARTH;',
+
+      'vec2 pA = vec2(0.0, r);',
+
+      'vec2 p = pA;',
+
+      'float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);',
+
+      'float cosOfSunZenith = inverseParameterizationOfZToCosOfSourceZenith(uv.z);',
+
+      '//sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction',
+
+      'vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);',
+
+      'vec2 sunDirection = vec2(sqrt(1.0 - cosOfSunZenith * cosOfSunZenith), cosOfSunZenith);',
+
+      'float initialSunAngle = atan(sunDirection.x, sunDirection.y);',
+
+
+
+      '//Check if we intersect the earth. If so, return a transmittance of zero.',
+
+      '//Otherwise, intersect our ray with the atmosphere.',
+
+      'vec2 pB = intersectRaySphere(pA, cameraDirection);',
+
+      'float distFromPaToPb = distance(pA, pB);',
+
+      'float chunkLength = distFromPaToPb / $numberOfChunks;',
+
+      'vec2 direction = (pB - pA) / distFromPaToPb;',
+
+      'vec2 deltaP = direction * chunkLength;',
+
+
+
+      'bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);',
+
+      'vec3 totalInscattering = vec3(0.0);',
+
+      'if(!intersectsEarth){',
+
+        '//Prime our trapezoidal rule',
+
+        'float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
+
+        'float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+
+        'float totalDensityMie = 0.0;',
+
+        'float totalDensityRayleigh = 0.0;',
+
+
+
+        'vec3 transmittancePaToP = vec3(1.0);',
+
+        '//Was better when this was just the initial angle of the sun',
+
+        'vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));',
+
+        'vec3 transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;',
+
+
+
+        '#if($isRayleigh)',
+
+          'vec3 previousInscattering = previousMieDensity * transmittance;',
+
+        '#else',
+
+          'vec3 previousInscattering = previousRayleighDensity * transmittance;',
+
+        '#endif',
+
+
+
+        '//Integrate from Pa to Pb to determine the total transmittance',
+
+        '//Using the trapezoidal rule.',
+
+        'float mieDensity;',
+
+        'float rayleighDensity;',
+
+        'float integralOfOzoneDensityFunction;',
+
+        'float r_p;',
+
+        'float sunAngle;',
+
+        'vec3 inscattering;',
+
+        '#pragma unroll',
+
+        'for(int i = 1; i < $numberOfChunksInt; i++){',
+
+          'p += deltaP;',
+
+          'r_p = length(p);',
+
+          'h = r_p - RADIUS_OF_EARTH;',
+
+
+
+          '//Only inscatter if this point is outside of the earth',
+
+          '//otherwise it contributes nothing to the final result',
+
+          'if(h > 0.0){',
+
+            'sunAngle = initialSunAngle - atan(p.x, p.y);',
+
+
+
+            '//Iterate our progress through the transmittance along P',
+
+            '//We do this for both mie and rayleigh as we are reffering to the transmittance here',
+
+            'mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
+
+            'rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+
+            'totalDensityMie += (previousMieDensity + mieDensity) * chunkLength * 0.5;',
+
+            'totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength * 0.5;',
+
+            'integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
+
+            'transmittancePaToP = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
+
+
+
+            '//Now that we have the transmittance from Pa to P, get the transmittance from P to Pc',
+
+            '//and combine them to determine the net transmittance',
+
+            'uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));',
+
+            'transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;',
+
+            '#if($isRayleigh)',
+
+              '//Is Rayleigh Scattering',
+
+              'inscattering = rayleighDensity * transmittance;',
+
+            '#else',
+
+              '//Is Mie Scattering',
+
+              'inscattering = mieDensity * transmittance;',
+
+            '#endif',
+
+            'totalInscattering += (previousInscattering + inscattering) * chunkLength;',
+
+
+
+            '//Store our values for the next iteration',
+
+            'previousInscattering = inscattering;',
+
+            'previousMieDensity = mieDensity;',
+
+            'previousRayleighDensity = rayleighDensity;',
+
+          '}',
+
+        '}',
+
+
+
+        '//Note that we ignore intensity until the final render as a multiplicative factor',
+
+        '#if($isRayleigh)',
+
+          'totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;',
+
+        '#else',
+
+          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;',
+
+        '#endif',
+
+      '}',
+
+
+
+      'gl_FragColor = vec4(totalInscattering, 1.0);',
+
     '}',
     ];
 
@@ -2046,26 +2379,46 @@ StarrySky.Materials.Atmosphere.inscatteringSumMaterial = {
     inscatteringTexture : {type: 't', 'value': null},
     isNotFirstIteration: {type: 'b', 'value': false}
   },
-  fragmentShader: [
-    '//Based on the work of Oskar Elek',
-    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
-    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
-    '//by Gustav Bodare and Edvard Sandberg',
-
-    'uniform sampler2D inscatteringTexture;',
-    'uniform sampler2D previousInscatteringSum;',
-    'uniform bool isNotFirstIteration;',
-
-    'void main(){',
-      'vec2 uv = gl_FragCoord.xy / resolution.xy;',
-
-      'vec4 kthInscattering = vec4(0.0);',
-      'if(isNotFirstIteration){',
-        'kthInscattering = texture2D(previousInscatteringSum, uv);',
-      '}',
-      'kthInscattering += max(texture2D(inscatteringTexture, uv), vec4(0.0));',
-
-      'gl_FragColor = vec4(kthInscattering.rgb, 1.0);',
+  fragmentShader: [
+
+    '//Based on the work of Oskar Elek',
+
+    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
+
+    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
+
+    '//by Gustav Bodare and Edvard Sandberg',
+
+
+
+    'uniform sampler2D inscatteringTexture;',
+
+    'uniform sampler2D previousInscatteringSum;',
+
+    'uniform bool isNotFirstIteration;',
+
+
+
+    'void main(){',
+
+      'vec2 uv = gl_FragCoord.xy / resolution.xy;',
+
+
+
+      'vec4 kthInscattering = vec4(0.0);',
+
+      'if(isNotFirstIteration){',
+
+        'kthInscattering = texture2D(previousInscatteringSum, uv);',
+
+      '}',
+
+      'kthInscattering += max(texture2D(inscatteringTexture, uv), vec4(0.0));',
+
+
+
+      'gl_FragColor = vec4(kthInscattering.rgb, 1.0);',
+
     '}',
   ].join('\n')
 };
@@ -2079,150 +2432,294 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
     inscatteredLightLUT: {type: 't', value: null},
   },
   fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
-    let originalGLSL = [
-    '//Based on the work of Oskar Elek',
-    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
-    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
-    '//by Gustav Bodare and Edvard Sandberg',
-    'uniform sampler2D inscatteredLightLUT;',
-    'uniform sampler2D transmittanceTexture;',
-
-    'const float mieGCoefficient = $mieGCoefficient;',
-
-    '$atmosphericFunctions',
-
-    'vec3 gatherInscatteredLight(float r, float sunAngleAtP){',
-      'float x;',
-      'float y = parameterizationOfHeightToY(r);',
-      'float z = parameterizationOfCosOfSourceZenithToZ(sunAngleAtP);',
-      'vec3 uv3 = vec3(x, y, z);',
-      'vec2 inscatteredUV2;',
-      'vec3 gatheredInscatteredIntensity = vec3(0.0);',
-      'vec3 transmittanceFromPToPb;',
-      'vec3 inscatteredLight;',
-      'float theta = 0.0;',
-      'float angleBetweenCameraAndIncomingRay;',
-      'float phaseValue;',
-      'float cosAngle;',
-      'float deltaTheta = PI_TIMES_TWO / $numberOfChunks;',
-      'float depthInPixels = $textureDepth;',
-
-      '#pragma unroll',
-      'for(int i = 1; i < $numberOfChunksInt; i++){',
-        'theta += deltaTheta;',
-        'uv3.x = parameterizationOfCosOfViewZenithToX(cos(theta));',
-
-        '//Get our transmittance value',
-        'transmittanceFromPToPb = texture2D(transmittanceTexture, uv3.xy).rgb;',
-
-        '//Interpolate our inscattered light from the 3D texture',
-        'UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);',
-        'inscatteredLight = mix(texture2D(inscatteredLightLUT, solarUVInterpolants.uv0).rgb, texture2D(inscatteredLightLUT, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
-
-        'angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;',
-        'cosAngle = cos(angleBetweenCameraAndIncomingRay);',
-        '#if($isRayleigh)',
-          'phaseValue = rayleighPhaseFunction(cosAngle);',
-        '#else',
-          'phaseValue = miePhaseFunction(cosAngle);',
-        '#endif',
-
-        'gatheredInscatteredIntensity += inscatteredLight * phaseValue * transmittanceFromPToPb;',
-      '}',
-      'return gatheredInscatteredIntensity * PI_TIMES_FOUR / $numberOfChunks;',
-    '}',
-
-    'void main(){',
-      '//This is actually a packed 3D Texture',
-      'vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy/resolution.xy);',
-      'float r = inverseParameterizationOfYToRPlusRe(uv.y);',
-      'float h = r - RADIUS_OF_EARTH;',
-      'vec2 pA = vec2(0.0, r);',
-      'vec2 p = pA;',
-      'float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);',
-      'float cosOfSunZenith = inverseParameterizationOfZToCosOfSourceZenith(uv.z);',
-      '//sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction',
-      'vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);',
-      'vec2 sunDirection = vec2(sqrt(1.0 - cosOfSunZenith * cosOfSunZenith), cosOfSunZenith);',
-      'float initialSunAngle = atan(sunDirection.x, sunDirection.y);',
-
-      '//Check if we intersect the earth. If so, return a transmittance of zero.',
-      '//Otherwise, intersect our ray with the atmosphere.',
-      'vec2 pB = intersectRaySphere(pA, cameraDirection);',
-      'float distFromPaToPb = distance(pA, pB);',
-      'float chunkLength = distFromPaToPb / $numberOfChunks;',
-      'vec2 deltaP = cameraDirection * chunkLength;',
-
-      'bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);',
-      'vec3 totalInscattering = vec3(0.0);',
-      'if(!intersectsEarth){',
-        '//Prime our trapezoidal rule',
-        'float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
-        'float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
-        'float totalDensityMie = 0.0;',
-        'float totalDensityRayleigh = 0.0;',
-
-        'vec3 transmittancePaToP = vec3(1.0);',
-        'vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));',
-
-        'vec3 gatheringFunction = gatherInscatteredLight(length(p), initialSunAngle);',
-        '#if($isRayleigh)',
-          'vec3 previousInscattering = gatheringFunction * previousMieDensity * transmittancePaToP;',
-        '#else',
-          'vec3 previousInscattering = gatheringFunction * previousRayleighDensity * transmittancePaToP;',
-        '#endif',
-
-        '//Integrate from Pa to Pb to determine the total transmittance',
-        '//Using the trapezoidal rule.',
-        'float mieDensity;',
-        'float rayleighDensity;',
-        'float integralOfOzoneDensityFunction;',
-        'float r_p;',
-        'float sunAngle;',
-        'vec3 inscattering;',
-        '#pragma unroll',
-        'for(int i = 1; i < $numberOfChunksInt; i++){',
-          'p += deltaP;',
-          'r_p = length(p);',
-          'h = r_p - RADIUS_OF_EARTH;',
-          '//Only inscatter if this point is outside of the earth',
-          '//otherwise it contributes nothing to the final result',
-          'if(h > 0.0){',
-            'sunAngle = initialSunAngle - atan(p.x, p.y);',
-
-            '//Iterate our progress through the transmittance along P',
-            'mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
-            'rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
-            'totalDensityMie += (previousMieDensity + mieDensity) * chunkLength * 0.5;',
-            'totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength * 0.5;',
-            'integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
-            'transmittancePaToP = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
-
-            '//Now that we have the transmittance from Pa to P, get the transmittance from P to Pc',
-            '//and combine them to determine the net transmittance',
-            'uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));',
-            'gatheringFunction = gatherInscatteredLight(r_p, sunAngle);',
-            '#if($isRayleigh)',
-              'inscattering = gatheringFunction * rayleighDensity * transmittancePaToP;',
-            '#else',
-              'inscattering = gatheringFunction * mieDensity * transmittancePaToP;',
-            '#endif',
-            'totalInscattering += (previousInscattering + inscattering) * chunkLength;',
-
-            '//Store our values for the next iteration',
-            'previousInscattering = inscattering;',
-            'previousMieDensity = mieDensity;',
-            'previousRayleighDensity = rayleighDensity;',
-          '}',
-        '}',
-        '#if($isRayleigh)',
-          'totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;',
-        '#else',
-          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;',
-        '#endif',
-      '}',
-
-      'gl_FragColor = vec4(totalInscattering, 1.0);',
+    let originalGLSL = [
+
+    '//Based on the work of Oskar Elek',
+
+    '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
+
+    '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
+
+    '//by Gustav Bodare and Edvard Sandberg',
+
+    'uniform sampler2D inscatteredLightLUT;',
+
+    'uniform sampler2D transmittanceTexture;',
+
+
+
+    'const float mieGCoefficient = $mieGCoefficient;',
+
+
+
+    '$atmosphericFunctions',
+
+
+
+    'vec3 gatherInscatteredLight(float r, float sunAngleAtP){',
+
+      'float x;',
+
+      'float y = parameterizationOfHeightToY(r);',
+
+      'float z = parameterizationOfCosOfSourceZenithToZ(sunAngleAtP);',
+
+      'vec3 uv3 = vec3(x, y, z);',
+
+      'vec2 inscatteredUV2;',
+
+      'vec3 gatheredInscatteredIntensity = vec3(0.0);',
+
+      'vec3 transmittanceFromPToPb;',
+
+      'vec3 inscatteredLight;',
+
+      'float theta = 0.0;',
+
+      'float angleBetweenCameraAndIncomingRay;',
+
+      'float phaseValue;',
+
+      'float cosAngle;',
+
+      'float deltaTheta = PI_TIMES_TWO / $numberOfChunks;',
+
+      'float depthInPixels = $textureDepth;',
+
+
+
+      '#pragma unroll',
+
+      'for(int i = 1; i < $numberOfChunksInt; i++){',
+
+        'theta += deltaTheta;',
+
+        'uv3.x = parameterizationOfCosOfViewZenithToX(cos(theta));',
+
+
+
+        '//Get our transmittance value',
+
+        'transmittanceFromPToPb = texture2D(transmittanceTexture, uv3.xy).rgb;',
+
+
+
+        '//Interpolate our inscattered light from the 3D texture',
+
+        'UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);',
+
+        'inscatteredLight = mix(texture2D(inscatteredLightLUT, solarUVInterpolants.uv0).rgb, texture2D(inscatteredLightLUT, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
+
+
+
+        'angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;',
+
+        'cosAngle = cos(angleBetweenCameraAndIncomingRay);',
+
+        '#if($isRayleigh)',
+
+          'phaseValue = rayleighPhaseFunction(cosAngle);',
+
+        '#else',
+
+          'phaseValue = miePhaseFunction(cosAngle);',
+
+        '#endif',
+
+
+
+        'gatheredInscatteredIntensity += inscatteredLight * phaseValue * transmittanceFromPToPb;',
+
+      '}',
+
+      'return gatheredInscatteredIntensity * PI_TIMES_FOUR / $numberOfChunks;',
+
+    '}',
+
+
+
+    'void main(){',
+
+      '//This is actually a packed 3D Texture',
+
+      'vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy/resolution.xy);',
+
+      'float r = inverseParameterizationOfYToRPlusRe(uv.y);',
+
+      'float h = r - RADIUS_OF_EARTH;',
+
+      'vec2 pA = vec2(0.0, r);',
+
+      'vec2 p = pA;',
+
+      'float cosOfViewZenith = inverseParameterizationOfXToCosOfViewZenith(uv.x);',
+
+      'float cosOfSunZenith = inverseParameterizationOfZToCosOfSourceZenith(uv.z);',
+
+      '//sqrt(1.0 - cos(zenith)^2) = sin(zenith), which is the view direction',
+
+      'vec2 cameraDirection = vec2(sqrt(1.0 - cosOfViewZenith * cosOfViewZenith), cosOfViewZenith);',
+
+      'vec2 sunDirection = vec2(sqrt(1.0 - cosOfSunZenith * cosOfSunZenith), cosOfSunZenith);',
+
+      'float initialSunAngle = atan(sunDirection.x, sunDirection.y);',
+
+
+
+      '//Check if we intersect the earth. If so, return a transmittance of zero.',
+
+      '//Otherwise, intersect our ray with the atmosphere.',
+
+      'vec2 pB = intersectRaySphere(pA, cameraDirection);',
+
+      'float distFromPaToPb = distance(pA, pB);',
+
+      'float chunkLength = distFromPaToPb / $numberOfChunks;',
+
+      'vec2 deltaP = cameraDirection * chunkLength;',
+
+
+
+      'bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);',
+
+      'vec3 totalInscattering = vec3(0.0);',
+
+      'if(!intersectsEarth){',
+
+        '//Prime our trapezoidal rule',
+
+        'float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
+
+        'float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+
+        'float totalDensityMie = 0.0;',
+
+        'float totalDensityRayleigh = 0.0;',
+
+
+
+        'vec3 transmittancePaToP = vec3(1.0);',
+
+        'vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));',
+
+
+
+        'vec3 gatheringFunction = gatherInscatteredLight(length(p), initialSunAngle);',
+
+        '#if($isRayleigh)',
+
+          'vec3 previousInscattering = gatheringFunction * previousMieDensity * transmittancePaToP;',
+
+        '#else',
+
+          'vec3 previousInscattering = gatheringFunction * previousRayleighDensity * transmittancePaToP;',
+
+        '#endif',
+
+
+
+        '//Integrate from Pa to Pb to determine the total transmittance',
+
+        '//Using the trapezoidal rule.',
+
+        'float mieDensity;',
+
+        'float rayleighDensity;',
+
+        'float integralOfOzoneDensityFunction;',
+
+        'float r_p;',
+
+        'float sunAngle;',
+
+        'vec3 inscattering;',
+
+        '#pragma unroll',
+
+        'for(int i = 1; i < $numberOfChunksInt; i++){',
+
+          'p += deltaP;',
+
+          'r_p = length(p);',
+
+          'h = r_p - RADIUS_OF_EARTH;',
+
+          '//Only inscatter if this point is outside of the earth',
+
+          '//otherwise it contributes nothing to the final result',
+
+          'if(h > 0.0){',
+
+            'sunAngle = initialSunAngle - atan(p.x, p.y);',
+
+
+
+            '//Iterate our progress through the transmittance along P',
+
+            'mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',
+
+            'rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+
+            'totalDensityMie += (previousMieDensity + mieDensity) * chunkLength * 0.5;',
+
+            'totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength * 0.5;',
+
+            'integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;',
+
+            'transmittancePaToP = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));',
+
+
+
+            '//Now that we have the transmittance from Pa to P, get the transmittance from P to Pc',
+
+            '//and combine them to determine the net transmittance',
+
+            'uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));',
+
+            'gatheringFunction = gatherInscatteredLight(r_p, sunAngle);',
+
+            '#if($isRayleigh)',
+
+              'inscattering = gatheringFunction * rayleighDensity * transmittancePaToP;',
+
+            '#else',
+
+              'inscattering = gatheringFunction * mieDensity * transmittancePaToP;',
+
+            '#endif',
+
+            'totalInscattering += (previousInscattering + inscattering) * chunkLength;',
+
+
+
+            '//Store our values for the next iteration',
+
+            'previousInscattering = inscattering;',
+
+            'previousMieDensity = mieDensity;',
+
+            'previousRayleighDensity = rayleighDensity;',
+
+          '}',
+
+        '}',
+
+        '#if($isRayleigh)',
+
+          'totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;',
+
+        '#else',
+
+          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;',
+
+        '#endif',
+
+      '}',
+
+
+
+      'gl_FragColor = vec4(totalInscattering, 1.0);',
+
     '}',
     ];
 
@@ -2335,466 +2832,923 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     return uniforms;
   },
-  vertexShader: [
-    'varying vec3 vWorldPosition;',
-    'varying vec3 galacticCoordinates;',
-    'varying vec2 screenPosition;',
-    'uniform float latitude;',
-    'uniform float localSiderealTime;',
-    'const float northGalaticPoleRightAscension = 3.36601290657539744989;',
-    'const float northGalaticPoleDec = 0.473507826066061614219;',
-    'const float sinOfNGP = 0.456010959101623894601;',
-    'const float cosOfNGP = 0.8899741598379231031239;',
-    'const float piTimes2 = 6.283185307179586476925286;',
-    'const float piOver2 = 1.5707963267948966192313;',
-    'const float threePiOverTwo = 4.712388980384689857693;',
-    'const float pi = 3.141592653589793238462;',
-
-    'void main() {',
-      'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-      'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
-
-      '//Convert coordinate position to RA and DEC',
-      'float altitude = piOver2 - acos(vWorldPosition.y);',
-      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
-      'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
-      'float hourAngle = atan(sin(azimuth), (cos(azimuth) * sin(latitude) + tan(altitude) * cos(latitude)));',
-
-      '//fmodulo return (a - (b * floor(a / b)));',
-      'float a = localSiderealTime - hourAngle;',
-      'float rightAscension = a - (piTimes2 * floor(a / piTimes2));',
-
-      '//Convert coordinate position to Galactic Coordinates',
-      'float sinOfDec = sin(declination);',
-      'float cosOfDec = cos(declination);',
-      'float cosOfRaMinusGalacticNGPRa = cos(rightAscension - northGalaticPoleRightAscension);',
-      'float galaticLatitude = threePiOverTwo - asin(sinOfNGP * sinOfDec + cosOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa);',
-      'float galaticLongitude = cosOfDec * sin(rightAscension - northGalaticPoleRightAscension);',
-      'galaticLongitude = atan(galaticLongitude, cosOfNGP * sinOfDec - sinOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa) + pi;',
-      'galacticCoordinates.x = sin(galaticLatitude) * cos(galaticLongitude);',
-      'galacticCoordinates.y = cos(galaticLatitude);',
-      'galacticCoordinates.z = sin(galaticLatitude) * sin(galaticLongitude);',
-
-      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
-      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
-      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
-      'gl_Position = projectionPosition;',
+  vertexShader: [
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec3 galacticCoordinates;',
+
+    'varying vec2 screenPosition;',
+
+    'uniform float latitude;',
+
+    'uniform float localSiderealTime;',
+
+    'const float northGalaticPoleRightAscension = 3.36601290657539744989;',
+
+    'const float northGalaticPoleDec = 0.473507826066061614219;',
+
+    'const float sinOfNGP = 0.456010959101623894601;',
+
+    'const float cosOfNGP = 0.8899741598379231031239;',
+
+    'const float piTimes2 = 6.283185307179586476925286;',
+
+    'const float piOver2 = 1.5707963267948966192313;',
+
+    'const float threePiOverTwo = 4.712388980384689857693;',
+
+    'const float pi = 3.141592653589793238462;',
+
+
+
+    'void main() {',
+
+      'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
+
+      'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
+
+
+
+      '//Convert coordinate position to RA and DEC',
+
+      'float altitude = piOver2 - acos(vWorldPosition.y);',
+
+      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
+
+      'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
+
+      'float hourAngle = atan(sin(azimuth), (cos(azimuth) * sin(latitude) + tan(altitude) * cos(latitude)));',
+
+
+
+      '//fmodulo return (a - (b * floor(a / b)));',
+
+      'float a = localSiderealTime - hourAngle;',
+
+      'float rightAscension = a - (piTimes2 * floor(a / piTimes2));',
+
+
+
+      '//Convert coordinate position to Galactic Coordinates',
+
+      'float sinOfDec = sin(declination);',
+
+      'float cosOfDec = cos(declination);',
+
+      'float cosOfRaMinusGalacticNGPRa = cos(rightAscension - northGalaticPoleRightAscension);',
+
+      'float galaticLatitude = threePiOverTwo - asin(sinOfNGP * sinOfDec + cosOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa);',
+
+      'float galaticLongitude = cosOfDec * sin(rightAscension - northGalaticPoleRightAscension);',
+
+      'galaticLongitude = atan(galaticLongitude, cosOfNGP * sinOfDec - sinOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa) + pi;',
+
+      'galacticCoordinates.x = sin(galaticLatitude) * cos(galaticLongitude);',
+
+      'galacticCoordinates.y = cos(galaticLatitude);',
+
+      'galacticCoordinates.z = sin(galaticLatitude) * sin(galaticLongitude);',
+
+
+
+      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+
+      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
+
+      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
+
+      'gl_Position = projectionPosition;',
+
     '}',
   ].join('\n'),
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
-    let originalGLSL = [
-    'precision mediump float;',
-
-    'varying vec3 vWorldPosition;',
-    'varying vec3 galacticCoordinates;',
-    'varying vec2 screenPosition;',
-
-    'uniform float uTime;',
-    'uniform vec3 sunPosition;',
-    'uniform vec3 moonPosition;',
-    'uniform float sunHorizonFade;',
-    'uniform float moonHorizonFade;',
-    'uniform float scatteringMoonIntensity;',
-    'uniform float scatteringSunIntensity;',
-    'uniform vec3 moonLightColor;',
-    'uniform sampler2D mieInscatteringSum;',
-    'uniform sampler2D rayleighInscatteringSum;',
-    'uniform sampler2D transmittance;',
-
-    '#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)',
-    'uniform sampler2D blueNoiseTexture;',
-    '#endif',
-
-    '#if(!$isSunPass && !$isMeteringPass)',
-      'uniform samplerCube starHashCubemap;',
-      'uniform sampler2D dimStarData;',
-      'uniform sampler2D medStarData;',
-      'uniform sampler2D brightStarData;',
-      'uniform sampler2D starColorMap;',
-
-      'uniform vec3 mercuryPosition;',
-      'uniform vec3 venusPosition;',
-      'uniform vec3 marsPosition;',
-      'uniform vec3 jupiterPosition;',
-      'uniform vec3 saturnPosition;',
-
-      'uniform float mercuryBrightness;',
-      'uniform float venusBrightness;',
-      'uniform float marsBrightness;',
-      'uniform float jupiterBrightness;',
-      'uniform float saturnBrightness;',
-
-      'const vec3 mercuryColor = vec3(1.0);',
-      'const vec3 venusColor = vec3(0.913, 0.847, 0.772);',
-      'const vec3 marsColor = vec3(0.894, 0.509, 0.317);',
-      'const vec3 jupiterColor = vec3(0.901, 0.858, 0.780);',
-      'const vec3 saturnColor = vec3(0.905, 0.772, 0.494);',
-    '#endif',
-
-    'const float piOver2 = 1.5707963267948966192313;',
-    'const float piTimes2 = 6.283185307179586476925286;',
-    'const float pi = 3.141592653589793238462;',
-    'const vec3 inverseGamma = vec3(0.454545454545454545454545);',
-    'const vec3 gamma = vec3(2.2);',
-
-    '#if($isSunPass)',
-      'uniform float sunAngularDiameterCos;',
-      'uniform float moonRadius;',
-      'uniform sampler2D moonDiffuseMap;',
-      'uniform sampler2D solarEclipseMap;',
-      'varying vec2 vUv;',
-      'const float sunDiskIntensity = 30.0;',
-
-      '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
-      'const float ac1 = 0.46787619;',
-      'const float ac2 = 0.67104811;',
-      'const float ac3 = -0.06948355;',
-    '#elif($isMoonPass)',
-      'uniform float starsExposure;',
-      'uniform float moonExposure;',
-      'uniform float moonAngularDiameterCos;',
-      'uniform float sunRadius;',
-      'uniform float distanceToEarthsShadowSquared;',
-      'uniform float oneOverNormalizedLunarDiameter;',
-      'uniform vec3 earthsShadowPosition;',
-      'uniform sampler2D moonDiffuseMap;',
-      'uniform sampler2D moonNormalMap;',
-      'uniform sampler2D moonRoughnessMap;',
-      'uniform sampler2D moonApertureSizeMap;',
-      'uniform sampler2D moonApertureOrientationMap;',
-      'varying vec2 vUv;',
-
-      '//Tangent space lighting',
-      'varying vec3 tangentSpaceSunLightDirection;',
-      'varying vec3 tangentSpaceViewDirection;',
-    '#elif($isMeteringPass)',
-      'varying vec2 vUv;',
-      'uniform float moonLuminosity;',
-      'uniform float sunLuminosity;',
-    '#else',
-      'uniform float starsExposure;',
-    '#endif',
-
-    '$atmosphericFunctions',
-
-    '#if(!$isSunPass && !$isMeteringPass)',
-      'vec3 getSpectralColor(){',
-        'return vec3(1.0);',
-      '}',
-
-      '//From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/',
-      'float rand(float x){',
-        'float a = 12.9898;',
-        'float b = 78.233;',
-        'float c = 43758.5453;',
-        'float dt= dot(vec2(x, x) ,vec2(a,b));',
-        'float sn= mod(dt,3.14);',
-        'return fract(sin(sn) * c);',
-      '}',
-
-      '//From The Book of Shaders :D',
-      '//https://thebookofshaders.com/11/',
-      'float noise(float x){',
-        'float i = floor(x);',
-        'float f = fract(x);',
-        'float y = mix(rand(i), rand(i + 1.0), smoothstep(0.0,1.0,f));',
-
-        'return y;',
-      '}',
-
-      'float brownianNoise(float lacunarity, float gain, float initialAmplitude, float initialFrequency, float timeInSeconds){',
-        'float amplitude = initialAmplitude;',
-        'float frequency = initialFrequency;',
-
-        '// Loop of octaves',
-        'float y = 0.0;',
-        'float maxAmplitude = initialAmplitude;',
-        'for (int i = 0; i < 5; i++) {',
-        '	y += amplitude * noise(frequency * timeInSeconds);',
-        '	frequency *= lacunarity;',
-        '	amplitude *= gain;',
-        '}',
-
-        'return y;',
-      '}',
-
-      'const float twinkleDust = 0.0010;',
-      'float twinkleFactor(vec3 starposition, float atmosphericDistance, float starBrightness){',
-        'float randSeed = uTime * twinkleDust + (starposition.x + starposition.y + starposition.z) * 10000.0;',
-
-        '//lacunarity, gain, initialAmplitude, initialFrequency',
-        'return 1.0 + (1.0 - atmosphericDistance) * brownianNoise(0.5, 0.2, starBrightness, 6.0, randSeed);',
-      '}',
-
-      'float colorTwinkleFactor(vec3 starposition){',
-        'float randSeed = uTime * 0.0007 + (starposition.x + starposition.y + starposition.z) * 10000.0;',
-
-        '//lacunarity, gain, initialAmplitude, initialFrequency',
-        'return 0.7 * (2.0 * noise(randSeed) - 1.0);',
-      '}',
-
-      'float fastAiry(float r){',
-        '//Variation of Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness',
-        'float one_over_r_cubed = 1.0 / abs(r * r * r);',
-        'float gauss_r_over_1_4 = exp(-.5 * (0.71428571428 * r) * (0.71428571428 * r));',
-        'return abs(r) < 1.88 ? gauss_r_over_1_4 : abs(r) > 6.0 ? 1.35 * one_over_r_cubed : (gauss_r_over_1_4 + 2.7 * one_over_r_cubed) * 0.5;',
-      '}',
-
-      'vec2 getUV2OffsetFromStarColorTemperature(float zCoordinate, float normalizedYPosition, float noise){',
-        'float row = clamp(floor(zCoordinate / 4.0), 0.0, 8.0); //range: [0-8]',
-        'float col = clamp(zCoordinate - row * 4.0, 0.0, 3.0); //range: [0-3]',
-
-        '//Note: We are still in pixel space, our texture areas are 32 pixels wide',
-        '//even though our subtextures are only 30x14 pixels due to 1 pixel padding.',
-        'float xOffset = col * 32.0 + 15.0;',
-        'float yOffset = row * 16.0 + 1.0;',
-
-        'float xPosition =  xOffset + 13.0 * noise;',
-        'float yPosition = yOffset + 15.0 * normalizedYPosition;',
-
-        'return vec2(xPosition / 128.0, yPosition / 128.0);',
-      '}',
-
-      'vec3 getStarColor(float temperature, float normalizedYPosition, float noise){',
-        '//Convert our temperature to a z-coordinate',
-        'float zCoordinate = floor(sqrt((temperature - 2000.0) * (961.0 / 15000.0)));//range: [0-31]',
-        'vec2 uv = getUV2OffsetFromStarColorTemperature(zCoordinate, normalizedYPosition, noise);',
-
-        'vec3 starColor = texture2D(starColorMap, uv).rgb;',
-        '//TODO: Vary these to change the color colors',
-        '// starColor *= starColor;',
-        '// starColor.r *= max((zCoordinate / 31.0), 1.0);',
-        '// starColor.g *= max((zCoordinate / 31.0), 1.0);',
-        '// starColor.b *= max((zCoordinate / 10.0), 1.0);',
-        '// starColor = sqrt(starColor);',
-
-        '//Interpolate between the 2 colors (ZCoordinateC and zCoordinate are never more then 1 apart)',
-        'return starColor;',
-      '}',
-
-      'vec3 drawStarLight(vec4 starData, vec3 galacticSphericalPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
-        '//I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.',
-        'float temperature = sqrt(dot(starData.xyz, starData.xyz));',
-        'vec3 normalizedStarPosition = starData.xyz / temperature;',
-
-        '//Get the distance the light ray travels',
-        'vec2 skyIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), normalize(vec2(length(vec2(skyPosition.xz)), skyPosition.y)));',
-        'vec2 normalizationIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), vec2(1.0, 0.0));',
-        'float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);',
-
-        "//Use the distance to the star to determine it's perceived twinkling",
-        'float starBrightness = pow(150.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);',
-        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;',
-
-        '//Modify the intensity and color of this star using approximation of stellar scintillation',
-        'vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));',
-
-        '//Pass this brightness into the fast Airy function to make the star glow',
-        'starBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0) * twinkleFactor(normalizedStarPosition, distanceToEdgeOfSky, sqrt(starBrightness) + 3.0);',
-        'return vec3(sqrt(starBrightness)) * pow(starColor, vec3(1.2));',
-      '}',
-
-      'vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
-        "//Use the distance to the star to determine it's perceived twinkling",
-        'float planetBrightness = pow(100.0, (-planetMagnitude + starAndSkyExposureReduction) * 0.2);',
-        'float approximateDistanceOnSphereStar = distance(skyPosition, planetPosition) * 1400.0;',
-
-        '//Pass this brightness into the fast Airy function to make the star glow',
-        'planetBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0);',
-        'return sqrt(vec3(planetBrightness)) * planetColor;',
-      '}',
-    '#endif',
-
-    '#if($isMoonPass)',
-    'vec3 getLunarEcclipseShadow(vec3 sphericalPosition){',
-      '//Determine the distance from this pixel to the center of the sun.',
-      'float distanceToPixel = distance(sphericalPosition, earthsShadowPosition);',
-      'float pixelToCenterDistanceInMoonDiameter = 4.0 * distanceToPixel * oneOverNormalizedLunarDiameter;',
-      'float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter * 0.5;',
-      'float pUmbDistSq = umbDistSq * 0.3;',
-      'float umbraBrightness = 0.5 + 0.5 * clamp(umbDistSq, 0.0, 1.0);',
-      'float penumbraBrightness = 0.15 + 0.85 * clamp(pUmbDistSq, 0.0, 1.0);',
-      'float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);',
-
-      '//Get color intensity based on distance from penumbra',
-      'vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);',
-      'float colorIntensity = clamp(16.0 * distanceToEarthsShadowSquared * oneOverNormalizedLunarDiameter * oneOverNormalizedLunarDiameter, 0.0, 1.0);',
-      'colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);',
-
-      'return totalBrightness * colorOfLunarEcclipse;',
-    '}',
-    '#endif',
-
-    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
-      'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);',
-      'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
-      'vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
-      'float depthInPixels = $textureDepth;',
-      'UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);',
-
-      '//Interpolated scattering values',
-      'vec3 interpolatedMieScattering = mix(texture2D(mieLookupTable, solarUVInterpolants.uv0).rgb, texture2D(mieLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
-      'vec3 interpolatedRayleighScattering = mix(texture2D(rayleighLookupTable, solarUVInterpolants.uv0).rgb, texture2D(rayleighLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
-
-      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
-    '}',
-
-    '//Including this because someone removed this in a future versio of THREE. Why?!',
-    'vec3 MyAESFilmicToneMapping(vec3 color) {',
-      'return clamp((color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14), 0.0, 1.0);',
-    '}',
-
-    'void main(){',
-
-      '#if($isMeteringPass)',
-        'float rho = length(vUv.xy);',
-        'float height = sqrt(1.0 - rho * rho);',
-        'float phi = piOver2 - atan(height, rho);',
-        'float theta = atan(vUv.y, vUv.x);',
-        'vec3 sphericalPosition;',
-        'sphericalPosition.x = sin(phi) * cos(theta);',
-        'sphericalPosition.z = sin(phi) * sin(theta);',
-        'sphericalPosition.y = cos(phi);',
-        'sphericalPosition = normalize(sphericalPosition);',
-      '#else',
-        'vec3 sphericalPosition = normalize(vWorldPosition);',
-      '#endif',
-
-      '//Get our transmittance for this texel',
-      '//Note that for uv2OfTransmittance, I am clamping the cosOfViewAngle',
-      '//to avoid edge interpolation in the 2-D texture with a different z',
-      'float cosOfViewAngle = sphericalPosition.y;',
-      'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.03125)), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
-      'vec3 transmittanceFade = texture2D(transmittance, uv2OfTransmittance).rgb;',
-
-      '//In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon',
-      '#if($isMoonPass)',
-        '//Get our lunar occlusion texel',
-        'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
-        'vec4 lunarDiffuseTexel = texture2D(moonDiffuseMap, offsetUV);',
-        'vec2 uvClamp1 = 1.0 - vec2(step(offsetUV.x, 0.0), step(offsetUV.y, 0.0));',
-        'vec2 uvClamp2 = 1.0 - vec2(step(1.0 - offsetUV.x, 0.0), step(1.0 - offsetUV.y, 0.0));',
-        'vec3 lunarDiffuseColor = lunarDiffuseTexel.rgb;',
-        'float lunarMask = lunarDiffuseTexel.a * uvClamp1.x * uvClamp1.y * uvClamp2.x * uvClamp2.y;',
-      '#elif($isSunPass)',
-        '//Get our lunar occlusion texel in the frame of the sun',
-        'float lunarMask = texture2D(moonDiffuseMap, vUv).a;',
-      '#endif',
-
-      '//Atmosphere',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
-      'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
-      'vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
-
-      '//This stuff never shows up near our sun, so we can exclude it',
-      '#if(!$isSunPass && !$isMeteringPass)',
-        '//Get the intensity of our sky color',
-        'vec3 intensityVector = vec3(0.3, 0.59, 0.11);',
-        'float starAndSkyExposureReduction =  starsExposure - 10.0 * dot(pow(solarAtmosphericPass + lunarAtmosphericPass, inverseGamma), intensityVector);',
-
-        '//Get the stellar starting id data from the galactic cube map',
-        'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
-        'vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);',
-
-        '//Red',
-        'float scaledBits = starHashData.r * 255.0;',
-        'float leftBits = floor(scaledBits / 2.0);',
-        'float starXCoordinate = leftBits / 127.0; //Dim Star',
-        'float rightBits = scaledBits - leftBits * 2.0;',
-
-        '//Green',
-        'scaledBits = starHashData.g * 255.0;',
-        'leftBits = floor(scaledBits / 8.0);',
-        'float starYCoordinate = (rightBits + leftBits * 2.0) / 63.0; //Dim Star',
-        'rightBits = scaledBits - leftBits * 8.0;',
-
-        '//Add the dim stars lighting',
-        'vec4 starData = texture2D(dimStarData, vec2(starXCoordinate, starYCoordinate));',
-        'vec3 galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-
-        '//Blue',
-        'scaledBits = starHashData.b * 255.0;',
-        'leftBits = floor(scaledBits / 64.0);',
-        'starXCoordinate = (rightBits + leftBits * 8.0) / 31.0; //Medium Star',
-        'rightBits = scaledBits - leftBits * 64.0;',
-        'leftBits = floor(rightBits / 2.0);',
-        'starYCoordinate = (leftBits  / 31.0); //Medium Star',
-
-        '//Add the medium stars lighting',
-        'starData = texture2D(medStarData, vec2(starXCoordinate, starYCoordinate));',
-        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-
-        '//Alpha',
-        'scaledBits = starHashData.a * 255.0;',
-        'leftBits = floor(scaledBits / 32.0);',
-        'starXCoordinate = leftBits / 7.0;',
-        'rightBits = scaledBits - leftBits * 32.0;',
-        'leftBits = floor(rightBits / 4.0);',
-        'starYCoordinate = leftBits  / 7.0;',
-
-        '//Add the bright stars lighting',
-        'starData = texture2D(brightStarData, vec2(starXCoordinate, starYCoordinate));',
-        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-
-        '//Check our distance from each of the four primary planets',
-        'galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-        'galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-        'galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-        'galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-        'galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-
-        '//Apply the transmittance function to all of our light sources',
-        'galacticLighting = pow(galacticLighting, gamma) * transmittanceFade;',
-      '#endif',
-
-      '//Sun and Moon layers',
-      '#if($isSunPass)',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
-
-        '$draw_sun_pass',
-
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);',
-      '#elif($isMoonPass)',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
-        'vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);',
-
-        '$draw_moon_pass',
-
-        '//Now mix in the moon light',
-        'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);',
-
-        '//And bring it back to the normal gamma afterwards',
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
-      '#elif($isMeteringPass)',
-        '//Cut this down to the circle of the sky ignoring the galatic lighting',
-        'float circularMask = 1.0 - step(1.0, rho);',
-        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting) * circularMask;',
-
-        '//Combine the colors together and apply a transformation from the scattering intensity to the moon luminosity',
-        'vec3 intensityPassColors = lunarAtmosphericPass * (moonLuminosity / scatteringMoonIntensity) + solarAtmosphericPass * (sunLuminosity / scatteringSunIntensity);',
-
-        '//Get the greyscale color of the sky for the intensity pass verses the r, g and b channels',
-        'float intensityPass = (0.3 * intensityPassColors.r + 0.59 * intensityPassColors.g + 0.11 * intensityPassColors.b) * circularMask;',
-
-        '//Now apply the ACESFilmicTonemapping',
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
-      '#else',
-        '//Regular atmospheric pass',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting;',
-
-        '//Now apply the ACESFilmicTonemapping',
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
-
-        '//Now apply the blue noise',
-        'combinedPass += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
-      '#endif',
-
-      '#if($isMeteringPass)',
-        'gl_FragColor = vec4(combinedPass, intensityPass);',
-      '#else',
-        '//Triangular Blue Noise Dithering Pass',
-        'gl_FragColor = vec4(combinedPass, 1.0);',
-      '#endif',
+    let originalGLSL = [
+
+    'precision mediump float;',
+
+
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec3 galacticCoordinates;',
+
+    'varying vec2 screenPosition;',
+
+
+
+    'uniform float uTime;',
+
+    'uniform vec3 sunPosition;',
+
+    'uniform vec3 moonPosition;',
+
+    'uniform float sunHorizonFade;',
+
+    'uniform float moonHorizonFade;',
+
+    'uniform float scatteringMoonIntensity;',
+
+    'uniform float scatteringSunIntensity;',
+
+    'uniform vec3 moonLightColor;',
+
+    'uniform sampler2D mieInscatteringSum;',
+
+    'uniform sampler2D rayleighInscatteringSum;',
+
+    'uniform sampler2D transmittance;',
+
+
+
+    '#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)',
+
+    'uniform sampler2D blueNoiseTexture;',
+
+    '#endif',
+
+
+
+    '#if(!$isSunPass && !$isMeteringPass)',
+
+      'uniform samplerCube starHashCubemap;',
+
+      'uniform sampler2D dimStarData;',
+
+      'uniform sampler2D medStarData;',
+
+      'uniform sampler2D brightStarData;',
+
+      'uniform sampler2D starColorMap;',
+
+
+
+      'uniform vec3 mercuryPosition;',
+
+      'uniform vec3 venusPosition;',
+
+      'uniform vec3 marsPosition;',
+
+      'uniform vec3 jupiterPosition;',
+
+      'uniform vec3 saturnPosition;',
+
+
+
+      'uniform float mercuryBrightness;',
+
+      'uniform float venusBrightness;',
+
+      'uniform float marsBrightness;',
+
+      'uniform float jupiterBrightness;',
+
+      'uniform float saturnBrightness;',
+
+
+
+      'const vec3 mercuryColor = vec3(1.0);',
+
+      'const vec3 venusColor = vec3(0.913, 0.847, 0.772);',
+
+      'const vec3 marsColor = vec3(0.894, 0.509, 0.317);',
+
+      'const vec3 jupiterColor = vec3(0.901, 0.858, 0.780);',
+
+      'const vec3 saturnColor = vec3(0.905, 0.772, 0.494);',
+
+    '#endif',
+
+
+
+    'const float piOver2 = 1.5707963267948966192313;',
+
+    'const float piTimes2 = 6.283185307179586476925286;',
+
+    'const float pi = 3.141592653589793238462;',
+
+    'const vec3 inverseGamma = vec3(0.454545454545454545454545);',
+
+    'const vec3 gamma = vec3(2.2);',
+
+
+
+    '#if($isSunPass)',
+
+      'uniform float sunAngularDiameterCos;',
+
+      'uniform float moonRadius;',
+
+      'uniform sampler2D moonDiffuseMap;',
+
+      'uniform sampler2D solarEclipseMap;',
+
+      'varying vec2 vUv;',
+
+      'const float sunDiskIntensity = 30.0;',
+
+
+
+      '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
+
+      'const float ac1 = 0.46787619;',
+
+      'const float ac2 = 0.67104811;',
+
+      'const float ac3 = -0.06948355;',
+
+    '#elif($isMoonPass)',
+
+      'uniform float starsExposure;',
+
+      'uniform float moonExposure;',
+
+      'uniform float moonAngularDiameterCos;',
+
+      'uniform float sunRadius;',
+
+      'uniform float distanceToEarthsShadowSquared;',
+
+      'uniform float oneOverNormalizedLunarDiameter;',
+
+      'uniform vec3 earthsShadowPosition;',
+
+      'uniform sampler2D moonDiffuseMap;',
+
+      'uniform sampler2D moonNormalMap;',
+
+      'uniform sampler2D moonRoughnessMap;',
+
+      'uniform sampler2D moonApertureSizeMap;',
+
+      'uniform sampler2D moonApertureOrientationMap;',
+
+      'varying vec2 vUv;',
+
+
+
+      '//Tangent space lighting',
+
+      'varying vec3 tangentSpaceSunLightDirection;',
+
+      'varying vec3 tangentSpaceViewDirection;',
+
+    '#elif($isMeteringPass)',
+
+      'varying vec2 vUv;',
+
+      'uniform float moonLuminosity;',
+
+      'uniform float sunLuminosity;',
+
+    '#else',
+
+      'uniform float starsExposure;',
+
+    '#endif',
+
+
+
+    '$atmosphericFunctions',
+
+
+
+    '#if(!$isSunPass && !$isMeteringPass)',
+
+      'vec3 getSpectralColor(){',
+
+        'return vec3(1.0);',
+
+      '}',
+
+
+
+      '//From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/',
+
+      'float rand(float x){',
+
+        'float a = 12.9898;',
+
+        'float b = 78.233;',
+
+        'float c = 43758.5453;',
+
+        'float dt= dot(vec2(x, x) ,vec2(a,b));',
+
+        'float sn= mod(dt,3.14);',
+
+        'return fract(sin(sn) * c);',
+
+      '}',
+
+
+
+      '//From The Book of Shaders :D',
+
+      '//https://thebookofshaders.com/11/',
+
+      'float noise(float x){',
+
+        'float i = floor(x);',
+
+        'float f = fract(x);',
+
+        'float y = mix(rand(i), rand(i + 1.0), smoothstep(0.0,1.0,f));',
+
+
+
+        'return y;',
+
+      '}',
+
+
+
+      'float brownianNoise(float lacunarity, float gain, float initialAmplitude, float initialFrequency, float timeInSeconds){',
+
+        'float amplitude = initialAmplitude;',
+
+        'float frequency = initialFrequency;',
+
+
+
+        '// Loop of octaves',
+
+        'float y = 0.0;',
+
+        'float maxAmplitude = initialAmplitude;',
+
+        'for (int i = 0; i < 5; i++) {',
+
+        '	y += amplitude * noise(frequency * timeInSeconds);',
+
+        '	frequency *= lacunarity;',
+
+        '	amplitude *= gain;',
+
+        '}',
+
+
+
+        'return y;',
+
+      '}',
+
+
+
+      'const float twinkleDust = 0.0010;',
+
+      'float twinkleFactor(vec3 starposition, float atmosphericDistance, float starBrightness){',
+
+        'float randSeed = uTime * twinkleDust + (starposition.x + starposition.y + starposition.z) * 10000.0;',
+
+
+
+        '//lacunarity, gain, initialAmplitude, initialFrequency',
+
+        'return 1.0 + (1.0 - atmosphericDistance) * brownianNoise(0.5, 0.2, starBrightness, 6.0, randSeed);',
+
+      '}',
+
+
+
+      'float colorTwinkleFactor(vec3 starposition){',
+
+        'float randSeed = uTime * 0.0007 + (starposition.x + starposition.y + starposition.z) * 10000.0;',
+
+
+
+        '//lacunarity, gain, initialAmplitude, initialFrequency',
+
+        'return 0.7 * (2.0 * noise(randSeed) - 1.0);',
+
+      '}',
+
+
+
+      'float fastAiry(float r){',
+
+        '//Variation of Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness',
+
+        'float one_over_r_cubed = 1.0 / abs(r * r * r);',
+
+        'float gauss_r_over_1_4 = exp(-.5 * (0.71428571428 * r) * (0.71428571428 * r));',
+
+        'return abs(r) < 1.88 ? gauss_r_over_1_4 : abs(r) > 6.0 ? 1.35 * one_over_r_cubed : (gauss_r_over_1_4 + 2.7 * one_over_r_cubed) * 0.5;',
+
+      '}',
+
+
+
+      'vec2 getUV2OffsetFromStarColorTemperature(float zCoordinate, float normalizedYPosition, float noise){',
+
+        'float row = clamp(floor(zCoordinate / 4.0), 0.0, 8.0); //range: [0-8]',
+
+        'float col = clamp(zCoordinate - row * 4.0, 0.0, 3.0); //range: [0-3]',
+
+
+
+        '//Note: We are still in pixel space, our texture areas are 32 pixels wide',
+
+        '//even though our subtextures are only 30x14 pixels due to 1 pixel padding.',
+
+        'float xOffset = col * 32.0 + 15.0;',
+
+        'float yOffset = row * 16.0 + 1.0;',
+
+
+
+        'float xPosition =  xOffset + 13.0 * noise;',
+
+        'float yPosition = yOffset + 15.0 * normalizedYPosition;',
+
+
+
+        'return vec2(xPosition / 128.0, yPosition / 128.0);',
+
+      '}',
+
+
+
+      'vec3 getStarColor(float temperature, float normalizedYPosition, float noise){',
+
+        '//Convert our temperature to a z-coordinate',
+
+        'float zCoordinate = floor(sqrt((temperature - 2000.0) * (961.0 / 15000.0)));//range: [0-31]',
+
+        'vec2 uv = getUV2OffsetFromStarColorTemperature(zCoordinate, normalizedYPosition, noise);',
+
+
+
+        'vec3 starColor = texture2D(starColorMap, uv).rgb;',
+
+        '//TODO: Vary these to change the color colors',
+
+        '// starColor *= starColor;',
+
+        '// starColor.r *= max((zCoordinate / 31.0), 1.0);',
+
+        '// starColor.g *= max((zCoordinate / 31.0), 1.0);',
+
+        '// starColor.b *= max((zCoordinate / 10.0), 1.0);',
+
+        '// starColor = sqrt(starColor);',
+
+
+
+        '//Interpolate between the 2 colors (ZCoordinateC and zCoordinate are never more then 1 apart)',
+
+        'return starColor;',
+
+      '}',
+
+
+
+      'vec3 drawStarLight(vec4 starData, vec3 galacticSphericalPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
+
+        '//I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.',
+
+        'float temperature = sqrt(dot(starData.xyz, starData.xyz));',
+
+        'vec3 normalizedStarPosition = starData.xyz / temperature;',
+
+
+
+        '//Get the distance the light ray travels',
+
+        'vec2 skyIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), normalize(vec2(length(vec2(skyPosition.xz)), skyPosition.y)));',
+
+        'vec2 normalizationIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), vec2(1.0, 0.0));',
+
+        'float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);',
+
+
+
+        "//Use the distance to the star to determine it's perceived twinkling",
+
+        'float starBrightness = pow(150.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);',
+
+        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;',
+
+
+
+        '//Modify the intensity and color of this star using approximation of stellar scintillation',
+
+        'vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));',
+
+
+
+        '//Pass this brightness into the fast Airy function to make the star glow',
+
+        'starBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0) * twinkleFactor(normalizedStarPosition, distanceToEdgeOfSky, sqrt(starBrightness) + 3.0);',
+
+        'return vec3(sqrt(starBrightness)) * pow(starColor, vec3(1.2));',
+
+      '}',
+
+
+
+      'vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
+
+        "//Use the distance to the star to determine it's perceived twinkling",
+
+        'float planetBrightness = pow(100.0, (-planetMagnitude + starAndSkyExposureReduction) * 0.2);',
+
+        'float approximateDistanceOnSphereStar = distance(skyPosition, planetPosition) * 1400.0;',
+
+
+
+        '//Pass this brightness into the fast Airy function to make the star glow',
+
+        'planetBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0);',
+
+        'return sqrt(vec3(planetBrightness)) * planetColor;',
+
+      '}',
+
+    '#endif',
+
+
+
+    '#if($isMoonPass)',
+
+    'vec3 getLunarEcclipseShadow(vec3 sphericalPosition){',
+
+      '//Determine the distance from this pixel to the center of the sun.',
+
+      'float distanceToPixel = distance(sphericalPosition, earthsShadowPosition);',
+
+      'float pixelToCenterDistanceInMoonDiameter = 4.0 * distanceToPixel * oneOverNormalizedLunarDiameter;',
+
+      'float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter * 0.5;',
+
+      'float pUmbDistSq = umbDistSq * 0.3;',
+
+      'float umbraBrightness = 0.5 + 0.5 * clamp(umbDistSq, 0.0, 1.0);',
+
+      'float penumbraBrightness = 0.15 + 0.85 * clamp(pUmbDistSq, 0.0, 1.0);',
+
+      'float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);',
+
+
+
+      '//Get color intensity based on distance from penumbra',
+
+      'vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);',
+
+      'float colorIntensity = clamp(16.0 * distanceToEarthsShadowSquared * oneOverNormalizedLunarDiameter * oneOverNormalizedLunarDiameter, 0.0, 1.0);',
+
+      'colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);',
+
+
+
+      'return totalBrightness * colorOfLunarEcclipse;',
+
+    '}',
+
+    '#endif',
+
+
+
+    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
+
+      'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);',
+
+      'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
+
+      'vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
+
+      'float depthInPixels = $textureDepth;',
+
+      'UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);',
+
+
+
+      '//Interpolated scattering values',
+
+      'vec3 interpolatedMieScattering = mix(texture2D(mieLookupTable, solarUVInterpolants.uv0).rgb, texture2D(mieLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
+
+      'vec3 interpolatedRayleighScattering = mix(texture2D(rayleighLookupTable, solarUVInterpolants.uv0).rgb, texture2D(rayleighLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
+
+
+
+      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
+
+    '}',
+
+
+
+    '//Including this because someone removed this in a future versio of THREE. Why?!',
+
+    'vec3 MyAESFilmicToneMapping(vec3 color) {',
+
+      'return clamp((color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14), 0.0, 1.0);',
+
+    '}',
+
+
+
+    'void main(){',
+
+
+
+      '#if($isMeteringPass)',
+
+        'float rho = length(vUv.xy);',
+
+        'float height = sqrt(1.0 - rho * rho);',
+
+        'float phi = piOver2 - atan(height, rho);',
+
+        'float theta = atan(vUv.y, vUv.x);',
+
+        'vec3 sphericalPosition;',
+
+        'sphericalPosition.x = sin(phi) * cos(theta);',
+
+        'sphericalPosition.z = sin(phi) * sin(theta);',
+
+        'sphericalPosition.y = cos(phi);',
+
+        'sphericalPosition = normalize(sphericalPosition);',
+
+      '#else',
+
+        'vec3 sphericalPosition = normalize(vWorldPosition);',
+
+      '#endif',
+
+
+
+      '//Get our transmittance for this texel',
+
+      '//Note that for uv2OfTransmittance, I am clamping the cosOfViewAngle',
+
+      '//to avoid edge interpolation in the 2-D texture with a different z',
+
+      'float cosOfViewAngle = sphericalPosition.y;',
+
+      'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.03125)), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
+
+      'vec3 transmittanceFade = texture2D(transmittance, uv2OfTransmittance).rgb;',
+
+
+
+      '//In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon',
+
+      '#if($isMoonPass)',
+
+        '//Get our lunar occlusion texel',
+
+        'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
+
+        'vec4 lunarDiffuseTexel = texture2D(moonDiffuseMap, offsetUV);',
+
+        'vec2 uvClamp1 = 1.0 - vec2(step(offsetUV.x, 0.0), step(offsetUV.y, 0.0));',
+
+        'vec2 uvClamp2 = 1.0 - vec2(step(1.0 - offsetUV.x, 0.0), step(1.0 - offsetUV.y, 0.0));',
+
+        'vec3 lunarDiffuseColor = lunarDiffuseTexel.rgb;',
+
+        'float lunarMask = lunarDiffuseTexel.a * uvClamp1.x * uvClamp1.y * uvClamp2.x * uvClamp2.y;',
+
+      '#elif($isSunPass)',
+
+        '//Get our lunar occlusion texel in the frame of the sun',
+
+        'float lunarMask = texture2D(moonDiffuseMap, vUv).a;',
+
+      '#endif',
+
+
+
+      '//Atmosphere',
+
+      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
+
+      'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
+
+      'vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
+
+
+
+      '//This stuff never shows up near our sun, so we can exclude it',
+
+      '#if(!$isSunPass && !$isMeteringPass)',
+
+        '//Get the intensity of our sky color',
+
+        'vec3 intensityVector = vec3(0.3, 0.59, 0.11);',
+
+        'float starAndSkyExposureReduction =  starsExposure - 10.0 * dot(pow(solarAtmosphericPass + lunarAtmosphericPass, inverseGamma), intensityVector);',
+
+
+
+        '//Get the stellar starting id data from the galactic cube map',
+
+        'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
+
+        'vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);',
+
+
+
+        '//Red',
+
+        'float scaledBits = starHashData.r * 255.0;',
+
+        'float leftBits = floor(scaledBits / 2.0);',
+
+        'float starXCoordinate = leftBits / 127.0; //Dim Star',
+
+        'float rightBits = scaledBits - leftBits * 2.0;',
+
+
+
+        '//Green',
+
+        'scaledBits = starHashData.g * 255.0;',
+
+        'leftBits = floor(scaledBits / 8.0);',
+
+        'float starYCoordinate = (rightBits + leftBits * 2.0) / 63.0; //Dim Star',
+
+        'rightBits = scaledBits - leftBits * 8.0;',
+
+
+
+        '//Add the dim stars lighting',
+
+        'vec4 starData = texture2D(dimStarData, vec2(starXCoordinate, starYCoordinate));',
+
+        'vec3 galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
+
+
+        '//Blue',
+
+        'scaledBits = starHashData.b * 255.0;',
+
+        'leftBits = floor(scaledBits / 64.0);',
+
+        'starXCoordinate = (rightBits + leftBits * 8.0) / 31.0; //Medium Star',
+
+        'rightBits = scaledBits - leftBits * 64.0;',
+
+        'leftBits = floor(rightBits / 2.0);',
+
+        'starYCoordinate = (leftBits  / 31.0); //Medium Star',
+
+
+
+        '//Add the medium stars lighting',
+
+        'starData = texture2D(medStarData, vec2(starXCoordinate, starYCoordinate));',
+
+        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
+
+
+        '//Alpha',
+
+        'scaledBits = starHashData.a * 255.0;',
+
+        'leftBits = floor(scaledBits / 32.0);',
+
+        'starXCoordinate = leftBits / 7.0;',
+
+        'rightBits = scaledBits - leftBits * 32.0;',
+
+        'leftBits = floor(rightBits / 4.0);',
+
+        'starYCoordinate = leftBits  / 7.0;',
+
+
+
+        '//Add the bright stars lighting',
+
+        'starData = texture2D(brightStarData, vec2(starXCoordinate, starYCoordinate));',
+
+        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
+
+
+        '//Check our distance from each of the four primary planets',
+
+        'galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
+        'galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
+        'galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
+        'galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
+        'galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
+
+
+        '//Apply the transmittance function to all of our light sources',
+
+        'galacticLighting = pow(galacticLighting, gamma) * transmittanceFade;',
+
+      '#endif',
+
+
+
+      '//Sun and Moon layers',
+
+      '#if($isSunPass)',
+
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
+
+
+
+        '$draw_sun_pass',
+
+
+
+        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);',
+
+      '#elif($isMoonPass)',
+
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
+
+        'vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);',
+
+
+
+        '$draw_moon_pass',
+
+
+
+        '//Now mix in the moon light',
+
+        'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);',
+
+
+
+        '//And bring it back to the normal gamma afterwards',
+
+        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+
+      '#elif($isMeteringPass)',
+
+        '//Cut this down to the circle of the sky ignoring the galatic lighting',
+
+        'float circularMask = 1.0 - step(1.0, rho);',
+
+        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting) * circularMask;',
+
+
+
+        '//Combine the colors together and apply a transformation from the scattering intensity to the moon luminosity',
+
+        'vec3 intensityPassColors = lunarAtmosphericPass * (moonLuminosity / scatteringMoonIntensity) + solarAtmosphericPass * (sunLuminosity / scatteringSunIntensity);',
+
+
+
+        '//Get the greyscale color of the sky for the intensity pass verses the r, g and b channels',
+
+        'float intensityPass = (0.3 * intensityPassColors.r + 0.59 * intensityPassColors.g + 0.11 * intensityPassColors.b) * circularMask;',
+
+
+
+        '//Now apply the ACESFilmicTonemapping',
+
+        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+
+      '#else',
+
+        '//Regular atmospheric pass',
+
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting;',
+
+
+
+        '//Now apply the ACESFilmicTonemapping',
+
+        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+
+
+
+        '//Now apply the blue noise',
+
+        'combinedPass += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
+
+      '#endif',
+
+
+
+      '#if($isMeteringPass)',
+
+        'gl_FragColor = vec4(combinedPass, intensityPass);',
+
+      '#else',
+
+        '//Triangular Blue Noise Dithering Pass',
+
+        'gl_FragColor = vec4(combinedPass, 1.0);',
+
+      '#endif',
+
     '}',
     ];
 
@@ -2861,26 +3815,46 @@ StarrySky.Materials.Postprocessing.highPassFilter = {
     sourceTexture: {type: 't', 'value': null},
     luminosityThreshold: {type: 'f', 'value': null},
   },
-  fragmentShader: [
-    'uniform sampler2D sourceTexture;',
-    'uniform float luminosityThreshold;',
-
-    'const vec3 luma = vec3(0.299, 0.587, 0.144);',
-
-    '//Based on Luminosity High Pass Shader',
-    '//Originall created by bhouston / http://clara.io/',
-    'void main(){',
-      'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
-      'vec4 sourceTexture = texture2D(sourceTexture, vUv);',
-      'float v = dot(sourceTexture.rgb, luma);',
-      'vec4 outputColor = vec4(vec3(0.0), 1.0);',
-
-      '//Note: for the bloom pass our the Unreal Shader sets smoothWidth to 0.01',
-      'float alpha = smoothstep(luminosityThreshold, luminosityThreshold + 0.01, v);',
-
-      '//Fudge factor of 0.1 to make sure that we get rid of the added intensity',
-      '//from the HDR sun before passing it to our bloom filter.',
-      'gl_FragColor = mix(outputColor, sourceTexture * 0.1, alpha);',
+  fragmentShader: [
+
+    'uniform sampler2D sourceTexture;',
+
+    'uniform float luminosityThreshold;',
+
+
+
+    'const vec3 luma = vec3(0.299, 0.587, 0.144);',
+
+
+
+    '//Based on Luminosity High Pass Shader',
+
+    '//Originall created by bhouston / http://clara.io/',
+
+    'void main(){',
+
+      'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
+
+      'vec4 sourceTexture = texture2D(sourceTexture, vUv);',
+
+      'float v = dot(sourceTexture.rgb, luma);',
+
+      'vec4 outputColor = vec4(vec3(0.0), 1.0);',
+
+
+
+      '//Note: for the bloom pass our the Unreal Shader sets smoothWidth to 0.01',
+
+      'float alpha = smoothstep(luminosityThreshold, luminosityThreshold + 0.01, v);',
+
+
+
+      '//Fudge factor of 0.1 to make sure that we get rid of the added intensity',
+
+      '//from the HDR sun before passing it to our bloom filter.',
+
+      'gl_FragColor = mix(outputColor, sourceTexture * 0.1, alpha);',
+
     '}',
   ].join('\n')
 };
@@ -2894,24 +3868,42 @@ StarrySky.Materials.Postprocessing.seperableBlurFilter = {
     sourceTexture: {type: 't', 'value': null}
   },
   fragmentShader: function(kernalRadius, textureSize){
-    let originalGLSL = [
-    '//Derivative of Unreal Bloom Pass from Three.JS',
-    '//Thanks spidersharma / http://eduperiment.com/',
-    '//',
-    'uniform sampler2D sourceTexture;',
-    'uniform vec2 direction;',
-
-    '//Based on Luminosity High Pass Shader',
-    '//Originally created by bhouston / http://clara.io/',
-    'void main(){',
-      'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
-      'float weightedSum = $gaussian_pdf_at_x_0;',
-      'vec3 diffuseSum = texture2D(sourceTexture, vUv).rgb * weightedSum;',
-
-      '//Unrolled for loop (completed in material function)',
-      '$unrolled_for_loop',
-
-      'gl_FragColor = vec4(abs(diffuseSum/weightedSum), 1.0);',
+    let originalGLSL = [
+
+    '//Derivative of Unreal Bloom Pass from Three.JS',
+
+    '//Thanks spidersharma / http://eduperiment.com/',
+
+    '//',
+
+    'uniform sampler2D sourceTexture;',
+
+    'uniform vec2 direction;',
+
+
+
+    '//Based on Luminosity High Pass Shader',
+
+    '//Originally created by bhouston / http://clara.io/',
+
+    'void main(){',
+
+      'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
+
+      'float weightedSum = $gaussian_pdf_at_x_0;',
+
+      'vec3 diffuseSum = texture2D(sourceTexture, vUv).rgb * weightedSum;',
+
+
+
+      '//Unrolled for loop (completed in material function)',
+
+      '$unrolled_for_loop',
+
+
+
+      'gl_FragColor = vec4(abs(diffuseSum/weightedSum), 1.0);',
+
     '}',
     ];
 
@@ -2973,71 +3965,134 @@ StarrySky.Materials.Sun.combinationPass = {
     bloomRadius: {type: 'f', 'value': null},
     blueNoiseTexture: {type: 't', 'value': null}
   },
-  vertexShader: [
-    'varying vec3 vWorldPosition;',
-    'varying vec2 vUv;',
-    'varying vec2 screenPosition;',
-
-    'void main() {',
-      'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-      'vWorldPosition = worldPosition.xyz;',
-      'vUv = uv;',
-
-      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
-      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
-      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
-      'gl_Position = projectionPosition;',
-
-      '//We offset our sun z-position by 0.01 to avoid Z-Fighting with the back sky plane',
-      'gl_Position.z -= 0.01;',
+  vertexShader: [
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec2 vUv;',
+
+    'varying vec2 screenPosition;',
+
+
+
+    'void main() {',
+
+      'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
+
+      'vWorldPosition = worldPosition.xyz;',
+
+      'vUv = uv;',
+
+
+
+      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+
+      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
+
+      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
+
+      'gl_Position = projectionPosition;',
+
+
+
+      '//We offset our sun z-position by 0.01 to avoid Z-Fighting with the back sky plane',
+
+      'gl_Position.z -= 0.01;',
+
     '}',
   ].join('\n'),
-  fragmentShader: [
-    '//Derivative of Unreal Bloom Pass from Three.JS',
-    '//Thanks spidersharma / http://eduperiment.com/',
-    'uniform sampler2D baseTexture;',
-    'uniform bool bloomEnabled;',
-    'uniform sampler2D blurTexture1;',
-    'uniform sampler2D blurTexture2;',
-    'uniform sampler2D blurTexture3;',
-    'uniform sampler2D blurTexture4;',
-    'uniform sampler2D blurTexture5;',
-    'uniform sampler2D blueNoiseTexture;',
-
-    'uniform float bloomStrength;',
-    'uniform float bloomRadius;',
-
-    'varying vec2 vUv;',
-    'varying vec2 screenPosition;',
-
-    'float lerpBloomFactor(float factor){',
-      'return mix(factor, 1.2 - factor, bloomRadius);',
-    '}',
-
-    'void main(){',
-      '//Fade this plane out towards the edges to avoid rough edges',
-      'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
-      'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
-      'float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromSun)));',
-
-      '//Determine the bloom effect',
-      'vec3 combinedLight = texture2D(baseTexture, vUv).rgb;',
-      'if(bloomEnabled){',
-        '//Bloom is only enabled when the sun has set so that we can share the bloom',
-        '//shader betweeen the sun and the moon.',
-        'vec3 bloomLight = lerpBloomFactor(1.0) * texture2D(blurTexture1, vUv).rgb;',
-        'bloomLight += lerpBloomFactor(0.8) * texture2D(blurTexture2, vUv).rgb;',
-        'bloomLight += lerpBloomFactor(0.6) * texture2D(blurTexture3, vUv).rgb;',
-        'bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;',
-        'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
-        'combinedLight += abs(bloomStrength * bloomLight);',
-      '}',
-
-      '//Late triangular blue noise',
-      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
-
-      '//Return our tone mapped color when everything else is done',
-      'gl_FragColor = vec4(combinedLight, 1.0);',
+  fragmentShader: [
+
+    '//Derivative of Unreal Bloom Pass from Three.JS',
+
+    '//Thanks spidersharma / http://eduperiment.com/',
+
+    'uniform sampler2D baseTexture;',
+
+    'uniform bool bloomEnabled;',
+
+    'uniform sampler2D blurTexture1;',
+
+    'uniform sampler2D blurTexture2;',
+
+    'uniform sampler2D blurTexture3;',
+
+    'uniform sampler2D blurTexture4;',
+
+    'uniform sampler2D blurTexture5;',
+
+    'uniform sampler2D blueNoiseTexture;',
+
+
+
+    'uniform float bloomStrength;',
+
+    'uniform float bloomRadius;',
+
+
+
+    'varying vec2 vUv;',
+
+    'varying vec2 screenPosition;',
+
+
+
+    'float lerpBloomFactor(float factor){',
+
+      'return mix(factor, 1.2 - factor, bloomRadius);',
+
+    '}',
+
+
+
+    'void main(){',
+
+      '//Fade this plane out towards the edges to avoid rough edges',
+
+      'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
+
+      'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
+
+      'float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromSun)));',
+
+
+
+      '//Determine the bloom effect',
+
+      'vec3 combinedLight = texture2D(baseTexture, vUv).rgb;',
+
+      'if(bloomEnabled){',
+
+        '//Bloom is only enabled when the sun has set so that we can share the bloom',
+
+        '//shader betweeen the sun and the moon.',
+
+        'vec3 bloomLight = lerpBloomFactor(1.0) * texture2D(blurTexture1, vUv).rgb;',
+
+        'bloomLight += lerpBloomFactor(0.8) * texture2D(blurTexture2, vUv).rgb;',
+
+        'bloomLight += lerpBloomFactor(0.6) * texture2D(blurTexture3, vUv).rgb;',
+
+        'bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;',
+
+        'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
+
+        'combinedLight += abs(bloomStrength * bloomLight);',
+
+      '}',
+
+
+
+      '//Late triangular blue noise',
+
+      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
+
+
+
+      '//Return our tone mapped color when everything else is done',
+
+      'gl_FragColor = vec4(combinedLight, 1.0);',
+
     '}',
   ].join('\n')
 };
@@ -3047,31 +4102,56 @@ StarrySky.Materials.Sun.combinationPass = {
 //https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Sun.baseSunPartial = {
   fragmentShader: function(sunAngularDiameter){
-    let originalGLSL = [
-    '//We enter and leave with additionalPassColor, which we add our sun direct',
-    '//lighting to, after it has been attenuated by our transmittance.',
-
-    '//Our sun is located in the middle square of our quad, so that we give our',
-    '//solar bloom enough room to expand into without clipping the edge.',
-    '//We also fade out our quad towards the edge to reduce the visibility of sharp',
-    '//edges.',
-    'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
-    'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
-
-    '//From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl',
-    'float sundisk = smoothstep(0.0, 0.1, (0.5 - (pixelDistanceFromSun)));',
-
-    '//We can use this for our solar limb darkening',
-    '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
-    'float rOverR = pixelDistanceFromSun / 0.5;',
-    'float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));',
-    'float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);',
-
-    '//Apply transmittance to our sun disk direct lighting',
-    'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
-    'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
-    'float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);',
-    'vec3 sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv).r)* transmittanceFade;',
+    let originalGLSL = [
+
+    '//We enter and leave with additionalPassColor, which we add our sun direct',
+
+    '//lighting to, after it has been attenuated by our transmittance.',
+
+
+
+    '//Our sun is located in the middle square of our quad, so that we give our',
+
+    '//solar bloom enough room to expand into without clipping the edge.',
+
+    '//We also fade out our quad towards the edge to reduce the visibility of sharp',
+
+    '//edges.',
+
+    'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
+
+    'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
+
+
+
+    '//From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl',
+
+    'float sundisk = smoothstep(0.0, 0.1, (0.5 - (pixelDistanceFromSun)));',
+
+
+
+    '//We can use this for our solar limb darkening',
+
+    '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
+
+    'float rOverR = pixelDistanceFromSun / 0.5;',
+
+    'float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));',
+
+    'float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);',
+
+
+
+    '//Apply transmittance to our sun disk direct lighting',
+
+    'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
+
+    'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
+
+    'float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);',
+
+    'vec3 sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv).r)* transmittanceFade;',
+
     'sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);',
     ];
 
@@ -3084,19 +4164,32 @@ StarrySky.Materials.Sun.baseSunPartial = {
 
     return updatedLines.join('\n');
   },
-  vertexShader: [
-    'uniform float radiusOfSunPlane;',
-    'uniform mat4 worldMatrix;',
-    'varying vec3 vWorldPosition;',
-    'varying vec2 vUv;',
-
-    'void main() {',
-      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfSunPlane, 1.0);',
-      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
-
-      'vUv = uv;',
-
-      'gl_Position = vec4(position, 1.0);',
+  vertexShader: [
+
+    'uniform float radiusOfSunPlane;',
+
+    'uniform mat4 worldMatrix;',
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec2 vUv;',
+
+
+
+    'void main() {',
+
+      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfSunPlane, 1.0);',
+
+      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
+
+
+
+      'vUv = uv;',
+
+
+
+      'gl_Position = vec4(position, 1.0);',
+
     '}',
   ].join('\n'),
 }
@@ -3117,72 +4210,136 @@ StarrySky.Materials.Moon.combinationPass = {
     bloomRadius: {type: 'f', 'value': null},
     blueNoiseTexture: {type: 't', 'value': null}
   },
-  vertexShader: [
-    'varying vec3 vWorldPosition;',
-    'varying vec2 vUv;',
-    'varying vec2 screenPosition;',
-
-    'void main() {',
-      'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-      'vWorldPosition = worldPosition.xyz;',
-      'vUv = uv;',
-
-      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
-      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
-      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
-      'gl_Position = projectionPosition;',
-
-      '//We offset our moon z-position by 0.01 to avoid Z-Fighting with the back sky plane',
-      'gl_Position.z -= 0.01;',
+  vertexShader: [
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec2 vUv;',
+
+    'varying vec2 screenPosition;',
+
+
+
+    'void main() {',
+
+      'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
+
+      'vWorldPosition = worldPosition.xyz;',
+
+      'vUv = uv;',
+
+
+
+      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+
+      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
+
+      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
+
+      'gl_Position = projectionPosition;',
+
+
+
+      '//We offset our moon z-position by 0.01 to avoid Z-Fighting with the back sky plane',
+
+      'gl_Position.z -= 0.01;',
+
     '}',
   ].join('\n'),
-  fragmentShader: [
-    '//Derivative of Unreal Bloom Pass from Three.JS',
-    '//Thanks spidersharma / http://eduperiment.com/',
-    'uniform sampler2D baseTexture;',
-    'uniform bool bloomEnabled;',
-    'uniform sampler2D blurTexture1;',
-    'uniform sampler2D blurTexture2;',
-    'uniform sampler2D blurTexture3;',
-    'uniform sampler2D blurTexture4;',
-    'uniform sampler2D blurTexture5;',
-    'uniform sampler2D blueNoiseTexture;',
-
-    'uniform float bloomStrength;',
-    'uniform float bloomRadius;',
-
-    'varying vec2 vUv;',
-    'varying vec2 screenPosition;',
-
-    'float lerpBloomFactor(float factor){',
-      'return mix(factor, 1.2 - factor, bloomRadius);',
-    '}',
-
-    'void main(){',
-      '//Fade this plane out towards the edgeys to avoid rough edges',
-      'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
-      'float pixelDistanceFromMoon = distance(offsetUV, vec2(0.5));',
-      'float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromMoon)));',
-
-      '//Add our post processing effects',
-      'vec3 combinedLight = abs(texture2D(baseTexture, vUv).rgb);',
-      'if(bloomEnabled){',
-        '//Bloom is only enabled when the sun has set so that we can share the bloom',
-        '//shader betweeen the sun and the moon.',
-        'vec3 bloomLight = lerpBloomFactor(1.0) * texture2D(blurTexture1, vUv).rgb;',
-        'bloomLight += lerpBloomFactor(0.8) * texture2D(blurTexture2, vUv).rgb;',
-        'bloomLight += lerpBloomFactor(0.6) * texture2D(blurTexture3, vUv).rgb;',
-        'bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;',
-        'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
-
-        'combinedLight += abs(bloomStrength * bloomLight);',
-      '}',
-
-      '//Late triangular blue noise',
-      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
-
-      '//Return our tone mapped color when everything else is done',
-      'gl_FragColor = vec4(combinedLight, falloffDisk);',
+  fragmentShader: [
+
+    '//Derivative of Unreal Bloom Pass from Three.JS',
+
+    '//Thanks spidersharma / http://eduperiment.com/',
+
+    'uniform sampler2D baseTexture;',
+
+    'uniform bool bloomEnabled;',
+
+    'uniform sampler2D blurTexture1;',
+
+    'uniform sampler2D blurTexture2;',
+
+    'uniform sampler2D blurTexture3;',
+
+    'uniform sampler2D blurTexture4;',
+
+    'uniform sampler2D blurTexture5;',
+
+    'uniform sampler2D blueNoiseTexture;',
+
+
+
+    'uniform float bloomStrength;',
+
+    'uniform float bloomRadius;',
+
+
+
+    'varying vec2 vUv;',
+
+    'varying vec2 screenPosition;',
+
+
+
+    'float lerpBloomFactor(float factor){',
+
+      'return mix(factor, 1.2 - factor, bloomRadius);',
+
+    '}',
+
+
+
+    'void main(){',
+
+      '//Fade this plane out towards the edgeys to avoid rough edges',
+
+      'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
+
+      'float pixelDistanceFromMoon = distance(offsetUV, vec2(0.5));',
+
+      'float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromMoon)));',
+
+
+
+      '//Add our post processing effects',
+
+      'vec3 combinedLight = abs(texture2D(baseTexture, vUv).rgb);',
+
+      'if(bloomEnabled){',
+
+        '//Bloom is only enabled when the sun has set so that we can share the bloom',
+
+        '//shader betweeen the sun and the moon.',
+
+        'vec3 bloomLight = lerpBloomFactor(1.0) * texture2D(blurTexture1, vUv).rgb;',
+
+        'bloomLight += lerpBloomFactor(0.8) * texture2D(blurTexture2, vUv).rgb;',
+
+        'bloomLight += lerpBloomFactor(0.6) * texture2D(blurTexture3, vUv).rgb;',
+
+        'bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;',
+
+        'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
+
+
+
+        'combinedLight += abs(bloomStrength * bloomLight);',
+
+      '}',
+
+
+
+      '//Late triangular blue noise',
+
+      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
+
+
+
+      '//Return our tone mapped color when everything else is done',
+
+      'gl_FragColor = vec4(combinedLight, falloffDisk);',
+
     '}',
   ].join('\n')
 };
@@ -3192,55 +4349,104 @@ StarrySky.Materials.Moon.combinationPass = {
 //https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Moon.baseMoonPartial = {
   fragmentShader: function(moonAngularDiameter){
-    let originalGLSL = [
-    '//We enter and leave with additionalPassColor, which we add our moon direct',
-    '//lighting to, after it has been attenuated by our transmittance.',
-
-    '//Calculate the light from the moon. Note that our normal is on a quad, which makes',
-    '//transforming our normals really easy, as we just have to transform them by the world matrix.',
-    '//and everything should work out. Furthermore, the light direction for the moon should just',
-    '//be our sun position in the sky.',
-    'vec3 texelNormal = normalize(2.0 * texture2D(moonNormalMap, offsetUV).rgb - 1.0);',
-
-    '//Lunar surface roughness from https://sos.noaa.gov/datasets/moon-surface-roughness/',
-    'float moonRoughnessTexel = piOver2 - (1.0 - texture2D(moonRoughnessMap, offsetUV).r);',
-
-    '//Implmentatation of the Ambient Appeture Lighting Equation',
-    'float sunArea = pi * sunRadius * sunRadius;',
-    'float apertureRadius = acos(1.0 - texture2D(moonApertureSizeMap, offsetUV).r);',
-    'vec3 apertureOrientation = normalize(2.0 * texture2D(moonApertureOrientationMap, offsetUV).rgb - 1.0);',
-    'float apertureToSunHaversineDistance = acos(dot(apertureOrientation, tangentSpaceSunLightDirection));',
-
-    'float observableSunFraction;',
-    'vec3 test = vec3(0.0);',
-    'if(apertureToSunHaversineDistance >= (apertureRadius + sunRadius)){',
-      'observableSunFraction = 0.0;',
-    '}',
-    'else if(apertureToSunHaversineDistance <= (apertureRadius - sunRadius)){',
-      'observableSunFraction = 1.0;',
-    '}',
-    'else{',
-      'float absOfRpMinusRl = abs(apertureRadius - sunRadius);',
-      'observableSunFraction = smoothstep(0.0, 1.0, 1.0 - ((apertureToSunHaversineDistance - absOfRpMinusRl) / (apertureRadius + sunRadius - absOfRpMinusRl)));',
-    '}',
-    'float omega = (sunRadius - apertureRadius + apertureToSunHaversineDistance) / (2.0 * apertureToSunHaversineDistance);',
-    'vec3 bentTangentSpaceSunlightDirection = normalize(mix(tangentSpaceSunLightDirection, apertureOrientation, omega));',
-
-    '//I opt to use the Oren-Nayar model over Hapke-Lommel-Seeliger',
-    '//As Oren-Nayar lacks a lunar phase component and is more extensible for',
-    '//Additional parameters, I used the following code as a guide',
-    '//https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4',
-    'float NDotL = max(dot(bentTangentSpaceSunlightDirection, texelNormal), 0.0);',
-    'float NDotV = max(dot(tangentSpaceViewDirection, texelNormal), 0.0);',
-    'float gamma = dot(tangentSpaceViewDirection - texelNormal * NDotV, bentTangentSpaceSunlightDirection - texelNormal * NDotL);',
-    'gamma = gamma / (sqrt(clamp(1.0 - NDotV * NDotV, 0.0, 1.0)) * sqrt(clamp(1.0 - NDotL * NDotL, 0.0, 1.0)));',
-    'float roughnessSquared = moonRoughnessTexel * moonRoughnessTexel;',
-    'float A = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));',
-    'float B = 0.45 * (roughnessSquared / (roughnessSquared + 0.09));',
-    'vec2 cos_alpha_beta = NDotV < NDotL ? vec2(NDotV, NDotL) : vec2(NDotL, NDotV);',
-    'vec2 sin_alpha_beta = sqrt(clamp(1.0 - cos_alpha_beta * cos_alpha_beta, 0.0, 1.0));',
-    'float C = sin_alpha_beta.x * sin_alpha_beta.y / (1e-6 + cos_alpha_beta.y);',
-
+    let originalGLSL = [
+
+    '//We enter and leave with additionalPassColor, which we add our moon direct',
+
+    '//lighting to, after it has been attenuated by our transmittance.',
+
+
+
+    '//Calculate the light from the moon. Note that our normal is on a quad, which makes',
+
+    '//transforming our normals really easy, as we just have to transform them by the world matrix.',
+
+    '//and everything should work out. Furthermore, the light direction for the moon should just',
+
+    '//be our sun position in the sky.',
+
+    'vec3 texelNormal = normalize(2.0 * texture2D(moonNormalMap, offsetUV).rgb - 1.0);',
+
+
+
+    '//Lunar surface roughness from https://sos.noaa.gov/datasets/moon-surface-roughness/',
+
+    'float moonRoughnessTexel = piOver2 - (1.0 - texture2D(moonRoughnessMap, offsetUV).r);',
+
+
+
+    '//Implmentatation of the Ambient Appeture Lighting Equation',
+
+    'float sunArea = pi * sunRadius * sunRadius;',
+
+    'float apertureRadius = acos(1.0 - texture2D(moonApertureSizeMap, offsetUV).r);',
+
+    'vec3 apertureOrientation = normalize(2.0 * texture2D(moonApertureOrientationMap, offsetUV).rgb - 1.0);',
+
+    'float apertureToSunHaversineDistance = acos(dot(apertureOrientation, tangentSpaceSunLightDirection));',
+
+
+
+    'float observableSunFraction;',
+
+    'vec3 test = vec3(0.0);',
+
+    'if(apertureToSunHaversineDistance >= (apertureRadius + sunRadius)){',
+
+      'observableSunFraction = 0.0;',
+
+    '}',
+
+    'else if(apertureToSunHaversineDistance <= (apertureRadius - sunRadius)){',
+
+      'observableSunFraction = 1.0;',
+
+    '}',
+
+    'else{',
+
+      'float absOfRpMinusRl = abs(apertureRadius - sunRadius);',
+
+      'observableSunFraction = smoothstep(0.0, 1.0, 1.0 - ((apertureToSunHaversineDistance - absOfRpMinusRl) / (apertureRadius + sunRadius - absOfRpMinusRl)));',
+
+    '}',
+
+    'float omega = (sunRadius - apertureRadius + apertureToSunHaversineDistance) / (2.0 * apertureToSunHaversineDistance);',
+
+    'vec3 bentTangentSpaceSunlightDirection = normalize(mix(tangentSpaceSunLightDirection, apertureOrientation, omega));',
+
+
+
+    '//I opt to use the Oren-Nayar model over Hapke-Lommel-Seeliger',
+
+    '//As Oren-Nayar lacks a lunar phase component and is more extensible for',
+
+    '//Additional parameters, I used the following code as a guide',
+
+    '//https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4',
+
+    'float NDotL = max(dot(bentTangentSpaceSunlightDirection, texelNormal), 0.0);',
+
+    'float NDotV = max(dot(tangentSpaceViewDirection, texelNormal), 0.0);',
+
+    'float gamma = dot(tangentSpaceViewDirection - texelNormal * NDotV, bentTangentSpaceSunlightDirection - texelNormal * NDotL);',
+
+    'gamma = gamma / (sqrt(clamp(1.0 - NDotV * NDotV, 0.0, 1.0)) * sqrt(clamp(1.0 - NDotL * NDotL, 0.0, 1.0)));',
+
+    'float roughnessSquared = moonRoughnessTexel * moonRoughnessTexel;',
+
+    'float A = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));',
+
+    'float B = 0.45 * (roughnessSquared / (roughnessSquared + 0.09));',
+
+    'vec2 cos_alpha_beta = NDotV < NDotL ? vec2(NDotV, NDotL) : vec2(NDotL, NDotV);',
+
+    'vec2 sin_alpha_beta = sqrt(clamp(1.0 - cos_alpha_beta * cos_alpha_beta, 0.0, 1.0));',
+
+    'float C = sin_alpha_beta.x * sin_alpha_beta.y / (1e-6 + cos_alpha_beta.y);',
+
+
+
     'vec3 moonTexel = 2.0 * observableSunFraction * NDotL * (A + B * max(0.0, gamma) * C) * lunarDiffuseColor * transmittanceFade * earthsShadow;',
     ];
 
@@ -3253,69 +4459,132 @@ StarrySky.Materials.Moon.baseMoonPartial = {
 
     return updatedLines.join('\n');
   },
-  vertexShader: [
-    'attribute vec4 tangent;',
-
-    'uniform float radiusOfMoonPlane;',
-    'uniform mat4 worldMatrix;',
-    'uniform vec3 sunLightDirection;',
-
-    'varying vec3 vWorldPosition;',
-    'varying vec2 vUv;',
-    'varying vec3 tangentSpaceSunLightDirection;',
-    'varying vec3 tangentSpaceViewDirection;',
-
-    'varying vec3 galacticCoordinates;',
-    'uniform float latitude;',
-    'uniform float localSiderealTime;',
-    'const float northGalaticPoleRightAscension = 3.36601290657539744989;',
-    'const float northGalaticPoleDec = 0.473507826066061614219;',
-    'const float sinOfNGP = 0.456010959101623894601;',
-    'const float cosOfNGP = 0.8899741598379231031239;',
-    'const float piTimes2 = 6.283185307179586476925286;',
-    'const float piOver2 = 1.5707963267948966192313;',
-    'const float threePiOverTwo = 4.712388980384689857693;',
-    'const float pi = 3.141592653589793238462;',
-
-    'void main() {',
-      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane, 1.0);',
-      'vec3 normalizedWorldPosition = normalize(worldPosition.xyz);',
-      'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
-      'vUv = uv;',
-
-      '//Other then our bitangent, all of our other values are already normalized',
-      'vec3 bitangent = normalize((tangent.w * cross(normal, tangent.xyz)));',
-      'vec3 cameraSpaceTangent = (worldMatrix * vec4(tangent.xyz, 0.0)).xyz;',
-      'vec3 b = (worldMatrix * vec4(bitangent.xyz, 0.0)).xyz;',
-      'vec3 n = (worldMatrix * vec4(normal.xyz, 0.0)).xyz;',
-
-      '//There is no matrix transpose, so we will do this ourselves',
-      'mat3 TBNMatrix = mat3(vec3(cameraSpaceTangent.x, b.x, n.x), vec3(cameraSpaceTangent.y, b.y, n.y), vec3(cameraSpaceTangent.z, b.z, n.z));',
-      'tangentSpaceSunLightDirection = normalize(TBNMatrix * sunLightDirection);',
-      'tangentSpaceViewDirection = normalize(TBNMatrix * -normalizedWorldPosition);',
-
-      '//Convert coordinate position to RA and DEC',
-      'float altitude = piOver2 - acos(vWorldPosition.y);',
-      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
-      'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
-      'float hourAngle = atan(sin(azimuth), (cos(azimuth) * sin(latitude) + tan(altitude) * cos(latitude)));',
-
-      '//fmodulo return (a - (b * floor(a / b)));',
-      'float a = localSiderealTime - hourAngle;',
-      'float rightAscension = a - (piTimes2 * floor(a / piTimes2));',
-
-      '//Convert coordinate position to Galactic Coordinates',
-      'float sinOfDec = sin(declination);',
-      'float cosOfDec = cos(declination);',
-      'float cosOfRaMinusGalacticNGPRa = cos(rightAscension - northGalaticPoleRightAscension);',
-      'float galaticLatitude = threePiOverTwo - asin(sinOfNGP * sinOfDec + cosOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa);',
-      'float galaticLongitude = cosOfDec * sin(rightAscension - northGalaticPoleRightAscension);',
-      'galaticLongitude = atan(galaticLongitude, cosOfNGP * sinOfDec - sinOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa) + pi;',
-      'galacticCoordinates.x = sin(galaticLatitude) * cos(galaticLongitude);',
-      'galacticCoordinates.y = cos(galaticLatitude);',
-      'galacticCoordinates.z = sin(galaticLatitude) * sin(galaticLongitude);',
-
-      'gl_Position = vec4(position, 1.0);',
+  vertexShader: [
+
+    'attribute vec4 tangent;',
+
+
+
+    'uniform float radiusOfMoonPlane;',
+
+    'uniform mat4 worldMatrix;',
+
+    'uniform vec3 sunLightDirection;',
+
+
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec2 vUv;',
+
+    'varying vec3 tangentSpaceSunLightDirection;',
+
+    'varying vec3 tangentSpaceViewDirection;',
+
+
+
+    'varying vec3 galacticCoordinates;',
+
+    'uniform float latitude;',
+
+    'uniform float localSiderealTime;',
+
+    'const float northGalaticPoleRightAscension = 3.36601290657539744989;',
+
+    'const float northGalaticPoleDec = 0.473507826066061614219;',
+
+    'const float sinOfNGP = 0.456010959101623894601;',
+
+    'const float cosOfNGP = 0.8899741598379231031239;',
+
+    'const float piTimes2 = 6.283185307179586476925286;',
+
+    'const float piOver2 = 1.5707963267948966192313;',
+
+    'const float threePiOverTwo = 4.712388980384689857693;',
+
+    'const float pi = 3.141592653589793238462;',
+
+
+
+    'void main() {',
+
+      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane, 1.0);',
+
+      'vec3 normalizedWorldPosition = normalize(worldPosition.xyz);',
+
+      'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
+
+      'vUv = uv;',
+
+
+
+      '//Other then our bitangent, all of our other values are already normalized',
+
+      'vec3 bitangent = normalize((tangent.w * cross(normal, tangent.xyz)));',
+
+      'vec3 cameraSpaceTangent = (worldMatrix * vec4(tangent.xyz, 0.0)).xyz;',
+
+      'vec3 b = (worldMatrix * vec4(bitangent.xyz, 0.0)).xyz;',
+
+      'vec3 n = (worldMatrix * vec4(normal.xyz, 0.0)).xyz;',
+
+
+
+      '//There is no matrix transpose, so we will do this ourselves',
+
+      'mat3 TBNMatrix = mat3(vec3(cameraSpaceTangent.x, b.x, n.x), vec3(cameraSpaceTangent.y, b.y, n.y), vec3(cameraSpaceTangent.z, b.z, n.z));',
+
+      'tangentSpaceSunLightDirection = normalize(TBNMatrix * sunLightDirection);',
+
+      'tangentSpaceViewDirection = normalize(TBNMatrix * -normalizedWorldPosition);',
+
+
+
+      '//Convert coordinate position to RA and DEC',
+
+      'float altitude = piOver2 - acos(vWorldPosition.y);',
+
+      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
+
+      'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
+
+      'float hourAngle = atan(sin(azimuth), (cos(azimuth) * sin(latitude) + tan(altitude) * cos(latitude)));',
+
+
+
+      '//fmodulo return (a - (b * floor(a / b)));',
+
+      'float a = localSiderealTime - hourAngle;',
+
+      'float rightAscension = a - (piTimes2 * floor(a / piTimes2));',
+
+
+
+      '//Convert coordinate position to Galactic Coordinates',
+
+      'float sinOfDec = sin(declination);',
+
+      'float cosOfDec = cos(declination);',
+
+      'float cosOfRaMinusGalacticNGPRa = cos(rightAscension - northGalaticPoleRightAscension);',
+
+      'float galaticLatitude = threePiOverTwo - asin(sinOfNGP * sinOfDec + cosOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa);',
+
+      'float galaticLongitude = cosOfDec * sin(rightAscension - northGalaticPoleRightAscension);',
+
+      'galaticLongitude = atan(galaticLongitude, cosOfNGP * sinOfDec - sinOfNGP * cosOfDec * cosOfRaMinusGalacticNGPRa) + pi;',
+
+      'galacticCoordinates.x = sin(galaticLatitude) * cos(galaticLongitude);',
+
+      'galacticCoordinates.y = cos(galaticLatitude);',
+
+      'galacticCoordinates.z = sin(galaticLatitude) * sin(galaticLongitude);',
+
+
+
+      'gl_Position = vec4(position, 1.0);',
+
     '}',
   ].join('\n'),
 }
@@ -3330,33 +4599,60 @@ StarrySky.Materials.Stars.starDataMap = {
     textureBChannel: {type: 't', 'value': null},
     textureAChannel: {type: 't', 'value': null},
   },
-  fragmentShader: [
-    'precision highp float;',
-
-    'uniform sampler2D textureRChannel;',
-    'uniform sampler2D textureGChannel;',
-    'uniform sampler2D textureBChannel;',
-    'uniform sampler2D textureAChannel;',
-
-    'float rgba2Float(vec4 rgbaValue, float minValue, float maxValue){',
-      'vec4 v = rgbaValue * 255.0;',
-
-      '//First convert this to the unscaled integer values',
-      'float scaledIntValue = v.a + 256.0 * (v.b + 256.0 * (v.g + 256.0 * v.r));',
-
-      '//Now scale the float down to the appropriate range',
-      'return (scaledIntValue / 4294967295.0) * (maxValue - minValue) + minValue;',
-    '}',
-
-    'void main(){',
-      'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
-
-      'float r = rgba2Float(texture2D(textureRChannel, vUv), -17000.0, 17000.0);',
-      'float g = rgba2Float(texture2D(textureGChannel, vUv), -17000.0, 17000.0);',
-      'float b = rgba2Float(texture2D(textureBChannel, vUv), -17000.0, 17000.0);',
-      'float a = rgba2Float(texture2D(textureAChannel, vUv), -2.0, 7.0);',
-
-      'gl_FragColor = vec4(r, g, b, a);',
+  fragmentShader: [
+
+    'precision highp float;',
+
+
+
+    'uniform sampler2D textureRChannel;',
+
+    'uniform sampler2D textureGChannel;',
+
+    'uniform sampler2D textureBChannel;',
+
+    'uniform sampler2D textureAChannel;',
+
+
+
+    'float rgba2Float(vec4 rgbaValue, float minValue, float maxValue){',
+
+      'vec4 v = rgbaValue * 255.0;',
+
+
+
+      '//First convert this to the unscaled integer values',
+
+      'float scaledIntValue = v.a + 256.0 * (v.b + 256.0 * (v.g + 256.0 * v.r));',
+
+
+
+      '//Now scale the float down to the appropriate range',
+
+      'return (scaledIntValue / 4294967295.0) * (maxValue - minValue) + minValue;',
+
+    '}',
+
+
+
+    'void main(){',
+
+      'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
+
+
+
+      'float r = rgba2Float(texture2D(textureRChannel, vUv), -17000.0, 17000.0);',
+
+      'float g = rgba2Float(texture2D(textureGChannel, vUv), -17000.0, 17000.0);',
+
+      'float b = rgba2Float(texture2D(textureBChannel, vUv), -17000.0, 17000.0);',
+
+      'float a = rgba2Float(texture2D(textureAChannel, vUv), -2.0, 7.0);',
+
+
+
+      'gl_FragColor = vec4(r, g, b, a);',
+
     '}',
   ].join('\n')
 }
@@ -3365,15 +4661,24 @@ StarrySky.Materials.Stars.starDataMap = {
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Autoexposure.meteringSurvey = {
-  vertexShader: [
-    'varying vec3 vWorldPosition;',
-    'varying vec2 vUv;',
-
-    'void main() {',
-      '//Just pass over the texture coordinates',
-      'vUv = uv * 2.0 - 1.0;',
-
-      'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+  vertexShader: [
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec2 vUv;',
+
+
+
+    'void main() {',
+
+      '//Just pass over the texture coordinates',
+
+      'vUv = uv * 2.0 - 1.0;',
+
+
+
+      'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+
     '}',
   ].join('\n'),
 }
@@ -3382,24 +4687,40 @@ StarrySky.Materials.Autoexposure.meteringSurvey = {
 //--------------------------v
 //https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Autoexposure.testPass = {
-  vertexShader: [
-    'varying vec3 vWorldPosition;',
-    'varying vec2 vUv;',
-
-    'void main() {',
-      '//Just pass over the texture coordinates',
-      'vUv = uv;',
-
-      'gl_Position = vec4(position, 1.0);',
+  vertexShader: [
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec2 vUv;',
+
+
+
+    'void main() {',
+
+      '//Just pass over the texture coordinates',
+
+      'vUv = uv;',
+
+
+
+      'gl_Position = vec4(position, 1.0);',
+
     '}',
   ].join('\n'),
-  fragmentShader: [
-    'uniform sampler2D testTexture;',
-    'varying vec2 vUv;',
-
-    'void main(){',
-      'vec3 testTexture = texture2D(testTexture, vUv).rgb;',
-      'gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);',
+  fragmentShader: [
+
+    'uniform sampler2D testTexture;',
+
+    'varying vec2 vUv;',
+
+
+
+    'void main(){',
+
+      'vec3 testTexture = texture2D(testTexture, vUv).rgb;',
+
+      'gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);',
+
     '}',
   ].join('\n')
 }
@@ -4263,7 +5584,6 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.dimStarDataRenderer.setVariableDependencies(this.dimStarMapVar, []);
   this.dimStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
-  this.dimStarMapVar.format = THREE.RGBAFormat;
   this.dimStarMapVar.encoding = THREE.LinearEncoding;
   this.dimStarMapVar.minFilter = THREE.NearestFilter;
   this.dimStarMapVar.magFilter = THREE.NearestFilter;
@@ -4284,7 +5604,6 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.medStarDataRenderer.setVariableDependencies(this.medStarMapVar, []);
   this.medStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
-  this.medStarMapVar.format = THREE.RGBAFormat;
   this.medStarMapVar.encoding = THREE.LinearEncoding;
   this.medStarMapVar.minFilter = THREE.NearestFilter;
   this.medStarMapVar.magFilter = THREE.NearestFilter;
@@ -4305,7 +5624,6 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.brightStarDataRenderer.setVariableDependencies(this.brightStarMapVar, []);
   this.brightStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
-  this.brightStarMapVar.format = THREE.RGBAFormat;
   this.brightStarMapVar.encoding = THREE.LinearEncoding;
   this.brightStarMapVar.minFilter = THREE.NearestFilter;
   this.brightStarMapVar.magFilter = THREE.NearestFilter;
@@ -4321,13 +5639,9 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   let self = this;
   this.dimStarMapPass = function(rImg, gImg, bImg, aImg){
     self.dimStarMapVar.material.uniforms.textureRChannel.value = rImg;
-    self.dimStarMapVar.material.uniforms.textureRChannel.needsUpdate = true;
     self.dimStarMapVar.material.uniforms.textureGChannel.value = gImg;
-    self.dimStarMapVar.material.uniforms.textureGChannel.needsUpdate = true;
     self.dimStarMapVar.material.uniforms.textureBChannel.value = bImg;
-    self.dimStarMapVar.material.uniforms.textureBChannel.needsUpdate = true;
     self.dimStarMapVar.material.uniforms.textureAChannel.value = aImg;
-    self.dimStarMapVar.material.uniforms.textureAChannel.needsUpdate = true;
 
     self.dimStarDataRenderer.compute();
     self.dimStarDataMap = self.dimStarDataRenderer.getCurrentRenderTarget(self.dimStarMapVar).texture;
@@ -4336,13 +5650,9 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
 
   this.medStarMapPass = function(rImg, gImg, bImg, aImg){
     self.medStarMapVar.material.uniforms.textureRChannel.value = rImg;
-    self.medStarMapVar.material.uniforms.textureRChannel.needsUpdate = true;
     self.medStarMapVar.material.uniforms.textureGChannel.value = gImg;
-    self.medStarMapVar.material.uniforms.textureGChannel.needsUpdate = true;
     self.medStarMapVar.material.uniforms.textureBChannel.value = bImg;
-    self.medStarMapVar.material.uniforms.textureBChannel.needsUpdate = true;
     self.medStarMapVar.material.uniforms.textureAChannel.value = aImg;
-    self.medStarMapVar.material.uniforms.textureAChannel.needsUpdate = true;
 
     self.medStarDataRenderer.compute();
     self.medStarDataMap = self.medStarDataRenderer.getCurrentRenderTarget(self.medStarMapVar).texture;
@@ -4351,13 +5661,9 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
 
   this.brightStarMapPass = function(rImg, gImg, bImg, aImg){
     self.brightStarMapVar.material.uniforms.textureRChannel.value = rImg;
-    self.brightStarMapVar.material.uniforms.textureRChannel.needsUpdate = true;
     self.brightStarMapVar.material.uniforms.textureGChannel.value = gImg;
-    self.brightStarMapVar.material.uniforms.textureGChannel.needsUpdate = true;
     self.brightStarMapVar.material.uniforms.textureBChannel.value = bImg;
-    self.brightStarMapVar.material.uniforms.textureBChannel.needsUpdate = true;
     self.brightStarMapVar.material.uniforms.textureAChannel.value = aImg;
-    self.brightStarMapVar.material.uniforms.textureAChannel.needsUpdate = true;
 
     self.brightStarDataRenderer.compute();
     self.brightStarDataMap = self.brightStarDataRenderer.getCurrentRenderTarget(self.brightStarMapVar).texture;
@@ -4375,7 +5681,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
     transparent: false,
-    flatShading: true,
     vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
       skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
@@ -4387,11 +5692,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     )
   });
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.atmosphereMaterial.uniforms.rayleighInscatteringSum.needsUpdate = true;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.atmosphereMaterial.uniforms.mieInscatteringSum.needsUpdate = true;
   this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.atmosphereMaterial.uniforms.transmittance.needsUpdate = true;
 
   if(this.skyDirector.assetManager.hasLoadedImages){
     this.atmosphereMaterial.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
@@ -4412,17 +5714,12 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
 
     //Update the uniforms so that we can see where we are on this sky.
     self.atmosphereMaterial.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.atmosphereMaterial.uniforms.sunHorizonFade.needsUpdate = true;
     self.atmosphereMaterial.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.atmosphereMaterial.uniforms.moonHorizonFade.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.sunPosition.needsUpdate = true;
-    self.atmosphereMaterial.uniforms.moonPosition.needsUpdate = true;
     self.atmosphereMaterial.uniforms.uTime.value = t;
     self.atmosphereMaterial.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
     self.atmosphereMaterial.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
     self.atmosphereMaterial.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.atmosphereMaterial.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
-    self.atmosphereMaterial.uniforms.moonLightColor.needsUpdate = true;
 
     const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
     self.atmosphereMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
@@ -4501,7 +5798,6 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
   this.highPassRenderer.setVariableDependencies(this.highPassFilterVar, []);
   this.highPassFilterVar.material.uniforms = JSON.parse(JSON.stringify(materials.highPassFilter.uniforms));
   this.highPassFilterVar.material.uniforms.luminosityThreshold.value = this.threshold;
-  this.highPassFilterVar.material.uniforms.luminosityThreshold.needsUpdate = true;
   this.highPassFilterVar.minFilter = THREE.LinearFilter;
   this.highPassFilterVar.magFilter = THREE.LinearFilter;
   this.highPassFilterVar.wrapS = THREE.ClampToEdgeWrapping;
@@ -4526,7 +5822,6 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     this.seperableBlurHorizontalRenderers[i].setVariableDependencies(this.seperableBlurHorizontalVars[i], []);
     this.seperableBlurHorizontalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.seperableBlurFilter.uniforms));
     this.seperableBlurHorizontalVars[i].material.uniforms.direction.value = blurDirectionX;
-    this.seperableBlurHorizontalVars[i].material.uniforms.direction.needsUpdate = true;
     this.seperableBlurHorizontalVars[i].minFilter = THREE.LinearFilter;
     this.seperableBlurHorizontalVars[i].magFilter = THREE.LinearMipmapLinear;
     this.seperableBlurHorizontalVars[i].wrapS = THREE.ClampToEdgeWrapping;
@@ -4546,7 +5841,6 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     this.seperableBlurVerticalRenderers[i].setVariableDependencies(this.seperableBlurVerticalVars[i], []);
     this.seperableBlurVerticalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.seperableBlurFilter.uniforms));
     this.seperableBlurVerticalVars[i].material.uniforms.direction.value = blurDirectionY;
-    this.seperableBlurVerticalVars[i].material.uniforms.direction.needsUpdate = true;
     this.seperableBlurVerticalVars[i].minFilter = THREE.LinearFilter;
     this.seperableBlurVerticalVars[i].magFilter = THREE.LinearFilter;
     this.seperableBlurVerticalVars[i].wrapS = THREE.ClampToEdgeWrapping;
@@ -4563,13 +5857,11 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
   let self = this;
   this.setThreshold = function(threshold){
     self.highPassFilterVar.material.uniforms.luminosityThreshold.value = self.threshold;
-    self.highPassFilterVar.material.uniforms.luminosityThreshold.needsUpdate = true;
   }
 
   this.render = function(inTexture){
     //Get our high pass filter of the injected texture
     self.highPassFilterVar.material.uniforms.sourceTexture.value = inTexture;
-    self.highPassFilterVar.material.uniforms.sourceTexture.needsUpdate = true;
     self.highPassRenderer.compute();
     let previousPass = self.highPassRenderer.getCurrentRenderTarget(self.highPassFilterVar).texture;
 
@@ -4577,12 +5869,10 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     let bloomTextures = [];
     for(let i = 0; i < 5; ++i){
       self.seperableBlurHorizontalVars[i].material.uniforms.sourceTexture.value = previousPass;
-      self.seperableBlurHorizontalVars[i].material.uniforms.sourceTexture.needsUpdate = true;
       self.seperableBlurHorizontalRenderers[i].compute();
       let horizontalTexture = self.seperableBlurHorizontalRenderers[i].getCurrentRenderTarget(self.seperableBlurHorizontalVars[i]).texture;
 
       self.seperableBlurVerticalVars[i].material.uniforms.sourceTexture.value = horizontalTexture;
-      self.seperableBlurVerticalVars[i].material.uniforms.sourceTexture.needsUpdate = true;
       self.seperableBlurVerticalRenderers[i].compute();
       bloomTextures.push(self.seperableBlurVerticalRenderers[i].getCurrentRenderTarget(self.seperableBlurVerticalVars[i]).texture);
 
@@ -4633,16 +5923,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.baseSunVar.material.vertexShader = materials.baseSunPartial.vertexShader;
   this.baseSunVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true)));
   this.baseSunVar.material.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
-  this.baseSunVar.material.uniforms.radiusOfSunPlane.needsUpdate = true;
   this.baseSunVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseSunVar.material.uniforms.rayleighInscatteringSum.needsUpdate = true;
   this.baseSunVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseSunVar.material.uniforms.mieInscatteringSum.needsUpdate = true;
   this.baseSunVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.baseSunVar.material.uniforms.transmittance.needsUpdate = true;
   this.baseSunVar.minFilter = THREE.LinearFilter;
   this.baseSunVar.magFilter = THREE.LinearFilter;
-  this.baseSunVar.needsUpdate = true;
 
   //Check for any errors in initialization
   let error1 = this.sunRenderer.init();
@@ -4656,7 +5941,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
-    flatShading: true,
     vertexShader: StarrySky.Materials.Sun.combinationPass.vertexShader,
     fragmentShader: StarrySky.Materials.Sun.combinationPass.fragmentShader
   });
@@ -4671,12 +5955,10 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   let self = this;
   this.setBloomStrength = function(bloomStrength){
     self.combinationPassMaterial.uniforms.bloomStrength.value = bloomStrength;
-    self.combinationPassMaterial.uniforms.bloomStrength.needsUpdate = true;
   }
 
   this.setBloomRadius = function(bloomRadius){
     self.combinationPassMaterial.uniforms.bloomRadius.value = bloomRadius;
-    self.combinationPassMaterial.uniforms.bloomRadius.needsUpdate = true;
   }
 
   //And update our object with our initial values
@@ -4693,19 +5975,13 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.sunMesh.updateMatrixWorld();
 
     //Update our shader material
-    self.baseSunVar.material.uniforms.worldMatrix.needsUpdate = true;
     self.baseSunVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.baseSunVar.material.uniforms.moonHorizonFade.needsUpdate = true;
     self.baseSunVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.baseSunVar.material.uniforms.sunHorizonFade.needsUpdate = true;
-    self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
-    self.baseSunVar.material.uniforms.moonPosition.needsUpdate = true;
     self.baseSunVar.material.uniforms.uTime.value = t;
     self.baseSunVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.baseSunVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
     self.baseSunVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
     self.baseSunVar.material.uniforms.moonRadius.value = self.skyDirector.skyState.moon.scale * baseRadiusOfTheMoon;
-    self.baseSunVar.material.uniforms.moonLightColor.needsUpdate = true;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();
@@ -4719,11 +5995,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //update our base texture, whether we pass it into a bloom shader or not.
     let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
     self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
     if(this.bloomEnabled){
       if(bloomSwapped){
         self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
-        self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
       }
 
       //Drive our bloom shader with our sun disk
@@ -4733,15 +6007,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
       self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
       self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-      self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
     }
     else if(bloomSwapped){
       self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
-      self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
     }
 
     const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
@@ -4757,13 +6025,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
 
     self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade >= 0.95;
-    self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
 
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager.hasLoadedImages){
       //Image of the solar corona for our solar ecclipse
       self.baseSunVar.material.uniforms.solarEclipseMap.value = self.skyDirector.assetManager.images.solarEclipseImage;
-      self.baseSunVar.material.uniforms.solarEclipseMap.needsUpdate = true;
     }
 
     //Proceed with the first tick
@@ -4816,15 +6082,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   this.baseMoonVar.material.vertexShader = materials.baseMoonPartial.vertexShader;
   this.baseMoonVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true)));
   this.baseMoonVar.material.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
-  this.baseMoonVar.material.uniforms.radiusOfMoonPlane.needsUpdate = true;
   this.baseMoonVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseMoonVar.material.uniforms.rayleighInscatteringSum.needsUpdate = true;
   this.baseMoonVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseMoonVar.material.uniforms.mieInscatteringSum.needsUpdate = true;
   this.baseMoonVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.baseMoonVar.material.uniforms.transmittance.needsUpdate = true;
   this.baseMoonVar.material.uniforms.sunRadius.value = sunAngularRadiusInRadians;
-  this.baseMoonVar.material.uniforms.sunRadius.needsUpdate = true;
 
   //If our images have finished loading, update our uniforms
   if(this.skyDirector.assetManager.hasLoadedImages){
@@ -4832,18 +6093,15 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     for(let i = 0; i < moonTextures.length; ++i){
       let moonTextureProperty = moonTextures[i];
       this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];
-      this.baseMoonVar.material.uniforms[moonTextureProperty].needsUpdate = true;
     }
 
     this.baseMoonVar.material.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
   }
-  this.baseMoonVar.format = THREE.RGBAFormat;
   this.baseMoonVar.type = THREE.UnsignedByteType;
   this.baseMoonVar.minFilter = THREE.LinearFilter;
   this.baseMoonVar.magFilter = THREE.LinearMipmapLinear;
   this.baseMoonVar.generateMipmaps = true;
   this.baseMoonVar.encoding = THREE.sRGBEncoding;
-  this.baseMoonVar.needsUpdate = true;
 
   //Check for any errors in initialization
   let error1 = this.moonRenderer.init();
@@ -4857,7 +6115,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
-    flatShading: true,
     vertexShader: StarrySky.Materials.Moon.combinationPass.vertexShader,
     fragmentShader: StarrySky.Materials.Moon.combinationPass.fragmentShader
   });
@@ -4871,12 +6128,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   let self = this;
   this.setBloomStrength = function(bloomStrength){
     self.combinationPassMaterial.uniforms.bloomStrength.value = bloomStrength;
-    self.combinationPassMaterial.uniforms.bloomStrength.needsUpdate = true;
   }
 
   this.setBloomRadius = function(bloomRadius){
     self.combinationPassMaterial.uniforms.bloomRadius.value = bloomRadius;
-    self.combinationPassMaterial.uniforms.bloomRadius.needsUpdate = true;
   }
 
   //And update our object with our initial values
@@ -4903,14 +6158,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.moonMesh.updateMatrixWorld();
 
     //Update our shader material
-    self.baseMoonVar.material.uniforms.worldMatrix.needsUpdate = true;
     self.baseMoonVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.baseMoonVar.material.uniforms.moonHorizonFade.needsUpdate = true;
     self.baseMoonVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.baseMoonVar.material.uniforms.sunHorizonFade.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.sunPosition.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.moonPosition.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.sunLightDirection.needsUpdate = true;
     self.baseMoonVar.material.uniforms.uTime.value = t;
     self.baseMoonVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.baseMoonVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
@@ -4918,8 +6167,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.moonExposure.value = self.skyDirector.exposureVariables.moonExposure;
     self.baseMoonVar.material.uniforms.distanceToEarthsShadowSquared.value = self.skyDirector.skyState.moon.distanceToEarthsShadowSquared;
     self.baseMoonVar.material.uniforms.oneOverNormalizedLunarDiameter.value = self.skyDirector.skyState.moon.oneOverNormalizedLunarDiameter;
-    self.baseMoonVar.material.uniforms.earthsShadowPosition.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.moonLightColor.needsUpdate = true;
 
     //Run our float shaders shaders
     self.moonRenderer.compute();
@@ -4934,11 +6181,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
     baseTexture.generateMipmaps = true;
     self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
     if(this.bloomEnabled){
       if(bloomSwapped){
         self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
-        self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
       }
 
       //Drive our bloom shader with our moon disk
@@ -4948,17 +6193,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
       self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
       self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-      self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
-
       self.baseMoonVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
     }
     else if(bloomSwapped){
       self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
-      self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
     }
 
     const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
@@ -4992,7 +6230,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       //Moon Textures
       for(let [property, value] of Object.entries(self.skyDirector.assetManager.images.moonImages)){
         self.baseMoonVar.material.uniforms[property].value = value;
-        self.baseMoonVar.material.uniforms[property].needsUpdate = true;
       }
 
       //Update our star data
@@ -5047,7 +6284,6 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
 
   this.meteringSurveyVar.minFilter = THREE.NearestFilter;
   this.meteringSurveyVar.magFilter = THREE.NearestFilter;
-  this.meteringSurveyVar.format = THREE.RGBAFormat;
   this.meteringSurveyVar.wrapS = THREE.ClampToEdgeWrapping;
   this.meteringSurveyVar.wrapT = THREE.ClampToEdgeWrapping;
   this.meteringSurveyVar.generateMipmaps = false;
@@ -5070,7 +6306,6 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   //   side: THREE.DoubleSide,
   //   blending: THREE.NormalBlending,
   //   transparent: true,
-  //   flatShading: true,
   //   map: test,
   // });
   //
@@ -5267,7 +6502,6 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    const moonFormats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
     const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
@@ -5293,7 +6527,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.Linear;
         texture.minFilter = THREE.LinearMipmapLinear;
         texture.encoding = moonEncodings[i];
-        texture.format = moonFormats[i];
         //Swap this tomorrow and implement custom mip-maps
         texture.generateMipmaps = true;
         self.images.moonImages[moonTextures[i]] = texture;
@@ -5302,7 +6535,6 @@ StarrySky.AssetManager = function(skyDirector){
         if(self.skyDirector?.renderers?.moonRenderer !== undefined){
           const textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextures[i]];
           textureRef.value = texture;
-          textureRef.needsUpdate = true;
         }
 
         self.numberOfTexturesLoaded += 1;
@@ -5325,7 +6557,6 @@ StarrySky.AssetManager = function(skyDirector){
       texture.magFilter = THREE.LinearFilter;
       texture.minFilter = THREE.LinearFilter;
       texture.encoding = THREE.LinearEncoding;
-      texture.format = THREE.RGBFormat;
       //Swap this tomorrow and implement custom mip-maps
       texture.generateMipmaps = true;
       self.images.starImages.starColorMap = texture;
@@ -5359,7 +6590,6 @@ StarrySky.AssetManager = function(skyDirector){
       //Make sure that our cubemap is using the appropriate settings
       cubemap.magFilter = THREE.NearestFilter;
       cubemap.minFilter = THREE.NearestFilter;
-      cubemap.format = THREE.RGBAFormat;
       cubemap.encoding = THREE.LinearEncoding;
       cubemap.generateMipmaps = false;
 
@@ -5400,7 +6630,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
         texture.encoding = THREE.LinearEncoding;
         texture.generateMipmaps = false;
         dimStarChannelImages[channels[i]] = texture;
@@ -5457,7 +6686,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
         texture.encoding = THREE.LinearEncoding;
         texture.generateMipmaps = false;
         medStarChannelImages[channels[i]] = texture;
@@ -5514,7 +6742,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
         texture.encoding = THREE.LinearEncoding;
         texture.generateMipmaps = false;
         brightStarChannelImages[channels[i]] = texture;
@@ -5570,7 +6797,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.Linear;
         texture.minFilter = THREE.LinearMipmapLinear;
         texture.encoding = THREE.LinearEncoding;
-        texture.format = THREE.RGBFormat;
         texture.generateMipmaps = true;
         self.images.blueNoiseImages[i] = texture;
 
@@ -5593,7 +6819,6 @@ StarrySky.AssetManager = function(skyDirector){
       texture.magFilter = THREE.LinearFilter;
       texture.minFilter = THREE.LinearMipmapLinear;
       texture.encoding = THREE.LinearEncoding;
-      texture.format = THREE.LuminanceFormat;
       texture.generateMipmaps = true;
       self.images.solarEclipseImage = texture;
 

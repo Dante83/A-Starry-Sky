@@ -80,14 +80,14 @@ def main():
     temp_dir = os.path.abspath(output_dir)
     with tempfile.NamedTemporaryFile(dir = temp_dir) as tmp:
         #Write our temporary file
-        tmp.write(combined_code)
+        tmp.write(combined_code.encode(encoding='ASCII'))
         tmp.seek(0)
 
         #Use that temporary file in our sub process
         proc = subprocess.Popen(['terser', tmp.name], stdout=subprocess.PIPE, shell=True)
         (uglified_js, err) = proc.communicate()
         if err == None:
-            with open(minified_file_dir, 'w') as w:
+            with open(minified_file_dir, 'wb') as w:
                 w.write(uglified_js)
                 print ("Uglified file written...")
 

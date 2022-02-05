@@ -40,15 +40,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   this.baseMoonVar.material.vertexShader = materials.baseMoonPartial.vertexShader;
   this.baseMoonVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true)));
   this.baseMoonVar.material.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
-  this.baseMoonVar.material.uniforms.radiusOfMoonPlane.needsUpdate = true;
   this.baseMoonVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseMoonVar.material.uniforms.rayleighInscatteringSum.needsUpdate = true;
   this.baseMoonVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseMoonVar.material.uniforms.mieInscatteringSum.needsUpdate = true;
   this.baseMoonVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.baseMoonVar.material.uniforms.transmittance.needsUpdate = true;
   this.baseMoonVar.material.uniforms.sunRadius.value = sunAngularRadiusInRadians;
-  this.baseMoonVar.material.uniforms.sunRadius.needsUpdate = true;
 
   //If our images have finished loading, update our uniforms
   if(this.skyDirector.assetManager.hasLoadedImages){
@@ -56,18 +51,15 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     for(let i = 0; i < moonTextures.length; ++i){
       let moonTextureProperty = moonTextures[i];
       this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];
-      this.baseMoonVar.material.uniforms[moonTextureProperty].needsUpdate = true;
     }
 
     this.baseMoonVar.material.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
   }
-  this.baseMoonVar.format = THREE.RGBAFormat;
   this.baseMoonVar.type = THREE.UnsignedByteType;
   this.baseMoonVar.minFilter = THREE.LinearFilter;
   this.baseMoonVar.magFilter = THREE.LinearMipmapLinear;
   this.baseMoonVar.generateMipmaps = true;
   this.baseMoonVar.encoding = THREE.sRGBEncoding;
-  this.baseMoonVar.needsUpdate = true;
 
   //Check for any errors in initialization
   let error1 = this.moonRenderer.init();
@@ -81,7 +73,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
-    flatShading: true,
     vertexShader: StarrySky.Materials.Moon.combinationPass.vertexShader,
     fragmentShader: StarrySky.Materials.Moon.combinationPass.fragmentShader
   });
@@ -95,12 +86,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   let self = this;
   this.setBloomStrength = function(bloomStrength){
     self.combinationPassMaterial.uniforms.bloomStrength.value = bloomStrength;
-    self.combinationPassMaterial.uniforms.bloomStrength.needsUpdate = true;
   }
 
   this.setBloomRadius = function(bloomRadius){
     self.combinationPassMaterial.uniforms.bloomRadius.value = bloomRadius;
-    self.combinationPassMaterial.uniforms.bloomRadius.needsUpdate = true;
   }
 
   //And update our object with our initial values
@@ -127,14 +116,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.moonMesh.updateMatrixWorld();
 
     //Update our shader material
-    self.baseMoonVar.material.uniforms.worldMatrix.needsUpdate = true;
     self.baseMoonVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.baseMoonVar.material.uniforms.moonHorizonFade.needsUpdate = true;
     self.baseMoonVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.baseMoonVar.material.uniforms.sunHorizonFade.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.sunPosition.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.moonPosition.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.sunLightDirection.needsUpdate = true;
     self.baseMoonVar.material.uniforms.uTime.value = t;
     self.baseMoonVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.baseMoonVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
@@ -142,8 +125,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.baseMoonVar.material.uniforms.moonExposure.value = self.skyDirector.exposureVariables.moonExposure;
     self.baseMoonVar.material.uniforms.distanceToEarthsShadowSquared.value = self.skyDirector.skyState.moon.distanceToEarthsShadowSquared;
     self.baseMoonVar.material.uniforms.oneOverNormalizedLunarDiameter.value = self.skyDirector.skyState.moon.oneOverNormalizedLunarDiameter;
-    self.baseMoonVar.material.uniforms.earthsShadowPosition.needsUpdate = true;
-    self.baseMoonVar.material.uniforms.moonLightColor.needsUpdate = true;
 
     //Run our float shaders shaders
     self.moonRenderer.compute();
@@ -158,11 +139,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
     baseTexture.generateMipmaps = true;
     self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
     if(this.bloomEnabled){
       if(bloomSwapped){
         self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
-        self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
       }
 
       //Drive our bloom shader with our moon disk
@@ -172,17 +151,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
       self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
       self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-      self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
-
       self.baseMoonVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
     }
     else if(bloomSwapped){
       self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
-      self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
     }
 
     const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
@@ -216,7 +188,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       //Moon Textures
       for(let [property, value] of Object.entries(self.skyDirector.assetManager.images.moonImages)){
         self.baseMoonVar.material.uniforms[property].value = value;
-        self.baseMoonVar.material.uniforms[property].needsUpdate = true;
       }
 
       //Update our star data

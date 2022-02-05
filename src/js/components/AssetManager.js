@@ -62,7 +62,6 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    const moonFormats = [THREE.RGBAFormat, THREE.RGBFormat, THREE.LuminanceFormat, THREE.LuminanceFormat, THREE.RGBFormat];
     const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
@@ -88,7 +87,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.Linear;
         texture.minFilter = THREE.LinearMipmapLinear;
         texture.encoding = moonEncodings[i];
-        texture.format = moonFormats[i];
         //Swap this tomorrow and implement custom mip-maps
         texture.generateMipmaps = true;
         self.images.moonImages[moonTextures[i]] = texture;
@@ -97,7 +95,6 @@ StarrySky.AssetManager = function(skyDirector){
         if(self.skyDirector?.renderers?.moonRenderer !== undefined){
           const textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextures[i]];
           textureRef.value = texture;
-          textureRef.needsUpdate = true;
         }
 
         self.numberOfTexturesLoaded += 1;
@@ -120,7 +117,6 @@ StarrySky.AssetManager = function(skyDirector){
       texture.magFilter = THREE.LinearFilter;
       texture.minFilter = THREE.LinearFilter;
       texture.encoding = THREE.LinearEncoding;
-      texture.format = THREE.RGBFormat;
       //Swap this tomorrow and implement custom mip-maps
       texture.generateMipmaps = true;
       self.images.starImages.starColorMap = texture;
@@ -154,7 +150,6 @@ StarrySky.AssetManager = function(skyDirector){
       //Make sure that our cubemap is using the appropriate settings
       cubemap.magFilter = THREE.NearestFilter;
       cubemap.minFilter = THREE.NearestFilter;
-      cubemap.format = THREE.RGBAFormat;
       cubemap.encoding = THREE.LinearEncoding;
       cubemap.generateMipmaps = false;
 
@@ -195,7 +190,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
         texture.encoding = THREE.LinearEncoding;
         texture.generateMipmaps = false;
         dimStarChannelImages[channels[i]] = texture;
@@ -252,7 +246,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
         texture.encoding = THREE.LinearEncoding;
         texture.generateMipmaps = false;
         medStarChannelImages[channels[i]] = texture;
@@ -309,7 +302,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
-        texture.format = THREE.RGBAFormat;
         texture.encoding = THREE.LinearEncoding;
         texture.generateMipmaps = false;
         brightStarChannelImages[channels[i]] = texture;
@@ -365,7 +357,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.Linear;
         texture.minFilter = THREE.LinearMipmapLinear;
         texture.encoding = THREE.LinearEncoding;
-        texture.format = THREE.RGBFormat;
         texture.generateMipmaps = true;
         self.images.blueNoiseImages[i] = texture;
 
@@ -388,7 +379,6 @@ StarrySky.AssetManager = function(skyDirector){
       texture.magFilter = THREE.LinearFilter;
       texture.minFilter = THREE.LinearMipmapLinear;
       texture.encoding = THREE.LinearEncoding;
-      texture.format = THREE.LuminanceFormat;
       texture.generateMipmaps = true;
       self.images.solarEclipseImage = texture;
 

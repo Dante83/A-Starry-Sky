@@ -38,16 +38,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.baseSunVar.material.vertexShader = materials.baseSunPartial.vertexShader;
   this.baseSunVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true)));
   this.baseSunVar.material.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
-  this.baseSunVar.material.uniforms.radiusOfSunPlane.needsUpdate = true;
   this.baseSunVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseSunVar.material.uniforms.rayleighInscatteringSum.needsUpdate = true;
   this.baseSunVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseSunVar.material.uniforms.mieInscatteringSum.needsUpdate = true;
   this.baseSunVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.baseSunVar.material.uniforms.transmittance.needsUpdate = true;
   this.baseSunVar.minFilter = THREE.LinearFilter;
   this.baseSunVar.magFilter = THREE.LinearFilter;
-  this.baseSunVar.needsUpdate = true;
 
   //Check for any errors in initialization
   let error1 = this.sunRenderer.init();
@@ -61,7 +56,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     side: THREE.FrontSide,
     blending: THREE.NormalBlending,
     transparent: true,
-    flatShading: true,
     vertexShader: StarrySky.Materials.Sun.combinationPass.vertexShader,
     fragmentShader: StarrySky.Materials.Sun.combinationPass.fragmentShader
   });
@@ -76,12 +70,10 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   let self = this;
   this.setBloomStrength = function(bloomStrength){
     self.combinationPassMaterial.uniforms.bloomStrength.value = bloomStrength;
-    self.combinationPassMaterial.uniforms.bloomStrength.needsUpdate = true;
   }
 
   this.setBloomRadius = function(bloomRadius){
     self.combinationPassMaterial.uniforms.bloomRadius.value = bloomRadius;
-    self.combinationPassMaterial.uniforms.bloomRadius.needsUpdate = true;
   }
 
   //And update our object with our initial values
@@ -98,19 +90,13 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.sunMesh.updateMatrixWorld();
 
     //Update our shader material
-    self.baseSunVar.material.uniforms.worldMatrix.needsUpdate = true;
     self.baseSunVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.baseSunVar.material.uniforms.moonHorizonFade.needsUpdate = true;
     self.baseSunVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.baseSunVar.material.uniforms.sunHorizonFade.needsUpdate = true;
-    self.baseSunVar.material.uniforms.sunPosition.needsUpdate = true;
-    self.baseSunVar.material.uniforms.moonPosition.needsUpdate = true;
     self.baseSunVar.material.uniforms.uTime.value = t;
     self.baseSunVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
     self.baseSunVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
     self.baseSunVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
     self.baseSunVar.material.uniforms.moonRadius.value = self.skyDirector.skyState.moon.scale * baseRadiusOfTheMoon;
-    self.baseSunVar.material.uniforms.moonLightColor.needsUpdate = true;
 
     //Run our float shaders shaders
     self.sunRenderer.compute();
@@ -124,11 +110,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //update our base texture, whether we pass it into a bloom shader or not.
     let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
     self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    self.combinationPassMaterial.uniforms.baseTexture.needsUpdate = true;
     if(this.bloomEnabled){
       if(bloomSwapped){
         self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
-        self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
       }
 
       //Drive our bloom shader with our sun disk
@@ -138,15 +122,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
       self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
       self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-      self.combinationPassMaterial.uniforms.blurTexture1.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture2.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture3.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture4.needsUpdate = true;
-      self.combinationPassMaterial.uniforms.blurTexture5.needsUpdate = true;
     }
     else if(bloomSwapped){
       self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
-      self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
     }
 
     const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
@@ -162,13 +140,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
 
     self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade >= 0.95;
-    self.combinationPassMaterial.uniforms.bloomEnabled.needsUpdate = true;
 
     //Connect up our images if they don't exist yet
     if(self.skyDirector.assetManager.hasLoadedImages){
       //Image of the solar corona for our solar ecclipse
       self.baseSunVar.material.uniforms.solarEclipseMap.value = self.skyDirector.assetManager.images.solarEclipseImage;
-      self.baseSunVar.material.uniforms.solarEclipseMap.needsUpdate = true;
     }
 
     //Proceed with the first tick

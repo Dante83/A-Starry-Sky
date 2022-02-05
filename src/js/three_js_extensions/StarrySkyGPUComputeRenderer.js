@@ -315,7 +315,6 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 			wrapT: wrapT,
 			minFilter: minFilter,
 			magFilter: magFilter,
-			format: THREE.RGBAFormat,
 			type: ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) ? THREE.HalfFloatType : THREE.FloatType,
 			stencilBuffer: false,
 			depthBuffer: false
@@ -333,7 +332,7 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
     else{
       data = inData;
     }
-		return new THREE.DataTexture( data, sizeX, sizeY, THREE.RGBAFormat, THREE.FloatType );
+		return new THREE.DataTexture( data, sizeX, sizeY );
 	};
 
 	this.renderTexture = function ( input, output ) {
