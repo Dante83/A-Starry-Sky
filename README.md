@@ -12,15 +12,15 @@ A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It a
 
 This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.2.0+. It also requires a Web XR compatible web browser.
 
-`https://aframe.io/releases/1.2.0/aframe.min.js`
+`https://aframe.io/releases/1.3.0/aframe.min.js`
 
 ## Installing
 
-When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.0.0.min.js* file, along with the *assets** and *wasm* folders into their own directory in your JavaScript folder. Afterwards, add the minified file into a script tag in your html, along with a reference to the interpolation engine JavaScript file in the WASM folder. You should not add a reference to the starry-sky-web-worker or state-engine JavaScript bootstrap file, here, however, but instead inject this into the `<a-starry-sky>` tag.
+When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.0.1.min.js* file, along with the *assets** and *wasm* folders into their own directory in your JavaScript folder. Afterwards, add the minified file into a script tag in your html, along with a reference to the interpolation engine JavaScript file in the WASM folder. You should not add a reference to the starry-sky-web-worker or state-engine JavaScript bootstrap file, here, however, but instead inject this into the `<a-starry-sky>` tag.
 
 ```html
-<script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-<script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.0.0.min.js"></script>
+<script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+<script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.0.1.min.js"></script>
 <script src="{PATH_TO_JS_FOLDER}/wasm/interpolation-engine.js"></script>
 ```
 
