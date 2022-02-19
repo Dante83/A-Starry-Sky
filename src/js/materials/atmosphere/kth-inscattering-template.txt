@@ -1,12 +1,12 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
   uniforms: {
-    transmittanceTexture: {type: 't', value: null},
-    inscatteredLightLUT: {type: 't', value: null},
+    transmittanceTexture: {value: null},
+    inscatteredMieLightLUT: {value: null},
+    inscatteredRayleighLightLUT: {value: null},
+    mieSumInColor: {value: null},
+    rayleighSumInColor: {value: null}
   },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
+  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, atmosphereFunctions){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -26,10 +26,6 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
-
-
-      //Choose which texture to use
-      updatedGLSL = updatedGLSL.replace(/\$isRayleigh/g, isRayleigh ? '1' : '0');
 
       updatedLines.push(updatedGLSL);
     }

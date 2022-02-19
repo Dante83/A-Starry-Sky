@@ -16,10 +16,6 @@ groups:
         template: 'kth-inscattering-template.txt'
         material: 'kth-inscattering.js'
       -
-        fragment: 'inscattering-sum.glsl'
-        template: 'inscattering-sum-template.txt'
-        material: 'inscattering-sum.js'
-      -
         fragment: 'atmosphere-pass.glsl'
         vertex: 'vertex.glsl'
         template: 'atmosphere-pass-template.txt'

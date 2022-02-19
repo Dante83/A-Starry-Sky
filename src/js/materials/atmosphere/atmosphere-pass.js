@@ -142,8 +142,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform float scatteringMoonIntensity;',
     'uniform float scatteringSunIntensity;',
     'uniform vec3 moonLightColor;',
-    'uniform sampler2D mieInscatteringSum;',
-    'uniform sampler2D rayleighInscatteringSum;',
+    'uniform sampler3D mieInscatteringSum;',
+    'uniform sampler3D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
 
     '#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)',
@@ -370,18 +370,11 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '}',
     '#endif',
 
-    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
+    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler3D mieLookupTable, sampler3D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
       'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);',
       'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
       'vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
-      'float depthInPixels = $textureDepth;',
-      'UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);',
-
-      '//Interpolated scattering values',
-      'vec3 interpolatedMieScattering = mix(texture2D(mieLookupTable, solarUVInterpolants.uv0).rgb, texture2D(mieLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
-      'vec3 interpolatedRayleighScattering = mix(texture2D(rayleighLookupTable, solarUVInterpolants.uv0).rgb, texture2D(rayleighLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
-
-      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
+      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * texture3D(mieLookupTable, uv3).rgb + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * texture3D(rayleighLookupTable, uv3).rgb);',
     '}',
 
     '//Including this because someone removed this in a future versio of THREE. Why?!',
@@ -427,7 +420,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#endif',
 
       '//Atmosphere',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
+      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
       'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
       'vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
 

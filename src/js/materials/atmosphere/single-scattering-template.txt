@@ -1,11 +1,8 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
   uniforms: {
-    transmittanceTexture: {type: 't', value: null}
+    transmittanceTexture: {value: null}
   },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions){
+  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -18,9 +15,6 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$textureHeight/g, textureHeight.toFixed(1));
-
-      //Choose which texture to use
-      updatedGLSL = updatedGLSL.replace(/\$isRayleigh/g, isRayleigh ? '1' : '0');
 
       //Texture depth is packingWidth * packingHeight
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));

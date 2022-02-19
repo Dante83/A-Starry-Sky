@@ -1,3 +1,7 @@
+**Version 1.1.0**
+* Added support for multiple-render targets for improved performance and reduced code complexity.
+* Switched out emulated 3D Textures to full 3D texture, which are now supported in WebGL 2.
+
 **Version 1.0.1**
 * Fixed issues associated with build 137 of THREE which is found in A-Frame Version 1.3.0.
 

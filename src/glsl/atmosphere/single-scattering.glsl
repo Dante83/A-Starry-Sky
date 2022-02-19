@@ -2,7 +2,13 @@
 //http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf
 //and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
 //by Gustav Bodare and Edvard Sandberg
+precision highp float;
+precision highp int;
 
+layout(location = 0) out vec4 mieOutColor;
+layout(location = 1) out vec4 rayleighOutColor;
+layout(location = 2) out vec4 mieSumOutColor;
+layout(location = 3) out vec4 rayleighSumOutColor;
 uniform sampler2D transmittanceTexture;
 
 $atmosphericFunctions
@@ -31,7 +37,8 @@ void main(){
   vec2 deltaP = direction * chunkLength;
 
   bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);
-  vec3 totalInscattering = vec3(0.0);
+  vec3 totalMieInscattering = vec3(0.0);
+  vec3 totalRayleighInscattering = vec3(0.0);
   if(!intersectsEarth){
     //Prime our trapezoidal rule
     float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);
@@ -42,13 +49,9 @@ void main(){
     vec3 transmittancePaToP = vec3(1.0);
     //Was better when this was just the initial angle of the sun
     vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));
-    vec3 transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;
-
-    #if($isRayleigh)
-      vec3 previousInscattering = previousMieDensity * transmittance;
-    #else
-      vec3 previousInscattering = previousRayleighDensity * transmittance;
-    #endif
+    vec3 transmittance = transmittancePaToP * texture(transmittanceTexture, uvt).rgb;
+    vec3 previousMieInscattering = previousMieDensity * transmittance;
+    vec3 previousRayleighInscattering = previousRayleighDensity * transmittance;
 
     //Integrate from Pa to Pb to determine the total transmittance
     //Using the trapezoidal rule.
@@ -57,8 +60,9 @@ void main(){
     float integralOfOzoneDensityFunction;
     float r_p;
     float sunAngle;
-    vec3 inscattering;
-    #pragma unroll
+    vec3 mieInscattering;
+    vec3 rayleighInscattering;
+    #pragma unroll_loop_start
     for(int i = 1; i < $numberOfChunksInt; i++){
       p += deltaP;
       r_p = length(p);
@@ -81,30 +85,28 @@ void main(){
         //Now that we have the transmittance from Pa to P, get the transmittance from P to Pc
         //and combine them to determine the net transmittance
         uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));
-        transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;
-        #if($isRayleigh)
-          //Is Rayleigh Scattering
-          inscattering = rayleighDensity * transmittance;
-        #else
-          //Is Mie Scattering
-          inscattering = mieDensity * transmittance;
-        #endif
-        totalInscattering += (previousInscattering + inscattering) * chunkLength;
+        transmittance = transmittancePaToP * texture(transmittanceTexture, uvt).rgb;
+        mieInscattering = mieDensity * transmittance;
+        rayleighInscattering = rayleighDensity * transmittance;
+        totalMieInscattering += (previousMieInscattering + mieInscattering) * chunkLength;
+        totalRayleighInscattering += (previousRayleighInscattering + rayleighInscattering) * chunkLength;
 
         //Store our values for the next iteration
-        previousInscattering = inscattering;
+        previousMieInscattering = mieInscattering;
+        previousRayleighInscattering = rayleighInscattering;
         previousMieDensity = mieDensity;
         previousRayleighDensity = rayleighDensity;
       }
     }
+    #pragma unroll_loop_end
 
     //Note that we ignore intensity until the final render as a multiplicative factor
-    #if($isRayleigh)
-      totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
-    #else
-      totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;
-    #endif
+    totalMieInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;
+    totalRayleighInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
   }
 
-  gl_FragColor = vec4(totalInscattering, 1.0);
+  mieOutColor = max(vec4(totalMieInscattering, 1.0), vec4(0.0));
+  rayleighOutColor = max(vec4(totalRayleighInscattering, 1.0), vec4(0.0));
+  mieSumOutColor = mieOutColor;
+  rayleighSumOutColor = rayleighOutColor;
 }

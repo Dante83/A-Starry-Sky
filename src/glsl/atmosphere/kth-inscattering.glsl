@@ -2,56 +2,76 @@
 //http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf
 //and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
 //by Gustav Bodare and Edvard Sandberg
-uniform sampler2D inscatteredLightLUT;
+precision highp float;
+precision highp int;
+
+layout(location = 0) out vec4 mieOutColor;
+layout(location = 1) out vec4 rayleighOutColor;
+layout(location = 2) out vec4 mieSumOutColor;
+layout(location = 3) out vec4 rayleighSumOutColor;
+
+uniform sampler3D inscatteredMieLightLUT;
+uniform sampler3D inscatteredRayleighLightLUT;
 uniform sampler2D transmittanceTexture;
+uniform sampler2D mieSumInColor;
+uniform sampler2D rayleighSumInColor;
 
 const float mieGCoefficient = $mieGCoefficient;
 
 $atmosphericFunctions
 
-vec3 gatherInscatteredLight(float r, float sunAngleAtP){
+struct GatheredLight{
+  vec3 mie;
+  vec3 rayleigh;
+};
+
+GatheredLight gatherInscatteredLight(float r, float sunAngleAtP){
   float x;
   float y = parameterizationOfHeightToY(r);
   float z = parameterizationOfCosOfSourceZenithToZ(sunAngleAtP);
   vec3 uv3 = vec3(x, y, z);
   vec2 inscatteredUV2;
-  vec3 gatheredInscatteredIntensity = vec3(0.0);
+  vec3 gatheredInscatteredIntensityMie = vec3(0.0);
+  vec3 gatheredInscatteredIntensityRayleigh = vec3(0.0);
   vec3 transmittanceFromPToPb;
   vec3 inscatteredLight;
   float theta = 0.0;
   float angleBetweenCameraAndIncomingRay;
-  float phaseValue;
+  float phaseValueMie;
+  float phaseValueRayleigh;
   float cosAngle;
   float deltaTheta = PI_TIMES_TWO / $numberOfChunks;
   float depthInPixels = $textureDepth;
 
-  #pragma unroll
+  #pragma unroll_loop_start
   for(int i = 1; i < $numberOfChunksInt; i++){
     theta += deltaTheta;
     uv3.x = parameterizationOfCosOfViewZenithToX(cos(theta));
 
     //Get our transmittance value
-    transmittanceFromPToPb = texture2D(transmittanceTexture, uv3.xy).rgb;
+    transmittanceFromPToPb = texture(transmittanceTexture, uv3.xy).rgb;
 
     //Interpolate our inscattered light from the 3D texture
-    UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);
-    inscatteredLight = mix(texture2D(inscatteredLightLUT, solarUVInterpolants.uv0).rgb, texture2D(inscatteredLightLUT, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);
+    inscatteredMieLight = texture3D(inscatteredMieLightLUT, uv3).rgb;
+    inscatteredRayleighLight = texture3D(inscatteredRayleighLightLUT, uv3).rgb;
 
     angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;
     cosAngle = cos(angleBetweenCameraAndIncomingRay);
-    #if($isRayleigh)
-      phaseValue = rayleighPhaseFunction(cosAngle);
-    #else
-      phaseValue = miePhaseFunction(cosAngle);
-    #endif
+    phaseValueMie = miePhaseFunction(cosAngle);
+    phaseValueRayleigh = rayleighPhaseFunction(cosAngle);
 
-    gatheredInscatteredIntensity += inscatteredLight * phaseValue * transmittanceFromPToPb;
+    gatheredInscatteredIntensityMie += inscatteredMieLight * phaseValueMie * transmittanceFromPToPb;
+    gatheredInscatteredIntensityRayleigh += inscatteredRayleighLight * phaseValueRayleigh * transmittanceFromPToPb;
   }
-  return gatheredInscatteredIntensity * PI_TIMES_FOUR / $numberOfChunks;
+  #pragma unroll_loop_end
+  gatheredInscatteredIntensityMie = gatheredInscatteredIntensityMie * PI_TIMES_FOUR / $numberOfChunks;
+  gatheredInscatteredIntensityRayleigh = gatheredInscatteredIntensityMie * PI_TIMES_FOUR / $numberOfChunks;
+  return GatheredLight(gatheredInscatteredIntensityMie, gatheredInscatteredIntensityRayleigh);
 }
 
 void main(){
   //This is actually a packed 3D Texture
+  vec2 uv_2d = gl_FragCoord.xy/resolution.xy;
   vec3 uv = get3DUVFrom2DUV(gl_FragCoord.xy/resolution.xy);
   float r = inverseParameterizationOfYToRPlusRe(uv.y);
   float h = r - RADIUS_OF_EARTH;
@@ -72,7 +92,8 @@ void main(){
   vec2 deltaP = cameraDirection * chunkLength;
 
   bool intersectsEarth = intersectsSphere(p, cameraDirection, RADIUS_OF_EARTH);
-  vec3 totalInscattering = vec3(0.0);
+  vec3 totalInscatteringMie = vec3(0.0);
+  vec3 totalInscatteringRayleigh = vec3(0.0);
   if(!intersectsEarth){
     //Prime our trapezoidal rule
     float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);
@@ -84,11 +105,8 @@ void main(){
     vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));
 
     vec3 gatheringFunction = gatherInscatteredLight(length(p), initialSunAngle);
-    #if($isRayleigh)
-      vec3 previousInscattering = gatheringFunction * previousMieDensity * transmittancePaToP;
-    #else
-      vec3 previousInscattering = gatheringFunction * previousRayleighDensity * transmittancePaToP;
-    #endif
+    vec3 previousMieInscattering = gatheringFunction.mie * previousMieDensity * transmittancePaToP;
+    vec3 previousRayleighInscattering = gatheringFunction.rayleigh * previousRayleighDensity * transmittancePaToP;
 
     //Integrate from Pa to Pb to determine the total transmittance
     //Using the trapezoidal rule.
@@ -97,8 +115,9 @@ void main(){
     float integralOfOzoneDensityFunction;
     float r_p;
     float sunAngle;
-    vec3 inscattering;
-    #pragma unroll
+    vec3 mieInscattering;
+    vec3 rayleighInscattering;
+    #pragma unroll_loop_start
     for(int i = 1; i < $numberOfChunksInt; i++){
       p += deltaP;
       r_p = length(p);
@@ -120,12 +139,10 @@ void main(){
         //and combine them to determine the net transmittance
         uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));
         gatheringFunction = gatherInscatteredLight(r_p, sunAngle);
-        #if($isRayleigh)
-          inscattering = gatheringFunction * rayleighDensity * transmittancePaToP;
-        #else
-          inscattering = gatheringFunction * mieDensity * transmittancePaToP;
-        #endif
-        totalInscattering += (previousInscattering + inscattering) * chunkLength;
+        mieInscattering = gatheringFunction.mie * mieDensity * transmittancePaToP;
+        rayleighInscattering = gatheringFunction.rayleigh * rayleighDensity * transmittancePaToP;
+        totalInscatteringMie += (previousInscatteringMie + mieInscattering) * chunkLength;
+        totalInscatteringRayleigh += (previousInscatteringRayleigh + rayleighInscattering) * chunkLength;
 
         //Store our values for the next iteration
         previousInscattering = inscattering;
@@ -133,12 +150,14 @@ void main(){
         previousRayleighDensity = rayleighDensity;
       }
     }
-    #if($isRayleigh)
-      totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
-    #else
-      totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;
-    #endif
+    #pragma unroll_loop_end
+
+    totalMieInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;
+    totalRayleighInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
   }
 
-  gl_FragColor = vec4(totalInscattering, 1.0);
+  mieOutColor = max(vec4(totalMieInscattering, 1.0), vec4(0.0));
+  rayleighOutColor = max(vec4(totalRayleighInscattering, 1.0), vec4(0.0));
+  mieSumOutColor = vec4(texture(mieSumInColor, uv_2d).rgb + mieOutColor, 1.0);
+  rayleighSumOutColor = vec4(texture(rayleighSumInColor, uv_2d).rgb + rayleighOutColor, 1.0);
 }
