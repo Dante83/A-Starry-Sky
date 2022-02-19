@@ -4,17 +4,19 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
   },
   fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions){
     let originalGLSL = [
+    'precision highp float;',
+    'precision highp int;',
     '//Based on the work of Oskar Elek',
     '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
     '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
     '//by Gustav Bodare and Edvard Sandberg',
-    'precision highp float;',
-    'precision highp int;',
+
 
     'layout(location = 0) out vec4 mieOutColor;',
     'layout(location = 1) out vec4 rayleighOutColor;',
     'layout(location = 2) out vec4 mieSumOutColor;',
     'layout(location = 3) out vec4 rayleighSumOutColor;',
+
     'uniform sampler2D transmittanceTexture;',
 
     '$atmosphericFunctions',

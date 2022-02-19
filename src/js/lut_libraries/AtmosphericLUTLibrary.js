@@ -132,10 +132,35 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   let mieScatteringSum = multiScatteringRenderTarget.texture[2];
   let rayleighScatteringSum = multiScatteringRenderTarget.texture[3];
 
+  //The read pixels render target (>_< Not the best, but can I do?)
+  const outputRenderTarget = new THREE.WebGLRenderTarget(MSRT_WIDTH, MSRT_HEIGHT);
+  outputRenderTarget.texture.name = 'readPixelsRenderTarget';
+  outputRenderTarget.texture.minFilter = THREE.NearestFilter;
+  outputRenderTarget.texture.magFilter = THREE.NearestFilter;
+  outputRenderTarget.texture.wrapS = THREE.ClampToEdgeWrapping;
+  outputRenderTarget.texture.wrapT = THREE.ClampToEdgeWrapping;
+  outputRenderTarget.texture.type = THREE.FloatType;
+  outputRenderTarget.texture.depthBuffer = false;
+  outputRenderTarget.texture.encoding = THREE.LinearEncoding;
+  const convertToRenderTextureMaterial = new THREE.RawShaderMaterial({
+    uniforms: {inTex: {value: null}},
+    vertexShader: 'in vec3 position;void main(){gl_Position = vec4( position, 1.0 );}',
+    fragmentShader: 'precision highp float;precision highp int;layout(location = 0) out vec4 outFragment;uniform sampler2D inTex;void main(){outFragment = texture(inTex, gl_FragCoord.xy/resolution.xy);}',
+    glslVersion: THREE.GLSL3
+  });
+  convertToRenderTextureMaterial.defines.resolution = 'vec2( ' + MSRT_WIDTH_STR + ', ' + MSRT_HEIGHT_STR + " )";
+  targetMesh.material = convertToRenderTextureMaterial;
+
   //Convert our mie and rayleigh scattering textures into 3D textures
   const mieRenderBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * MSRT_WIDTH * MSRT_HEIGHT * 4);
   const mieRenderBufferFloatArray = new Float32Array(mieRenderBuffer);
-  renderer.readRenderTargetPixels(mieScattering, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
+  convertToRenderTextureMaterial.uniforms.inTex.value = mieScattering;
+  renderer.setRenderTarget(outputRenderTarget);
+  renderer.clear();
+  renderer.render(scene, camera);
+  renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
+
+  mie3DDataTexture  = new THREE.DataTexture3D(mieRenderBufferFloatArray, MSRT_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
   mie3DDataTexture.wrapR = THREE.ClampToEdgeWrapping;
   mie3DDataTexture.wrapS = THREE.ClampToEdgeWrapping;
   mie3DDataTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -148,7 +173,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
 
   const rayleighRenderBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * MSRT_WIDTH * MSRT_HEIGHT * 4);
   const rayleighRenderBufferFloatArray = new Float32Array(rayleighRenderBuffer);
-  renderer.readRenderTargetPixels(rayleighScattering, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
+  convertToRenderTextureMaterial.uniforms.inTex.value = rayleighScattering;
+  renderer.clear();
+  renderer.render(scene, camera);
+  renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
   const rayleigh3DDataTexture = new THREE.DataTexture3D(rayleighRenderBufferFloatArray, MSRT_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
   rayleigh3DDataTexture.wrapR = THREE.ClampToEdgeWrapping;
   rayleigh3DDataTexture.wrapS = THREE.ClampToEdgeWrapping;
@@ -163,7 +191,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   //
   //Prime the first of our multiple scattering operations
   //
-  targetMesh.material = new THREE.RawShaderMaterial({
+  const kthInscatteringMaterial = new THREE.RawShaderMaterial({
     uniforms: {...materials.kthInscatteringMaterial.uniforms},
     vertexShader: 'in vec3 position;void main(){gl_Position = vec4( position, 1.0 );}',
     fragmentShader: materials.kthInscatteringMaterial.fragmentShader(
@@ -177,14 +205,20 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
     ),
     glslVersion: THREE.GLSL3
   });
+  targetMesh.material = kthInscatteringMaterial;
   targetMesh.material.defines.resolution = 'vec2( ' + MSRT_WIDTH_STR + ', ' + MSRT_HEIGHT_STR + " )";
   targetMesh.material.uniforms.transmittanceTexture.value = transmittanceLUT;
   targetMesh.material.uniforms.inscatteredMieLightLUT.value = mie3DDataTexture;
   targetMesh.material.uniforms.inscatteredRayleighLightLUT.value = rayleigh3DDataTexture;
   targetMesh.material.uniforms.mieSumInColor.value = mieScatteringSum;
   targetMesh.material.uniforms.rayleighSumInColor.value = rayleighScatteringSum;
+  console.log('bing!');
+  debugger;
+
 
   //Render the second scattering event
+  renderer.setRenderTarget(multiScatteringRenderTarget);
+  renderer.clear();
   renderer.render(scene, camera);
   mieScattering = multiScatteringRenderTarget.texture[0];
   rayleighScattering = multiScatteringRenderTarget.texture[1];
@@ -193,13 +227,23 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
 
   // Iterate this a few times to get higher order scattering
   for(let i = 0; i < 7; ++i){
+    console.log('TEST!');
     //Convert the previous inscattering results to a 3D texture
-    renderer.readRenderTargetPixels(mieScattering, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
-    mei3DDataTexture.setData();
-    renderer.readRenderTargetPixels(rayleighScattering, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
+    targetMesh.material = convertToRenderTextureMaterial;
+    targetMesh.material.uniforms.inTex.value = mieScattering;
+    renderer.setRenderTarget(outputRenderTarget);
+    renderer.clear();
+    renderer.render(scene, camera);
+    renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
+    mei3DDataTexture.needsUpdate = true;
+    targetMesh.material.uniforms.inTex.value = rayleighScattering;
+    renderer.clear();
+    renderer.render(scene, camera);
+    renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
     rayleigh3DDataTexture.needsUpdate = true;
 
     //Update our uniforms...
+    targetMesh.material = kthInscatteringMaterial;
     targetMesh.material.uniforms.inscatteredMieLightLUT.value = mie3DDataTexture;
     targetMesh.material.uniforms.inscatteredRayleighLightLUT.value = rayleigh3DDataTexture;
 
@@ -211,13 +255,22 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
     rayleighScatteringSum = multiScatteringRenderTarget.texture[3];
   }
   //Convert the sums to a 3D Texture and dispose of the MRT
-  renderer.readRenderTargetPixels(mieScatteringSum, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
+  targetMesh.material = convertToRenderTextureMaterial;
+  targetMesh.material.uniforms.inTex.value = mieScatteringSum;
+  renderer.setRenderTarget(outputRenderTarget);
+  renderer.clear();
+  renderer.render(scene, camera);
+  renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
   mei3DDataTexture.needsUpdate = true;
-  renderer.readRenderTargetPixels(rayleighScatteringSum, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
+  targetMesh.material.uniforms.inTex.value = rayleighScatteringSum;
+  renderer.clear();
+  renderer.render(scene, camera);
+  renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
   rayleigh3DDataTexture.needsUpdate = true;
   this.mieScatteringSum.dispose();
   this.rayleighScatteringSum.dispose();
   multiScatteringRenderTarget.dispose();
+  outputRenderTarget.dispose();
   this.mieScatteringSum = mei3DDataTexture;
   this.rayleighScatteringSum = rayleigh3DDataTexture;
   this.transmittance = transmittanceLUT;

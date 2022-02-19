@@ -1,9 +1,11 @@
+precision highp float;
+precision highp int;
+precision highp sampler3D;
+
 //Based on the work of Oskar Elek
 //http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf
 //and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
 //by Gustav Bodare and Edvard Sandberg
-precision highp float;
-precision highp int;
 
 layout(location = 0) out vec4 mieOutColor;
 layout(location = 1) out vec4 rayleighOutColor;
@@ -42,6 +44,8 @@ GatheredLight gatherInscatteredLight(float r, float sunAngleAtP){
   float cosAngle;
   float deltaTheta = PI_TIMES_TWO / $numberOfChunks;
   float depthInPixels = $textureDepth;
+  vec3 inscatteredMieLight;
+  vec3 inscatteredRayleighLight;
 
   #pragma unroll_loop_start
   for(int i = 1; i < $numberOfChunksInt; i++){
@@ -52,8 +56,8 @@ GatheredLight gatherInscatteredLight(float r, float sunAngleAtP){
     transmittanceFromPToPb = texture(transmittanceTexture, uv3.xy).rgb;
 
     //Interpolate our inscattered light from the 3D texture
-    inscatteredMieLight = texture3D(inscatteredMieLightLUT, uv3).rgb;
-    inscatteredRayleighLight = texture3D(inscatteredRayleighLightLUT, uv3).rgb;
+    inscatteredMieLight = texture(inscatteredMieLightLUT, uv3).rgb;
+    inscatteredRayleighLight = texture(inscatteredRayleighLightLUT, uv3).rgb;
 
     angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;
     cosAngle = cos(angleBetweenCameraAndIncomingRay);
@@ -104,7 +108,7 @@ void main(){
     vec3 transmittancePaToP = vec3(1.0);
     vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));
 
-    vec3 gatheringFunction = gatherInscatteredLight(length(p), initialSunAngle);
+    GatheredLight gatheringFunction = gatherInscatteredLight(length(p), initialSunAngle);
     vec3 previousMieInscattering = gatheringFunction.mie * previousMieDensity * transmittancePaToP;
     vec3 previousRayleighInscattering = gatheringFunction.rayleigh * previousRayleighDensity * transmittancePaToP;
 
@@ -117,6 +121,8 @@ void main(){
     float sunAngle;
     vec3 mieInscattering;
     vec3 rayleighInscattering;
+    vec3 previousInscatteringMie;
+    vec3 previousInscatteringRayleigh;
     #pragma unroll_loop_start
     for(int i = 1; i < $numberOfChunksInt; i++){
       p += deltaP;
@@ -145,19 +151,20 @@ void main(){
         totalInscatteringRayleigh += (previousInscatteringRayleigh + rayleighInscattering) * chunkLength;
 
         //Store our values for the next iteration
-        previousInscattering = inscattering;
+        previousInscatteringMie = mieInscattering;
+        previousInscatteringRayleigh = rayleighInscattering;
         previousMieDensity = mieDensity;
         previousRayleighDensity = rayleighDensity;
       }
     }
     #pragma unroll_loop_end
 
-    totalMieInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;
-    totalRayleighInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
+    totalInscatteringMie *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;
+    totalInscatteringRayleigh *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
   }
 
-  mieOutColor = max(vec4(totalMieInscattering, 1.0), vec4(0.0));
-  rayleighOutColor = max(vec4(totalRayleighInscattering, 1.0), vec4(0.0));
-  mieSumOutColor = vec4(texture(mieSumInColor, uv_2d).rgb + mieOutColor, 1.0);
-  rayleighSumOutColor = vec4(texture(rayleighSumInColor, uv_2d).rgb + rayleighOutColor, 1.0);
+  mieOutColor = max(vec4(totalInscatteringMie, 1.0), vec4(0.0));
+  rayleighOutColor = max(vec4(totalInscatteringRayleigh, 1.0), vec4(0.0));
+  mieSumOutColor = vec4(texture(mieSumInColor, uv_2d).rgb + mieOutColor.rgb, 1.0);
+  rayleighSumOutColor = vec4(texture(rayleighSumInColor, uv_2d).rgb + rayleighOutColor.rgb, 1.0);
 }

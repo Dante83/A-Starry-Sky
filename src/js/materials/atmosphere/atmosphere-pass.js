@@ -128,7 +128,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   ].join('\n'),
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
     let originalGLSL = [
+    'precision mediump int;',
     'precision mediump float;',
+    'precision mediump sampler3D;',
 
     'varying vec3 vWorldPosition;',
     'varying vec3 galacticCoordinates;',
@@ -374,7 +376,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);',
       'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
       'vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
-      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * texture3D(mieLookupTable, uv3).rgb + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * texture3D(rayleighLookupTable, uv3).rgb);',
+      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * texture(mieLookupTable, uv3).rgb + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * texture(rayleighLookupTable, uv3).rgb);',
     '}',
 
     '//Including this because someone removed this in a future versio of THREE. Why?!',
@@ -420,8 +422,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#endif',
 
       '//Atmosphere',
-      'vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
-      'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
+      '// vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);',
+      '// vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
+      'vec3 solarAtmosphericPass = vec3(1.0);',
+      'vec3 lunarAtmosphericPass = vec3(1.0);',
       'vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
 
       '//This stuff never shows up near our sun, so we can exclude it',

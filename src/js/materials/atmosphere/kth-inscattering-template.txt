@@ -14,6 +14,12 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
     let updatedLines = [];
     let numberOfChunks = numberOfPoints - 1;
     let textureDepth = packingWidth * packingHeight;
+    console.log(numberOfChunks);
+    console.log(mieGCoefficient);
+    console.log(textureWidth);
+    console.log(textureHeight);
+    console.log(packingWidth);
+    console.log(packingHeight);
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
       updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
