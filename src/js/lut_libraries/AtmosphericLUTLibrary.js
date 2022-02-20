@@ -159,8 +159,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   renderer.clear();
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
-
-  mie3DDataTexture  = new THREE.DataTexture3D(mieRenderBufferFloatArray, MSRT_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  let mie3DDataTexture  = new THREE.DataTexture3D(mieRenderBufferFloatArray, MSRT_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
   mie3DDataTexture.wrapR = THREE.ClampToEdgeWrapping;
   mie3DDataTexture.wrapS = THREE.ClampToEdgeWrapping;
   mie3DDataTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -177,7 +176,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   renderer.clear();
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
-  const rayleigh3DDataTexture = new THREE.DataTexture3D(rayleighRenderBufferFloatArray, MSRT_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  let rayleigh3DDataTexture = new THREE.DataTexture3D(rayleighRenderBufferFloatArray, MSRT_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
   rayleigh3DDataTexture.wrapR = THREE.ClampToEdgeWrapping;
   rayleigh3DDataTexture.wrapS = THREE.ClampToEdgeWrapping;
   rayleigh3DDataTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -212,9 +211,6 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   targetMesh.material.uniforms.inscatteredRayleighLightLUT.value = rayleigh3DDataTexture;
   targetMesh.material.uniforms.mieSumInColor.value = mieScatteringSum;
   targetMesh.material.uniforms.rayleighSumInColor.value = rayleighScatteringSum;
-  console.log('bing!');
-  debugger;
-
 
   //Render the second scattering event
   renderer.setRenderTarget(multiScatteringRenderTarget);
@@ -226,34 +222,34 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   mieScatteringSum = multiScatteringRenderTarget.texture[3];
 
   // Iterate this a few times to get higher order scattering
-  for(let i = 0; i < 7; ++i){
-    console.log('TEST!');
-    //Convert the previous inscattering results to a 3D texture
-    targetMesh.material = convertToRenderTextureMaterial;
-    targetMesh.material.uniforms.inTex.value = mieScattering;
-    renderer.setRenderTarget(outputRenderTarget);
-    renderer.clear();
-    renderer.render(scene, camera);
-    renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
-    mei3DDataTexture.needsUpdate = true;
-    targetMesh.material.uniforms.inTex.value = rayleighScattering;
-    renderer.clear();
-    renderer.render(scene, camera);
-    renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
-    rayleigh3DDataTexture.needsUpdate = true;
-
-    //Update our uniforms...
-    targetMesh.material = kthInscatteringMaterial;
-    targetMesh.material.uniforms.inscatteredMieLightLUT.value = mie3DDataTexture;
-    targetMesh.material.uniforms.inscatteredRayleighLightLUT.value = rayleigh3DDataTexture;
-
-    //render the scene
-    renderer.render(scene, camera);
-    mieScattering = multiScatteringRenderTarget.texture[0];
-    rayleighScattering = multiScatteringRenderTarget.texture[1];
-    mieScatteringSum = multiScatteringRenderTarget.texture[2];
-    rayleighScatteringSum = multiScatteringRenderTarget.texture[3];
-  }
+  // for(let i = 0; i < 7; ++i){
+  //   console.log('TEST!');
+  //   //Convert the previous inscattering results to a 3D texture
+  //   targetMesh.material = convertToRenderTextureMaterial;
+  //   targetMesh.material.uniforms.inTex.value = mieScattering;
+  //   renderer.setRenderTarget(outputRenderTarget);
+  //   renderer.clear();
+  //   renderer.render(scene, camera);
+  //   renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
+  //   mie3DDataTexture.needsUpdate = true;
+  //   targetMesh.material.uniforms.inTex.value = rayleighScattering;
+  //   renderer.clear();
+  //   renderer.render(scene, camera);
+  //   renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
+  //   rayleigh3DDataTexture.needsUpdate = true;
+  //
+  //   //Update our uniforms...
+  //   targetMesh.material = kthInscatteringMaterial;
+  //   targetMesh.material.uniforms.inscatteredMieLightLUT.value = mie3DDataTexture;
+  //   targetMesh.material.uniforms.inscatteredRayleighLightLUT.value = rayleigh3DDataTexture;
+  //
+  //   //render the scene
+  //   renderer.render(scene, camera);
+  //   mieScattering = multiScatteringRenderTarget.texture[0];
+  //   rayleighScattering = multiScatteringRenderTarget.texture[1];
+  //   mieScatteringSum = multiScatteringRenderTarget.texture[2];
+  //   rayleighScatteringSum = multiScatteringRenderTarget.texture[3];
+  // }
   //Convert the sums to a 3D Texture and dispose of the MRT
   targetMesh.material = convertToRenderTextureMaterial;
   targetMesh.material.uniforms.inTex.value = mieScatteringSum;
@@ -261,17 +257,35 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer){
   renderer.clear();
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, mieRenderBufferFloatArray);
-  mei3DDataTexture.needsUpdate = true;
+  mie3DDataTexture = new THREE.DataTexture3D(mieRenderBufferFloatArray, MSRT_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  mie3DDataTexture.wrapR = THREE.ClampToEdgeWrapping;
+  mie3DDataTexture.wrapS = THREE.ClampToEdgeWrapping;
+  mie3DDataTexture.wrapT = THREE.ClampToEdgeWrapping;
+  mie3DDataTexture.minFilter = THREE.LinearFilter;
+  mie3DDataTexture.magFilter = THREE.LinearFilter;
+  mie3DDataTexture.type = THREE.FloatType;
+  mie3DDataTexture.encoding = THREE.LinearEncoding;
+  mie3DDataTexture.unpackAlignment = 1;
+  mie3DDataTexture.needsUpdate = true;
   targetMesh.material.uniforms.inTex.value = rayleighScatteringSum;
   renderer.clear();
   renderer.render(scene, camera);
   renderer.readRenderTargetPixels(outputRenderTarget, 0, 0, MSRT_WIDTH, MSRT_HEIGHT, rayleighRenderBufferFloatArray);
+  rayleigh3DDataTexture = new THREE.DataTexture3D(rayleighRenderBufferFloatArray, MSRT_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  rayleigh3DDataTexture.wrapR = THREE.ClampToEdgeWrapping;
+  rayleigh3DDataTexture.wrapS = THREE.ClampToEdgeWrapping;
+  rayleigh3DDataTexture.wrapT = THREE.ClampToEdgeWrapping;
+  rayleigh3DDataTexture.minFilter = THREE.LinearFilter;
+  rayleigh3DDataTexture.magFilter = THREE.LinearFilter;
+  rayleigh3DDataTexture.type = THREE.FloatType;
+  rayleigh3DDataTexture.encoding = THREE.LinearEncoding;
+  rayleigh3DDataTexture.unpackAlignment = 1;
   rayleigh3DDataTexture.needsUpdate = true;
-  this.mieScatteringSum.dispose();
-  this.rayleighScatteringSum.dispose();
-  multiScatteringRenderTarget.dispose();
-  outputRenderTarget.dispose();
-  this.mieScatteringSum = mei3DDataTexture;
+  // this.mieScatteringSum.dispose();
+  // this.rayleighScatteringSum.dispose();
+  // multiScatteringRenderTarget.dispose();
+  // outputRenderTarget.dispose();
+  this.mieScatteringSum = mie3DDataTexture;
   this.rayleighScatteringSum = rayleigh3DDataTexture;
   this.transmittance = transmittanceLUT;
 

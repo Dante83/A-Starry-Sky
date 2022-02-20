@@ -128,9 +128,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   ].join('\n'),
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
     let originalGLSL = [
-    'precision mediump int;',
-    'precision mediump float;',
-    'precision mediump sampler3D;',
+    'precision highp int;',
+    'precision highp float;',
+    'precision highp sampler3D;',
 
     'varying vec3 vWorldPosition;',
     'varying vec3 galacticCoordinates;',
