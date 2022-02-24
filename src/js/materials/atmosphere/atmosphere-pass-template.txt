@@ -1,22 +1,19 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false){
     let uniforms = {
-      uTime: {type: 'f', value: 0.0},
-      localSiderealTime: {type: 'f', value: 0.0},
-      latitude: {type: 'f', value: 0.0},
-      sunPosition: {type: 'vec3', value: new THREE.Vector3()},
-      moonPosition: {type: 'vec3', value: new THREE.Vector3()},
-      moonLightColor: {type: 'vec3', value: new THREE.Vector3()},
-      mieInscatteringSum: {type: 't', value: null},
-      rayleighInscatteringSum: {type: 't', value: null},
-      transmittance: {type: 't', value: null},
-      sunHorizonFade: {type: 'f', value: 1.0},
-      moonHorizonFade: {type: 'f', value: 1.0},
-      scatteringSunIntensity: {type: 'f', value: 20.0},
-      scatteringMoonIntensity: {type: 'f', value: 1.4}
+      uTime: {value: 0.0},
+      localSiderealTime: {value: 0.0},
+      latitude: {value: 0.0},
+      sunPosition: {value: new THREE.Vector3()},
+      moonPosition: {value: new THREE.Vector3()},
+      moonLightColor: {value: new THREE.Vector3()},
+      mieInscatteringSum: {value: new THREE.DataTexture3D()},
+      rayleighInscatteringSum: {value: new THREE.DataTexture3D()},
+      transmittance: {value: null},
+      sunHorizonFade: {value: 1.0},
+      moonHorizonFade: {value: 1.0},
+      scatteringSunIntensity: {value: 20.0},
+      scatteringMoonIntensity: {value: 1.4}
     }
 
     if(!isSunShader && !isMoonShader && !isMeteringShader){

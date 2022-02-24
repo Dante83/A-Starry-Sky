@@ -26,6 +26,7 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.dimStarDataRenderer.setVariableDependencies(this.dimStarMapVar, []);
   this.dimStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
+  this.dimStarMapVar.format = THREE.RGBAFormat;
   this.dimStarMapVar.encoding = THREE.LinearEncoding;
   this.dimStarMapVar.minFilter = THREE.NearestFilter;
   this.dimStarMapVar.magFilter = THREE.NearestFilter;
@@ -46,6 +47,7 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.medStarDataRenderer.setVariableDependencies(this.medStarMapVar, []);
   this.medStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
+  this.medStarMapVar.format = THREE.RGBAFormat;
   this.medStarMapVar.encoding = THREE.LinearEncoding;
   this.medStarMapVar.minFilter = THREE.NearestFilter;
   this.medStarMapVar.magFilter = THREE.NearestFilter;
@@ -66,6 +68,7 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   );
   this.brightStarDataRenderer.setVariableDependencies(this.brightStarMapVar, []);
   this.brightStarMapVar.material.uniforms = JSON.parse(JSON.stringify(materials.starDataMap.uniforms));
+  this.brightStarMapVar.format = THREE.RGBAFormat;
   this.brightStarMapVar.encoding = THREE.LinearEncoding;
   this.brightStarMapVar.minFilter = THREE.NearestFilter;
   this.brightStarMapVar.magFilter = THREE.NearestFilter;

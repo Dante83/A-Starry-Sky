@@ -35,7 +35,9 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
   this.highPassRenderer.setVariableDependencies(this.highPassFilterVar, []);
   this.highPassFilterVar.material.uniforms = JSON.parse(JSON.stringify(materials.highPassFilter.uniforms));
   this.highPassFilterVar.material.uniforms.luminosityThreshold.value = this.threshold;
-  this.highPassFilterVar.minFilter = THREE.LinearFilter;
+  this.highPassFilterVar.format = THREE.RGBAFormat;
+  this.highPassFilterVar.generateMipmaps = true;
+  this.highPassFilterVar.minFilter = THREE.LinearMipmapLinearFilter;
   this.highPassFilterVar.magFilter = THREE.LinearFilter;
   this.highPassFilterVar.wrapS = THREE.ClampToEdgeWrapping;
   this.highPassFilterVar.wrapT = THREE.ClampToEdgeWrapping;
@@ -59,8 +61,10 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     this.seperableBlurHorizontalRenderers[i].setVariableDependencies(this.seperableBlurHorizontalVars[i], []);
     this.seperableBlurHorizontalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.seperableBlurFilter.uniforms));
     this.seperableBlurHorizontalVars[i].material.uniforms.direction.value = blurDirectionX;
-    this.seperableBlurHorizontalVars[i].minFilter = THREE.LinearFilter;
-    this.seperableBlurHorizontalVars[i].magFilter = THREE.LinearMipmapLinear;
+    this.seperableBlurHorizontalVars[i].format = THREE.RGBAFormat;
+    this.seperableBlurHorizontalVars[i].generateMipmaps = true;
+    this.seperableBlurHorizontalVars[i].minFilter = THREE.LinearMipmapLinearFilter;
+    this.seperableBlurHorizontalVars[i].magFilter = THREE.LinearFilter;
     this.seperableBlurHorizontalVars[i].wrapS = THREE.ClampToEdgeWrapping;
     this.seperableBlurHorizontalVars[i].wrapT = THREE.ClampToEdgeWrapping;
 
@@ -78,7 +82,9 @@ StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold)
     this.seperableBlurVerticalRenderers[i].setVariableDependencies(this.seperableBlurVerticalVars[i], []);
     this.seperableBlurVerticalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.seperableBlurFilter.uniforms));
     this.seperableBlurVerticalVars[i].material.uniforms.direction.value = blurDirectionY;
-    this.seperableBlurVerticalVars[i].minFilter = THREE.LinearFilter;
+    this.seperableBlurVerticalVars[i].format = THREE.RGBAFormat;
+    this.seperableBlurVerticalVars[i].generateMipmaps = true;
+    this.seperableBlurVerticalVars[i].minFilter = THREE.LinearMipmapLinearFilter;
     this.seperableBlurVerticalVars[i].magFilter = THREE.LinearFilter;
     this.seperableBlurVerticalVars[i].wrapS = THREE.ClampToEdgeWrapping;
     this.seperableBlurVerticalVars[i].wrapT = THREE.ClampToEdgeWrapping;

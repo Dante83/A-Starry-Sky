@@ -1,7 +1,3 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-//Currently has no uniforms, but might get them in the future
 StarrySky.Materials.Atmosphere.transmittanceMaterial = {
   uniforms: {},
   fragmentShader: function(numberOfPoints, atmosphereFunctions){

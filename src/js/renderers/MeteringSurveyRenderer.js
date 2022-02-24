@@ -32,11 +32,11 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.meteringSurveyVar.material.uniforms.latitude.value = skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
   this.meteringSurveyVar.material.uniforms.moonLightColor.value = skyDirector.skyState.moon.lightingModifier;
 
+  this.meteringSurveyVar.format = THREE.RGBAFormat;
   this.meteringSurveyVar.minFilter = THREE.NearestFilter;
   this.meteringSurveyVar.magFilter = THREE.NearestFilter;
   this.meteringSurveyVar.wrapS = THREE.ClampToEdgeWrapping;
   this.meteringSurveyVar.wrapT = THREE.ClampToEdgeWrapping;
-  this.meteringSurveyVar.generateMipmaps = false;
 
   //Check for any errors in initialization
   let error1 = this.meteringSurveyRenderer.init();

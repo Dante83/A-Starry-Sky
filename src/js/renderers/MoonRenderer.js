@@ -55,11 +55,12 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
     this.baseMoonVar.material.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
   }
-  this.baseMoonVar.type = THREE.UnsignedByteType;
-  this.baseMoonVar.minFilter = THREE.LinearFilter;
-  this.baseMoonVar.magFilter = THREE.LinearMipmapLinear;
+  this.baseMoonVar.format = THREE.RGBAFormat;
+  this.baseMoonVar.type = THREE.FloatType;
   this.baseMoonVar.generateMipmaps = true;
-  this.baseMoonVar.encoding = THREE.sRGBEncoding;
+  this.baseMoonVar.minFilter = THREE.LinearMipmapLinearFilter;
+  this.baseMoonVar.magFilter = THREE.LinearFilter;
+  this.baseMoonVar.generateMipmaps = true;
 
   //Check for any errors in initialization
   let error1 = this.moonRenderer.init();

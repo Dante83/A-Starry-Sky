@@ -1,22 +1,19 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false){
     let uniforms = {
-      uTime: {type: 'f', value: 0.0},
-      localSiderealTime: {type: 'f', value: 0.0},
-      latitude: {type: 'f', value: 0.0},
-      sunPosition: {type: 'vec3', value: new THREE.Vector3()},
-      moonPosition: {type: 'vec3', value: new THREE.Vector3()},
-      moonLightColor: {type: 'vec3', value: new THREE.Vector3()},
-      mieInscatteringSum: {type: 't', value: null},
-      rayleighInscatteringSum: {type: 't', value: null},
-      transmittance: {type: 't', value: null},
-      sunHorizonFade: {type: 'f', value: 1.0},
-      moonHorizonFade: {type: 'f', value: 1.0},
-      scatteringSunIntensity: {type: 'f', value: 20.0},
-      scatteringMoonIntensity: {type: 'f', value: 1.4}
+      uTime: {value: 0.0},
+      localSiderealTime: {value: 0.0},
+      latitude: {value: 0.0},
+      sunPosition: {value: new THREE.Vector3()},
+      moonPosition: {value: new THREE.Vector3()},
+      moonLightColor: {value: new THREE.Vector3()},
+      mieInscatteringSum: {value: new THREE.DataTexture3D()},
+      rayleighInscatteringSum: {value: new THREE.DataTexture3D()},
+      transmittance: {value: null},
+      sunHorizonFade: {value: 1.0},
+      moonHorizonFade: {value: 1.0},
+      scatteringSunIntensity: {value: 20.0},
+      scatteringMoonIntensity: {value: 1.4}
     }
 
     if(!isSunShader && !isMoonShader && !isMeteringShader){
@@ -128,7 +125,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   ].join('\n'),
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
     let originalGLSL = [
-    'precision mediump float;',
+    'precision highp sampler3D;',
 
     'varying vec3 vWorldPosition;',
     'varying vec3 galacticCoordinates;',
@@ -142,8 +139,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform float scatteringMoonIntensity;',
     'uniform float scatteringSunIntensity;',
     'uniform vec3 moonLightColor;',
-    'uniform sampler2D mieInscatteringSum;',
-    'uniform sampler2D rayleighInscatteringSum;',
+    'uniform sampler3D mieInscatteringSum;',
+    'uniform sampler3D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
 
     '#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)',
@@ -370,16 +367,14 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '}',
     '#endif',
 
-    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
+    'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler3D mieLookupTable, sampler3D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
       'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);',
       'float cosOFAngleBetweenZenithAndSource = sourcePosition.y;',
       'vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));',
-      'float depthInPixels = $textureDepth;',
-      'UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);',
 
       '//Interpolated scattering values',
-      'vec3 interpolatedMieScattering = mix(texture2D(mieLookupTable, solarUVInterpolants.uv0).rgb, texture2D(mieLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
-      'vec3 interpolatedRayleighScattering = mix(texture2D(rayleighLookupTable, solarUVInterpolants.uv0).rgb, texture2D(rayleighLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
+      'vec3 interpolatedMieScattering = texture2D(mieLookupTable, uv3).rgb;',
+      'vec3 interpolatedRayleighScattering = texture2D(rayleighLookupTable, uv3).rgb;',
 
       'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
     '}',

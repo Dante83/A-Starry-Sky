@@ -1,9 +1,6 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
   uniforms: {
-    transmittanceTexture: {type: 't', value: null}
+    transmittanceTexture: {value: null}
   },
   fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions){
     let originalGLSL = [

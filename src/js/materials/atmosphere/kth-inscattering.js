@@ -1,10 +1,7 @@
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
 StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
   uniforms: {
-    transmittanceTexture: {type: 't', value: null},
-    inscatteredLightLUT: {type: 't', value: null},
+    transmittanceTexture: {value: null},
+    inscatteredLightLUT: {value: new THREE.DataTexture3D()},
   },
   fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
     let originalGLSL = [
@@ -12,7 +9,9 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
     '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
     '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
     '//by Gustav Bodare and Edvard Sandberg',
-    'uniform sampler2D inscatteredLightLUT;',
+    'precision highp sampler3D;',
+
+    'uniform sampler3D inscatteredLightLUT;',
     'uniform sampler2D transmittanceTexture;',
 
     'const float mieGCoefficient = $mieGCoefficient;',
@@ -43,9 +42,8 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
         '//Get our transmittance value',
         'transmittanceFromPToPb = texture2D(transmittanceTexture, uv3.xy).rgb;',
 
-        '//Interpolate our inscattered light from the 3D texture',
-        'UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);',
-        'inscatteredLight = mix(texture2D(inscatteredLightLUT, solarUVInterpolants.uv0).rgb, texture2D(inscatteredLightLUT, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);',
+        '//Get our value from our 3-D Texture',
+        'inscatteredLight = texture2D(inscatteredLightLUT, uv3).rgb;',
 
         'angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;',
         'cosAngle = cos(angleBetweenCameraAndIncomingRay);',

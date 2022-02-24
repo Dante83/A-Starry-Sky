@@ -1,4 +1,4 @@
-precision mediump float;
+precision highp sampler3D;
 
 varying vec3 vWorldPosition;
 varying vec3 galacticCoordinates;
@@ -12,8 +12,8 @@ uniform float moonHorizonFade;
 uniform float scatteringMoonIntensity;
 uniform float scatteringSunIntensity;
 uniform vec3 moonLightColor;
-uniform sampler2D mieInscatteringSum;
-uniform sampler2D rayleighInscatteringSum;
+uniform sampler3D mieInscatteringSum;
+uniform sampler3D rayleighInscatteringSum;
 uniform sampler2D transmittance;
 
 #if(!$isSunPass && !$isMoonPass && !$isMeteringPass)
@@ -240,16 +240,14 @@ vec3 getLunarEcclipseShadow(vec3 sphericalPosition){
 }
 #endif
 
-vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler2D mieLookupTable, sampler2D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){
+vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler3D mieLookupTable, sampler3D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){
   float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);
   float cosOFAngleBetweenZenithAndSource = sourcePosition.y;
   vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));
-  float depthInPixels = $textureDepth;
-  UVInterpolatants solarUVInterpolants = getUVInterpolants(uv3, depthInPixels);
 
   //Interpolated scattering values
-  vec3 interpolatedMieScattering = mix(texture2D(mieLookupTable, solarUVInterpolants.uv0).rgb, texture2D(mieLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);
-  vec3 interpolatedRayleighScattering = mix(texture2D(rayleighLookupTable, solarUVInterpolants.uv0).rgb, texture2D(rayleighLookupTable, solarUVInterpolants.uvf).rgb, solarUVInterpolants.interpolationFraction);
+  vec3 interpolatedMieScattering = texture2D(mieLookupTable, uv3).rgb;
+  vec3 interpolatedRayleighScattering = texture2D(rayleighLookupTable, uv3).rgb;
 
   return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);
 }

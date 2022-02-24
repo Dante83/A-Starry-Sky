@@ -41,7 +41,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.baseSunVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.baseSunVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.baseSunVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.baseSunVar.minFilter = THREE.LinearFilter;
+  this.baseSunVar.format = THREE.RGBAFormat;
+  this.baseSunVar.generateMipmaps = true;
+  this.baseSunVar.minFilter = THREE.LinearMipmapLinearFilter;
   this.baseSunVar.magFilter = THREE.LinearFilter;
 
   //Check for any errors in initialization
@@ -151,6 +153,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.tick(t);
 
     //Add this object to the scene
-    self.skyDirector.scene.add(self.sunMesh);
+    //self.skyDirector.scene.add(self.sunMesh);
   }
 }

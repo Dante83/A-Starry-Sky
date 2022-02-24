@@ -82,13 +82,13 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
+        texture.format = THREE.RGBAFormat;
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.magFilter = THREE.Linear;
-        texture.minFilter = THREE.LinearMipmapLinear;
-        texture.encoding = moonEncodings[i];
-        //Swap this tomorrow and implement custom mip-maps
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.generateMipmaps = true;
+        texture.encoding = moonEncodings[i];
         self.images.moonImages[moonTextures[i]] = texture;
 
         //If the renderer already exists, go in and update the uniform
@@ -112,13 +112,14 @@ StarrySky.AssetManager = function(skyDirector){
     });
     texturePromise.then(function(texture){
       //Fill in the details of our texture
+      texture.format = THREE.RGBAFormat;
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.magFilter = THREE.LinearFilter;
-      texture.minFilter = THREE.LinearFilter;
+      texture.generateMipmaps = true;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
       texture.encoding = THREE.LinearEncoding;
       //Swap this tomorrow and implement custom mip-maps
-      texture.generateMipmaps = true;
       self.images.starImages.starColorMap = texture;
 
       //If the renderer already exists, go in and update the uniform
@@ -148,10 +149,10 @@ StarrySky.AssetManager = function(skyDirector){
     texturePromise2.then(function(cubemap){
 
       //Make sure that our cubemap is using the appropriate settings
+      cubemap.format = THREE.RGBAFormat;
       cubemap.magFilter = THREE.NearestFilter;
       cubemap.minFilter = THREE.NearestFilter;
       cubemap.encoding = THREE.LinearEncoding;
-      cubemap.generateMipmaps = false;
 
       self.numberOfTexturesLoaded += 1;
       if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
@@ -186,12 +187,12 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
+        texture.format = THREE.RGBAFormat;
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.encoding = THREE.LinearEncoding;
-        texture.generateMipmaps = false;
         dimStarChannelImages[channels[i]] = texture;
 
         numberOfDimStarChannelsLoaded += 1;
@@ -242,12 +243,12 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
+        texture.format = THREE.RGBAFormat;
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.encoding = THREE.LinearEncoding;
-        texture.generateMipmaps = false;
         medStarChannelImages[channels[i]] = texture;
 
         numberOfMedStarChannelsLoaded += 1;
@@ -298,12 +299,12 @@ StarrySky.AssetManager = function(skyDirector){
       });
       texturePromise.then(function(texture){
         //Fill in the details of our texture
+        texture.format = THREE.RGBAFormat;
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.encoding = THREE.LinearEncoding;
-        texture.generateMipmaps = false;
         brightStarChannelImages[channels[i]] = texture;
 
         numberOfBrightStarChannelsLoaded += 1;
@@ -354,10 +355,11 @@ StarrySky.AssetManager = function(skyDirector){
         //Fill in the details of our texture
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;
-        texture.magFilter = THREE.Linear;
-        texture.minFilter = THREE.LinearMipmapLinear;
-        texture.encoding = THREE.LinearEncoding;
+        texture.format = THREE.RGBAFormat;
         texture.generateMipmaps = true;
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.encoding = THREE.LinearEncoding;
         self.images.blueNoiseImages[i] = texture;
 
         self.numberOfTexturesLoaded += 1;
@@ -376,10 +378,10 @@ StarrySky.AssetManager = function(skyDirector){
       //Fill in the details of our texture
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
-      texture.magFilter = THREE.LinearFilter;
-      texture.minFilter = THREE.LinearMipmapLinear;
-      texture.encoding = THREE.LinearEncoding;
       texture.generateMipmaps = true;
+      texture.magFilter = THREE.LinearFilter;
+      texture.minFilter = THREE.LinearMipmapLinearFilter;
+      texture.encoding = THREE.LinearEncoding;
       self.images.solarEclipseImage = texture;
 
       //If the renderer already exists, go in and update the uniform

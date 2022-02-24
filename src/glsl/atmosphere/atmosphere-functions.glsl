@@ -119,46 +119,13 @@ const float packingHeight = $packingHeight;
 
 vec3 get3DUVFrom2DUV(vec2 uv2){
   vec3 uv3;
-  vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);
+  vec2 parentTextureDimensions = vec2(textureWidth, textureHeight * packingHeight);
   vec2 pixelPosition = uv2 * parentTextureDimensions;
   float row = floor(pixelPosition.y / textureHeight);
-  float column = floor(pixelPosition.x / textureWidth);
   float rowRemainder = pixelPosition.y - row * textureHeight;
-  float columnRemainder = pixelPosition.x - column * textureWidth;
-  uv3.x = columnRemainder / textureWidth;
+  uv3.x = pixelPosition.x / textureWidth;
   uv3.y = rowRemainder / textureHeight;
-  uv3.z = (row * packingWidth + column) / (packingWidth * packingHeight);
+  uv3.z = row / packingHeight;
 
   return uv3;
-}
-
-vec2 getUV2From3DUV(vec3 uv3){
-  vec2 parentTextureDimensions = vec2(textureWidth * packingWidth, textureHeight * packingHeight);
-  float zIndex = uv3.z * packingHeight * packingWidth - 1.0;
-  float row = floor((zIndex + 1.0) / 2.0);
-  float column = (zIndex + 1.0) - row * packingWidth;
-  vec2 uv2;
-  uv2.x = ((column + uv3.x) * textureWidth) / parentTextureDimensions.x;
-  uv2.y = (((row + uv3.y - 1.0) * textureHeight)) / parentTextureDimensions.y;
-
-  return vec2(uv2);
-}
-
-struct UVInterpolatants{
-  vec2 uv0;
-  vec2 uvf;
-  float interpolationFraction;
-};
-
-UVInterpolatants getUVInterpolants(vec3 uv3, float depthInPixels){
-  uv3.y += 1.0/($textureHeight - 1.0);
-  uv3.x -= 1.0/($textureWidth - 1.0);
-  float medianValue = (floor(uv3.z * depthInPixels) + ceil(uv3.z * depthInPixels)) / 2.0;
-  float floorValue = clamp(floor(medianValue - 0.5) / depthInPixels, 0.0, 1.0);
-  float ceilingValue = clamp(floor(medianValue + 0.5) / depthInPixels, 0.0, 1.0);
-  vec2 uv2_0 = getUV2From3DUV(vec3(uv3.xy, floorValue));
-  vec2 uv2_f = getUV2From3DUV(vec3(uv3.xy, ceilingValue));
-  float interpolationFraction = clamp((uv3.z - floorValue) / (ceilingValue - floorValue), 0.0, 1.0);
-
-  return UVInterpolatants(uv2_0, uv2_f, interpolationFraction);
 }
