@@ -4,31 +4,16 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.sunLUT;
   this.moonLUT;
   this.lunarEcclipseLUTs = [];
-
-  //Enable the OES_texture_float_linear extension
-  if(!renderer.capabilities.isWebGL2 && !renderer.extensions.get("OES_texture_float_linear")){
-    console.error("No linear interpolation of OES textures allowed.");
-    return false;
-  }
-
-  //Enable 32 bit float textures
-  if(!renderer.capabilities.isWebGL2 && !renderer.extensions.get("WEBGL_color_buffer_float")){
-    console.error("No float WEBGL color buffers allowed.");
-    return false;
-  }
-
   document.body.appendChild(renderer.domElement);
 
   //Create our first renderer, for transmittance
   const TRANSMITTANCE_TEXTURE_SIZE = 512;
+  const SCATTERING_TEXTURE_WIDTH = 256;
+  const SCATTERING_TEXTURE_HEIGHT = 1024; //32x32
   this.transmittanceTextureSize = TRANSMITTANCE_TEXTURE_SIZE;
   let transmittanceRenderer = new THREE.StarrySkyComputationRenderer(TRANSMITTANCE_TEXTURE_SIZE, TRANSMITTANCE_TEXTURE_SIZE, renderer);
-
-  //Using a 3D look up table of 256x32x32, I can have 2 256x32 textures per row
-  //and 16*32 rows, using this structure allows us to directly compute the 3D texture
-  //in one go.
-  let singleScatteringRenderer = new THREE.StarrySkyComputationRenderer(512, 512, renderer);
-  let scatteringSumRenderer = new THREE.StarrySkyComputationRenderer(512, 512, renderer);
+  let singleScatteringRenderer = new THREE.StarrySkyComputationRenderer(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, renderer);
+  let scatteringSumRenderer = new THREE.StarrySkyComputationRenderer(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, renderer);
 
   let materials = StarrySky.Materials.Atmosphere;
 
@@ -58,6 +43,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   );
   transmittanceRenderer.setVariableDependencies(transmittanceVar, []);
   transmittanceVar.material.uniforms = {};
+  transmittanceVar.type = THREE.FloatType;
   transmittanceVar.format = THREE.RGBAFormat;
   transmittanceVar.minFilter = THREE.LinearFilter;
   transmittanceVar.magFilter = THREE.LinearFilter;
@@ -98,8 +84,9 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     singleScatteringMieTexture
   );
   singleScatteringRenderer.setVariableDependencies(singleScatteringMieVar, []);
-  singleScatteringMieVar.material.uniforms = {...materials.singleScatteringMaterial.uniforms};
+  singleScatteringMieVar.material.uniforms = JSON.parse(JSON.stringify(materials.singleScatteringMaterial.uniforms));
   singleScatteringMieVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
+  singleScatteringMieVar.type = THREE.FloatType;
   singleScatteringMieVar.format = THREE.RGBAFormat;
   singleScatteringMieVar.minFilter = THREE.NearestFilter;
   singleScatteringMieVar.magFilter = THREE.NearestFilter;
@@ -122,8 +109,9 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     singleScatteringRayleighTexture
   );
   singleScatteringRenderer.setVariableDependencies(singleScatteringRayleighVar, []);
-  singleScatteringRayleighVar.material.uniforms = {...materials.singleScatteringMaterial.uniforms};
+  singleScatteringRayleighVar.material.uniforms = JSON.parse(JSON.stringify(materials.singleScatteringMaterial.uniforms));
   singleScatteringRayleighVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
+  singleScatteringRayleighVar.type = THREE.FloatType;
   singleScatteringRayleighVar.format = THREE.RGBAFormat;
   singleScatteringRayleighVar.minFilter = THREE.NearestFilter;
   singleScatteringRayleighVar.magFilter = THREE.NearestFilter;
@@ -142,12 +130,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   const mieSingleScatteringRenderTarget = singleScatteringRenderer.getCurrentRenderTarget(singleScatteringMieVar);
   const rayleighSingleScatteringRenderTarget = singleScatteringRenderer.getCurrentRenderTarget(singleScatteringRayleighVar);
   //Convert this to a 3-D LUT
-  const MSRT_TEXTURE_WIDTH = 256;
-  const MSRT_TEXTURE_HEIGHT = 1024;
-  const singleScatteringMieBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * MSRT_TEXTURE_WIDTH * MSRT_TEXTURE_HEIGHT * 4);
-  const singleScatteringMieFloat32Array = new Float32Array(singleScatteringMieBuffer);
-  renderer.readRenderTargetPixels(mieSingleScatteringRenderTarget, 0, 0, MSRT_TEXTURE_WIDTH, MSRT_TEXTURE_HEIGHT, singleScatteringMieFloat32Array);
-  const singleScatteringMie3DLUT = new THREE.DataTexture3D(singleScatteringMieFloat32Array, MSRT_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  const singleScatteringMieFloat32Array = new Float32Array(SCATTERING_TEXTURE_WIDTH * SCATTERING_TEXTURE_HEIGHT * 4);
+  renderer.readRenderTargetPixels(mieSingleScatteringRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, singleScatteringMieFloat32Array);
+  const singleScatteringMie3DLUT = new THREE.DataTexture3D(singleScatteringMieFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  singleScatteringMie3DLUT.type = THREE.FloatType;
   singleScatteringMie3DLUT.format = THREE.RGBAFormat;
   singleScatteringMie3DLUT.minFilter = THREE.LinearFilter;
   singleScatteringMie3DLUT.magFilter = THREE.LinearFilter;
@@ -155,11 +141,12 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   singleScatteringMie3DLUT.wrapT = THREE.ClampToEdgeWrapping;
   singleScatteringMie3DLUT.wrapR = THREE.ClampToEdgeWrapping;
   singleScatteringMie3DLUT.encoding = THREE.LinearEncoding;
+  singleScatteringMie3DLUT.needsUpdate = true;
 
-  const singleScatteringRayleighBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * MSRT_TEXTURE_WIDTH * MSRT_TEXTURE_HEIGHT * 4);
-  const singleScatteringRayleighFloat32Array = new Float32Array(singleScatteringRayleighBuffer);
-  renderer.readRenderTargetPixels(rayleighSingleScatteringRenderTarget, 0, 0, MSRT_TEXTURE_WIDTH, MSRT_TEXTURE_HEIGHT, singleScatteringRayleighFloat32Array);
-  const singleScatteringRayleigh3DLUT = new THREE.DataTexture3D(singleScatteringRayleighFloat32Array, MSRT_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  const singleScatteringRayleighFloat32Array = new Float32Array(SCATTERING_TEXTURE_WIDTH * SCATTERING_TEXTURE_HEIGHT * 4);
+  renderer.readRenderTargetPixels(rayleighSingleScatteringRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, singleScatteringRayleighFloat32Array);
+  const singleScatteringRayleigh3DLUT = new THREE.DataTexture3D(singleScatteringRayleighFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  singleScatteringRayleigh3DLUT.type = THREE.FloatType;
   singleScatteringRayleigh3DLUT.format = THREE.RGBAFormat;
   singleScatteringRayleigh3DLUT.minFilter = THREE.LinearFilter;
   singleScatteringRayleigh3DLUT.magFilter = THREE.LinearFilter;
@@ -167,6 +154,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   singleScatteringRayleigh3DLUT.wrapT = THREE.ClampToEdgeWrapping;
   singleScatteringRayleigh3DLUT.wrapR = THREE.ClampToEdgeWrapping;
   singleScatteringRayleigh3DLUT.encoding = THREE.LinearEncoding;
+  singleScatteringRayleigh3DLUT.needsUpdate = true;
 
   //Combine our two shaders together into an inscattering sum texture
   let inscatteringRayleighSumTexture = scatteringSumRenderer.createTexture();
@@ -175,9 +163,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     inscatteringRayleighSumTexture
   );
   scatteringSumRenderer.setVariableDependencies(inscatteringRayleighSumVar, []);
-  inscatteringRayleighSumVar.material.uniforms = {...materials.inscatteringSumMaterial.uniforms};
+  inscatteringRayleighSumVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
   inscatteringRayleighSumVar.material.uniforms.isNotFirstIteration.value = 0;
   inscatteringRayleighSumVar.material.uniforms.inscatteringTexture.value = rayleighSingleScatteringRenderTarget.texture;
+  inscatteringRayleighSumVar.type = THREE.FloatType;
   inscatteringRayleighSumVar.format = THREE.RGBAFormat;
   inscatteringRayleighSumVar.minFilter = THREE.NearestFilter;
   inscatteringRayleighSumVar.magFilter = THREE.NearestFilter;
@@ -191,9 +180,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     inscatteringMieSumTexture
   );
   scatteringSumRenderer.setVariableDependencies(inscatteringMieSumVar, []);
-  inscatteringMieSumVar.material.uniforms = {...materials.inscatteringSumMaterial.uniforms};
+  inscatteringMieSumVar.material.uniforms = JSON.parse(JSON.stringify(materials.inscatteringSumMaterial.uniforms));
   inscatteringMieSumVar.material.uniforms.isNotFirstIteration.value = 0;
   inscatteringMieSumVar.material.uniforms.inscatteringTexture.value = mieSingleScatteringRenderTarget.texture;
+  inscatteringMieSumVar.type = THREE.FloatType;
   inscatteringMieSumVar.format = THREE.RGBAFormat;
   inscatteringMieSumVar.minFilter = THREE.NearestFilter;
   inscatteringMieSumVar.magFilter = THREE.NearestFilter;
@@ -207,13 +197,17 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     console.error(`Single Scattering Sum Renderer: ${error3}`);
   }
   scatteringSumRenderer.compute();
-  let rayleighScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar).texture;
-  let mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
+
+  let mieScatteringSumRenderTarget = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar);
+  let mieScatteringSum = mieScatteringSumRenderTarget.texture;
+  let rayleighScatteringSumRenderTarget = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar);
+  rayleighScatteringSumRenderTarget = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar);
+  let rayleighScatteringSum = rayleighScatteringSumRenderTarget.texture;
 
   //
   //Set up our multiple scattering textures
   //
-  let multipleScatteringRenderer = new THREE.StarrySkyComputationRenderer(512, 512, renderer);
+  let multipleScatteringRenderer = new THREE.StarrySkyComputationRenderer(SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, renderer);
 
   //Mie
   let multipleScatteringMieTexture = multipleScatteringRenderer.createTexture();
@@ -231,9 +225,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     multipleScatteringMieTexture
   );
   multipleScatteringRenderer.setVariableDependencies(multipleScatteringMieVar, []);
-  multipleScatteringMieVar.material.uniforms = {...materials.kthInscatteringMaterial.uniforms};
+  multipleScatteringMieVar.material.uniforms = JSON.parse(JSON.stringify(materials.kthInscatteringMaterial.uniforms));
   multipleScatteringMieVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
   multipleScatteringMieVar.material.uniforms.inscatteredLightLUT.value = singleScatteringMie3DLUT;
+  multipleScatteringMieVar.type = THREE.FloatType;
   multipleScatteringMieVar.format = THREE.RGBAFormat;
   multipleScatteringMieVar.minFilter = THREE.NearestFilter;
   multipleScatteringMieVar.magFilter = THREE.NearestFilter;
@@ -257,9 +252,10 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     multipleScatteringRayleighTexture
   );
   multipleScatteringRenderer.setVariableDependencies(multipleScatteringRayleighVar, []);
-  multipleScatteringRayleighVar.material.uniforms = {...materials.kthInscatteringMaterial.uniforms};
+  multipleScatteringRayleighVar.material.uniforms = JSON.parse(JSON.stringify(materials.kthInscatteringMaterial.uniforms));
   multipleScatteringRayleighVar.material.uniforms.transmittanceTexture.value = transmittanceLUT;
   multipleScatteringRayleighVar.material.uniforms.inscatteredLightLUT.value = singleScatteringRayleigh3DLUT;
+  multipleScatteringRayleighVar.type = THREE.FloatType;
   multipleScatteringRayleighVar.format = THREE.RGBAFormat;
   multipleScatteringRayleighVar.minFilter = THREE.NearestFilter;
   multipleScatteringRayleighVar.magFilter = THREE.NearestFilter;
@@ -278,11 +274,11 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let multipleMieScatteringRenderTarget = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringMieVar);
   let multipleRayleighScatteringRenderTarget = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringRayleighVar);
 
-  //And create our 3-D Texture again...
-  let multipleScatteringMieBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * MSRT_TEXTURE_WIDTH * MSRT_TEXTURE_HEIGHT * 4);
-  let multipleScatteringMieFloat32Array = new Float32Array(multipleScatteringMieBuffer);
-  renderer.readRenderTargetPixels(multipleMieScatteringRenderTarget, 0, 0, MSRT_TEXTURE_WIDTH, MSRT_TEXTURE_HEIGHT, multipleScatteringMieFloat32Array);
-  let multipleScatteringMie3DLUT = new THREE.DataTexture3D(multipleScatteringMieFloat32Array, MSRT_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  // //And create our 3-D Texture again...
+  let multipleScatteringMieFloat32Array = new Float32Array(SCATTERING_TEXTURE_WIDTH * SCATTERING_TEXTURE_HEIGHT * 4);
+  renderer.readRenderTargetPixels(multipleMieScatteringRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, multipleScatteringMieFloat32Array);
+  let multipleScatteringMie3DLUT = new THREE.DataTexture3D(multipleScatteringMieFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  multipleScatteringMie3DLUT.type = THREE.FloatType;
   multipleScatteringMie3DLUT.format = THREE.RGBAFormat;
   multipleScatteringMie3DLUT.minFilter = THREE.LinearFilter;
   multipleScatteringMie3DLUT.magFilter = THREE.LinearFilter;
@@ -290,11 +286,12 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   multipleScatteringMie3DLUT.wrapT = THREE.ClampToEdgeWrapping;
   multipleScatteringMie3DLUT.wrapR = THREE.ClampToEdgeWrapping;
   multipleScatteringMie3DLUT.encoding = THREE.LinearEncoding;
-
-  let multipleScatteringRayleighBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * MSRT_TEXTURE_WIDTH * MSRT_TEXTURE_HEIGHT * 4);
-  let multipleScatteringRayleighFloat32Array = new Float32Array(multipleScatteringRayleighBuffer);
-  renderer.readRenderTargetPixels(multipleRayleighScatteringRenderTarget, 0, 0, MSRT_TEXTURE_WIDTH, MSRT_TEXTURE_HEIGHT, multipleScatteringRayleighFloat32Array);
-  let multipleScatteringRayleigh3DLUT = new THREE.DataTexture3D(multipleScatteringRayleighFloat32Array, MSRT_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  multipleScatteringMie3DLUT.needsUpdate = true;
+  //
+  let multipleScatteringRayleighFloat32Array = new Float32Array(SCATTERING_TEXTURE_WIDTH * SCATTERING_TEXTURE_HEIGHT * 4);
+  renderer.readRenderTargetPixels(multipleRayleighScatteringRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, multipleScatteringRayleighFloat32Array);
+  let multipleScatteringRayleigh3DLUT = new THREE.DataTexture3D(multipleScatteringRayleighFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  multipleScatteringRayleigh3DLUT.type = THREE.FloatType;
   multipleScatteringRayleigh3DLUT.format = THREE.RGBAFormat;
   multipleScatteringRayleigh3DLUT.minFilter = THREE.LinearFilter;
   multipleScatteringRayleigh3DLUT.magFilter = THREE.LinearFilter;
@@ -302,6 +299,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   multipleScatteringRayleigh3DLUT.wrapT = THREE.ClampToEdgeWrapping;
   multipleScatteringRayleigh3DLUT.wrapR = THREE.ClampToEdgeWrapping;
   multipleScatteringRayleigh3DLUT.encoding = THREE.LinearEncoding;
+  multipleScatteringRayleigh3DLUT.needsUpdate = true;
 
   //Sum
   inscatteringRayleighSumVar.material.uniforms.isNotFirstIteration.value = 1;
@@ -311,13 +309,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   inscatteringMieSumVar.material.uniforms.inscatteringTexture.value = multipleMieScatteringRenderTarget.texture;
   inscatteringMieSumVar.material.uniforms.previousInscatteringSum.value = mieScatteringSum;
   scatteringSumRenderer.compute();
-  rayleighScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar).texture;
-  mieScatteringSum = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar).texture;
+  rayleighScatteringSumRenderTarget = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar);
+  mieScatteringSumRenderTarget = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar);
+  rayleighScatteringSum = rayleighScatteringSumRenderTarget.texture;
+  mieScatteringSum = mieScatteringSumRenderTarget.texture;
 
   // Let's just focus on the second order scattering until that looks correct, possibly giving
   // another look over the first order scattering to make sure we have that correct as well.
-  let rayleighScatteringSumRenderTarget;
-  let meiScatteringSumRenderTarget;
   for(let i = 0; i < 7; ++i){
     multipleScatteringMieVar.material.uniforms.inscatteredLightLUT.value = multipleScatteringMie3DLUT;
     multipleScatteringRayleighVar.material.uniforms.inscatteredLightLUT.value = multipleScatteringRayleigh3DLUT;
@@ -327,6 +325,35 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     multipleMieScatteringRenderTarget = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringMieVar);
     multipleRayleighScatteringRenderTarget = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringRayleighVar);
 
+    //And create our 3-D textures again...
+    if(i !== 6){
+      multipleScatteringMieFloat32Array = new Float32Array(SCATTERING_TEXTURE_WIDTH * SCATTERING_TEXTURE_HEIGHT * 4);
+      renderer.readRenderTargetPixels(multipleMieScatteringRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, multipleScatteringMieFloat32Array);
+      multipleScatteringMie3DLUT = new THREE.DataTexture3D(multipleScatteringMieFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+      multipleScatteringMie3DLUT.type = THREE.FloatType;
+      multipleScatteringMie3DLUT.format = THREE.RGBAFormat;
+      multipleScatteringMie3DLUT.minFilter = THREE.LinearFilter;
+      multipleScatteringMie3DLUT.magFilter = THREE.LinearFilter;
+      multipleScatteringMie3DLUT.wrapS = THREE.ClampToEdgeWrapping;
+      multipleScatteringMie3DLUT.wrapT = THREE.ClampToEdgeWrapping;
+      multipleScatteringMie3DLUT.wrapR = THREE.ClampToEdgeWrapping;
+      multipleScatteringMie3DLUT.encoding = THREE.LinearEncoding;
+      multipleScatteringMie3DLUT.needsUpdate = true;
+
+      multipleScatteringRayleighFloat32Array = new Float32Array(SCATTERING_TEXTURE_WIDTH * SCATTERING_TEXTURE_HEIGHT * 4);
+      renderer.readRenderTargetPixels(multipleRayleighScatteringRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, multipleScatteringRayleighFloat32Array);
+      multipleScatteringRayleigh3DLUT = new THREE.DataTexture3D(multipleScatteringRayleighFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+      multipleScatteringRayleigh3DLUT.type = THREE.FloatType;
+      multipleScatteringRayleigh3DLUT.format = THREE.RGBAFormat;
+      multipleScatteringRayleigh3DLUT.minFilter = THREE.LinearFilter;
+      multipleScatteringRayleigh3DLUT.magFilter = THREE.LinearFilter;
+      multipleScatteringRayleigh3DLUT.wrapS = THREE.ClampToEdgeWrapping;
+      multipleScatteringRayleigh3DLUT.wrapT = THREE.ClampToEdgeWrapping;
+      multipleScatteringRayleigh3DLUT.wrapR = THREE.ClampToEdgeWrapping;
+      multipleScatteringRayleigh3DLUT.encoding = THREE.LinearEncoding;
+      multipleScatteringRayleigh3DLUT.needsUpdate = true;
+    }
+
     //Sum
     inscatteringRayleighSumVar.material.uniforms.inscatteringTexture.value = multipleRayleighScatteringRenderTarget.texture;
     inscatteringRayleighSumVar.material.uniforms.previousInscatteringSum.value = rayleighScatteringSum;
@@ -335,33 +362,14 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     scatteringSumRenderer.compute();
     rayleighScatteringSumRenderTarget = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar);
     rayleighScatteringSum = rayleighScatteringSumRenderTarget.texture;
-    meiScatteringSumRenderTarget = scatteringSumRenderer.getCurrentRenderTarget(inscatteringRayleighSumVar);
-    mieScatteringSum = meiScatteringSumRenderTarget.texture;
-
-    //And create our 3-D textures again...
-    renderer.readRenderTargetPixels(multipleMieScatteringRenderTarget, 0, 0, MSRT_TEXTURE_WIDTH, MSRT_TEXTURE_HEIGHT, multipleScatteringMieFloat32Array);
-    multipleScatteringMie3DLUT = new THREE.DataTexture3D(multipleScatteringMieFloat32Array, MSRT_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
-    multipleScatteringMie3DLUT.format = THREE.RGBAFormat;
-    multipleScatteringMie3DLUT.minFilter = THREE.LinearFilter;
-    multipleScatteringMie3DLUT.magFilter = THREE.LinearFilter;
-    multipleScatteringMie3DLUT.wrapS = THREE.ClampToEdgeWrapping;
-    multipleScatteringMie3DLUT.wrapT = THREE.ClampToEdgeWrapping;
-    multipleScatteringMie3DLUT.wrapR = THREE.ClampToEdgeWrapping;
-    multipleScatteringMie3DLUT.encoding = THREE.LinearEncoding;
-    renderer.readRenderTargetPixels(multipleRayleighScatteringRenderTarget, 0, 0, MSRT_TEXTURE_WIDTH, MSRT_TEXTURE_HEIGHT, multipleScatteringRayleighFloat32Array);
-    multipleScatteringRayleigh3DLUT = new THREE.DataTexture3D(multipleScatteringRayleighFloat32Array, MSRT_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
-    multipleScatteringRayleigh3DLUT.format = THREE.RGBAFormat;
-    multipleScatteringRayleigh3DLUT.minFilter = THREE.LinearFilter;
-    multipleScatteringRayleigh3DLUT.magFilter = THREE.LinearFilter;
-    multipleScatteringRayleigh3DLUT.wrapS = THREE.ClampToEdgeWrapping;
-    multipleScatteringRayleigh3DLUT.wrapT = THREE.ClampToEdgeWrapping;
-    multipleScatteringRayleigh3DLUT.wrapR = THREE.ClampToEdgeWrapping;
-    multipleScatteringRayleigh3DLUT.encoding = THREE.LinearEncoding;
+    mieScatteringSumRenderTarget = scatteringSumRenderer.getCurrentRenderTarget(inscatteringMieSumVar);
+    mieScatteringSum = mieScatteringSumRenderTarget.texture;
   }
 
   //And finally create a 3-D texture for our sum, which is what we really want...
-  renderer.readRenderTargetPixels(meiScatteringSumRenderTarget, 0, 0, MSRT_TEXTURE_WIDTH, MSRT_TEXTURE_HEIGHT, multipleScatteringMieFloat32Array);
-  multipleScatteringMie3DLUT = new THREE.DataTexture3D(multipleScatteringMieFloat32Array, MSRT_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  renderer.readRenderTargetPixels(mieScatteringSumRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, multipleScatteringMieFloat32Array);
+  multipleScatteringMie3DLUT = new THREE.DataTexture3D(multipleScatteringMieFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  multipleScatteringMie3DLUT.type = THREE.FloatType;
   multipleScatteringMie3DLUT.format = THREE.RGBAFormat;
   multipleScatteringMie3DLUT.minFilter = THREE.LinearFilter;
   multipleScatteringMie3DLUT.magFilter = THREE.LinearFilter;
@@ -369,8 +377,11 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   multipleScatteringMie3DLUT.wrapT = THREE.ClampToEdgeWrapping;
   multipleScatteringMie3DLUT.wrapR = THREE.ClampToEdgeWrapping;
   multipleScatteringMie3DLUT.encoding = THREE.LinearEncoding;
-  renderer.readRenderTargetPixels(rayleighScatteringSumRenderTarget, 0, 0, MSRT_TEXTURE_WIDTH, MSRT_TEXTURE_HEIGHT, multipleScatteringRayleighFloat32Array);
-  multipleScatteringRayleigh3DLUT = new THREE.DataTexture3D(multipleScatteringRayleighFloat32Array, MSRT_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  multipleScatteringMie3DLUT.needsUpdate = true;
+
+  renderer.readRenderTargetPixels(rayleighScatteringSumRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, multipleScatteringRayleighFloat32Array);
+  multipleScatteringRayleigh3DLUT = new THREE.DataTexture3D(multipleScatteringRayleighFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
+  multipleScatteringRayleigh3DLUT.type = THREE.FloatType;
   multipleScatteringRayleigh3DLUT.format = THREE.RGBAFormat;
   multipleScatteringRayleigh3DLUT.minFilter = THREE.LinearFilter;
   multipleScatteringRayleigh3DLUT.magFilter = THREE.LinearFilter;
@@ -378,6 +389,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   multipleScatteringRayleigh3DLUT.wrapT = THREE.ClampToEdgeWrapping;
   multipleScatteringRayleigh3DLUT.wrapR = THREE.ClampToEdgeWrapping;
   multipleScatteringRayleigh3DLUT.encoding = THREE.LinearEncoding;
+  multipleScatteringRayleigh3DLUT.needsUpdate = true;
 
   //Clean up and finishin attaching things we will need
   this.transmittance = transmittanceLUT;

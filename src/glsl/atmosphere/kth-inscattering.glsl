@@ -33,10 +33,10 @@ vec3 gatherInscatteredLight(float r, float sunAngleAtP){
     uv3.x = parameterizationOfCosOfViewZenithToX(cos(theta));
 
     //Get our transmittance value
-    transmittanceFromPToPb = texture2D(transmittanceTexture, uv3.xy).rgb;
+    transmittanceFromPToPb = texture(transmittanceTexture, uv3.xy).rgb;
 
     //Get our value from our 3-D Texture
-    inscatteredLight = texture2D(inscatteredLightLUT, uv3).rgb;
+    inscatteredLight = texture(inscatteredLightLUT, uv3).rgb;
 
     angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;
     cosAngle = cos(angleBetweenCameraAndIncomingRay);

@@ -79,7 +79,7 @@ StarrySky.Materials.Moon.combinationPass = {
       'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
 
       '//Return our tone mapped color when everything else is done',
-      'gl_FragColor = vec4(combinedLight, falloffDisk);',
+      'gl_FragColor = vec4(combinedLight, 1.0);',
     '}',
   ].join('\n')
 };

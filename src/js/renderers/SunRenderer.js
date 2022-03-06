@@ -15,7 +15,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   //we can use this to render to a square compute shader for the color pass
   //a clamped pass to use for our bloom, several bloom passes and a combination
   //pass to combine these results with our original pass.
-  this.sunRenderer = new THREE.StarrySkyComputationRenderer(skyDirector.moonAndSunRendererSize, skyDirector.moonAndSunRendererSize, skyDirector.renderer);
+  this.sunRenderer = new THREE.StarrySkyComputationRenderer(1024, 1024, skyDirector.renderer);
   let materials = StarrySky.Materials.Sun;
   let baseSunPartial = materials.baseSunPartial.fragmentShader(this.sunAngularRadiusInRadians);
 
@@ -42,8 +42,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.baseSunVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.baseSunVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
   this.baseSunVar.format = THREE.RGBAFormat;
-  this.baseSunVar.generateMipmaps = true;
-  this.baseSunVar.minFilter = THREE.LinearMipmapLinearFilter;
+  this.baseSunVar.type = THREE.FloatType;
+  this.baseSunVar.generateMipmaps = false;
+  this.baseSunVar.minFilter = THREE.LinearFilter;
   this.baseSunVar.magFilter = THREE.LinearFilter;
 
   //Check for any errors in initialization
@@ -153,6 +154,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.tick(t);
 
     //Add this object to the scene
-    //self.skyDirector.scene.add(self.sunMesh);
+    self.skyDirector.scene.add(self.sunMesh);
   }
 }

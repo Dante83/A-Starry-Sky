@@ -1,6 +1,6 @@
 StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.skyDirector = skyDirector;
-  this.geometry = new THREE.OctahedronBufferGeometry(5000.0, 5);
+  this.geometry = new THREE.IcosahedronBufferGeometry(5000.0, 4);
 
   //Create our material late
   this.atmosphereMaterial = new THREE.ShaderMaterial({

@@ -17,7 +17,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   //we can use this to render to a square compute shader for the color pass
   //a clamped pass to use for our bloom, several bloom passes and a combination
   //pass to combine these results with our original pass.
-  this.moonRenderer = new THREE.StarrySkyComputationRenderer(skyDirector.moonAndSunRendererSize, skyDirector.moonAndSunRendererSize, skyDirector.renderer, true);
+  this.moonRenderer = new THREE.StarrySkyComputationRenderer(1024, 1024, skyDirector.renderer, true);
   let materials = StarrySky.Materials.Moon;
   let baseMoonPartial = materials.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians);
 
@@ -60,7 +60,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   this.baseMoonVar.generateMipmaps = true;
   this.baseMoonVar.minFilter = THREE.LinearMipmapLinearFilter;
   this.baseMoonVar.magFilter = THREE.LinearFilter;
-  this.baseMoonVar.generateMipmaps = true;
+  this.baseMoonVar.anisotropy = 4;
+  this.baseMoonVar.samples = 8;
 
   //Check for any errors in initialization
   let error1 = this.moonRenderer.init();

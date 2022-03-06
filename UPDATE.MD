@@ -1,3 +1,7 @@
+**Version 1.1.0**
+* Swapped out emulated 3D textures for Web GL 2 3D textures.
+* Fixed bug with lunar intensity and eliminated crusty moon edges by adding in mipmapping and increased anisotropic sampling.
+
 **Version 1.0.1**
 * Fixed issues associated with build 137 of THREE which is found in A-Frame Version 1.3.0.
 

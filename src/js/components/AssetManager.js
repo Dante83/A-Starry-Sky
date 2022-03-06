@@ -62,7 +62,7 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    const moonEncodings = [THREE.sRGBEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
+    const moonEncodings = [THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
     const oneSolarEclipseImage = 1;
@@ -83,10 +83,13 @@ StarrySky.AssetManager = function(skyDirector){
       texturePromise.then(function(texture){
         //Fill in the details of our texture
         texture.format = THREE.RGBAFormat;
+        texture.type = THREE.FloatType;
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.magFilter = THREE.LinearFilter;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
+        texture.anisotropy = 4;
+        texture.samples = 8;
         texture.generateMipmaps = true;
         texture.encoding = moonEncodings[i];
         self.images.moonImages[moonTextures[i]] = texture;
@@ -116,9 +119,10 @@ StarrySky.AssetManager = function(skyDirector){
       texture.wrapS = THREE.ClampToEdgeWrapping;
       texture.wrapT = THREE.ClampToEdgeWrapping;
       texture.magFilter = THREE.LinearFilter;
-      texture.generateMipmaps = true;
       texture.minFilter = THREE.LinearMipmapLinearFilter;
       texture.encoding = THREE.LinearEncoding;
+      texture.type = THREE.FloatType;
+      texture.generateMipmaps = true;
       //Swap this tomorrow and implement custom mip-maps
       self.images.starImages.starColorMap = texture;
 
@@ -153,6 +157,7 @@ StarrySky.AssetManager = function(skyDirector){
       cubemap.magFilter = THREE.NearestFilter;
       cubemap.minFilter = THREE.NearestFilter;
       cubemap.encoding = THREE.LinearEncoding;
+      cubemap.type = THREE.FloatType;
 
       self.numberOfTexturesLoaded += 1;
       if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
@@ -193,6 +198,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.encoding = THREE.LinearEncoding;
+        texture.type = THREE.FloatType;
         dimStarChannelImages[channels[i]] = texture;
 
         numberOfDimStarChannelsLoaded += 1;
@@ -249,6 +255,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.encoding = THREE.LinearEncoding;
+        texture.type = THREE.FloatType;
         medStarChannelImages[channels[i]] = texture;
 
         numberOfMedStarChannelsLoaded += 1;
@@ -305,6 +312,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.encoding = THREE.LinearEncoding;
+        texture.type = THREE.FloatType;
         brightStarChannelImages[channels[i]] = texture;
 
         numberOfBrightStarChannelsLoaded += 1;
@@ -360,6 +368,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.LinearFilter;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.encoding = THREE.LinearEncoding;
+        texture.type = THREE.FloatType;
         self.images.blueNoiseImages[i] = texture;
 
         self.numberOfTexturesLoaded += 1;
@@ -382,6 +391,7 @@ StarrySky.AssetManager = function(skyDirector){
       texture.magFilter = THREE.LinearFilter;
       texture.minFilter = THREE.LinearMipmapLinearFilter;
       texture.encoding = THREE.LinearEncoding;
+      texture.type = THREE.FloatType;
       self.images.solarEclipseImage = texture;
 
       //If the renderer already exists, go in and update the uniform

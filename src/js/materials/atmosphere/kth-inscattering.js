@@ -1,7 +1,7 @@
 StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
   uniforms: {
     transmittanceTexture: {value: null},
-    inscatteredLightLUT: {value: new THREE.DataTexture3D()},
+    inscatteredLightLUT: {value: null},
   },
   fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
     let originalGLSL = [
@@ -40,10 +40,10 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
         'uv3.x = parameterizationOfCosOfViewZenithToX(cos(theta));',
 
         '//Get our transmittance value',
-        'transmittanceFromPToPb = texture2D(transmittanceTexture, uv3.xy).rgb;',
+        'transmittanceFromPToPb = texture(transmittanceTexture, uv3.xy).rgb;',
 
         '//Get our value from our 3-D Texture',
-        'inscatteredLight = texture2D(inscatteredLightLUT, uv3).rgb;',
+        'inscatteredLight = texture(inscatteredLightLUT, uv3).rgb;',
 
         'angleBetweenCameraAndIncomingRay = abs(fModulo(abs(theta - sunAngleAtP), PI_TIMES_TWO)) - PI;',
         'cosAngle = cos(angleBetweenCameraAndIncomingRay);',

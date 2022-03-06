@@ -175,7 +175,7 @@ $atmosphericFunctions
     float zCoordinate = floor(sqrt((temperature - 2000.0) * (961.0 / 15000.0)));//range: [0-31]
     vec2 uv = getUV2OffsetFromStarColorTemperature(zCoordinate, normalizedYPosition, noise);
 
-    vec3 starColor = texture2D(starColorMap, uv).rgb;
+    vec3 starColor = texture(starColorMap, uv).rgb;
     //TODO: Vary these to change the color colors
     // starColor *= starColor;
     // starColor.r *= max((zCoordinate / 31.0), 1.0);
@@ -246,13 +246,13 @@ vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 spher
   vec3 uv3 = vec3(uv2OfTransmittance.x, uv2OfTransmittance.y, parameterizationOfCosOfSourceZenithToZ(cosOFAngleBetweenZenithAndSource));
 
   //Interpolated scattering values
-  vec3 interpolatedMieScattering = texture2D(mieLookupTable, uv3).rgb;
-  vec3 interpolatedRayleighScattering = texture2D(rayleighLookupTable, uv3).rgb;
+  vec3 interpolatedMieScattering = texture(mieLookupTable, uv3).rgb;
+  vec3 interpolatedRayleighScattering = texture(rayleighLookupTable, uv3).rgb;
 
   return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);
 }
 
-//Including this because someone removed this in a future versio of THREE. Why?!
+//Including this because someone removed this in a future version of THREE. Why?!
 vec3 MyAESFilmicToneMapping(vec3 color) {
   return clamp((color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14), 0.0, 1.0);
 }
@@ -277,24 +277,24 @@ void main(){
   //Note that for uv2OfTransmittance, I am clamping the cosOfViewAngle
   //to avoid edge interpolation in the 2-D texture with a different z
   float cosOfViewAngle = sphericalPosition.y;
-  vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.03125)), parameterizationOfHeightToY(RADIUS_OF_EARTH));
-  vec3 transmittanceFade = texture2D(transmittance, uv2OfTransmittance).rgb;
+  vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH));
+  vec3 transmittanceFade = texture(transmittance, uv2OfTransmittance).rgb;
 
   //In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon
   #if($isMoonPass)
     //Get our lunar occlusion texel
     vec2 offsetUV = vUv * 2.0 - vec2(0.5);
-    vec4 lunarDiffuseTexel = texture2D(moonDiffuseMap, offsetUV);
+    vec4 lunarDiffuseTexel = texture(moonDiffuseMap, offsetUV);
     vec2 uvClamp1 = 1.0 - vec2(step(offsetUV.x, 0.0), step(offsetUV.y, 0.0));
     vec2 uvClamp2 = 1.0 - vec2(step(1.0 - offsetUV.x, 0.0), step(1.0 - offsetUV.y, 0.0));
     vec3 lunarDiffuseColor = lunarDiffuseTexel.rgb;
     float lunarMask = lunarDiffuseTexel.a * uvClamp1.x * uvClamp1.y * uvClamp2.x * uvClamp2.y;
   #elif($isSunPass)
     //Get our lunar occlusion texel in the frame of the sun
-    float lunarMask = texture2D(moonDiffuseMap, vUv).a;
+    float lunarMask = texture(moonDiffuseMap, vUv).a;
   #endif
 
-  //Atmosphere
+  //Atmosphere (We multiply the scattering sun intensity by vec3 to convert it to a vector)
   vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);
   vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);
   vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;
@@ -322,7 +322,7 @@ void main(){
     rightBits = scaledBits - leftBits * 8.0;
 
     //Add the dim stars lighting
-    vec4 starData = texture2D(dimStarData, vec2(starXCoordinate, starYCoordinate));
+    vec4 starData = texture(dimStarData, vec2(starXCoordinate, starYCoordinate));
     vec3 galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
     //Blue
@@ -334,7 +334,7 @@ void main(){
     starYCoordinate = (leftBits  / 31.0); //Medium Star
 
     //Add the medium stars lighting
-    starData = texture2D(medStarData, vec2(starXCoordinate, starYCoordinate));
+    starData = texture(medStarData, vec2(starXCoordinate, starYCoordinate));
     galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
     //Alpha
@@ -346,7 +346,7 @@ void main(){
     starYCoordinate = leftBits  / 7.0;
 
     //Add the bright stars lighting
-    starData = texture2D(brightStarData, vec2(starXCoordinate, starYCoordinate));
+    starData = texture(brightStarData, vec2(starXCoordinate, starYCoordinate));
     galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
     //Check our distance from each of the four primary planets
@@ -399,7 +399,7 @@ void main(){
     combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
 
     //Now apply the blue noise
-    combinedPass += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));
+    combinedPass += ((texture(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));
   #endif
 
   #if($isMeteringPass)

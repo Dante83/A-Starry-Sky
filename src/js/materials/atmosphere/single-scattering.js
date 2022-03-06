@@ -47,7 +47,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
         'vec3 transmittancePaToP = vec3(1.0);',
         '//Was better when this was just the initial angle of the sun',
         'vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));',
-        'vec3 transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;',
+        'vec3 transmittance = transmittancePaToP * texture(transmittanceTexture, uvt).rgb;',
 
         '#if($isRayleigh)',
           'vec3 previousInscattering = previousMieDensity * transmittance;',
@@ -86,7 +86,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
             '//Now that we have the transmittance from Pa to P, get the transmittance from P to Pc',
             '//and combine them to determine the net transmittance',
             'uvt = vec2(parameterizationOfCosOfViewZenithToX(cos(sunAngle)), parameterizationOfHeightToY(r_p));',
-            'transmittance = transmittancePaToP * texture2D(transmittanceTexture, uvt).rgb;',
+            'transmittance = transmittancePaToP * texture(transmittanceTexture, uvt).rgb;',
             '#if($isRayleigh)',
               '//Is Rayleigh Scattering',
               'inscattering = rayleighDensity * transmittance;',
