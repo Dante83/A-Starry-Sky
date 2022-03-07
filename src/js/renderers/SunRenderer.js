@@ -1,20 +1,42 @@
+import { EffectComposer } from './jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from './jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from './jsm/postprocessing/ShaderPass.js';
+import { RGBShiftShader } from './jsm/shaders/RGBShiftShader.js';
+import { DotScreenShader } from './jsm/shaders/DotScreenShader.js';
+
 StarrySky.Renderers.SunRenderer = function(skyDirector){
-  this.skyDirector = skyDirector;
-  let assetManager = skyDirector.assetManager;
+	this.sunAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+
+	const renderer = skyDirector.renderer;
+	const assetManager = skyDirector.assetManager;
+	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
+	const RENDER_TARGET_SIZE = 256;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const moonAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
   const baseRadiusOfTheMoon = Math.sin(moonAngularRadiusInRadians)
-  this.sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(this.sunAngularRadiusInRadians) * 2.0;
   const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
+
+	//All of this eventually gets drawn out to a single quad
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
 
-  //Unlike the regular sky, we run the sun as a multi-pass shader
-  //in order to allow for bloom shading. As we are using a square plane
-  //we can use this to render to a square compute shader for the color pass
-  //a clamped pass to use for our bloom, several bloom passes and a combination
-  //pass to combine these results with our original pass.
+	//Prepare our scene and render target object
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const renderBufferMesh = new THREE.Mesh(
+    new THREE.PlaneBufferGeometry(2, 2),
+    new THREE.MeshBasicMaterial({color: new THREE.Color( 0, 1, 0 )}) //Default to no material because we will set this to a shader material later
+  );
+  scene.add(renderBufferMesh);
+	outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
+	const convertToRenderTextureMaterial = new THREE.ShaderMaterial({
+    uniforms: JSON.parse(JSON.stringify()),
+    vertexShader: ,
+    fragmentShader: ,
+  });
+  convertToRenderTextureMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+
   this.sunRenderer = new THREE.StarrySkyComputationRenderer(1024, 1024, skyDirector.renderer);
   let materials = StarrySky.Materials.Sun;
   let baseSunPartial = materials.baseSunPartial.fragmentShader(this.sunAngularRadiusInRadians);
@@ -23,12 +45,12 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.baseSunTexture = this.sunRenderer.createTexture();
   this.baseSunVar = this.sunRenderer.addVariable('baseSunTexture',
     StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
-      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
+      assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphereLUTLibrary.scatteringTextureWidth,
+      atmosphereLUTLibrary.scatteringTextureHeight,
+      atmosphereLUTLibrary.scatteringTexturePackingWidth,
+      atmosphereLUTLibrary.scatteringTexturePackingHeight,
+      atmosphereLUTLibrary.atmosphereFunctionsString,
       baseSunPartial,
       false
     ),
@@ -84,6 +106,14 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   this.setBloomRadius(0.7);
 
   this.tick = function(t){
+		//Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
+		const renderer = self.renderer;
+		const initialRenderTarget = renderer.getRenderTarget();
+		const currentXrEnabled = renderer.xr.enabled;
+		const currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
+		renderer.xr.enabled = false;
+		renderer.shadowMap.autoUpdate = false;
+
     //Update the position of our mesh
     let cameraPosition = skyDirector.camera.position;
     let quadOffset = skyDirector.skyState.sun.quadOffset;
@@ -102,7 +132,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.baseSunVar.material.uniforms.moonRadius.value = self.skyDirector.skyState.moon.scale * baseRadiusOfTheMoon;
 
     //Run our float shaders shaders
-    self.sunRenderer.compute();
+		renderer.setRenderTarget(outputRenderTarget);
+	  renderer.clear();
+	  renderer.render(scene, camera);
 
     //Update our final texture that is displayed
     //TODO: Drive this with HDR instead of sky fade
@@ -132,6 +164,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
     const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
     self.combinationPassMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+
+		//Clean up shadows and XR stuff
+	  renderer.xr.enabled = currentXrEnabled;
+	  renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
+	  renderer.setRenderTarget(initialRenderTarget);
   }
 
   //Upon completion, this method self destructs

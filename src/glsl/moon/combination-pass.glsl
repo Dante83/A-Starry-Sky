@@ -40,7 +40,7 @@ void main(){
   }
 
   //Late triangular blue noise
-  combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));
+  combinedLight += (texelFetch(blueNoiseTexture, ivec2(gl_FragCoord.xy) % 128, 0).rgb - vec3(0.5)) / vec3(256.0);
 
   //Return our tone mapped color when everything else is done
   gl_FragColor = vec4(combinedLight, 1.0);

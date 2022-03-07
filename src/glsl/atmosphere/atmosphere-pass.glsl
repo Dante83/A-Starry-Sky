@@ -399,7 +399,7 @@ void main(){
     combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
 
     //Now apply the blue noise
-    combinedPass += ((texture(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));
+    combinedPass += (texelFetch(blueNoiseTexture, ivec2(gl_FragCoord.xy) % 128, 0).rgb - vec3(0.5)) / vec3(256.0);
   #endif
 
   #if($isMeteringPass)
