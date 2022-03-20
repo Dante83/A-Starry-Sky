@@ -125,6 +125,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
     moonMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
     moonMaterial.uniforms.uTime.value = t;
+    moonMaterial.uniforms.localSiderealTime.value = skyDirector.skyState.LSRT;
     moonMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
     moonMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
     moonMaterial.uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
