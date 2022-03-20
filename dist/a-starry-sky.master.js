@@ -786,410 +786,983 @@ THREE.BufferGeometryUtils = {
 
 };
 
-/**
- * @author yomboprime https://github.com/yomboprime
- *
- * StarrySkyComputationRenderer, based on SimulationRenderer by zz85
- *
- * The StarrySkyComputationRenderer uses the concept of variables. These variables are RGBA float textures that hold 4 floats
- * for each compute element (texel)
- *
- * Each variable has a fragment shader that defines the computation made to obtain the variable in question.
- * You can use as many variables you need, and make dependencies so you can use textures of other variables in the shader
- * (the sampler uniforms are added automatically) Most of the variables will need themselves as dependency.
- *
- * The renderer has actually two render targets per variable, to make ping-pong. Textures from the current frame are used
- * as inputs to render the textures of the next frame.
- *
- * The render targets of the variables can be used as input textures for your visualization shaders.
- *
- * Variable names should be valid identifiers and should not collide with THREE GLSL used identifiers.
- * a common approach could be to use 'texture' prefixing the variable name; i.e texturePosition, textureVelocity...
- *
- * The size of the computation (sizeX * sizeY) is defined as 'resolution' automatically in the shader. For example:
- * #DEFINE resolution vec2( 1024.0, 1024.0 )
- *
- * -------------
- *
- * Basic use:
- *
- * // Initialization...
- *
- * // Create computation renderer
- * var gpuCompute = new THREE.StarrySkyComputationRenderer( 1024, 1024, renderer );
- *
- * // Create initial state float textures
- * var pos0 = gpuCompute.createTexture();
- * var vel0 = gpuCompute.createTexture();
- * // and fill in here the texture data...
- *
- * // Add texture variables
- * var velVar = gpuCompute.addVariable( "textureVelocity", fragmentShaderVel, pos0 );
- * var posVar = gpuCompute.addVariable( "texturePosition", fragmentShaderPos, vel0 );
- *
- * // Add variable dependencies
- * gpuCompute.setVariableDependencies( velVar, [ velVar, posVar ] );
- * gpuCompute.setVariableDependencies( posVar, [ velVar, posVar ] );
- *
- * // Add custom uniforms
- * velVar.material.uniforms.time = { value: 0.0 };
- *
- * // Check for completeness
- * var error = gpuCompute.init();
- * if ( error !== null ) {
- *		console.error( error );
-  * }
- *
- *
- * // In each frame...
- *
- * // Compute!
- * gpuCompute.compute();
- *
- * // Update texture uniforms in your visualization materials with the gpu renderer output
- * myMaterial.uniforms.myTexture.value = gpuCompute.getCurrentRenderTarget( posVar ).texture;
- *
- * // Do your rendering
- * renderer.render( myScene, myCamera );
- *
- * -------------
- *
- * Also, you can use utility functions to create ShaderMaterial and perform computations (rendering between textures)
- * Note that the shaders can have multiple input textures.
- *
- * var myFilter1 = gpuCompute.createShaderMaterial( myFilterFragmentShader1, { theTexture: { value: null } } );
- * var myFilter2 = gpuCompute.createShaderMaterial( myFilterFragmentShader2, { theTexture: { value: null } } );
- *
- * var inputTexture = gpuCompute.createTexture();
- *
- * // Fill in here inputTexture...
- *
- * myFilter1.uniforms.theTexture.value = inputTexture;
- *
- * var myRenderTarget = gpuCompute.createRenderTarget();
- * myFilter2.uniforms.theTexture.value = myRenderTarget.texture;
- *
- * var outputRenderTarget = gpuCompute.createRenderTarget();
- *
- * // Now use the output texture where you want:
- * myMaterial.uniforms.map.value = outputRenderTarget.texture;
- *
- * // And compute each frame, before rendering to screen:
- * gpuCompute.doRenderTarget( myFilter1, myRenderTarget );
- * gpuCompute.doRenderTarget( myFilter2, outputRenderTarget );
- *
- *
- *
- * @param {int} sizeX Computation problem size is always 2d: sizeX * sizeY elements.
- * @param {int} sizeY Computation problem size is always 2d: sizeX * sizeY elements.
- * @param {WebGLRenderer} renderer The renderer
-  */
+( function () {
 
-//Like our normal GPU Compute Renderer, but with calculated tangents
-//
-//NOTE: This is almost like GPU Compute renderer, but it also includes attributes for our tangents
-//so we can do multi-pass rendering on our moon.
-//
-THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeTangets = false) {
+	/**
+ * Full-screen textured quad shader
+ */
+	const CopyShader = {
+		uniforms: {
+			'tDiffuse': {
+				value: null
+			},
+			'opacity': {
+				value: 1.0
+			}
+		},
+		vertexShader:
+  /* glsl */
+  `
 
-	this.variables = [];
+		varying vec2 vUv;
 
-	this.currentTextureIndex = 0;
+		void main() {
 
-	var scene = new THREE.Scene();
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 
-	var camera = new THREE.Camera();
-	camera.position.z = 1;
+		}`,
+		fragmentShader:
+  /* glsl */
+  `
 
-	var passThruUniforms = {
-		passThruTexture: { value: null }
+		uniform float opacity;
+
+		uniform sampler2D tDiffuse;
+
+		varying vec2 vUv;
+
+		void main() {
+
+			gl_FragColor = texture2D( tDiffuse, vUv );
+			gl_FragColor.a *= opacity;
+
+
+		}`
 	};
 
-	var passThruShader = createShaderMaterial( getPassThroughFragmentShader(), passThruUniforms );
+	THREE.CopyShader = CopyShader;
 
-  let planeGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
-  if(computeTangets){
-    THREE.BufferGeometryUtils.computeTangents(planeGeometry);
-  }
-	let mesh = new THREE.Mesh(planeGeometry , passThruShader );
-	scene.add( mesh );
+} )();
 
-  let self = this;
-	this.addVariable = function ( variableName, computeFragmentShader, initialValueTexture ) {
+( function () {
 
-		var material = this.createShaderMaterial( computeFragmentShader );
+	class Pass {
 
-		var variable = {
-			name: variableName,
-			initialValueTexture: initialValueTexture,
-			material: material,
-			dependencies: null,
-			renderTargets: [],
-			wrapS: null,
-			wrapT: null,
-			minFilter: THREE.NearestFilter,
-			magFilter: THREE.NearestFilter
-		};
+		constructor() {
 
-		this.variables.push( variable );
+			// if set to true, the pass is processed by the composer
+			this.enabled = true; // if set to true, the pass indicates to swap read and write buffer after rendering
 
-		return variable;
+			this.needsSwap = true; // if set to true, the pass clears its buffer before rendering
 
-	};
+			this.clear = false; // if set to true, the result of the pass is rendered to screen. This is set automatically by EffectComposer.
 
-	this.setVariableDependencies = function ( variable, dependencies ) {
-
-		variable.dependencies = dependencies;
-
-	};
-
-	this.init = function () {
-
-		if ( ! renderer.capabilities.isWebGL2 &&
-			 ! renderer.extensions.get( "OES_texture_float" ) ) {
-
-			return "No OES_texture_float support for float textures.";
+			this.renderToScreen = false;
 
 		}
 
-		if ( renderer.capabilities.maxVertexTextures === 0 ) {
+		setSize() {}
 
-			return "No support for vertex shader textures.";
+		render() {
+
+			console.error( 'THREE.Pass: .render() must be implemented in derived pass.' );
 
 		}
 
-		for ( var i = 0; i < this.variables.length; i ++ ) {
+	} // Helper for passes that need to fill the viewport with a single quad.
 
-			var variable = this.variables[ i ];
 
-			// Creates rendertargets and initialize them with input texture
-			variable.renderTargets[ 0 ] = this.createRenderTarget( sizeX, sizeY, variable.wrapS, variable.wrapT, variable.minFilter, variable.magFilter );
-			variable.renderTargets[ 1 ] = this.createRenderTarget( sizeX, sizeY, variable.wrapS, variable.wrapT, variable.minFilter, variable.magFilter );
-			this.renderTexture( variable.initialValueTexture, variable.renderTargets[ 0 ] );
-			this.renderTexture( variable.initialValueTexture, variable.renderTargets[ 1 ] );
+	const _camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 ); // https://github.com/mrdoob/three.js/pull/21358
 
-			// Adds dependencies uniforms to the ShaderMaterial
-			var material = variable.material;
-			var uniforms = material.uniforms;
-			if ( variable.dependencies !== null ) {
 
-				for ( var d = 0; d < variable.dependencies.length; d ++ ) {
+	const _geometry = new THREE.BufferGeometry();
 
-					var depVar = variable.dependencies[ d ];
+	_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ - 1, 3, 0, - 1, - 1, 0, 3, - 1, 0 ], 3 ) );
 
-					if ( depVar.name !== variable.name ) {
+	_geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( [ 0, 2, 0, 0, 2, 0 ], 2 ) );
 
-						// Checks if variable exists
-						var found = false;
-						for ( var j = 0; j < this.variables.length; j ++ ) {
+	class FullScreenQuad {
 
-							if ( depVar.name === this.variables[ j ].name ) {
+		constructor( material ) {
 
-								found = true;
-								break;
+			this._mesh = new THREE.Mesh( _geometry, material );
 
-							}
+		}
 
-						}
-						if ( ! found ) {
+		dispose() {
 
-							return "Variable dependency not found. Variable=" + variable.name + ", dependency=" + depVar.name;
+			this._mesh.geometry.dispose();
 
-						}
+		}
+
+		render( renderer ) {
+
+			renderer.render( this._mesh, _camera );
+
+		}
+
+		get material() {
+
+			return this._mesh.material;
+
+		}
+
+		set material( value ) {
+
+			this._mesh.material = value;
+
+		}
+
+	}
+
+	THREE.FullScreenQuad = FullScreenQuad;
+	THREE.Pass = Pass;
+
+} )();
+
+( function () {
+
+	class RenderPass extends THREE.Pass {
+
+		constructor( scene, camera, overrideMaterial, clearColor, clearAlpha ) {
+
+			super();
+			this.scene = scene;
+			this.camera = camera;
+			this.overrideMaterial = overrideMaterial;
+			this.clearColor = clearColor;
+			this.clearAlpha = clearAlpha !== undefined ? clearAlpha : 0;
+			this.clear = true;
+			this.clearDepth = false;
+			this.needsSwap = false;
+			this._oldClearColor = new THREE.Color();
+
+		}
+
+		render( renderer, writeBuffer, readBuffer
+			/*, deltaTime, maskActive */
+		) {
+
+			const oldAutoClear = renderer.autoClear;
+			renderer.autoClear = false;
+			let oldClearAlpha, oldOverrideMaterial;
+
+			if ( this.overrideMaterial !== undefined ) {
+
+				oldOverrideMaterial = this.scene.overrideMaterial;
+				this.scene.overrideMaterial = this.overrideMaterial;
+
+			}
+
+			if ( this.clearColor ) {
+
+				renderer.getClearColor( this._oldClearColor );
+				oldClearAlpha = renderer.getClearAlpha();
+				renderer.setClearColor( this.clearColor, this.clearAlpha );
+
+			}
+
+			if ( this.clearDepth ) {
+
+				renderer.clearDepth();
+
+			}
+
+			renderer.setRenderTarget( this.renderToScreen ? null : readBuffer ); // TODO: Avoid using autoClear properties, see https://github.com/mrdoob/three.js/pull/15571#issuecomment-465669600
+
+			if ( this.clear ) renderer.clear( renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil );
+			renderer.render( this.scene, this.camera );
+
+			if ( this.clearColor ) {
+
+				renderer.setClearColor( this._oldClearColor, oldClearAlpha );
+
+			}
+
+			if ( this.overrideMaterial !== undefined ) {
+
+				this.scene.overrideMaterial = oldOverrideMaterial;
+
+			}
+
+			renderer.autoClear = oldAutoClear;
+
+		}
+
+	}
+
+	THREE.RenderPass = RenderPass;
+
+} )();
+
+( function () {
+
+	class ShaderPass extends THREE.Pass {
+
+		constructor( shader, textureID ) {
+
+			super();
+			this.textureID = textureID !== undefined ? textureID : 'tDiffuse';
+
+			if ( shader instanceof THREE.ShaderMaterial ) {
+
+				this.uniforms = shader.uniforms;
+				this.material = shader;
+
+			} else if ( shader ) {
+
+				this.uniforms = THREE.UniformsUtils.clone( shader.uniforms );
+				this.material = new THREE.ShaderMaterial( {
+					defines: Object.assign( {}, shader.defines ),
+					uniforms: this.uniforms,
+					vertexShader: shader.vertexShader,
+					fragmentShader: shader.fragmentShader
+				} );
+
+			}
+
+			this.fsQuad = new THREE.FullScreenQuad( this.material );
+
+		}
+
+		render( renderer, writeBuffer, readBuffer
+			/*, deltaTime, maskActive */
+		) {
+
+			if ( this.uniforms[ this.textureID ] ) {
+
+				this.uniforms[ this.textureID ].value = readBuffer.texture;
+
+			}
+
+			this.fsQuad.material = this.material;
+
+			if ( this.renderToScreen ) {
+
+				renderer.setRenderTarget( null );
+				this.fsQuad.render( renderer );
+
+			} else {
+
+				renderer.setRenderTarget( writeBuffer ); // TODO: Avoid using autoClear properties, see https://github.com/mrdoob/three.js/pull/15571#issuecomment-465669600
+
+				if ( this.clear ) renderer.clear( renderer.autoClearColor, renderer.autoClearDepth, renderer.autoClearStencil );
+				this.fsQuad.render( renderer );
+
+			}
+
+		}
+
+	}
+
+	THREE.ShaderPass = ShaderPass;
+
+} )();
+
+( function () {
+
+	class EffectComposer {
+
+		constructor( renderer, renderTarget ) {
+
+			this.renderer = renderer;
+
+			if ( renderTarget === undefined ) {
+
+				const size = renderer.getSize( new THREE.Vector2() );
+				this._pixelRatio = renderer.getPixelRatio();
+				this._width = size.width;
+				this._height = size.height;
+				renderTarget = new THREE.WebGLRenderTarget( this._width * this._pixelRatio, this._height * this._pixelRatio );
+				renderTarget.texture.name = 'EffectComposer.rt1';
+
+			} else {
+
+				this._pixelRatio = 1;
+				this._width = renderTarget.width;
+				this._height = renderTarget.height;
+
+			}
+
+			this.renderTarget1 = renderTarget;
+			this.renderTarget2 = renderTarget.clone();
+			this.renderTarget2.texture.name = 'EffectComposer.rt2';
+			this.writeBuffer = this.renderTarget1;
+			this.readBuffer = this.renderTarget2;
+			this.renderToScreen = true;
+			this.passes = []; // dependencies
+
+			if ( THREE.CopyShader === undefined ) {
+
+				console.error( 'THREE.EffectComposer relies on THREE.CopyShader' );
+
+			}
+
+			if ( THREE.ShaderPass === undefined ) {
+
+				console.error( 'THREE.EffectComposer relies on THREE.ShaderPass' );
+
+			}
+
+			this.copyPass = new THREE.ShaderPass( THREE.CopyShader );
+			this.clock = new THREE.Clock();
+
+		}
+
+		swapBuffers() {
+
+			const tmp = this.readBuffer;
+			this.readBuffer = this.writeBuffer;
+			this.writeBuffer = tmp;
+
+		}
+
+		addPass( pass ) {
+
+			this.passes.push( pass );
+			pass.setSize( this._width * this._pixelRatio, this._height * this._pixelRatio );
+
+		}
+
+		insertPass( pass, index ) {
+
+			this.passes.splice( index, 0, pass );
+			pass.setSize( this._width * this._pixelRatio, this._height * this._pixelRatio );
+
+		}
+
+		removePass( pass ) {
+
+			const index = this.passes.indexOf( pass );
+
+			if ( index !== - 1 ) {
+
+				this.passes.splice( index, 1 );
+
+			}
+
+		}
+
+		isLastEnabledPass( passIndex ) {
+
+			for ( let i = passIndex + 1; i < this.passes.length; i ++ ) {
+
+				if ( this.passes[ i ].enabled ) {
+
+					return false;
+
+				}
+
+			}
+
+			return true;
+
+		}
+
+		render( deltaTime ) {
+
+			// deltaTime value is in seconds
+			if ( deltaTime === undefined ) {
+
+				deltaTime = this.clock.getDelta();
+
+			}
+
+			const currentRenderTarget = this.renderer.getRenderTarget();
+			let maskActive = false;
+
+			for ( let i = 0, il = this.passes.length; i < il; i ++ ) {
+
+				const pass = this.passes[ i ];
+				if ( pass.enabled === false ) continue;
+				pass.renderToScreen = this.renderToScreen && this.isLastEnabledPass( i );
+				pass.render( this.renderer, this.writeBuffer, this.readBuffer, deltaTime, maskActive );
+
+				if ( pass.needsSwap ) {
+
+					if ( maskActive ) {
+
+						const context = this.renderer.getContext();
+						const stencil = this.renderer.state.buffers.stencil; //context.stencilFunc( context.NOTEQUAL, 1, 0xffffffff );
+
+						stencil.setFunc( context.NOTEQUAL, 1, 0xffffffff );
+						this.copyPass.render( this.renderer, this.writeBuffer, this.readBuffer, deltaTime ); //context.stencilFunc( context.EQUAL, 1, 0xffffffff );
+
+						stencil.setFunc( context.EQUAL, 1, 0xffffffff );
 
 					}
 
-					uniforms[ depVar.name ] = { value: null };
+					this.swapBuffers();
 
-					material.fragmentShader = "\nuniform sampler2D " + depVar.name + ";\n" + material.fragmentShader;
+				}
+
+				if ( THREE.MaskPass !== undefined ) {
+
+					if ( pass instanceof THREE.MaskPass ) {
+
+						maskActive = true;
+
+					} else if ( pass instanceof THREE.ClearMaskPass ) {
+
+						maskActive = false;
+
+					}
 
 				}
 
 			}
 
+			this.renderer.setRenderTarget( currentRenderTarget );
+
 		}
 
-		this.currentTextureIndex = 0;
+		reset( renderTarget ) {
 
-		return null;
+			if ( renderTarget === undefined ) {
 
-	};
-
-	this.compute = function () {
-
-		var currentTextureIndex = this.currentTextureIndex;
-		var nextTextureIndex = this.currentTextureIndex === 0 ? 1 : 0;
-
-		for ( var i = 0, il = this.variables.length; i < il; i ++ ) {
-
-			var variable = this.variables[ i ];
-
-			// Sets texture dependencies uniforms
-			if ( variable.dependencies !== null ) {
-
-				var uniforms = variable.material.uniforms;
-				for ( var d = 0, dl = variable.dependencies.length; d < dl; d ++ ) {
-
-					var depVar = variable.dependencies[ d ];
-
-					uniforms[ depVar.name ].value = depVar.renderTargets[ currentTextureIndex ].texture;
-
-				}
+				const size = this.renderer.getSize( new THREE.Vector2() );
+				this._pixelRatio = this.renderer.getPixelRatio();
+				this._width = size.width;
+				this._height = size.height;
+				renderTarget = this.renderTarget1.clone();
+				renderTarget.setSize( this._width * this._pixelRatio, this._height * this._pixelRatio );
 
 			}
 
-			// Performs the computation for this variable
-			this.doRenderTarget( variable.material, variable.renderTargets[ nextTextureIndex ] );
+			this.renderTarget1.dispose();
+			this.renderTarget2.dispose();
+			this.renderTarget1 = renderTarget;
+			this.renderTarget2 = renderTarget.clone();
+			this.writeBuffer = this.renderTarget1;
+			this.readBuffer = this.renderTarget2;
 
 		}
 
-		this.currentTextureIndex = nextTextureIndex;
+		setSize( width, height ) {
 
-	};
+			this._width = width;
+			this._height = height;
+			const effectiveWidth = this._width * this._pixelRatio;
+			const effectiveHeight = this._height * this._pixelRatio;
+			this.renderTarget1.setSize( effectiveWidth, effectiveHeight );
+			this.renderTarget2.setSize( effectiveWidth, effectiveHeight );
 
-	this.getCurrentRenderTarget = function ( variable ) {
+			for ( let i = 0; i < this.passes.length; i ++ ) {
 
-		return variable.renderTargets[ this.currentTextureIndex ];
+				this.passes[ i ].setSize( effectiveWidth, effectiveHeight );
 
-	};
+			}
 
-	this.getAlternateRenderTarget = function ( variable ) {
+		}
 
-		return variable.renderTargets[ this.currentTextureIndex === 0 ? 1 : 0 ];
+		setPixelRatio( pixelRatio ) {
 
-	};
+			this._pixelRatio = pixelRatio;
+			this.setSize( this._width, this._height );
 
-	function addResolutionDefine( materialShader ) {
-
-		materialShader.defines.resolution = 'vec2( ' + sizeX.toFixed( 1 ) + ', ' + sizeY.toFixed( 1 ) + " )";
-
-	}
-	this.addResolutionDefine = addResolutionDefine;
-
-
-	// The following functions can be used to compute things manually
-
-	function createShaderMaterial( computeFragmentShader, uniforms ) {
-
-		uniforms = uniforms || {};
-
-		var material = new THREE.ShaderMaterial( {
-			uniforms: uniforms,
-			vertexShader: getPassThroughVertexShader(),
-			fragmentShader: computeFragmentShader
-		} );
-
-		addResolutionDefine( material );
-
-		return material;
+		}
 
 	}
 
-	this.createShaderMaterial = createShaderMaterial;
+	class Pass {
 
-	this.createRenderTarget = function ( sizeXTexture, sizeYTexture, wrapS, wrapT, minFilter, magFilter ) {
+		constructor() {
 
-		sizeXTexture = sizeXTexture || sizeX;
-		sizeYTexture = sizeYTexture || sizeY;
+			// if set to true, the pass is processed by the composer
+			this.enabled = true; // if set to true, the pass indicates to swap read and write buffer after rendering
 
-		wrapS = wrapS || THREE.ClampToEdgeWrapping;
-		wrapT = wrapT || THREE.ClampToEdgeWrapping;
+			this.needsSwap = true; // if set to true, the pass clears its buffer before rendering
 
-		minFilter = minFilter || THREE.NearestFilter;
-		magFilter = magFilter || THREE.NearestFilter;
+			this.clear = false; // if set to true, the result of the pass is rendered to screen. This is set automatically by EffectComposer.
 
-		var renderTarget = new THREE.WebGLRenderTarget( sizeXTexture, sizeYTexture, {
-			wrapS: wrapS,
-			wrapT: wrapT,
-			minFilter: minFilter,
-			magFilter: magFilter,
-			type: ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) ? THREE.HalfFloatType : THREE.FloatType,
-			stencilBuffer: false,
-			depthBuffer: false
-		} );
+			this.renderToScreen = false;
 
-		return renderTarget;
+		}
 
-	};
+		setSize() {}
 
-	this.createTexture = function (inData = false) {
-    var data
-    if(!inData){
-		  data = new Float32Array( sizeX * sizeY * 4 );
-    }
-    else{
-      data = inData;
-    }
-		return new THREE.DataTexture( data, sizeX, sizeY );
-	};
+		render() {
 
-	this.renderTexture = function ( input, output ) {
+			console.error( 'THREE.Pass: .render() must be implemented in derived pass.' );
 
-		// Takes a texture, and render out in rendertarget
-		// input = Texture
-		// output = RenderTarget
+		}
 
-		passThruUniforms.passThruTexture.value = input;
+	} // Helper for passes that need to fill the viewport with a single quad.
 
-		this.doRenderTarget( passThruShader, output );
 
-		passThruUniforms.passThruTexture.value = null;
+	const _camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 ); // https://github.com/mrdoob/three.js/pull/21358
 
-	};
 
-	this.doRenderTarget = function ( material, output ) {
+	const _geometry = new THREE.BufferGeometry();
 
-		var currentRenderTarget = renderer.getRenderTarget();
+	_geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ - 1, 3, 0, - 1, - 1, 0, 3, - 1, 0 ], 3 ) );
 
-		mesh.material = material;
+	_geometry.setAttribute( 'uv', new THREE.Float32BufferAttribute( [ 0, 2, 0, 0, 2, 0 ], 2 ) );
 
-		//Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
-		var currentXrEnabled = renderer.xr.enabled;
-		var currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
+	class FullScreenQuad {
 
-		renderer.xr.enabled = false;
-		renderer.shadowMap.autoUpdate = false;
+		constructor( material ) {
 
-		renderer.setRenderTarget( output );
-		renderer.clear();
+			this._mesh = new THREE.Mesh( _geometry, material );
 
-    renderer.render( scene, camera );
+		}
 
-		renderer.xr.enabled = currentXrEnabled;
-		renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
+		dispose() {
 
-		mesh.material = passThruShader;
+			this._mesh.geometry.dispose();
 
-		renderer.setRenderTarget( currentRenderTarget );
-	};
+		}
 
-	// Shaders
+		render( renderer ) {
 
-	function getPassThroughVertexShader() {
+			renderer.render( this._mesh, _camera );
 
-		return	"void main()	{\n" +
-				"\n" +
-				"	gl_Position = vec4( position, 1.0 );\n" +
-				"\n" +
-				"}\n";
+		}
+
+		get material() {
+
+			return this._mesh.material;
+
+		}
+
+		set material( value ) {
+
+			this._mesh.material = value;
+
+		}
 
 	}
 
-	function getPassThroughFragmentShader() {
+	THREE.EffectComposer = EffectComposer;
+	THREE.FullScreenQuad = FullScreenQuad;
+	THREE.Pass = Pass;
 
-		return	"uniform sampler2D passThruTexture;\n" +
-				"\n" +
-				"void main() {\n" +
-				"\n" +
-				"	vec2 uv = gl_FragCoord.xy / resolution.xy;\n" +
-				"\n" +
-				"	gl_FragColor = texture2D( passThruTexture, uv );\n" +
-				"\n" +
-				"}\n";
+} )();
+
+( function () {
+
+	/**
+ * Luminosity
+ * http://en.wikipedia.org/wiki/Luminosity
+ */
+
+	const LuminosityHighPassShader = {
+		shaderID: 'luminosityHighPass',
+		uniforms: {
+			'tDiffuse': {
+				value: null
+			},
+			'luminosityThreshold': {
+				value: 1.0
+			},
+			'smoothWidth': {
+				value: 1.0
+			},
+			'defaultColor': {
+				value: new THREE.Color( 0x000000 )
+			},
+			'defaultOpacity': {
+				value: 0.0
+			}
+		},
+		vertexShader:
+  /* glsl */
+  `
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`,
+		fragmentShader:
+  /* glsl */
+  `
+
+		uniform sampler2D tDiffuse;
+		uniform vec3 defaultColor;
+		uniform float defaultOpacity;
+		uniform float luminosityThreshold;
+		uniform float smoothWidth;
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vec4 texel = texture2D( tDiffuse, vUv );
+
+			vec3 luma = vec3( 0.299, 0.587, 0.114 );
+
+			float v = dot( texel.xyz, luma );
+
+			vec4 outputColor = vec4( defaultColor.rgb, defaultOpacity );
+
+			float alpha = smoothstep( luminosityThreshold, luminosityThreshold + smoothWidth, v );
+
+			gl_FragColor = mix( outputColor, texel, alpha );
+
+		}`
+	};
+
+	THREE.LuminosityHighPassShader = LuminosityHighPassShader;
+
+} )();
+
+( function () {
+
+	/**
+ * UnrealBloomPass is inspired by the bloom pass of Unreal Engine. It creates a
+ * mip map chain of bloom textures and blurs them with different radii. Because
+ * of the weighted combination of mips, and because larger blurs are done on
+ * higher mips, this effect provides good quality and performance.
+ *
+ * Reference:
+ * - https://docs.unrealengine.com/latest/INT/Engine/Rendering/PostProcessEffects/Bloom/
+ */
+
+	class UnrealBloomPass extends THREE.Pass {
+
+		constructor( resolution, strength, radius, threshold ) {
+
+			super();
+			this.strength = strength !== undefined ? strength : 1;
+			this.radius = radius;
+			this.threshold = threshold;
+			this.resolution = resolution !== undefined ? new THREE.Vector2( resolution.x, resolution.y ) : new THREE.Vector2( 256, 256 ); // create color only once here, reuse it later inside the render function
+
+			this.clearColor = new THREE.Color( 0, 0, 0 ); // render targets
+
+			this.renderTargetsHorizontal = [];
+			this.renderTargetsVertical = [];
+			this.nMips = 5;
+			let resx = Math.round( this.resolution.x / 2 );
+			let resy = Math.round( this.resolution.y / 2 );
+			this.renderTargetBright = new THREE.WebGLRenderTarget( resx, resy );
+			this.renderTargetBright.texture.name = 'UnrealBloomPass.bright';
+			this.renderTargetBright.texture.generateMipmaps = false;
+
+			for ( let i = 0; i < this.nMips; i ++ ) {
+
+				const renderTargetHorizonal = new THREE.WebGLRenderTarget( resx, resy );
+				renderTargetHorizonal.texture.name = 'UnrealBloomPass.h' + i;
+				renderTargetHorizonal.texture.generateMipmaps = false;
+				this.renderTargetsHorizontal.push( renderTargetHorizonal );
+				const renderTargetVertical = new THREE.WebGLRenderTarget( resx, resy );
+				renderTargetVertical.texture.name = 'UnrealBloomPass.v' + i;
+				renderTargetVertical.texture.generateMipmaps = false;
+				this.renderTargetsVertical.push( renderTargetVertical );
+				resx = Math.round( resx / 2 );
+				resy = Math.round( resy / 2 );
+
+			} // luminosity high pass material
+
+
+			if ( THREE.LuminosityHighPassShader === undefined ) console.error( 'THREE.UnrealBloomPass relies on THREE.LuminosityHighPassShader' );
+			const highPassShader = THREE.LuminosityHighPassShader;
+			this.highPassUniforms = THREE.UniformsUtils.clone( highPassShader.uniforms );
+			this.highPassUniforms[ 'luminosityThreshold' ].value = threshold;
+			this.highPassUniforms[ 'smoothWidth' ].value = 0.01;
+			this.materialHighPassFilter = new THREE.ShaderMaterial( {
+				uniforms: this.highPassUniforms,
+				vertexShader: highPassShader.vertexShader,
+				fragmentShader: highPassShader.fragmentShader,
+				defines: {}
+			} ); // Gaussian Blur Materials
+
+			this.separableBlurMaterials = [];
+			const kernelSizeArray = [ 3, 5, 7, 9, 11 ];
+			resx = Math.round( this.resolution.x / 2 );
+			resy = Math.round( this.resolution.y / 2 );
+
+			for ( let i = 0; i < this.nMips; i ++ ) {
+
+				this.separableBlurMaterials.push( this.getSeperableBlurMaterial( kernelSizeArray[ i ] ) );
+				this.separableBlurMaterials[ i ].uniforms[ 'texSize' ].value = new THREE.Vector2( resx, resy );
+				resx = Math.round( resx / 2 );
+				resy = Math.round( resy / 2 );
+
+			} // Composite material
+
+
+			this.compositeMaterial = this.getCompositeMaterial( this.nMips );
+			this.compositeMaterial.uniforms[ 'blurTexture1' ].value = this.renderTargetsVertical[ 0 ].texture;
+			this.compositeMaterial.uniforms[ 'blurTexture2' ].value = this.renderTargetsVertical[ 1 ].texture;
+			this.compositeMaterial.uniforms[ 'blurTexture3' ].value = this.renderTargetsVertical[ 2 ].texture;
+			this.compositeMaterial.uniforms[ 'blurTexture4' ].value = this.renderTargetsVertical[ 3 ].texture;
+			this.compositeMaterial.uniforms[ 'blurTexture5' ].value = this.renderTargetsVertical[ 4 ].texture;
+			this.compositeMaterial.uniforms[ 'bloomStrength' ].value = strength;
+			this.compositeMaterial.uniforms[ 'bloomRadius' ].value = 0.1;
+			this.compositeMaterial.needsUpdate = true;
+			const bloomFactors = [ 1.0, 0.8, 0.6, 0.4, 0.2 ];
+			this.compositeMaterial.uniforms[ 'bloomFactors' ].value = bloomFactors;
+			this.bloomTintColors = [ new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ) ];
+			this.compositeMaterial.uniforms[ 'bloomTintColors' ].value = this.bloomTintColors; // copy material
+
+			if ( THREE.CopyShader === undefined ) {
+
+				console.error( 'THREE.UnrealBloomPass relies on THREE.CopyShader' );
+
+			}
+
+			const copyShader = THREE.CopyShader;
+			this.copyUniforms = THREE.UniformsUtils.clone( copyShader.uniforms );
+			this.copyUniforms[ 'opacity' ].value = 1.0;
+			this.materialCopy = new THREE.ShaderMaterial( {
+				uniforms: this.copyUniforms,
+				vertexShader: copyShader.vertexShader,
+				fragmentShader: copyShader.fragmentShader,
+				blending: THREE.AdditiveBlending,
+				depthTest: false,
+				depthWrite: false,
+				transparent: true
+			} );
+			this.enabled = true;
+			this.needsSwap = false;
+			this._oldClearColor = new THREE.Color();
+			this.oldClearAlpha = 1;
+			this.basic = new THREE.MeshBasicMaterial();
+			this.fsQuad = new THREE.FullScreenQuad( null );
+
+		}
+
+		dispose() {
+
+			for ( let i = 0; i < this.renderTargetsHorizontal.length; i ++ ) {
+
+				this.renderTargetsHorizontal[ i ].dispose();
+
+			}
+
+			for ( let i = 0; i < this.renderTargetsVertical.length; i ++ ) {
+
+				this.renderTargetsVertical[ i ].dispose();
+
+			}
+
+			this.renderTargetBright.dispose();
+
+		}
+
+		setSize( width, height ) {
+
+			let resx = Math.round( width / 2 );
+			let resy = Math.round( height / 2 );
+			this.renderTargetBright.setSize( resx, resy );
+
+			for ( let i = 0; i < this.nMips; i ++ ) {
+
+				this.renderTargetsHorizontal[ i ].setSize( resx, resy );
+				this.renderTargetsVertical[ i ].setSize( resx, resy );
+				this.separableBlurMaterials[ i ].uniforms[ 'texSize' ].value = new THREE.Vector2( resx, resy );
+				resx = Math.round( resx / 2 );
+				resy = Math.round( resy / 2 );
+
+			}
+
+		}
+
+		render( renderer, writeBuffer, readBuffer, deltaTime, maskActive ) {
+
+			renderer.getClearColor( this._oldClearColor );
+			this.oldClearAlpha = renderer.getClearAlpha();
+			const oldAutoClear = renderer.autoClear;
+			renderer.autoClear = false;
+			renderer.setClearColor( this.clearColor, 0 );
+			if ( maskActive ) renderer.state.buffers.stencil.setTest( false ); // Render input to screen
+
+			if ( this.renderToScreen ) {
+
+				this.fsQuad.material = this.basic;
+				this.basic.map = readBuffer.texture;
+				renderer.setRenderTarget( null );
+				renderer.clear();
+				this.fsQuad.render( renderer );
+
+			} // 1. Extract Bright Areas
+
+
+			this.highPassUniforms[ 'tDiffuse' ].value = readBuffer.texture;
+			this.highPassUniforms[ 'luminosityThreshold' ].value = this.threshold;
+			this.fsQuad.material = this.materialHighPassFilter;
+			renderer.setRenderTarget( this.renderTargetBright );
+			renderer.clear();
+			this.fsQuad.render( renderer ); // 2. Blur All the mips progressively
+
+			let inputRenderTarget = this.renderTargetBright;
+
+			for ( let i = 0; i < this.nMips; i ++ ) {
+
+				this.fsQuad.material = this.separableBlurMaterials[ i ];
+				this.separableBlurMaterials[ i ].uniforms[ 'colorTexture' ].value = inputRenderTarget.texture;
+				this.separableBlurMaterials[ i ].uniforms[ 'direction' ].value = UnrealBloomPass.BlurDirectionX;
+				renderer.setRenderTarget( this.renderTargetsHorizontal[ i ] );
+				renderer.clear();
+				this.fsQuad.render( renderer );
+				this.separableBlurMaterials[ i ].uniforms[ 'colorTexture' ].value = this.renderTargetsHorizontal[ i ].texture;
+				this.separableBlurMaterials[ i ].uniforms[ 'direction' ].value = UnrealBloomPass.BlurDirectionY;
+				renderer.setRenderTarget( this.renderTargetsVertical[ i ] );
+				renderer.clear();
+				this.fsQuad.render( renderer );
+				inputRenderTarget = this.renderTargetsVertical[ i ];
+
+			} // Composite All the mips
+
+
+			this.fsQuad.material = this.compositeMaterial;
+			this.compositeMaterial.uniforms[ 'bloomStrength' ].value = this.strength;
+			this.compositeMaterial.uniforms[ 'bloomRadius' ].value = this.radius;
+			this.compositeMaterial.uniforms[ 'bloomTintColors' ].value = this.bloomTintColors;
+			renderer.setRenderTarget( this.renderTargetsHorizontal[ 0 ] );
+			renderer.clear();
+			this.fsQuad.render( renderer ); // Blend it additively over the input texture
+
+			this.fsQuad.material = this.materialCopy;
+			this.copyUniforms[ 'tDiffuse' ].value = this.renderTargetsHorizontal[ 0 ].texture;
+			if ( maskActive ) renderer.state.buffers.stencil.setTest( true );
+
+			if ( this.renderToScreen ) {
+
+				renderer.setRenderTarget( null );
+				this.fsQuad.render( renderer );
+
+			} else {
+
+				renderer.setRenderTarget( readBuffer );
+				this.fsQuad.render( renderer );
+
+			} // Restore renderer settings
+
+
+			renderer.setClearColor( this._oldClearColor, this.oldClearAlpha );
+			renderer.autoClear = oldAutoClear;
+
+		}
+
+		getSeperableBlurMaterial( kernelRadius ) {
+
+			return new THREE.ShaderMaterial( {
+				defines: {
+					'KERNEL_RADIUS': kernelRadius,
+					'SIGMA': kernelRadius
+				},
+				uniforms: {
+					'colorTexture': {
+						value: null
+					},
+					'texSize': {
+						value: new THREE.Vector2( 0.5, 0.5 )
+					},
+					'direction': {
+						value: new THREE.Vector2( 0.5, 0.5 )
+					}
+				},
+				vertexShader: `varying vec2 vUv;
+				void main() {
+					vUv = uv;
+					gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+				}`,
+				fragmentShader: `#include <common>
+				varying vec2 vUv;
+				uniform sampler2D colorTexture;
+				uniform vec2 texSize;
+				uniform vec2 direction;
+
+				float gaussianPdf(in float x, in float sigma) {
+					return 0.39894 * exp( -0.5 * x * x/( sigma * sigma))/sigma;
+				}
+				void main() {
+					vec2 invSize = 1.0 / texSize;
+					float fSigma = float(SIGMA);
+					float weightSum = gaussianPdf(0.0, fSigma);
+					vec3 diffuseSum = texture2D( colorTexture, vUv).rgb * weightSum;
+					for( int i = 1; i < KERNEL_RADIUS; i ++ ) {
+						float x = float(i);
+						float w = gaussianPdf(x, fSigma);
+						vec2 uvOffset = direction * invSize * x;
+						vec3 sample1 = texture2D( colorTexture, vUv + uvOffset).rgb;
+						vec3 sample2 = texture2D( colorTexture, vUv - uvOffset).rgb;
+						diffuseSum += (sample1 + sample2) * w;
+						weightSum += 2.0 * w;
+					}
+					gl_FragColor = vec4(diffuseSum/weightSum, 1.0);
+				}`
+			} );
+
+		}
+
+		getCompositeMaterial( nMips ) {
+
+			return new THREE.ShaderMaterial( {
+				defines: {
+					'NUM_MIPS': nMips
+				},
+				uniforms: {
+					'blurTexture1': {
+						value: null
+					},
+					'blurTexture2': {
+						value: null
+					},
+					'blurTexture3': {
+						value: null
+					},
+					'blurTexture4': {
+						value: null
+					},
+					'blurTexture5': {
+						value: null
+					},
+					'dirtTexture': {
+						value: null
+					},
+					'bloomStrength': {
+						value: 1.0
+					},
+					'bloomFactors': {
+						value: null
+					},
+					'bloomTintColors': {
+						value: null
+					},
+					'bloomRadius': {
+						value: 0.0
+					}
+				},
+				vertexShader: `varying vec2 vUv;
+				void main() {
+					vUv = uv;
+					gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+				}`,
+				fragmentShader: `varying vec2 vUv;
+				uniform sampler2D blurTexture1;
+				uniform sampler2D blurTexture2;
+				uniform sampler2D blurTexture3;
+				uniform sampler2D blurTexture4;
+				uniform sampler2D blurTexture5;
+				uniform sampler2D dirtTexture;
+				uniform float bloomStrength;
+				uniform float bloomRadius;
+				uniform float bloomFactors[NUM_MIPS];
+				uniform vec3 bloomTintColors[NUM_MIPS];
+
+				float lerpBloomFactor(const in float factor) {
+					float mirrorFactor = 1.2 - factor;
+					return mix(factor, mirrorFactor, bloomRadius);
+				}
+
+				void main() {
+					gl_FragColor = bloomStrength * ( lerpBloomFactor(bloomFactors[0]) * vec4(bloomTintColors[0], 1.0) * texture2D(blurTexture1, vUv) +
+						lerpBloomFactor(bloomFactors[1]) * vec4(bloomTintColors[1], 1.0) * texture2D(blurTexture2, vUv) +
+						lerpBloomFactor(bloomFactors[2]) * vec4(bloomTintColors[2], 1.0) * texture2D(blurTexture3, vUv) +
+						lerpBloomFactor(bloomFactors[3]) * vec4(bloomTintColors[3], 1.0) * texture2D(blurTexture4, vUv) +
+						lerpBloomFactor(bloomFactors[4]) * vec4(bloomTintColors[4], 1.0) * texture2D(blurTexture5, vUv) );
+				}`
+			} );
+
+		}
 
 	}
 
-};
+	UnrealBloomPass.BlurDirectionX = new THREE.Vector2( 1.0, 0.0 );
+	UnrealBloomPass.BlurDirectionY = new THREE.Vector2( 0.0, 1.0 );
+
+	THREE.UnrealBloomPass = UnrealBloomPass;
+
+} )();
 
 /**
  * @author yomboprime https://github.com/yomboprime
@@ -2259,7 +2832,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
 
         '#else',
 
-          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;',
+          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION  / 0.9;',
 
         '#endif',
 
@@ -2629,7 +3202,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
 
         '#else',
 
-          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;',
+          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION / 0.9;',
 
         '#endif',
 
@@ -2687,7 +3260,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {value: 1.4}
     }
 
-    if(!isSunShader && !isMoonShader && !isMeteringShader){
+    if(!isSunShader && !isMeteringShader){
       uniforms.blueNoiseTexture = {type: 't', value: null};
     }
 
@@ -3411,23 +3984,19 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Get our lunar occlusion texel',
 
-        'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
+        'vec2 offsetUV = clamp(vUv * 4.0 - vec2(1.5), vec2(0.0), vec2(1.0));',
 
         'vec4 lunarDiffuseTexel = texture(moonDiffuseMap, offsetUV);',
 
-        'vec2 uvClamp1 = 1.0 - vec2(step(offsetUV.x, 0.0), step(offsetUV.y, 0.0));',
-
-        'vec2 uvClamp2 = 1.0 - vec2(step(1.0 - offsetUV.x, 0.0), step(1.0 - offsetUV.y, 0.0));',
-
         'vec3 lunarDiffuseColor = lunarDiffuseTexel.rgb;',
-
-        'float lunarMask = lunarDiffuseTexel.a * uvClamp1.x * uvClamp1.y * uvClamp2.x * uvClamp2.y;',
 
       '#elif($isSunPass)',
 
         '//Get our lunar occlusion texel in the frame of the sun',
 
-        'float lunarMask = texture(moonDiffuseMap, vUv).a;',
+        'vec2 offsetUV = clamp(vUv * 4.0 - vec2(1.5), vec2(0.0), vec2(1.0));',
+
+        'float lunarMask = texture(moonDiffuseMap, offsetUV).a;',
 
       '#endif',
 
@@ -3577,7 +4146,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
 
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);',
+        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + sunTexel), inverseGamma);',
 
       '#elif($isMoonPass)',
 
@@ -3593,7 +4162,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Now mix in the moon light',
 
-        'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);',
+        'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarDiffuseTexel.a);',
 
 
 
@@ -3643,7 +4212,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Now apply the blue noise',
 
-        'combinedPass += ((texture(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
+        'combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + ivec2(128.0 * noise(uTime),  128.0 * noise(uTime + 511.0))) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);',
 
       '#endif',
 
@@ -3719,168 +4288,101 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   }
 }
 
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Postprocessing.highPassFilter = {
+StarrySky.Materials.Postprocessing.moonAndSunOutput = {
   uniforms: {
-    sourceTexture: {type: 't', 'value': null},
-    luminosityThreshold: {type: 'f', 'value': null},
+    blueNoiseTexture: {type: 't', 'value': null},
+    outputImage: {type: 't', 'value': null},
+    uTime: {'value': 0.0},
   },
   fragmentShader: [
 
-    'uniform sampler2D sourceTexture;',
+    'uniform sampler2D blueNoiseTexture;',
 
-    'uniform float luminosityThreshold;',
+    'uniform sampler2D outputImage;',
 
-
-
-    'const vec3 luma = vec3(0.299, 0.587, 0.144);',
+    'uniform float uTime;',
 
 
-
-    '//Based on Luminosity High Pass Shader',
-
-    '//Originall created by bhouston / http://clara.io/',
-
-    'void main(){',
-
-      'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
-
-      'vec4 sourceTexture = texture2D(sourceTexture, vUv);',
-
-      'float v = dot(sourceTexture.rgb, luma);',
-
-      'vec4 outputColor = vec4(vec3(0.0), 1.0);',
-
-
-
-      '//Note: for the bloom pass our the Unreal Shader sets smoothWidth to 0.01',
-
-      'float alpha = smoothstep(luminosityThreshold, luminosityThreshold + 0.01, v);',
-
-
-
-      '//Fudge factor of 0.1 to make sure that we get rid of the added intensity',
-
-      '//from the HDR sun before passing it to our bloom filter.',
-
-      'gl_FragColor = mix(outputColor, sourceTexture * 0.1, alpha);',
-
-    '}',
-  ].join('\n')
-};
-
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Postprocessing.seperableBlurFilter = {
-  uniforms: {
-    direction: {type: 'vec2', 'value': new THREE.Vector2(0.5, 0.5)},
-    sourceTexture: {type: 't', 'value': null}
-  },
-  fragmentShader: function(kernalRadius, textureSize){
-    let originalGLSL = [
-
-    '//Derivative of Unreal Bloom Pass from Three.JS',
-
-    '//Thanks spidersharma / http://eduperiment.com/',
-
-    '//',
-
-    'uniform sampler2D sourceTexture;',
-
-    'uniform vec2 direction;',
-
-
-
-    '//Based on Luminosity High Pass Shader',
-
-    '//Originally created by bhouston / http://clara.io/',
-
-    'void main(){',
-
-      'vec2 vUv = gl_FragCoord.xy / resolution.xy;',
-
-      'float weightedSum = $gaussian_pdf_at_x_0;',
-
-      'vec3 diffuseSum = texture2D(sourceTexture, vUv).rgb * weightedSum;',
-
-
-
-      '//Unrolled for loop (completed in material function)',
-
-      '$unrolled_for_loop',
-
-
-
-      'gl_FragColor = vec4(abs(diffuseSum/weightedSum), 1.0);',
-
-    '}',
-    ];
-
-    let oneOverSigmaSquared = 1.0 / kernalRadius * kernalRadius;
-    let inverseSigma = 1.0 / kernalRadius;
-    function gaussianPdf(x){
-      return 0.39894 * Math.exp(-0.5 * x * x * oneOverSigmaSquared) * inverseSigma;
-    }
-
-    let invSize = 1.0 / textureSize;
-    let gaussianPdfAtX0 = gaussianPdf(0.0);
-    let unrolledForLoop = [];
-
-    //loop 0 (defines variables)
-    let w = gaussianPdf(1.0); //gaussianPdf(i), i = 1
-    let invSizeTimesI = invSize; //invSize * i, i = 1
-    unrolledForLoop.push(`vec2 uvOffset = direction * ${invSizeTimesI.toFixed(16)};`);
-    unrolledForLoop.push(`vec3 sample1 = texture2D(sourceTexture, vUv + uvOffset).rgb;`);
-    unrolledForLoop.push(`vec3 sample2 = texture2D(sourceTexture, vUv - uvOffset).rgb;`);
-    unrolledForLoop.push(`diffuseSum += (sample1 + sample2) * ${w.toFixed(16)};`);
-    unrolledForLoop.push(`weightedSum += 2.0 * ${w.toFixed(16)};`);
-    //Unroll the rest of the for loop
-    for(let i = 2.0; i < kernalRadius; ++i){
-      w = gaussianPdf(i);
-      invSizeTimesI = invSize * i;
-      unrolledForLoop.push(`uvOffset = direction * ${invSizeTimesI.toFixed(16)};`);
-      unrolledForLoop.push(`sample1 = texture2D(sourceTexture, vUv + uvOffset).rgb;`);
-      unrolledForLoop.push(`sample2 = texture2D(sourceTexture, vUv - uvOffset).rgb;`);
-      unrolledForLoop.push(`diffuseSum += (sample1 + sample2) * ${w.toFixed(16)};`);
-      unrolledForLoop.push(`weightedSum += 2.0 * ${w.toFixed(16)};`);
-    }
-    let joinedUnrolledForLoop = unrolledForLoop.join('\n');
-
-    let updatedLines = [];
-    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$gaussian_pdf_at_x_0/g, gaussianPdfAtX0.toFixed(16));
-      updatedGLSL = updatedGLSL.replace(/\$unrolled_for_loop/g, joinedUnrolledForLoop);
-
-      updatedLines.push(updatedGLSL);
-    }
-
-    return updatedLines.join('\n');
-  }
-};
-
-StarrySky.Materials.Sun.combinationPass = {
-  uniforms: {
-    baseTexture: {'value': null},
-    bloomEnabled: {'value': 0},
-    blurTexture1: {'value': null},
-    blurTexture2: {'value': null},
-    blurTexture3: {'value': null},
-    blurTexture4: {'value': null},
-    blurTexture5: {'value': null},
-    bloomStrength: {'value': null},
-    bloomRadius: {'value': null},
-    blueNoiseTexture: {'value': null}
-  },
-  vertexShader: [
 
     'varying vec3 vWorldPosition;',
 
     'varying vec2 vUv;',
 
-    'varying vec2 screenPosition;',
+    'const vec3 inverseGamma = vec3(0.454545454545454545454545);',
+
+    'const float sqrtOfOneHalf = 0.7071067811865475244008443;',
+
+
+
+    '//From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/',
+
+    'float rand(float x){',
+
+      'float a = 12.9898;',
+
+      'float b = 78.233;',
+
+      'float c = 43758.5453;',
+
+      'float dt= dot(vec2(x, x) ,vec2(a,b));',
+
+      'float sn= mod(dt,3.14);',
+
+      'return fract(sin(sn) * c);',
+
+    '}',
+
+
+
+    '//From The Book of Shaders :D',
+
+    '//https://thebookofshaders.com/11/',
+
+    'float noise(float x){',
+
+      'float i = floor(x);',
+
+      'float f = fract(x);',
+
+      'float y = mix(rand(i), rand(i + 1.0), smoothstep(0.0,1.0,f));',
+
+
+
+      'return y;',
+
+    '}',
+
+
+
+    '//Including this because someone removed this in a future version of THREE. Why?!',
+
+    'vec3 MyAESFilmicToneMapping(vec3 color) {',
+
+      'return clamp((color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14), 0.0, 1.0);',
+
+    '}',
+
+
+
+    'void main(){',
+
+      'float distanceFromCenter = distance(vUv, vec2(0.5));',
+
+      'float falloffDisk = clamp(smoothstep(0.0, 1.0, (sqrtOfOneHalf - min(distanceFromCenter * 2.7 - 0.8, 1.0))), 0.0, 1.0);',
+
+      'vec3 combinedPass = texture(outputImage, vUv).rgb;',
+
+      'combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + ivec2(128.0 * noise(uTime),  128.0 * noise(uTime + 511.0))) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);',
+
+      'gl_FragColor = vec4(combinedPass, falloffDisk);',
+
+    '}',
+  ].join('\n'),
+  vertexShader: [
+
+    'varying vec3 vWorldPosition;',
+
+    'varying vec2 vUv;',
 
 
 
@@ -3898,8 +4400,6 @@ StarrySky.Materials.Sun.combinationPass = {
 
       'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
 
-      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
-
       'gl_Position = projectionPosition;',
 
 
@@ -3907,100 +4407,6 @@ StarrySky.Materials.Sun.combinationPass = {
       '//We offset our sun z-position by 0.01 to avoid Z-Fighting with the back sky plane',
 
       'gl_Position.z -= 0.01;',
-
-    '}',
-  ].join('\n'),
-  fragmentShader: [
-
-    '//Derivative of Unreal Bloom Pass from Three.JS',
-
-    '//Thanks spidersharma / http://eduperiment.com/',
-
-    'uniform sampler2D baseTexture;',
-
-    'uniform bool bloomEnabled;',
-
-    'uniform sampler2D blurTexture1;',
-
-    'uniform sampler2D blurTexture2;',
-
-    'uniform sampler2D blurTexture3;',
-
-    'uniform sampler2D blurTexture4;',
-
-    'uniform sampler2D blurTexture5;',
-
-    'uniform sampler2D blueNoiseTexture;',
-
-
-
-    'uniform float bloomStrength;',
-
-    'uniform float bloomRadius;',
-
-
-
-    'varying vec2 vUv;',
-
-    'varying vec2 screenPosition;',
-
-
-
-    'float lerpBloomFactor(float factor){',
-
-      'return mix(factor, 1.2 - factor, bloomRadius);',
-
-    '}',
-
-
-
-    'void main(){',
-
-      '//Fade this plane out towards the edges to avoid rough edges',
-
-      'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
-
-      'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
-
-      'float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromSun)));',
-
-
-
-      '//Determine the bloom effect',
-
-      'vec3 combinedLight = texture2D(baseTexture, vUv).rgb;',
-
-      'if(bloomEnabled){',
-
-        '//Bloom is only enabled when the sun has set so that we can share the bloom',
-
-        '//shader betweeen the sun and the moon.',
-
-        'vec3 bloomLight = lerpBloomFactor(1.0) * texture2D(blurTexture1, vUv).rgb;',
-
-        'bloomLight += lerpBloomFactor(0.8) * texture2D(blurTexture2, vUv).rgb;',
-
-        'bloomLight += lerpBloomFactor(0.6) * texture2D(blurTexture3, vUv).rgb;',
-
-        'bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;',
-
-        'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
-
-        'combinedLight += abs(bloomStrength * bloomLight);',
-
-      '}',
-
-
-
-      '//Late triangular blue noise',
-
-      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
-
-
-
-      '//Return our tone mapped color when everything else is done',
-
-      'gl_FragColor = vec4(combinedLight, 1.0);',
 
     '}',
   ].join('\n')
@@ -4026,8 +4432,6 @@ StarrySky.Materials.Sun.baseSunPartial = {
     '//We also fade out our quad towards the edge to reduce the visibility of sharp',
 
     '//edges.',
-
-    'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
 
     'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
 
@@ -4059,7 +4463,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
 
     'float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);',
 
-    'vec3 sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv).r)* transmittanceFade;',
+    'vec3 sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r)* transmittanceFade;',
 
     'sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);',
     ];
@@ -4087,7 +4491,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
 
     'void main() {',
 
-      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfSunPlane, 1.0);',
+      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfSunPlane * 2.0, 1.0);',
 
       'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
 
@@ -4102,156 +4506,6 @@ StarrySky.Materials.Sun.baseSunPartial = {
     '}',
   ].join('\n'),
 }
-
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Moon.combinationPass = {
-  uniforms: {
-    baseTexture: {type: 't', 'value': null},
-    bloomEnabled: {type: 'i', 'value': 0},
-    blurTexture1: {type: 't', 'value': null},
-    blurTexture2: {type: 't', 'value': null},
-    blurTexture3: {type: 't', 'value': null},
-    blurTexture4: {type: 't', 'value': null},
-    blurTexture5: {type: 't', 'value': null},
-    bloomStrength: {type: 'f', 'value': null},
-    bloomRadius: {type: 'f', 'value': null},
-    blueNoiseTexture: {type: 't', 'value': null}
-  },
-  vertexShader: [
-
-    'varying vec3 vWorldPosition;',
-
-    'varying vec2 vUv;',
-
-    'varying vec2 screenPosition;',
-
-
-
-    'void main() {',
-
-      'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-
-      'vWorldPosition = worldPosition.xyz;',
-
-      'vUv = uv;',
-
-
-
-      'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
-
-      'vec3 normalizedPosition = projectionPosition.xyz / projectionPosition.w;',
-
-      'screenPosition = vec2(0.5) + 0.5 * normalizedPosition.xy;',
-
-      'gl_Position = projectionPosition;',
-
-
-
-      '//We offset our moon z-position by 0.01 to avoid Z-Fighting with the back sky plane',
-
-      'gl_Position.z -= 0.01;',
-
-    '}',
-  ].join('\n'),
-  fragmentShader: [
-
-    '//Derivative of Unreal Bloom Pass from Three.JS',
-
-    '//Thanks spidersharma / http://eduperiment.com/',
-
-    'uniform sampler2D baseTexture;',
-
-    'uniform bool bloomEnabled;',
-
-    'uniform sampler2D blurTexture1;',
-
-    'uniform sampler2D blurTexture2;',
-
-    'uniform sampler2D blurTexture3;',
-
-    'uniform sampler2D blurTexture4;',
-
-    'uniform sampler2D blurTexture5;',
-
-    'uniform sampler2D blueNoiseTexture;',
-
-
-
-    'uniform float bloomStrength;',
-
-    'uniform float bloomRadius;',
-
-
-
-    'varying vec2 vUv;',
-
-    'varying vec2 screenPosition;',
-
-
-
-    'float lerpBloomFactor(float factor){',
-
-      'return mix(factor, 1.2 - factor, bloomRadius);',
-
-    '}',
-
-
-
-    'void main(){',
-
-      '//Fade this plane out towards the edgeys to avoid rough edges',
-
-      'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
-
-      'float pixelDistanceFromMoon = distance(offsetUV, vec2(0.5));',
-
-      'float falloffDisk = smoothstep(0.0, 1.0, (1.5 - (pixelDistanceFromMoon)));',
-
-
-
-      '//Add our post processing effects',
-
-      'vec3 combinedLight = abs(texture2D(baseTexture, vUv).rgb);',
-
-      'if(bloomEnabled){',
-
-        '//Bloom is only enabled when the sun has set so that we can share the bloom',
-
-        '//shader betweeen the sun and the moon.',
-
-        'vec3 bloomLight = lerpBloomFactor(1.0) * texture2D(blurTexture1, vUv).rgb;',
-
-        'bloomLight += lerpBloomFactor(0.8) * texture2D(blurTexture2, vUv).rgb;',
-
-        'bloomLight += lerpBloomFactor(0.6) * texture2D(blurTexture3, vUv).rgb;',
-
-        'bloomLight += lerpBloomFactor(0.4) * texture2D(blurTexture4, vUv).rgb;',
-
-        'bloomLight += lerpBloomFactor(0.2) * texture2D(blurTexture5, vUv).rgb;',
-
-
-
-        'combinedLight += abs(bloomStrength * bloomLight);',
-
-      '}',
-
-
-
-      '//Late triangular blue noise',
-
-      'combinedLight += ((texture2D(blueNoiseTexture, screenPosition.xy * 11.0).rgb - vec3(0.5)) / vec3(128.0));',
-
-
-
-      '//Return our tone mapped color when everything else is done',
-
-      'gl_FragColor = vec4(combinedLight, 1.0);',
-
-    '}',
-  ].join('\n')
-};
 
 //This helps
 //--------------------------v
@@ -4418,11 +4672,13 @@ StarrySky.Materials.Moon.baseMoonPartial = {
 
     'void main() {',
 
-      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane, 1.0);',
+      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
 
       'vec3 normalizedWorldPosition = normalize(worldPosition.xyz);',
 
-      'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
+      'vWorldPosition = vec3(-normalizedWorldPosition.z, normalizedWorldPosition.y, -normalizedWorldPosition.x);',
+
+
 
       'vUv = uv;',
 
@@ -4590,48 +4846,6 @@ StarrySky.Materials.Autoexposure.meteringSurvey = {
 
     '}',
   ].join('\n'),
-}
-
-//This helps
-//--------------------------v
-//https://threejs.org/docs/#api/en/core/Uniform
-StarrySky.Materials.Autoexposure.testPass = {
-  vertexShader: [
-
-    'varying vec3 vWorldPosition;',
-
-    'varying vec2 vUv;',
-
-
-
-    'void main() {',
-
-      '//Just pass over the texture coordinates',
-
-      'vUv = uv;',
-
-
-
-      'gl_Position = vec4(position, 1.0);',
-
-    '}',
-  ].join('\n'),
-  fragmentShader: [
-
-    'uniform sampler2D testTexture;',
-
-    'varying vec2 vUv;',
-
-
-
-    'void main(){',
-
-      'vec3 testTexture = texture2D(testTexture, vUv).rgb;',
-
-      'gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);',
-
-    '}',
-  ].join('\n')
 }
 
 //Child classes
@@ -5792,501 +6006,339 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   }
 }
 
-//This is so super derivative of the UnrealBloom Pass in Three.JS
-//Thanks spidersharma / http://eduperiment.com/, kupo!
-//That it practically breaks calculus :D :D :D
-//But - hey, it's integral to the objectives I'm trying to achieve with all these
-//blooming glow effects. GLOW ALL TEH THINGS!
-//Note, bloom radius is applied at the end, when combining our bloom with the original image
-StarrySky.Renderers.BloomRenderer = function(skyDirector, targetName, threshold){
-  this.threshold = threshold;
-  this.renderer = skyDirector.renderer
-  this.seperableBlurHorizontalRenderers = [];
-  this.seperableBlurHorizontalTextures = [];
-  this.seperableBlurVerticalRenderers = [];
-  this.seperableBlurVerticalTextures = [];
-  this.seperableBlurHorizontalVars = [];
-  this.seperableBlurVerticalVars = [];
-  let materials = StarrySky.Materials.Postprocessing;
-  const blurDirectionX = new THREE.Vector2(1.0, 0.0);
-  const blurDirectionY = new THREE.Vector2(0.0, 1.0);
-  let mipSizes = [265, 128, 64, 32, 16];
-  let baseSize = skyDirector.moonAndSunRendererSize;
-  for(let i = 0; i < 5; ++i){
-    baseSize = baseSize >> 1; //Divide by two
-    mipSizes[i] = baseSize;
-  }
-  const kernelSizeArray = [3, 5, 7, 9, 11];
-
-  this.highPassRenderer = new THREE.StarrySkyComputationRenderer(1024, 1024, this.renderer);
-
-  //Set up our transmittance texture
-  this.highPassFilterTexture = this.highPassRenderer.createTexture();
-  this.highPassFilterVar = this.highPassRenderer.addVariable(`${targetName}.highPassFilter`,
-    materials.highPassFilter.fragmentShader,
-    this.highPassFilterTexture
-  );
-  this.highPassRenderer.setVariableDependencies(this.highPassFilterVar, []);
-  this.highPassFilterVar.material.uniforms = JSON.parse(JSON.stringify(materials.highPassFilter.uniforms));
-  this.highPassFilterVar.material.uniforms.luminosityThreshold.value = this.threshold;
-  this.highPassFilterVar.format = THREE.RGBAFormat;
-  this.highPassFilterVar.generateMipmaps = true;
-  this.highPassFilterVar.minFilter = THREE.LinearMipmapLinearFilter;
-  this.highPassFilterVar.magFilter = THREE.LinearFilter;
-  this.highPassFilterVar.wrapS = THREE.ClampToEdgeWrapping;
-  this.highPassFilterVar.wrapT = THREE.ClampToEdgeWrapping;
-
-  //Check for any errors in initialization
-  let error1 = this.highPassRenderer.init();
-  if(error1 !== null){
-    console.error(`High Pass Renderer: ${error1}`);
-  }
-
-  let kernalRadius = 3;
-  for(let i = 0; i < 5; ++i){
-    let mipSize = mipSizes[i];
-    let kernalSize = kernelSizeArray[i];
-    this.seperableBlurHorizontalRenderers.push(new THREE.StarrySkyComputationRenderer(mipSize, mipSize, this.renderer));
-    this.seperableBlurHorizontalTextures.push(this.seperableBlurHorizontalRenderers[i].createTexture());
-    this.seperableBlurHorizontalVars.push(this.seperableBlurHorizontalRenderers[i].addVariable(`${targetName}.seperableHorizontalBlur.${i}`,
-      materials.seperableBlurFilter.fragmentShader(kernalSize, mipSize),
-      this.seperableBlurHorizontalTextures[i]
-    ));
-    this.seperableBlurHorizontalRenderers[i].setVariableDependencies(this.seperableBlurHorizontalVars[i], []);
-    this.seperableBlurHorizontalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.seperableBlurFilter.uniforms));
-    this.seperableBlurHorizontalVars[i].material.uniforms.direction.value = blurDirectionX;
-    this.seperableBlurHorizontalVars[i].format = THREE.RGBAFormat;
-    this.seperableBlurHorizontalVars[i].generateMipmaps = true;
-    this.seperableBlurHorizontalVars[i].minFilter = THREE.LinearMipmapLinearFilter;
-    this.seperableBlurHorizontalVars[i].magFilter = THREE.LinearFilter;
-    this.seperableBlurHorizontalVars[i].wrapS = THREE.ClampToEdgeWrapping;
-    this.seperableBlurHorizontalVars[i].wrapT = THREE.ClampToEdgeWrapping;
-
-    let error2 = this.seperableBlurHorizontalRenderers[i].init();
-    if(error2 !== null){
-      console.error(`Blur Horizontal Renderer ${i}: ${error2}`);
-    }
-
-    this.seperableBlurVerticalRenderers.push(new THREE.StarrySkyComputationRenderer(mipSize, mipSize, this.renderer));
-    this.seperableBlurVerticalTextures.push(this.seperableBlurVerticalRenderers[i].createTexture());
-    this.seperableBlurVerticalVars.push(this.seperableBlurVerticalRenderers[i].addVariable(`${targetName}.seperableVerticalBlur.${i}`,
-      materials.seperableBlurFilter.fragmentShader(kernalSize, mipSize),
-      this.seperableBlurVerticalTextures[i]
-    ));
-    this.seperableBlurVerticalRenderers[i].setVariableDependencies(this.seperableBlurVerticalVars[i], []);
-    this.seperableBlurVerticalVars[i].material.uniforms = JSON.parse(JSON.stringify(materials.seperableBlurFilter.uniforms));
-    this.seperableBlurVerticalVars[i].material.uniforms.direction.value = blurDirectionY;
-    this.seperableBlurVerticalVars[i].format = THREE.RGBAFormat;
-    this.seperableBlurVerticalVars[i].generateMipmaps = true;
-    this.seperableBlurVerticalVars[i].minFilter = THREE.LinearMipmapLinearFilter;
-    this.seperableBlurVerticalVars[i].magFilter = THREE.LinearFilter;
-    this.seperableBlurVerticalVars[i].wrapS = THREE.ClampToEdgeWrapping;
-    this.seperableBlurVerticalVars[i].wrapT = THREE.ClampToEdgeWrapping;
-
-    let error3 = this.seperableBlurVerticalRenderers[i].init();
-    if(error3 !== null){
-      console.error(`Blur Vertical Renderer ${i}: ${error3}`);
-    }
-
-    kernalRadius += 2;
-  }
-
-  let self = this;
-  this.setThreshold = function(threshold){
-    self.highPassFilterVar.material.uniforms.luminosityThreshold.value = self.threshold;
-  }
-
-  this.render = function(inTexture){
-    //Get our high pass filter of the injected texture
-    self.highPassFilterVar.material.uniforms.sourceTexture.value = inTexture;
-    self.highPassRenderer.compute();
-    let previousPass = self.highPassRenderer.getCurrentRenderTarget(self.highPassFilterVar).texture;
-
-    //Pass this into our blur filter create our various levels of bloom
-    let bloomTextures = [];
-    for(let i = 0; i < 5; ++i){
-      self.seperableBlurHorizontalVars[i].material.uniforms.sourceTexture.value = previousPass;
-      self.seperableBlurHorizontalRenderers[i].compute();
-      let horizontalTexture = self.seperableBlurHorizontalRenderers[i].getCurrentRenderTarget(self.seperableBlurHorizontalVars[i]).texture;
-
-      self.seperableBlurVerticalVars[i].material.uniforms.sourceTexture.value = horizontalTexture;
-      self.seperableBlurVerticalRenderers[i].compute();
-      bloomTextures.push(self.seperableBlurVerticalRenderers[i].getCurrentRenderTarget(self.seperableBlurVerticalVars[i]).texture);
-
-      previousPass = bloomTextures[i];
-    }
-
-    return bloomTextures;
-  }
-}
-
 StarrySky.Renderers.SunRenderer = function(skyDirector){
-  this.skyDirector = skyDirector;
-  let assetManager = skyDirector.assetManager;
+	const renderer = skyDirector.renderer;
+	const assetManager = skyDirector.assetManager;
+	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
+	const skyState = skyDirector.skyState;
+	const RENDER_TARGET_SIZE = 256;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const moonAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
   const baseRadiusOfTheMoon = Math.sin(moonAngularRadiusInRadians)
-  this.sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+	this.sunAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(this.sunAngularRadiusInRadians) * 2.0;
-  const diameterOfSunPlane = 2.0 * radiusOfSunPlane;
+  const diameterOfSunPlane = 4.0 * radiusOfSunPlane;
+
+	//All of this eventually gets drawn out to a single quad
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
 
-  //Unlike the regular sky, we run the sun as a multi-pass shader
-  //in order to allow for bloom shading. As we are using a square plane
-  //we can use this to render to a square compute shader for the color pass
-  //a clamped pass to use for our bloom, several bloom passes and a combination
-  //pass to combine these results with our original pass.
-  this.sunRenderer = new THREE.StarrySkyComputationRenderer(1024, 1024, skyDirector.renderer);
-  let materials = StarrySky.Materials.Sun;
-  let baseSunPartial = materials.baseSunPartial.fragmentShader(this.sunAngularRadiusInRadians);
+	//Prepare our scene and render target object
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+	outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
+  outputRenderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
+  outputRenderTarget.texture.magFilter = THREE.LinearFilter;
+	outputRenderTarget.texture.format = THREE.RGBAFormat;
+  outputRenderTarget.texture.type = THREE.FloatType;
+  outputRenderTarget.texture.generateMipmaps = true;
+  outputRenderTarget.texture.anisotropy = 4;
+  outputRenderTarget.texture.samples = 8;
+	const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
+	composer.renderToScreen = false;
 
-  //Set up our transmittance texture
-  this.baseSunTexture = this.sunRenderer.createTexture();
-  this.baseSunVar = this.sunRenderer.addVariable('baseSunTexture',
-    StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
-      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
-      baseSunPartial,
+	const baseSunMaterial = new THREE.ShaderMaterial({
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true))),
+    vertexShader: StarrySky.Materials.Sun.baseSunPartial.vertexShader,
+    fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
+      assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphereLUTLibrary.scatteringTextureWidth,
+      atmosphereLUTLibrary.scatteringTextureHeight,
+      atmosphereLUTLibrary.scatteringTexturePackingWidth,
+      atmosphereLUTLibrary.scatteringTexturePackingHeight,
+      atmosphereLUTLibrary.atmosphereFunctionsString,
+      StarrySky.Materials.Sun.baseSunPartial.fragmentShader(this.sunAngularRadiusInRadians),
       false
     ),
-    this.baseSunTexture
-  );
-  this.sunRenderer.setVariableDependencies(this.baseSunVar, []);
-  this.baseSunVar.material.vertexShader = materials.baseSunPartial.vertexShader;
-  this.baseSunVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true)));
-  this.baseSunVar.material.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
-  this.baseSunVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseSunVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseSunVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.baseSunVar.format = THREE.RGBAFormat;
-  this.baseSunVar.type = THREE.FloatType;
-  this.baseSunVar.generateMipmaps = false;
-  this.baseSunVar.minFilter = THREE.LinearFilter;
-  this.baseSunVar.magFilter = THREE.LinearFilter;
-
-  //Check for any errors in initialization
-  let error1 = this.sunRenderer.init();
-  if(error1 !== null){
-    console.error(`Sun Renderer: ${error1}`);
-  }
-
-  //Create our material late
-  this.combinationPassMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Sun.combinationPass.uniforms)),
-    side: THREE.FrontSide,
-    blending: THREE.NormalBlending,
-    transparent: true,
-    vertexShader: StarrySky.Materials.Sun.combinationPass.vertexShader,
-    fragmentShader: StarrySky.Materials.Sun.combinationPass.fragmentShader
   });
+  baseSunMaterial.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
+  baseSunMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
+  baseSunMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
+  baseSunMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
+  baseSunMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+	const renderBufferMesh = new THREE.Mesh(
+    new THREE.PlaneBufferGeometry(2, 2),
+    baseSunMaterial
+  );
+  scene.add(renderBufferMesh);
 
-  //Attach the material to our geometry
-  this.sunMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
-  this.sunMesh.castShadow = false;
-  this.sunMesh.receiveShadow = false;
-  this.sunMesh.fog = false;
-  this.baseSunVar.material.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
+	const renderPass = new THREE.RenderPass(scene, camera);
+	composer.addPass(renderPass);
+	const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85 );
+	bloomPass.threshold = 0.97;
+	bloomPass.strength = 1.0;
+	bloomPass.radius = 1.0;
+	composer.addPass(bloomPass);
 
-  let self = this;
-  this.setBloomStrength = function(bloomStrength){
-    self.combinationPassMaterial.uniforms.bloomStrength.value = bloomStrength;
-  }
+	//Attach the material to our geometry
+	const outputMaterial = new THREE.ShaderMaterial({
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Postprocessing.moonAndSunOutput.uniforms)),
+    vertexShader: StarrySky.Materials.Postprocessing.moonAndSunOutput.vertexShader,
+    fragmentShader: StarrySky.Materials.Postprocessing.moonAndSunOutput.fragmentShader
+  });
+	outputMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+  this.sunMesh = new THREE.Mesh(this.geometry, outputMaterial);
+  outputMaterial.castShadow = false;
+  outputMaterial.fog = false;
+	outputMaterial.side = THREE.FrontSide;
+	outputMaterial.dithering = false;
+	outputMaterial.toneMapped = false;
+	outputMaterial.transparent = true;
+	baseSunMaterial.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
 
-  this.setBloomRadius = function(bloomRadius){
-    self.combinationPassMaterial.uniforms.bloomRadius.value = bloomRadius;
-  }
-
-  //And update our object with our initial values
-  this.setBloomStrength(3.0);
-  this.setBloomRadius(0.7);
-
+	const self = this;
   this.tick = function(t){
+		//Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
+		const initialRenderTarget = renderer.getRenderTarget();
+		const currentXrEnabled = renderer.xr.enabled;
+		const currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
+		renderer.xr.enabled = false;
+		renderer.shadowMap.autoUpdate = false;
+
     //Update the position of our mesh
-    let cameraPosition = skyDirector.camera.position;
-    let quadOffset = skyDirector.skyState.sun.quadOffset;
+    const cameraPosition = skyDirector.camera.position;
+    const quadOffset = skyDirector.skyState.sun.quadOffset;
     self.sunMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.sunMesh.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
     self.sunMesh.updateMatrix();
     self.sunMesh.updateMatrixWorld();
 
     //Update our shader material
-    self.baseSunVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.baseSunVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.baseSunVar.material.uniforms.uTime.value = t;
-    self.baseSunVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
-    self.baseSunVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
-    self.baseSunVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
-    self.baseSunVar.material.uniforms.moonRadius.value = self.skyDirector.skyState.moon.scale * baseRadiusOfTheMoon;
+    baseSunMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
+    baseSunMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
+    baseSunMaterial.uniforms.uTime.value = t;
+    baseSunMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
+    baseSunMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    baseSunMaterial.uniforms.localSiderealTime.value = skyState.LSRT;
+    baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;
 
     //Run our float shaders shaders
-    self.sunRenderer.compute();
+		composer.render();
+    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+		outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+	  outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
+	  outputMaterial.uniforms.uTime.value = t;
 
-    //Update our final texture that is displayed
-    //TODO: Drive this with HDR instead of sky fade
-    let bloomTest = self.skyDirector.skyState.sun.horizonFade >= 0.95;
-    let bloomSwapped = this.bloomEnabled !== bloomTest;
-    this.bloomEnabled = bloomSwapped ? bloomTest : this.bloomEnabled;
-
-    //update our base texture, whether we pass it into a bloom shader or not.
-    let baseTexture = self.sunRenderer.getCurrentRenderTarget(self.baseSunVar).texture;
-    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    if(this.bloomEnabled){
-      if(bloomSwapped){
-        self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
-      }
-
-      //Drive our bloom shader with our sun disk
-      let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
-      self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
-      self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
-      self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
-      self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
-      self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-    }
-    else if(bloomSwapped){
-      self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
-    }
-
-    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
-    self.combinationPassMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+		//Clean up shadows and XR stuff
+	  renderer.xr.enabled = currentXrEnabled;
+	  renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
+	  renderer.setRenderTarget(initialRenderTarget);
   }
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
     //Connect up our reference values
-    self.baseSunVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
-    self.baseSunVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
-    self.baseSunVar.material.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
-    self.baseSunVar.material.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
-
-    self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade >= 0.95;
+    baseSunMaterial.uniforms.sunPosition.value = skyState.sun.position;
+    baseSunMaterial.uniforms.moonPosition.value = skyState.moon.position;
+    baseSunMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+    baseSunMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
     //Connect up our images if they don't exist yet
-    if(self.skyDirector.assetManager.hasLoadedImages){
+    if(assetManager.hasLoadedImages){
       //Image of the solar corona for our solar ecclipse
-      self.baseSunVar.material.uniforms.solarEclipseMap.value = self.skyDirector.assetManager.images.solarEclipseImage;
+      baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
     }
 
     //Proceed with the first tick
     self.tick(t);
 
     //Add this object to the scene
-    self.skyDirector.scene.add(self.sunMesh);
+    skyDirector.scene.add(self.sunMesh);
   }
 }
 
 StarrySky.Renderers.MoonRenderer = function(skyDirector){
-  this.skyDirector = skyDirector;
-  let assetManager = skyDirector.assetManager;
+  this.parallacticAxis = new THREE.Vector3();
+  const renderer = skyDirector.renderer;
+	const assetManager = skyDirector.assetManager;
+	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
+	const skyState = skyDirector.skyState;
+  const RENDER_TARGET_SIZE = 512;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
-  this.moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const sunAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+  this.moonAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(this.moonAngularRadiusInRadians) * 2.0;
-  const diameterOfMoonPlane = 2.0 * radiusOfMoonPlane;
+  const diameterOfMoonPlane = 4.0 * radiusOfMoonPlane;
   const blinkOutDistance = Math.SQRT2 * diameterOfMoonPlane;
+
+  //All of this eventually gets drawn out to a single quad
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
-  this.bloomEnabled = false;
-  this.parallacticAxis = new THREE.Vector3();
 
-  //Unlike the regular sky, we run the moon as a multi-pass shader
-  //in order to allow for bloom shading. As we are using a square plane
-  //we can use this to render to a square compute shader for the color pass
-  //a clamped pass to use for our bloom, several bloom passes and a combination
-  //pass to combine these results with our original pass.
-  this.moonRenderer = new THREE.StarrySkyComputationRenderer(1024, 1024, skyDirector.renderer, true);
-  let materials = StarrySky.Materials.Moon;
-  let baseMoonPartial = materials.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians);
+  //Prepare our scene and render target object
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
+  outputRenderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
+  outputRenderTarget.texture.magFilter = THREE.LinearFilter;
+  outputRenderTarget.texture.format = THREE.RGBAFormat;
+  outputRenderTarget.texture.type = THREE.FloatType;
+  outputRenderTarget.texture.generateMipmaps = true;
+  outputRenderTarget.texture.anisotropy = 4;
+  outputRenderTarget.texture.samples = 8;
+  const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
+  composer.renderToScreen = false;
 
-  //Set up our transmittance texture
-  this.baseMoonTexture = this.moonRenderer.createTexture();
-  this.baseMoonVar = this.moonRenderer.addVariable('baseMoonTexture',
-    StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
-      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
+  const moonMaterial = new THREE.ShaderMaterial({
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true))),
+    vertexShader: StarrySky.Materials.Moon.baseMoonPartial.vertexShader,
+    fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
+      assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphereLUTLibrary.scatteringTextureWidth,
+      atmosphereLUTLibrary.scatteringTextureHeight,
+      atmosphereLUTLibrary.scatteringTexturePackingWidth,
+      atmosphereLUTLibrary.scatteringTexturePackingHeight,
+      atmosphereLUTLibrary.atmosphereFunctionsString,
       false,
-      baseMoonPartial,
-    ),
-    this.baseMoonTexture
-  );
-  this.moonRenderer.setVariableDependencies(this.baseMoonVar, []);
-  this.baseMoonVar.material.vertexShader = materials.baseMoonPartial.vertexShader;
-  this.baseMoonVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true)));
-  this.baseMoonVar.material.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
-  this.baseMoonVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseMoonVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseMoonVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.baseMoonVar.material.uniforms.sunRadius.value = sunAngularRadiusInRadians;
-
-  //If our images have finished loading, update our uniforms
-  if(this.skyDirector.assetManager.hasLoadedImages){
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    for(let i = 0; i < moonTextures.length; ++i){
-      let moonTextureProperty = moonTextures[i];
-      this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];
-    }
-
-    this.baseMoonVar.material.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
-  }
-  this.baseMoonVar.format = THREE.RGBAFormat;
-  this.baseMoonVar.type = THREE.FloatType;
-  this.baseMoonVar.generateMipmaps = true;
-  this.baseMoonVar.minFilter = THREE.LinearMipmapLinearFilter;
-  this.baseMoonVar.magFilter = THREE.LinearFilter;
-  this.baseMoonVar.anisotropy = 4;
-  this.baseMoonVar.samples = 8;
-
-  //Check for any errors in initialization
-  let error1 = this.moonRenderer.init();
-  if(error1 !== null){
-    console.error(`Moon Renderer: ${error1}`);
-  }
-
-  //Create our material late
-  this.combinationPassMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Moon.combinationPass.uniforms)),
-    side: THREE.FrontSide,
-    blending: THREE.NormalBlending,
-    transparent: true,
-    vertexShader: StarrySky.Materials.Moon.combinationPass.vertexShader,
-    fragmentShader: StarrySky.Materials.Moon.combinationPass.fragmentShader
+      StarrySky.Materials.Moon.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians),
+    )
   });
   //Attach the material to our geometry
-  this.moonMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
-  this.moonMesh.castShadow = false;
-  this.moonMesh.receiveShadow = false;
-  this.moonMesh.fog = false;
-  this.baseMoonVar.material.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
+  moonMaterial.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
+  moonMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
+  moonMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
+  moonMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
+  moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
+  moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+  const renderTargetGeometry = new THREE.PlaneBufferGeometry(2, 2);
+  THREE.BufferGeometryUtils.computeTangents(renderTargetGeometry);
+  const renderBufferMesh = new THREE.Mesh(
+    renderTargetGeometry,
+    moonMaterial
+  );
+  scene.add(renderBufferMesh);
 
-  let self = this;
-  this.setBloomStrength = function(bloomStrength){
-    self.combinationPassMaterial.uniforms.bloomStrength.value = bloomStrength;
-  }
-
-  this.setBloomRadius = function(bloomRadius){
-    self.combinationPassMaterial.uniforms.bloomRadius.value = bloomRadius;
-  }
-
-  //And update our object with our initial values
-  this.setBloomStrength(3.0);
-  this.setBloomRadius(0.7);
-
-  this.tick = function(t){
-    const distanceFromSunToMoon = self.skyDirector.skyState.sun.position.distanceTo(self.skyDirector.skyState.moon.position) * RADIUS_OF_SKY;
-    if(distanceFromSunToMoon < blinkOutDistance && this.moonMesh.visible){
-      this.moonMesh.visible = false;
+  //If our images have finished loading, update our uniforms
+  if(assetManager.hasLoadedImages){
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
+    for(let i = 0; i < moonTextures.length; ++i){
+      const moonTextureProperty = moonTextures[i];
+      moonMaterial.uniforms[moonTextureProperty].value = assetManager.images[moonTextureProperty];
     }
-    else if(distanceFromSunToMoon >= blinkOutDistance && !this.moonMesh.visible){
-      this.moonMesh.visible = true;
+
+    moonMaterial.uniforms.starColorMap.value = assetManager.images.starImages.starColorMap;
+  }
+
+  const renderPass = new THREE.RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85);
+  this.bloomPass.threshold = 0.55;
+  this.bloomPass.strength = 0.9;
+  this.bloomPass.radius = 1.4;
+  composer.addPass(this.bloomPass);
+
+  //Attach the material to our geometry
+	const outputMaterial = new THREE.ShaderMaterial({
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Postprocessing.moonAndSunOutput.uniforms)),
+    vertexShader: StarrySky.Materials.Postprocessing.moonAndSunOutput.vertexShader,
+    fragmentShader: StarrySky.Materials.Postprocessing.moonAndSunOutput.fragmentShader
+  });
+	outputMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+  this.moonMesh = new THREE.Mesh(this.geometry, outputMaterial);
+  outputMaterial.castShadow = false;
+  outputMaterial.fog = false;
+	outputMaterial.side = THREE.FrontSide;
+	outputMaterial.dithering = false;
+	outputMaterial.toneMapped = false;
+	outputMaterial.transparent = true;
+	moonMaterial.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
+
+  const self = this;
+  this.tick = function(t){
+    //Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
+    const initialRenderTarget = renderer.getRenderTarget();
+    const currentXrEnabled = renderer.xr.enabled;
+    const currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
+    renderer.xr.enabled = false;
+    renderer.shadowMap.autoUpdate = false;
+
+    const distanceFromSunToMoon = skyState.sun.position.distanceTo(skyState.moon.position) * RADIUS_OF_SKY;
+    if(distanceFromSunToMoon < blinkOutDistance && self.moonMesh.visible){
+      self.moonMesh.visible = false;
+    }
+    else if(distanceFromSunToMoon >= blinkOutDistance && !self.moonMesh.visible){
+      self.moonMesh.visible = true;
     }
 
     //Update the position of our mesh
-    let cameraPosition = skyDirector.camera.position;
-    let quadOffset = skyDirector.skyState.moon.quadOffset;
+    const cameraPosition = skyDirector.camera.position;
+    const quadOffset = skyState.moon.quadOffset;
+    self.moonMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.parallacticAxis.copy(quadOffset).normalize();
-    self.moonMesh.position.copy(quadOffset).add(cameraPosition);
     self.moonMesh.lookAt(cameraPosition); //Use the basic look-at function to always have this plane face the camera.
-    self.moonMesh.rotateOnWorldAxis(self.parallacticAxis, -skyDirector.skyState.moon.parallacticAngle); //And rotate the mesh by the parallactic angle.
+    self.moonMesh.rotateOnWorldAxis(self.parallacticAxis, -skyState.moon.parallacticAngle); //And rotate the mesh by the parallactic angle.
     self.moonMesh.updateMatrix();
     self.moonMesh.updateMatrixWorld();
 
     //Update our shader material
-    self.baseMoonVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.baseMoonVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.baseMoonVar.material.uniforms.uTime.value = t;
-    self.baseMoonVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
-    self.baseMoonVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
-    self.baseMoonVar.material.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
-    self.baseMoonVar.material.uniforms.moonExposure.value = self.skyDirector.exposureVariables.moonExposure;
-    self.baseMoonVar.material.uniforms.distanceToEarthsShadowSquared.value = self.skyDirector.skyState.moon.distanceToEarthsShadowSquared;
-    self.baseMoonVar.material.uniforms.oneOverNormalizedLunarDiameter.value = self.skyDirector.skyState.moon.oneOverNormalizedLunarDiameter;
+    moonMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
+    moonMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
+    moonMaterial.uniforms.uTime.value = t;
+    moonMaterial.uniforms.localSiderealTime.value = skyDirector.skyState.LSRT;
+    moonMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
+    moonMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    moonMaterial.uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
+    moonMaterial.uniforms.moonExposure.value = skyDirector.exposureVariables.moonExposure;
+    moonMaterial.uniforms.distanceToEarthsShadowSquared.value = skyState.moon.distanceToEarthsShadowSquared;
+    moonMaterial.uniforms.oneOverNormalizedLunarDiameter.value = skyState.moon.oneOverNormalizedLunarDiameter;
+
+    //Update our bloom threshold so we don't bloom the moon during the day
+    this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
 
     //Run our float shaders shaders
-    self.moonRenderer.compute();
+    composer.render();
+    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+    outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+    outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
+    outputMaterial.uniforms.uTime.value = t;
 
-    //Update our final texture that is displayed
-    //TODO: Drive this with HDR instead of sky fade
-    let bloomTest = self.skyDirector.skyState.sun.horizonFade < 0.95;
-    let bloomSwapped = this.bloomEnabled !== bloomTest;
-    this.bloomEnabled = bloomSwapped ? bloomTest : this.bloomEnabled;
-
-    //Get our moon disk whether we pass it into the bloom shader or not
-    let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
-    baseTexture.generateMipmaps = true;
-    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    if(this.bloomEnabled){
-      if(bloomSwapped){
-        self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
-      }
-
-      //Drive our bloom shader with our moon disk
-      let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
-      self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
-      self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
-      self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
-      self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
-      self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-      self.baseMoonVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
-    }
-    else if(bloomSwapped){
-      self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
-    }
-
-    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
-    self.combinationPassMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+    //Clean up shadows and XR stuff
+    renderer.xr.enabled = currentXrEnabled;
+    renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
+    renderer.setRenderTarget(initialRenderTarget);
   }
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
     //Connect up our reference values
-    self.baseMoonVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
-    self.baseMoonVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
-    self.baseMoonVar.material.uniforms.sunLightDirection.value = self.skyDirector.skyState.sun.quadOffset;
-    self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade < 0.95;
+    moonMaterial.uniforms.sunPosition.value = skyState.sun.position;
+    moonMaterial.uniforms.moonPosition.value = skyState.moon.position;
+    moonMaterial.uniforms.sunLightDirection.value = skyState.sun.quadOffset;
 
-    self.baseMoonVar.material.uniforms.mercuryPosition.value = self.skyDirector.skyState.mercury.position;
-    self.baseMoonVar.material.uniforms.venusPosition.value = self.skyDirector.skyState.venus.position;
-    self.baseMoonVar.material.uniforms.marsPosition.value = self.skyDirector.skyState.mars.position;
-    self.baseMoonVar.material.uniforms.jupiterPosition.value = self.skyDirector.skyState.jupiter.position;
-    self.baseMoonVar.material.uniforms.saturnPosition.value = self.skyDirector.skyState.saturn.position;
+    moonMaterial.uniforms.mercuryPosition.value = skyState.mercury.position;
+    moonMaterial.uniforms.venusPosition.value = skyState.venus.position;
+    moonMaterial.uniforms.marsPosition.value = skyState.mars.position;
+    moonMaterial.uniforms.jupiterPosition.value = skyState.jupiter.position;
+    moonMaterial.uniforms.saturnPosition.value = skyState.saturn.position;
 
-    self.baseMoonVar.material.uniforms.mercuryBrightness.value = self.skyDirector.skyState.mercury.intensity;
-    self.baseMoonVar.material.uniforms.venusBrightness.value = self.skyDirector.skyState.venus.intensity;
-    self.baseMoonVar.material.uniforms.marsBrightness.value = self.skyDirector.skyState.mars.intensity;
-    self.baseMoonVar.material.uniforms.jupiterBrightness.value = self.skyDirector.skyState.jupiter.intensity;
-    self.baseMoonVar.material.uniforms.saturnBrightness.value = self.skyDirector.skyState.saturn.intensity;
-    self.baseMoonVar.material.uniforms.earthsShadowPosition.value = self.skyDirector.skyState.moon.earthsShadowPosition;
-    self.baseMoonVar.material.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
+    moonMaterial.uniforms.mercuryBrightness.value = skyState.mercury.intensity;
+    moonMaterial.uniforms.venusBrightness.value = skyState.venus.intensity;
+    moonMaterial.uniforms.marsBrightness.value = skyState.mars.intensity;
+    moonMaterial.uniforms.jupiterBrightness.value = skyState.jupiter.intensity;
+    moonMaterial.uniforms.saturnBrightness.value = skyState.saturn.intensity;
+    moonMaterial.uniforms.earthsShadowPosition.value = skyState.moon.earthsShadowPosition;
+    moonMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
     //Connect up our images if they don't exist yet
-    if(self.skyDirector.assetManager){
+    if(assetManager){
       //Moon Textures
-      for(let [property, value] of Object.entries(self.skyDirector.assetManager.images.moonImages)){
-        self.baseMoonVar.material.uniforms[property].value = value;
+      for(let [property, value] of Object.entries(assetManager.images.moonImages)){
+        moonMaterial.uniforms[property].value = value;
       }
 
       //Update our star data
-      self.baseMoonVar.material.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
-      self.baseMoonVar.material.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
-      self.baseMoonVar.material.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
-      self.baseMoonVar.material.uniforms.medStarData.value = self.skyDirector.stellarLUTLibrary.medStarDataMap;
-      self.baseMoonVar.material.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
+      moonMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+      moonMaterial.uniforms.starHashCubemap.value = assetManager.images.starImages.starHashCubemap;
+      moonMaterial.uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
+      moonMaterial.uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
+      moonMaterial.uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
     }
 
     //Proceed with the first tick
     self.tick(t);
 
     //Add this object to the scene
-    self.skyDirector.scene.add(self.moonMesh);
+    skyDirector.scene.add(self.moonMesh);
   }
 }
 
@@ -7147,7 +7199,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
-      self.renderers.bloomRenderer = new StarrySky.Renderers.BloomRenderer(self, 'shared', 0.98);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
       self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
       self.renderers.meteringSurveyRenderer = new StarrySky.Renderers.MeteringSurveyRenderer(self);

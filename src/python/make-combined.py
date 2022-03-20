@@ -12,7 +12,13 @@ def main():
     #Directy and ordered list of files to load
     js_dir = '../js/'
     js_fil_names = ['three_js_extensions/BufferGeometryUtils.js',\
-    'three_js_extensions/StarrySkyGPUComputeRenderer.js',\
+    'three_js_extensions/Copyshader.js',\
+    'three_js_extensions/Pass.js',\
+    'three_js_extensions/RenderPass.js',\
+    'three_js_extensions/ShaderPass.js',\
+    'three_js_extensions/EffectComposer.js',\
+    'three_js_extensions/LuminosityHighPassShader.js',\
+    'three_js_extensions/UnrealBloom.js',\
     'three_js_extensions/StarrySkyGPUComputeRenderer.js',\
     'StarrySky.js',\
     'materials/atmosphere/atmosphere-functions.js',\
@@ -21,15 +27,11 @@ def main():
     'materials/atmosphere/inscattering-sum.js',\
     'materials/atmosphere/kth-inscattering.js',\
     'materials/atmosphere/atmosphere-pass.js',\
-    'materials/postprocessing/high-pass-filter.js',\
-    'materials/postprocessing/seperable-blur-filter.js',\
-    'materials/sun/combination-pass.js',\
+    'materials/postprocessing/moon-and-sun-output.js',\
     'materials/sun/base-sun-partial.js',\
-    'materials/moon/combination-pass.js',\
     'materials/moon/base-moon-partial.js',\
     'materials/stars/star-data-map.js',\
     'materials/autoexposure/metering-survey.js',\
-    'materials/autoexposure/test-pass.js',\
     'html_tags/SkyAssetsDir.js',\
     'html_tags/SkyAtmosphericParameters.js',\
     'html_tags/SkyLocation.js',\
@@ -38,7 +40,6 @@ def main():
     'lut_libraries/AtmosphericLUTLibrary.js',\
     'lut_libraries/StellarLUTLibrary.js',\
     'renderers/AtmosphereRenderer.js',\
-    'renderers/BloomRenderer.js',\
     'renderers/SunRenderer.js',\
     'renderers/MoonRenderer.js',\
     'renderers/MeteringSurveyRenderer.js',\
