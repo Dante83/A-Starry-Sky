@@ -16,7 +16,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {value: 1.4}
     }
 
-    if(!isSunShader && !isMoonShader && !isMeteringShader){
+    if(!isSunShader && !isMeteringShader){
       uniforms.blueNoiseTexture = {type: 't', value: null};
     }
 

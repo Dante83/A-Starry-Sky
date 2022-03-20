@@ -1,0 +1,13 @@
+StarrySky.Materials.Postprocessing.moonAndSunOutput = {
+  uniforms: {
+    blueNoiseTexture: {type: 't', 'value': null},
+    outputImage: {type: 't', 'value': null},
+    uTime: {'value': 0.0},
+  },
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n'),
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n')
+};

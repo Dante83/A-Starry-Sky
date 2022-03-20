@@ -24,7 +24,16 @@
     <!-- The below are used for development purposes, it is advised that you use the files in the dist folder -->
     <!-- Three.js extensions -->
     <script src="../src/js/three_js_extensions/BufferGeometryUtils.js"></script>
+    <script src="../src/js/three_js_extensions/CopyShader.js"></script>
+    <script src="../src/js/three_js_extensions/Pass.js"></script>
+    <script src="../src/js/three_js_extensions/RenderPass.js"></script>
+    <script src="../src/js/three_js_extensions/ShaderPass.js"></script>
+    <script src="../src/js/three_js_extensions/EffectComposer.js"></script>
     <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script>
+
+    <!-- Post Processing -->
+    <script src="../src/js/three_js_extensions/LuminosityHighPassShader.js"></script>
+    <script src="../src/js/three_js_extensions/UnrealBloom.js"></script>
 
     <!-- Namespace -->
     <script src="../src/js/StarrySky.js"></script>
@@ -36,15 +45,11 @@
     <script src="../src/js/materials/atmosphere/inscattering-sum.js"></script>
     <script src="../src/js/materials/atmosphere/kth-inscattering.js"></script>
     <script src="../src/js/materials/atmosphere/atmosphere-pass.js"></script>
-    <script src="../src/js/materials/postprocessing/high-pass-filter.js"></script>
-    <script src="../src/js/materials/postprocessing/seperable-blur-filter.js"></script>
-    <script src="../src/js/materials/sun/combination-pass.js"></script>
+    <script src="../src/js/materials/postprocessing/moon-and-sun-output.js"></script>
     <script src="../src/js/materials/sun/base-sun-partial.js"></script>
-    <script src="../src/js/materials/moon/combination-pass.js"></script>
     <script src="../src/js/materials/moon/base-moon-partial.js"></script>
     <script src="../src/js/materials/stars/star-data-map.js"></script>
     <script src="../src/js/materials/autoexposure/metering-survey.js"></script>
-    <script src="../src/js/materials/autoexposure/test-pass.js"></script>
 
     <!--- Custom HTML Tags -->
     <script src="../src/js/html_tags/SkyAssetsDir.js"></script>
@@ -59,7 +64,6 @@
 
     <!-- Renderers -->
     <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
-    <script src="../src/js/renderers/BloomRenderer.js"></script>
     <script src="../src/js/renderers/SunRenderer.js"></script>
     <script src="../src/js/renderers/MoonRenderer.js"></script>
     <script src="../src/js/renderers/MeteringSurveyRenderer.js"></script>
@@ -80,12 +84,12 @@
       <!-- Sky Setup -->
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
           <sky-time>
-            <sky-date>1226-12-26 15:00:00</sky-date>
+            <sky-date>1226-12-05 20:00:00</sky-date>
             <sky-speed>200.0</sky-speed>
           </sky-time>
           <sky-atmospheric-parameters>
-            <sky-sun-angular-diameter>5.0</sky-sun-angular-diameter>
-            <sky-moon-angular-diameter>5.0</sky-moon-angular-diameter>
+            <sky-sun-angular-diameter>3.1</sky-sun-angular-diameter>
+            <sky-moon-angular-diameter>3.1</sky-moon-angular-diameter>
           </sky-atmospheric-parameters>
       </a-starry-sky>
 

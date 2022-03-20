@@ -22,9 +22,10 @@ const float threePiOverTwo = 4.712388980384689857693;
 const float pi = 3.141592653589793238462;
 
 void main() {
-  vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane, 1.0);
+  vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane * 2.0, 1.0);
   vec3 normalizedWorldPosition = normalize(worldPosition.xyz);
-  vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));
+  vWorldPosition = vec3(-normalizedWorldPosition.z, normalizedWorldPosition.y, -normalizedWorldPosition.x);
+
   vUv = uv;
 
   //Other then our bitangent, all of our other values are already normalized

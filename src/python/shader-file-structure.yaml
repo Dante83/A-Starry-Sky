@@ -37,11 +37,6 @@ groups:
         vertex: 'base-sun-vertex.glsl'
         template: 'base-sun-partial-template.txt'
         material: 'base-sun-partial.js'
-      -
-        fragment: 'combination-pass.glsl'
-        vertex: 'combination-pass-vertex.glsl'
-        template: 'combination-pass-template.txt'
-        material: 'combination-pass.js'
   -
     base_glsl_dir: '../glsl/moon'
     base_js_dir: '../js/materials/moon'
@@ -51,24 +46,6 @@ groups:
         vertex: 'base-moon-vertex.glsl'
         template: 'base-moon-partial-template.txt'
         material: 'base-moon-partial.js'
-      -
-        fragment: 'combination-pass.glsl'
-        vertex: 'combination-pass-vertex.glsl'
-        template: 'combination-pass-template.txt'
-        material: 'combination-pass.js'
-  -
-    base_glsl_dir: '../glsl/postprocessing'
-    base_js_dir: '../js/materials/postprocessing'
-    shaders:
-      -
-        fragment: 'high-pass-filter.glsl'
-        vertex: 'high-pass-filter.glsl'
-        template: 'high-pass-filter-template.txt'
-        material: 'high-pass-filter.js'
-      -
-        fragment: 'seperable-blur-filter.glsl'
-        template: 'seperable-blur-filter-template.txt'
-        material: 'seperable-blur-filter.js'
   -
     base_glsl_dir: '../glsl/stars'
     base_js_dir: '../js/materials/stars'
@@ -85,3 +62,12 @@ groups:
         vertex: 'vertex.glsl'
         template: 'metering-survey-template.txt'
         material: 'metering-survey.js'
+  -
+    base_glsl_dir: '../glsl/postprocessing'
+    base_js_dir: '../js/materials/postprocessing'
+    shaders:
+      -
+        fragment: 'moon-and-sun-output.glsl'
+        vertex: 'moon-and-sun-output-vertex.glsl'
+        template: 'moon-and-sun-output-template.txt'
+        material: 'moon-and-sun-output.js'

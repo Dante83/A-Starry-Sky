@@ -11,7 +11,6 @@ StarrySky.Materials.Sun.baseSunPartial = {
     '//solar bloom enough room to expand into without clipping the edge.',
     '//We also fade out our quad towards the edge to reduce the visibility of sharp',
     '//edges.',
-    'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
     'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
 
     '//From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl',
@@ -27,7 +26,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
     'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
     'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
     'float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);',
-    'vec3 sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv).r)* transmittanceFade;',
+    'vec3 sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r)* transmittanceFade;',
     'sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);',
     ];
 
@@ -47,7 +46,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
     'varying vec2 vUv;',
 
     'void main() {',
-      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfSunPlane, 1.0);',
+      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfSunPlane * 2.0, 1.0);',
       'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
 
       'vUv = uv;',

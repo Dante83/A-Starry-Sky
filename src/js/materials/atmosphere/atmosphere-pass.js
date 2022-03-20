@@ -16,7 +16,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {value: 1.4}
     }
 
-    if(!isSunShader && !isMoonShader && !isMeteringShader){
+    if(!isSunShader && !isMeteringShader){
       uniforms.blueNoiseTexture = {type: 't', value: null};
     }
 
@@ -410,15 +410,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon',
       '#if($isMoonPass)',
         '//Get our lunar occlusion texel',
-        'vec2 offsetUV = vUv * 2.0 - vec2(0.5);',
+        'vec2 offsetUV = clamp(vUv * 4.0 - vec2(1.5), vec2(0.0), vec2(1.0));',
         'vec4 lunarDiffuseTexel = texture(moonDiffuseMap, offsetUV);',
-        'vec2 uvClamp1 = 1.0 - vec2(step(offsetUV.x, 0.0), step(offsetUV.y, 0.0));',
-        'vec2 uvClamp2 = 1.0 - vec2(step(1.0 - offsetUV.x, 0.0), step(1.0 - offsetUV.y, 0.0));',
         'vec3 lunarDiffuseColor = lunarDiffuseTexel.rgb;',
-        'float lunarMask = lunarDiffuseTexel.a * uvClamp1.x * uvClamp1.y * uvClamp2.x * uvClamp2.y;',
       '#elif($isSunPass)',
         '//Get our lunar occlusion texel in the frame of the sun',
-        'float lunarMask = texture(moonDiffuseMap, vUv).a;',
+        'vec2 offsetUV = clamp(vUv * 4.0 - vec2(1.5), vec2(0.0), vec2(1.0));',
+        'float lunarMask = texture(moonDiffuseMap, offsetUV).a;',
       '#endif',
 
       '//Atmosphere (We multiply the scattering sun intensity by vec3 to convert it to a vector)',
@@ -493,7 +491,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '$draw_sun_pass',
 
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + pow(sunTexel, gamma)), inverseGamma);',
+        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + sunTexel), inverseGamma);',
       '#elif($isMoonPass)',
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
         'vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);',
@@ -501,7 +499,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '$draw_moon_pass',
 
         '//Now mix in the moon light',
-        'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarMask);',
+        'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarDiffuseTexel.a);',
 
         '//And bring it back to the normal gamma afterwards',
         'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
@@ -526,7 +524,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
 
         '//Now apply the blue noise',
-        'combinedPass += (texelFetch(blueNoiseTexture, ivec2(gl_FragCoord.xy) % 128, 0).rgb - vec3(0.5)) / vec3(256.0);',
+        'combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + ivec2(128.0 * noise(uTime),  128.0 * noise(uTime + 511.0))) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);',
       '#endif',
 
       '#if($isMeteringPass)',

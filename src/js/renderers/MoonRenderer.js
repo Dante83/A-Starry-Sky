@@ -1,209 +1,193 @@
 StarrySky.Renderers.MoonRenderer = function(skyDirector){
-  this.skyDirector = skyDirector;
-  let assetManager = skyDirector.assetManager;
+  this.parallacticAxis = new THREE.Vector3();
+  const renderer = skyDirector.renderer;
+	const assetManager = skyDirector.assetManager;
+	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
+	const skyState = skyDirector.skyState;
+  const RENDER_TARGET_SIZE = 512;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const sunAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
-  this.moonAngularRadiusInRadians = skyDirector.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const sunAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+  this.moonAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfMoonPlane = RADIUS_OF_SKY * Math.sin(this.moonAngularRadiusInRadians) * 2.0;
-  const diameterOfMoonPlane = 2.0 * radiusOfMoonPlane;
+  const diameterOfMoonPlane = 4.0 * radiusOfMoonPlane;
   const blinkOutDistance = Math.SQRT2 * diameterOfMoonPlane;
+
+  //All of this eventually gets drawn out to a single quad
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
-  this.bloomEnabled = false;
-  this.parallacticAxis = new THREE.Vector3();
 
-  //Unlike the regular sky, we run the moon as a multi-pass shader
-  //in order to allow for bloom shading. As we are using a square plane
-  //we can use this to render to a square compute shader for the color pass
-  //a clamped pass to use for our bloom, several bloom passes and a combination
-  //pass to combine these results with our original pass.
-  this.moonRenderer = new THREE.StarrySkyComputationRenderer(1024, 1024, skyDirector.renderer, true);
-  let materials = StarrySky.Materials.Moon;
-  let baseMoonPartial = materials.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians);
+  //Prepare our scene and render target object
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
+  outputRenderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
+  outputRenderTarget.texture.magFilter = THREE.LinearFilter;
+  outputRenderTarget.texture.format = THREE.RGBAFormat;
+  outputRenderTarget.texture.type = THREE.FloatType;
+  outputRenderTarget.texture.generateMipmaps = true;
+  outputRenderTarget.texture.anisotropy = 4;
+  outputRenderTarget.texture.samples = 8;
+  const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
+  composer.renderToScreen = false;
 
-  //Set up our transmittance texture
-  this.baseMoonTexture = this.moonRenderer.createTexture();
-  this.baseMoonVar = this.moonRenderer.addVariable('baseMoonTexture',
-    StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
-      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
+  const moonMaterial = new THREE.ShaderMaterial({
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true))),
+    vertexShader: StarrySky.Materials.Moon.baseMoonPartial.vertexShader,
+    fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
+      assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphereLUTLibrary.scatteringTextureWidth,
+      atmosphereLUTLibrary.scatteringTextureHeight,
+      atmosphereLUTLibrary.scatteringTexturePackingWidth,
+      atmosphereLUTLibrary.scatteringTexturePackingHeight,
+      atmosphereLUTLibrary.atmosphereFunctionsString,
       false,
-      baseMoonPartial,
-    ),
-    this.baseMoonTexture
-  );
-  this.moonRenderer.setVariableDependencies(this.baseMoonVar, []);
-  this.baseMoonVar.material.vertexShader = materials.baseMoonPartial.vertexShader;
-  this.baseMoonVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true)));
-  this.baseMoonVar.material.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
-  this.baseMoonVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.baseMoonVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.baseMoonVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  this.baseMoonVar.material.uniforms.sunRadius.value = sunAngularRadiusInRadians;
-
-  //If our images have finished loading, update our uniforms
-  if(this.skyDirector.assetManager.hasLoadedImages){
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    for(let i = 0; i < moonTextures.length; ++i){
-      let moonTextureProperty = moonTextures[i];
-      this.baseMoonVar.material.uniforms[moonTextureProperty].value = this.skyDirector.assetManager.images[moonTextureProperty];
-    }
-
-    this.baseMoonVar.material.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
-  }
-  this.baseMoonVar.format = THREE.RGBAFormat;
-  this.baseMoonVar.type = THREE.FloatType;
-  this.baseMoonVar.generateMipmaps = true;
-  this.baseMoonVar.minFilter = THREE.LinearMipmapLinearFilter;
-  this.baseMoonVar.magFilter = THREE.LinearFilter;
-  this.baseMoonVar.anisotropy = 4;
-  this.baseMoonVar.samples = 8;
-
-  //Check for any errors in initialization
-  let error1 = this.moonRenderer.init();
-  if(error1 !== null){
-    console.error(`Moon Renderer: ${error1}`);
-  }
-
-  //Create our material late
-  this.combinationPassMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Moon.combinationPass.uniforms)),
-    side: THREE.FrontSide,
-    blending: THREE.NormalBlending,
-    transparent: true,
-    vertexShader: StarrySky.Materials.Moon.combinationPass.vertexShader,
-    fragmentShader: StarrySky.Materials.Moon.combinationPass.fragmentShader
+      StarrySky.Materials.Moon.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians),
+    )
   });
   //Attach the material to our geometry
-  this.moonMesh = new THREE.Mesh(this.geometry, this.combinationPassMaterial);
-  this.moonMesh.castShadow = false;
-  this.moonMesh.receiveShadow = false;
-  this.moonMesh.fog = false;
-  this.baseMoonVar.material.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
+  moonMaterial.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
+  moonMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
+  moonMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
+  moonMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
+  moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
+  moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+  const renderTargetGeometry = new THREE.PlaneBufferGeometry(2, 2);
+  THREE.BufferGeometryUtils.computeTangents(renderTargetGeometry);
+  const renderBufferMesh = new THREE.Mesh(
+    renderTargetGeometry,
+    moonMaterial
+  );
+  scene.add(renderBufferMesh);
 
-  let self = this;
-  this.setBloomStrength = function(bloomStrength){
-    self.combinationPassMaterial.uniforms.bloomStrength.value = bloomStrength;
-  }
-
-  this.setBloomRadius = function(bloomRadius){
-    self.combinationPassMaterial.uniforms.bloomRadius.value = bloomRadius;
-  }
-
-  //And update our object with our initial values
-  this.setBloomStrength(3.0);
-  this.setBloomRadius(0.7);
-
-  this.tick = function(t){
-    const distanceFromSunToMoon = self.skyDirector.skyState.sun.position.distanceTo(self.skyDirector.skyState.moon.position) * RADIUS_OF_SKY;
-    if(distanceFromSunToMoon < blinkOutDistance && this.moonMesh.visible){
-      this.moonMesh.visible = false;
+  //If our images have finished loading, update our uniforms
+  if(assetManager.hasLoadedImages){
+    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
+    for(let i = 0; i < moonTextures.length; ++i){
+      const moonTextureProperty = moonTextures[i];
+      moonMaterial.uniforms[moonTextureProperty].value = assetManager.images[moonTextureProperty];
     }
-    else if(distanceFromSunToMoon >= blinkOutDistance && !this.moonMesh.visible){
-      this.moonMesh.visible = true;
+
+    moonMaterial.uniforms.starColorMap.value = assetManager.images.starImages.starColorMap;
+  }
+
+  const renderPass = new THREE.RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85);
+  this.bloomPass.threshold = 0.55;
+  this.bloomPass.strength = 0.9;
+  this.bloomPass.radius = 1.4;
+  composer.addPass(this.bloomPass);
+
+  //Attach the material to our geometry
+	const outputMaterial = new THREE.ShaderMaterial({
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Postprocessing.moonAndSunOutput.uniforms)),
+    vertexShader: StarrySky.Materials.Postprocessing.moonAndSunOutput.vertexShader,
+    fragmentShader: StarrySky.Materials.Postprocessing.moonAndSunOutput.fragmentShader
+  });
+	outputMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+  this.moonMesh = new THREE.Mesh(this.geometry, outputMaterial);
+  outputMaterial.castShadow = false;
+  outputMaterial.fog = false;
+	outputMaterial.side = THREE.FrontSide;
+	outputMaterial.dithering = false;
+	outputMaterial.toneMapped = false;
+	outputMaterial.transparent = true;
+	moonMaterial.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
+
+  const self = this;
+  this.tick = function(t){
+    //Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
+    const initialRenderTarget = renderer.getRenderTarget();
+    const currentXrEnabled = renderer.xr.enabled;
+    const currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
+    renderer.xr.enabled = false;
+    renderer.shadowMap.autoUpdate = false;
+
+    const distanceFromSunToMoon = skyState.sun.position.distanceTo(skyState.moon.position) * RADIUS_OF_SKY;
+    if(distanceFromSunToMoon < blinkOutDistance && self.moonMesh.visible){
+      self.moonMesh.visible = false;
+    }
+    else if(distanceFromSunToMoon >= blinkOutDistance && !self.moonMesh.visible){
+      self.moonMesh.visible = true;
     }
 
     //Update the position of our mesh
-    let cameraPosition = skyDirector.camera.position;
-    let quadOffset = skyDirector.skyState.moon.quadOffset;
+    const cameraPosition = skyDirector.camera.position;
+    const quadOffset = skyState.moon.quadOffset;
+    self.moonMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.parallacticAxis.copy(quadOffset).normalize();
-    self.moonMesh.position.copy(quadOffset).add(cameraPosition);
     self.moonMesh.lookAt(cameraPosition); //Use the basic look-at function to always have this plane face the camera.
-    self.moonMesh.rotateOnWorldAxis(self.parallacticAxis, -skyDirector.skyState.moon.parallacticAngle); //And rotate the mesh by the parallactic angle.
+    self.moonMesh.rotateOnWorldAxis(self.parallacticAxis, -skyState.moon.parallacticAngle); //And rotate the mesh by the parallactic angle.
     self.moonMesh.updateMatrix();
     self.moonMesh.updateMatrixWorld();
 
     //Update our shader material
-    self.baseMoonVar.material.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.baseMoonVar.material.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.baseMoonVar.material.uniforms.uTime.value = t;
-    self.baseMoonVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
-    self.baseMoonVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
-    self.baseMoonVar.material.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
-    self.baseMoonVar.material.uniforms.moonExposure.value = self.skyDirector.exposureVariables.moonExposure;
-    self.baseMoonVar.material.uniforms.distanceToEarthsShadowSquared.value = self.skyDirector.skyState.moon.distanceToEarthsShadowSquared;
-    self.baseMoonVar.material.uniforms.oneOverNormalizedLunarDiameter.value = self.skyDirector.skyState.moon.oneOverNormalizedLunarDiameter;
+    moonMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
+    moonMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
+    moonMaterial.uniforms.uTime.value = t;
+    moonMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
+    moonMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    moonMaterial.uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
+    moonMaterial.uniforms.moonExposure.value = skyDirector.exposureVariables.moonExposure;
+    moonMaterial.uniforms.distanceToEarthsShadowSquared.value = skyState.moon.distanceToEarthsShadowSquared;
+    moonMaterial.uniforms.oneOverNormalizedLunarDiameter.value = skyState.moon.oneOverNormalizedLunarDiameter;
+
+    //Update our bloom threshold so we don't bloom the moon during the day
+    this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
 
     //Run our float shaders shaders
-    self.moonRenderer.compute();
+    composer.render();
+    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+    outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+    outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
+    outputMaterial.uniforms.uTime.value = t;
 
-    //Update our final texture that is displayed
-    //TODO: Drive this with HDR instead of sky fade
-    let bloomTest = self.skyDirector.skyState.sun.horizonFade < 0.95;
-    let bloomSwapped = this.bloomEnabled !== bloomTest;
-    this.bloomEnabled = bloomSwapped ? bloomTest : this.bloomEnabled;
-
-    //Get our moon disk whether we pass it into the bloom shader or not
-    let baseTexture = self.moonRenderer.getCurrentRenderTarget(self.baseMoonVar).texture;
-    baseTexture.generateMipmaps = true;
-    self.combinationPassMaterial.uniforms.baseTexture.value = baseTexture;
-    if(this.bloomEnabled){
-      if(bloomSwapped){
-        self.combinationPassMaterial.uniforms.bloomEnabled.value = true;
-      }
-
-      //Drive our bloom shader with our moon disk
-      let bloomTextures = self.skyDirector.renderers.bloomRenderer.render(baseTexture);
-      self.combinationPassMaterial.uniforms.blurTexture1.value = bloomTextures[0];
-      self.combinationPassMaterial.uniforms.blurTexture2.value = bloomTextures[1];
-      self.combinationPassMaterial.uniforms.blurTexture3.value = bloomTextures[2];
-      self.combinationPassMaterial.uniforms.blurTexture4.value = bloomTextures[3];
-      self.combinationPassMaterial.uniforms.blurTexture5.value = bloomTextures[4];
-      self.baseMoonVar.material.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
-    }
-    else if(bloomSwapped){
-      self.combinationPassMaterial.uniforms.bloomEnabled.value = false;
-    }
-
-    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
-    self.combinationPassMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+    //Clean up shadows and XR stuff
+    renderer.xr.enabled = currentXrEnabled;
+    renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
+    renderer.setRenderTarget(initialRenderTarget);
   }
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
     //Connect up our reference values
-    self.baseMoonVar.material.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
-    self.baseMoonVar.material.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
-    self.baseMoonVar.material.uniforms.sunLightDirection.value = self.skyDirector.skyState.sun.quadOffset;
-    self.combinationPassMaterial.uniforms.bloomEnabled.value = self.skyDirector.skyState.sun.horizonFade < 0.95;
+    moonMaterial.uniforms.sunPosition.value = skyState.sun.position;
+    moonMaterial.uniforms.moonPosition.value = skyState.moon.position;
+    moonMaterial.uniforms.sunLightDirection.value = skyState.sun.quadOffset;
 
-    self.baseMoonVar.material.uniforms.mercuryPosition.value = self.skyDirector.skyState.mercury.position;
-    self.baseMoonVar.material.uniforms.venusPosition.value = self.skyDirector.skyState.venus.position;
-    self.baseMoonVar.material.uniforms.marsPosition.value = self.skyDirector.skyState.mars.position;
-    self.baseMoonVar.material.uniforms.jupiterPosition.value = self.skyDirector.skyState.jupiter.position;
-    self.baseMoonVar.material.uniforms.saturnPosition.value = self.skyDirector.skyState.saturn.position;
+    moonMaterial.uniforms.mercuryPosition.value = skyState.mercury.position;
+    moonMaterial.uniforms.venusPosition.value = skyState.venus.position;
+    moonMaterial.uniforms.marsPosition.value = skyState.mars.position;
+    moonMaterial.uniforms.jupiterPosition.value = skyState.jupiter.position;
+    moonMaterial.uniforms.saturnPosition.value = skyState.saturn.position;
 
-    self.baseMoonVar.material.uniforms.mercuryBrightness.value = self.skyDirector.skyState.mercury.intensity;
-    self.baseMoonVar.material.uniforms.venusBrightness.value = self.skyDirector.skyState.venus.intensity;
-    self.baseMoonVar.material.uniforms.marsBrightness.value = self.skyDirector.skyState.mars.intensity;
-    self.baseMoonVar.material.uniforms.jupiterBrightness.value = self.skyDirector.skyState.jupiter.intensity;
-    self.baseMoonVar.material.uniforms.saturnBrightness.value = self.skyDirector.skyState.saturn.intensity;
-    self.baseMoonVar.material.uniforms.earthsShadowPosition.value = self.skyDirector.skyState.moon.earthsShadowPosition;
-    self.baseMoonVar.material.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
+    moonMaterial.uniforms.mercuryBrightness.value = skyState.mercury.intensity;
+    moonMaterial.uniforms.venusBrightness.value = skyState.venus.intensity;
+    moonMaterial.uniforms.marsBrightness.value = skyState.mars.intensity;
+    moonMaterial.uniforms.jupiterBrightness.value = skyState.jupiter.intensity;
+    moonMaterial.uniforms.saturnBrightness.value = skyState.saturn.intensity;
+    moonMaterial.uniforms.earthsShadowPosition.value = skyState.moon.earthsShadowPosition;
+    moonMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
     //Connect up our images if they don't exist yet
-    if(self.skyDirector.assetManager){
+    if(assetManager){
       //Moon Textures
-      for(let [property, value] of Object.entries(self.skyDirector.assetManager.images.moonImages)){
-        self.baseMoonVar.material.uniforms[property].value = value;
+      for(let [property, value] of Object.entries(assetManager.images.moonImages)){
+        moonMaterial.uniforms[property].value = value;
       }
 
       //Update our star data
-      self.baseMoonVar.material.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
-      self.baseMoonVar.material.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
-      self.baseMoonVar.material.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
-      self.baseMoonVar.material.uniforms.medStarData.value = self.skyDirector.stellarLUTLibrary.medStarDataMap;
-      self.baseMoonVar.material.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
+      moonMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+      moonMaterial.uniforms.starHashCubemap.value = assetManager.images.starImages.starHashCubemap;
+      moonMaterial.uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
+      moonMaterial.uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
+      moonMaterial.uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
     }
 
     //Proceed with the first tick
     self.tick(t);
 
     //Add this object to the scene
-    self.skyDirector.scene.add(self.moonMesh);
+    skyDirector.scene.add(self.moonMesh);
   }
 }

@@ -144,7 +144,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
         '#if($isRayleigh)',
           'totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;',
         '#else',
-          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION;',
+          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION / 0.9;',
         '#endif',
       '}',
 
