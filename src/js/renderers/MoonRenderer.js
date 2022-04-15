@@ -132,13 +132,14 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.moonExposure.value = skyDirector.exposureVariables.moonExposure;
     moonMaterial.uniforms.distanceToEarthsShadowSquared.value = skyState.moon.distanceToEarthsShadowSquared;
     moonMaterial.uniforms.oneOverNormalizedLunarDiameter.value = skyState.moon.oneOverNormalizedLunarDiameter;
+    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+    moonMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 
     //Update our bloom threshold so we don't bloom the moon during the day
     this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
 
     //Run our float shaders shaders
     composer.render();
-    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
     outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
     outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
     outputMaterial.uniforms.uTime.value = t;
@@ -183,6 +184,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       moonMaterial.uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
       moonMaterial.uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
       moonMaterial.uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
+      moonMaterial.uniforms.auroraSampler1.value =  assetManager.images.auroraImages[0];
+      moonMaterial.uniforms.auroraSampler2.value =  assetManager.images.auroraImages[1];
     }
 
     //Proceed with the first tick

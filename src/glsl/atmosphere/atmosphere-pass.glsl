@@ -16,8 +16,10 @@ uniform sampler3D mieInscatteringSum;
 uniform sampler3D rayleighInscatteringSum;
 uniform sampler2D transmittance;
 
-#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)
-uniform sampler2D blueNoiseTexture;
+#if(!$isSunPass)
+  uniform sampler2D blueNoiseTexture;
+  uniform sampler2D auroraSampler1;
+  uniform sampler2D auroraSampler2;
 #endif
 
 #if(!$isSunPass && !$isMeteringPass)
@@ -26,8 +28,6 @@ uniform sampler2D blueNoiseTexture;
   uniform sampler2D medStarData;
   uniform sampler2D brightStarData;
   uniform sampler2D starColorMap;
-  uniform sampler2D causticSampler1;
-  uniform sampler2D causticSampler2;
 
   uniform vec3 mercuryPosition;
   uniform vec3 venusPosition;
@@ -94,29 +94,31 @@ const vec3 gamma = vec3(2.2);
 
 $atmosphericFunctions
 
+#if(!$isSunPass)
+//From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
+float rand(float x){
+  float a = 12.9898;
+  float b = 78.233;
+  float c = 43758.5453;
+  float dt= dot(vec2(x, x) ,vec2(a,b));
+  float sn= mod(dt,3.14);
+  return fract(sin(sn) * c);
+}
+
+//From The Book of Shaders :D
+//https://thebookofshaders.com/11/
+float noise(float x){
+  float i = floor(x);
+  float f = fract(x);
+  float y = mix(rand(i), rand(i + 1.0), smoothstep(0.0,1.0,f));
+
+  return y;
+}
+#endif
+
 #if(!$isSunPass && !$isMeteringPass)
   vec3 getSpectralColor(){
     return vec3(1.0);
-  }
-
-  //From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
-  float rand(float x){
-    float a = 12.9898;
-    float b = 78.233;
-    float c = 43758.5453;
-    float dt= dot(vec2(x, x) ,vec2(a,b));
-    float sn= mod(dt,3.14);
-    return fract(sin(sn) * c);
-  }
-
-  //From The Book of Shaders :D
-  //https://thebookofshaders.com/11/
-  float noise(float x){
-    float i = floor(x);
-    float f = fract(x);
-    float y = mix(rand(i), rand(i + 1.0), smoothstep(0.0,1.0,f));
-
-    return y;
   }
 
   float brownianNoise(float lacunarity, float gain, float initialAmplitude, float initialFrequency, float timeInSeconds){
@@ -242,7 +244,7 @@ vec3 getLunarEcclipseShadow(vec3 sphericalPosition){
 }
 #endif
 
-#if(!$isSunPass && !$isMeteringPass)
+#if(!$isSunPass)
   //I'm gonna do something weird. I propose that aurora look an aweful lot
   //like water caustics - slower, with some texture ripples introduced with
   //perlin noise.
@@ -281,10 +283,10 @@ vec3 getLunarEcclipseShadow(vec3 sphericalPosition){
     vec2 pSample = vec2(perlinOffset1, perlinOffset2);
 
     //Sample our caustic shader
-    float aSample1 = texture(causticSampler1, (uv + vec2(0.8, 0.1) * quarterTime + pSample * 0.025) * 0.25).r;
-    float aSample2 = texture(causticSampler1, (uv + vec2(0.8, 0.1) * quarterTime) * 0.25).r;
-    float aSample3 = texture(causticSampler2, (uv - vec2(0.2, 0.7) * quarterTime) * 0.25).r;
-    float aSample4 = texture(causticSampler2, (uv - vec2(0.2, 0.7) * quarterTime + pSample * 0.025) * 0.25).r;
+    float aSample1 = texture(auroraSampler1, (uv + vec2(0.8, 0.1) * quarterTime + pSample * 0.025) * 0.25).r;
+    float aSample2 = texture(auroraSampler1, (uv + vec2(0.8, 0.1) * quarterTime) * 0.25).r;
+    float aSample3 = texture(auroraSampler2, (uv - vec2(0.2, 0.7) * quarterTime) * 0.25).r;
+    float aSample4 = texture(auroraSampler2, (uv - vec2(0.2, 0.7) * quarterTime + pSample * 0.025) * 0.25).r;
 
     //Combine our caustic shader results
     float cSample1 = max(pow(aSample1, 2.2), pow(aSample2, 2.2));
@@ -313,72 +315,79 @@ vec3 getLunarEcclipseShadow(vec3 sphericalPosition){
 
     //Nitrogen contribution
     if(h > 60.0 && h < 120.0){
-      centroidValue = h - 90.0;
-      linearIntensityFader = clamp(auroraNoiseValue - 0.8, 0.0, 1.0) * clamp(avgElectronVelocityScalar - 0.8, 0.0, 1.0);
-      outputLightIntensity += excitedNitrogenSpectrumEmission * linearIntensityFader * exp(centroidValue * centroidValue);
+      centroidValue = (h - 90.0) / 70.0;
+      //linearIntensityFader = clamp(auroraNoiseValue - 0.8, 0.0, 1.0) * clamp(avgElectronVelocityScalar - 0.8, 0.0, 1.0);
+      linearIntensityFader = clamp(auroraNoiseValue - 0.12, 0.0, 1.0);
+      outputLightIntensity += 4.0 * excitedNitrogenSpectrumEmission * linearIntensityFader * exp(-centroidValue * centroidValue);
     }
 
     //Molecular oxygen contribution
     if(h > 100.0 && h < 250.0){
-      centroidValue = h - 175.0;
-      linearIntensityFader = clamp(auroraNoiseValue, 0.0, 1.0) * clamp(avgElectronVelocityScalar - 0.2, 0.0, 1.0);
-      outputLightIntensity += molecularO2SpectralEmission * linearIntensityFader * exp(centroidValue * centroidValue);
+      centroidValue = (h - 175.0) / 50.5;
+      //linearIntensityFader = clamp(auroraNoiseValue, 0.0, 1.0) * clamp(avgElectronVelocityScalar - 0.2, 0.0, 1.0);
+      linearIntensityFader = clamp(auroraNoiseValue - 0.02, 0.0, 1.0);
+      outputLightIntensity += 2.0 * molecularO2SpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);
     }
 
     //Atomic oxygen contribution
     if(h > 150.0 && h < 600.0){
-      centroidValue = h - 375.0;
-      linearIntensityFader = clamp(auroraNoiseValue - 0.8, 0.0, 1.0);
-      outputLightIntensity += atomicOxygenSpectralEmission * linearIntensityFader * exp(centroidValue * centroidValue);
+      centroidValue = (h - 375.0) / 80.5;
+      linearIntensityFader = clamp(auroraNoiseValue - 0.12, 0.0, 1.0);
+      outputLightIntensity += 0.3 * atomicOxygenSpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);
     }
 
-    return outputLightIntensity;
+    return max(vec3(outputLightIntensity), 0.0);
   }
 
-  float interceptSphereSurfaceFromWithin(vec3 rayStartPosition, vec3 rayDirection, float radius){
-    float a = dot(rayDirection, rayStartPosition);
-    float b = dot(rayDirection, rayDirection);
-    float c = dot(rayStartPosition, rayStartPosition);
-    return sqrt((2.0 * a * a - 4.0 * b * (c - radius * radius)) / (2.0 * b)) - 2.0 * a;
+  float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float height){
+    return rayDirection.y == 0.0 ? -1.0 : (height - rayStartPosition.y) / rayDirection.y;
   }
 
-  vec3 auroraRayMarchPass(vec3 rayStartPosition, vec3 rayDirection){
+  vec3 auroraRayMarchPass(vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction){
     //Set up the initial conditions of our ray marcher.
     //Note that our aurora ray marcher is a little different
     //then a standard ray marcher as we expect less contributions from greater
     //heights, allowing us to take expontial steps to reduce the number of texture
     //samples.
-    int numberOfSteps = 64;
     float numberOfStepFloat = 64.0;
     float uvScaling = 4.0;
-    float expontialMultiplier = (RADIUS_OF_AURORA_TOP - RADIUS_OF_AURORA_BOTTOM) / 445.7915685;
-    float rayInterceptStartTime = interceptSphereSurfaceFromWithin(rayStartPosition, rayDirection, RADIUS_OF_AURORA_BOTTOM);
-    vec3 lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
+    float rayInterceptStartTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_BOTTOM), 2500.0);
+    float rayInterceptEndTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_TOP), 3300.0);
+    float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfStepFloat;
+    float auroraNoiseValue;
+    vec3 auroraColorValue0;
+    vec3 auroraColorValuef;
+    vec3 lastPosition;
     vec3 linearAuroraGlow = vec3(0.0);
-    for(int i = 0; i < numberOfSteps; i++){
-      //Determine the position of our raymarcher in the sky
-      float currentHeight = RADIUS_OF_AURORA_BOTTOM + pow(1.1, expontialMultiplier) * expontialMultiplier;
-      float currentTime = interceptSphereSurfaceFromWithin(rayStartPosition, rayDirection, currentHeight);
-      vec3 currentPosition = rayStartPosition + currentTime * rayDirection;
-      float r = length(currentPosition);
-      float distanceBetweenPositions = distance(currentPosition, lastPosition);
+    float auroraBrightness = pow(150.0, min(starAndSkyExposureReduction, 2.7) * 0.20);
+    if(rayInterceptStartTime > 0.0){
+      lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
+      vec2 auroraNoiseTextureUV = vec2(lastPosition.x, lastPosition.z);
+      auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 512.0, uTime / 16000.0);
+      auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
+      float totalD = 0.0;
+      for(float i = 1.0; i < numberOfStepFloat; i++){
+        //Determine the position of our raymarcher in the sky
+        float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x, lastPosition.z) / 128.0).r;
+        vec3 currentPosition = lastPosition + rayDirection * (rayDeltaT  * blueNoise);
+        float d = distance(currentPosition, lastPosition);
+        totalD += d;
 
-      //Get our spherical coordinates for spherical uv mapping
-      float rho = length(currentPosition.xy);
-      float height = sqrt(1.0 - rho * rho);
-      float phi = piOver2 - atan(r, rho);
-      float theta = atan(currentPosition.y, currentPosition.x);
+        //Get our spherical coordinates for spherical uv mapping
 
-      vec2 auroraNoiseTextureUV = vec2(2.0 * theta * uvScaling, phi * uvScaling);
-      float auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV, uTime);
-      vec3 auroraColor = auroraColor(auroraNoiseValue, r, 0.5); //Setting the velocity value to a constant while we test this out.
-      linearAuroraGlow += auroraColor * distanceBetweenPositions;//We linearly scale by the longer distances to cancel out the effect of fewer samples
+        auroraNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);
+        auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);
+        auroraColorValuef = auroraColor(auroraNoiseValue, currentPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
+        linearAuroraGlow += 0.5 * (auroraColorValue0 + auroraColorValuef) * d;//We linearly scale by the longer distances to cancel out the effect of fewer samples
 
-      //Save the current position as the last position so we can determine the distance between points the next time
-      lastPosition = currentPosition;
+        //Save the current position as the last position so we can determine the distance between points the next time
+        lastPosition = currentPosition;
+        auroraColorValue0 = auroraColorValuef;
+      }
+      linearAuroraGlow = 0.2 * linearAuroraGlow / (RADIUS_OF_AURORA_TOP - RADIUS_OF_AURORA_BOTTOM);
     }
 
-    return linearAuroraGlow * 1.0; //Linear multiplier for artistic control
+    return linearAuroraGlow * auroraBrightness; //Linear multiplier for artistic control
   }
 #endif
 
@@ -495,12 +504,13 @@ void main(){
     galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
     galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
     galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+    galacticLighting = pow(galacticLighting, gamma);
 
     //Add our aurora light to all of this
-    galacticLighting += auroraRayMarchPass(vec3(0.0, RADIUS_OF_EARTH, 0.0), sphericalPosition);
+    galacticLighting += auroraRayMarchPass(vec3(0.0, RADIUS_OF_EARTH, 0.0), sphericalPosition, starAndSkyExposureReduction);
 
     //Apply the transmittance function to all of our light sources
-    galacticLighting = pow(galacticLighting, gamma) * transmittanceFade;
+    galacticLighting = galacticLighting * transmittanceFade;
   #endif
 
   //Sun and Moon layers

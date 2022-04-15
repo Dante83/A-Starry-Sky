@@ -16,10 +16,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {value: 1.4}
     }
 
-    if(!isSunShader && !isMeteringShader){
+    if(!isSunShader){
       uniforms.blueNoiseTexture = {value: null};
-      uniforms.causticSampler1 = {value: null};
-      uniforms.causticSampler2 = {value: null};
+      uniforms.auroraSampler1 = {value: null};
+      uniforms.auroraSampler2 = {value: null};
     }
 
     //Pass our specific uniforms in here.

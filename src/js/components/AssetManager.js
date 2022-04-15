@@ -5,6 +5,7 @@ StarrySky.AssetManager = function(skyDirector){
     moonImages: {},
     starImages: {},
     blueNoiseImages: {},
+    auroraImages: {},
     solarEclipseImage: null
   };
   const starrySkyComponent = skyDirector.parentComponent;
@@ -66,7 +67,8 @@ StarrySky.AssetManager = function(skyDirector){
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
     const oneSolarEclipseImage = 1;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage;
+    const numberOfAuroraTextures = 2;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + numberOfAuroraTextures;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -370,6 +372,39 @@ StarrySky.AssetManager = function(skyDirector){
         texture.encoding = THREE.LinearEncoding;
         texture.type = THREE.FloatType;
         self.images.blueNoiseImages[i] = texture;
+
+        self.numberOfTexturesLoaded += 1;
+        if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+          self.hasLoadedImages = true;
+        }
+      }, function(err){
+        console.error(err);
+      });
+    })(0);
+
+    //Load aurora textures
+    //Recursive based functional for loop, with asynchronous execution because
+    //Each iteration is not dependent upon the last, but it's just a set of similiar code
+    //that can be run in parallel.
+    (async function createNewAuroraTexturePromise(i){
+      let next = i + 1;
+      if(next < numberOfAuroraTextures){
+        createNewAuroraTexturePromise(next);
+      }
+
+      let texturePromise = new Promise(function(resolve, reject){
+        textureLoader.load(StarrySky.assetPaths['auroraMaps'][i], function(texture){resolve(texture);});
+      });
+      texturePromise.then(function(texture){
+        //Fill in the details of our texture
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.format = THREE.RGBAFormat;
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearFilter;
+        texture.encoding = THREE.LinearEncoding;
+        texture.type = THREE.FloatType;
+        self.images.auroraImages[i] = texture;
 
         self.numberOfTexturesLoaded += 1;
         if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){

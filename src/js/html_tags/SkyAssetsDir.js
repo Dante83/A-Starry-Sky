@@ -11,6 +11,7 @@ window.customElements.define('sky-bright-star-maps', class extends HTMLElement{}
 window.customElements.define('sky-star-color-map', class extends HTMLElement{});
 window.customElements.define('sky-blue-noise-maps', class extends HTMLElement{});
 window.customElements.define('sky-solar-eclipse-map', class extends HTMLElement{});
+window.customElements.define('sky-aurora-maps', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.webp',
@@ -52,7 +53,11 @@ StarrySky.DefaultData.fileNames = {
     'blue-noise-3.bmp',
     'blue-noise-4.bmp'
   ],
-  solarEclipseMap: 'solar-eclipse-map.webp'
+  solarEclipseMap: 'solar-eclipse-map.webp',
+  auroraMaps: [
+    'aurora-map-1.webp',
+    'aurora-map-2.webp',
+  ]
 };
 
 StarrySky.DefaultData.assetPaths = {
@@ -67,7 +72,8 @@ StarrySky.DefaultData.assetPaths = {
   medStarDataMaps: StarrySky.DefaultData.fileNames.medStarDataMaps.map(x => './assets/star_data/' + x),
   brightStarDataMaps: StarrySky.DefaultData.fileNames.brightStarDataMaps.map(x => './assets/star_data/' + x),
   starColorMap: './assets/star_data/' + StarrySky.DefaultData.fileNames.starColorMap,
-  blueNoiseMaps: StarrySky.DefaultData.fileNames.blueNoiseMaps.map(x => './assets/blue_noise/' + x)
+  blueNoiseMaps: StarrySky.DefaultData.fileNames.blueNoiseMaps.map(x => './assets/blue_noise/' + x),
+  auroraMaps: StarrySky.DefaultData.fileNames.auroraMaps.map(x => './assets/aurora_maps/' + x),
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
@@ -141,19 +147,22 @@ class SkyAssetsDir extends HTMLElement {
       const brightStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-bright-star-map');
       const starColorMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-color-map');
       const blueNoiseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-blue-noise-maps');
+      const auroraMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'aurora-maps');
 
       const objectProperties = ['moonDiffuseMap', 'moonNormalMap',
         'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap', 'starHashCubemap',
-        'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap']
+        'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap',
+        'auroraMaps']
       const tagsList = [moonDiffuseMapTags, moonNormalMapTags,
         moonRoughnessMapTags, moonApertureSizeMapTags, moonApertureOrientationMapTags, starCubemapTags,
-        medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags];
+        medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags,
+        auroraMapTags];
       const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
         'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap'];
         const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
-        'blueNoiseMaps'];
+        'blueNoiseMaps', 'auroraMapTags'];
 
         //Process single texture keys
         for(let i = 0; i < singleTextureKeys.length; ++i){
@@ -162,7 +171,7 @@ class SkyAssetsDir extends HTMLElement {
 
         //Process multi texture keys
         for(let i = 0; i < multiTextureKeys.length; ++i){
-          let multiTextureFileNames = multiTextureKeys[i];
+          const multiTextureFileNames = multiTextureKeys[i];
           for(let j = 0; j < multiTextureFileNames.length; ++j){
             StarrySky.assetPaths[multiTextureFileNames[i]][j] = path + '/' + StarrySky.DefaultData.fileNames[singleTextureKeys[i]][j];
           }
@@ -178,7 +187,7 @@ class SkyAssetsDir extends HTMLElement {
       else if(self.hasAttribute('star-path') && self.getAttribute('star-path').toLowerCase() !== 'false'){
         const starTextureKeys = ['starHashCubemap', 'dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps'];
         for(let i = 0; i < starTextureKeys.length; ++i){
-          let starMapFileNames =  StarrySky.DefaultData.fileNames[starTextureKeys[i]];
+          const starMapFileNames =  StarrySky.DefaultData.fileNames[starTextureKeys[i]];
           for(let j = 0; j < starMapFileNames.length; ++j){
             StarrySky.assetPaths[starTextureKeys[i]][j] = path + '/' + starMapFileNames[j];
           }
@@ -188,13 +197,20 @@ class SkyAssetsDir extends HTMLElement {
       }
       else if(self.hasAttribute('blue-noise-path') && self.getAttribute('blue-noise-path').toLowerCase() !== 'false'){
         for(let i = 0; i < 5; ++i){
-          let blueNoiseFileNames =  StarrySky.DefaultData.fileNames['blue-noise-' + i];
+          const blueNoiseFileNames =  StarrySky.DefaultData.fileNames['blue-noise-' + i];
           StarrySky.assetPaths['blueNoiseMaps'][i] = path + '/' + StarrySky.DefaultData.fileNames['blueNoiseMaps'][i];
         }
       }
       else if(self.hasAttribute('solar-eclipse-path') && self.getAttribute('solar-eclipse-path').toLowerCase() !== 'false'){
         StarrySky.assetPaths['solarEclipseMap'] = path + '/' + StarrySky.DefaultData.fileNames['solarEclipseMap'];
       }
+      else if(self.hasAttribute('aurora-map-path') && self.getAttribute('aurora-map-path').toLowerCase() !== 'false'){
+        for(let i = 0; i < 2; ++i){
+          const auroraMapFileNames =  StarrySky.DefaultData.fileNames['aurora-map-' + i];
+          StarrySky.assetPaths['auroraMaps'][i] = path + '/' + StarrySky.DefaultData.fileNames['auroraMaps'][i];
+        }
+      }
+
 
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));

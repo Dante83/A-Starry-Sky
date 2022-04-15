@@ -77,6 +77,10 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     self.meteringSurveyVar.material.uniforms.sunLuminosity.value = self.skyDirector.skyState.sun.luminosity;
     self.meteringSurveyVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
     self.meteringSurveyVar.material.uniforms.moonLuminosity.value = self.skyDirector.skyState.moon.luminosity;
+    self.meteringSurveyVar.material.uniforms.auroraSampler1.value =  self.skyDirector?.assetManager.images.auroraImages[0];
+    self.meteringSurveyVar.material.uniforms.auroraSampler2.value =  self.skyDirector?.assetManager.images.auroraImages[1];
+    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
+    self.meteringSurveyVar.material.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 
     self.meteringSurveyRenderer.compute();
     const skyRenderTarget = self.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar);

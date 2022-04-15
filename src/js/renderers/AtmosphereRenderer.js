@@ -78,6 +78,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       self.atmosphereMaterial.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
       self.atmosphereMaterial.uniforms.medStarData.value = self.skyDirector.stellarLUTLibrary.medStarDataMap;
       self.atmosphereMaterial.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
+      self.atmosphereMaterial.uniforms.auroraSampler1.value =  self.skyDirector.assetManager.images.auroraImages[0];
+      self.atmosphereMaterial.uniforms.auroraSampler2.value =  self.skyDirector.assetManager.images.auroraImages[1];
     }
 
     //Proceed with the first tick
