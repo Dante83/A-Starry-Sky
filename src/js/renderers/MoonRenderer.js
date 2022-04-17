@@ -30,20 +30,58 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
   composer.renderToScreen = false;
 
+  const auroraParameters = assetManager.data.skyAuroraParameters;
+  const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const moonMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true))),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
+      false,
+      true,
+      false,
+      assetManager.data.skyAuroraParameters.auroraEnabled
+    ))),
     vertexShader: StarrySky.Materials.Moon.baseMoonPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphericParameters.mieDirectionalG,
       atmosphereLUTLibrary.scatteringTextureWidth,
       atmosphereLUTLibrary.scatteringTextureHeight,
       atmosphereLUTLibrary.scatteringTexturePackingWidth,
       atmosphereLUTLibrary.scatteringTexturePackingHeight,
       atmosphereLUTLibrary.atmosphereFunctionsString,
-      false,
+      false, //Sun Code
       StarrySky.Materials.Moon.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians),
+      false, //Metering Code
+      assetManager.data.skyAuroraParameters.auroraEnabled //aurora enabled
     )
   });
+  if(assetManager.data.skyAuroraParameters.auroraEnabled){
+    moonMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
+      auroraParameters.nitrogenColor.red / 255.0,
+      auroraParameters.nitrogenColor.green / 255.0,
+      auroraParameters.nitrogenColor.blue / 255.0,
+    );
+    moonMaterial.uniforms.nitrogenCutOff.value = auroraParameters.nitrogenCutOff;
+    moonMaterial.uniforms.nitrogenIntensity.value = auroraParameters.nitrogenIntensity;
+
+    moonMaterial.uniforms.molecularOxygenColor.value = new THREE.Vector3(
+      auroraParameters.molecularOxygenColor.red / 255.0,
+      auroraParameters.molecularOxygenColor.green / 255.0,
+      auroraParameters.molecularOxygenColor.blue / 255.0,
+    );
+    moonMaterial.uniforms.molecularOxygenCutOff.value = auroraParameters.molecularOxygenCutOff;
+    moonMaterial.uniforms.molecularOxygenIntensity.value = auroraParameters.molecularOxygenIntensity;
+
+    moonMaterial.uniforms.atomicOxygenColor.value = new THREE.Vector3(
+      auroraParameters.atomicOxygenColor.red / 255.0,
+      auroraParameters.atomicOxygenColor.green / 255.0,
+      auroraParameters.atomicOxygenColor.blue / 255.0,
+    );
+    moonMaterial.uniforms.atomicOxygenCutOff.value = auroraParameters.atomicOxygenCutOff;
+    moonMaterial.uniforms.atomicOxygenIntensity.value = auroraParameters.atomicOxygenIntensity;
+
+    //Number of raymarching steps
+    moonMaterial.uniforms.numberOfAuroraRaymarchingSteps.value = auroraParameters.raymarchSteps;
+  }
+
   //Attach the material to our geometry
   moonMaterial.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
   moonMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
@@ -184,8 +222,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       moonMaterial.uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
       moonMaterial.uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
       moonMaterial.uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
-      moonMaterial.uniforms.auroraSampler1.value =  assetManager.images.auroraImages[0];
-      moonMaterial.uniforms.auroraSampler2.value =  assetManager.images.auroraImages[1];
+      if(assetManager.data.skyAuroraParameters.auroraEnabled){
+        moonMaterial.uniforms.auroraSampler1.value =  assetManager.images.auroraImages[0];
+        moonMaterial.uniforms.auroraSampler2.value =  assetManager.images.auroraImages[1];
+      }
     }
 
     //Proceed with the first tick

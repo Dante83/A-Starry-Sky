@@ -1,5 +1,5 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
-  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false){
+  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false, auroraEnabled = false){
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -16,10 +16,24 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {value: 1.4}
     }
 
-    if(!isSunShader){
-      uniforms.blueNoiseTexture = {value: null};
+    console.log(auroraEnabled);
+    if(auroraEnabled){
       uniforms.auroraSampler1 = {value: null};
       uniforms.auroraSampler2 = {value: null};
+
+      uniforms.nitrogenColor = {value: new THREE.Vector3()};
+      uniforms.nitrogenCutOff = {value: null};
+      uniforms.nitrogenIntensity = {value: null};
+
+      uniforms.molecularOxygenColor = {value: new THREE.Vector3()};
+      uniforms.molecularOxygenCutOff = {value: null};
+      uniforms.molecularOxygenIntensity = {value: null};
+
+      uniforms.atomicOxygenColor = {value: new THREE.Vector3()};
+      uniforms.atomicOxygenCutOff = {value: null};
+      uniforms.atomicOxygenIntensity = {value: null};
+
+      uniforms.numberOfAuroraRaymarchingSteps = {value: null};
     }
 
     //Pass our specific uniforms in here.
@@ -49,6 +63,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
 
     if(!isSunShader){
+      uniforms.blueNoiseTexture = {value: null};
       uniforms.starHashCubemap = {value: null};
       uniforms.dimStarData = {value: null};
       uniforms.medStarData = {value: null};
@@ -68,7 +83,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.saturnBrightness = {value: 0.0};
     }
 
-    if(!isSunShader && !isMeteringShader){
+    if(!isSunShader){
       uniforms.starsExposure = {value: -4.0};
     }
 
@@ -82,7 +97,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   vertexShader: [
     {vertex_glsl}
   ].join('\n'),
-  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
+  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false, auroraEnabled = false){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -133,6 +148,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '0');
         updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, '');
         updatedGLSL = updatedGLSL.replace(/\$isMeteringPass/g, '0');
+      }
+
+      if(auroraEnabled){
+        updatedGLSL = updatedGLSL.replace(/\$auroraEnabled/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$auroraEnabled/g, '0');
       }
 
       updatedLines.push(updatedGLSL);

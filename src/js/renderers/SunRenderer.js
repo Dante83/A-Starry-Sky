@@ -40,7 +40,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       atmosphereLUTLibrary.scatteringTexturePackingHeight,
       atmosphereLUTLibrary.atmosphereFunctionsString,
       StarrySky.Materials.Sun.baseSunPartial.fragmentShader(this.sunAngularRadiusInRadians),
-      false
+      false, //Moon Code
+      false, //Metering Code
+      false //aurora enabled
     ),
   });
   baseSunMaterial.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;

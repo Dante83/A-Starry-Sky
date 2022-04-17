@@ -3,24 +3,66 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.geometry = new THREE.IcosahedronBufferGeometry(5000.0, 4);
 
   //Create our material late
+  const assetManager = skyDirector.assetManager;
+  const auroraParameters = assetManager.data.skyAuroraParameters;
+  const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   this.atmosphereMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms())),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
+      false, //sun pass
+      false, //moon pass
+      false, //metering pass
+      assetManager.data.skyAuroraParameters.auroraEnabled  //aurora enabled
+    ))),
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
     transparent: false,
     vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphericParameters.mieDirectionalG,
       skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
-      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString
+      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
+      false, //sun pass
+      false, //moon pass
+      false, //metering pass
+      assetManager.data.skyAuroraParameters.auroraEnabled  //aurora enabled
     )
   });
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
+  if(assetManager.data.skyAuroraParameters.auroraEnabled){
+    this.atmosphereMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
+      auroraParameters.nitrogenColor.red / 255.0,
+      auroraParameters.nitrogenColor.green / 255.0,
+      auroraParameters.nitrogenColor.blue / 255.0,
+    );
+    this.atmosphereMaterial.uniforms.nitrogenCutOff.value = auroraParameters.nitrogenCutOff;
+    this.atmosphereMaterial.uniforms.nitrogenIntensity.value = auroraParameters.nitrogenIntensity;
+
+    this.atmosphereMaterial.uniforms.molecularOxygenColor.value = new THREE.Vector3(
+      auroraParameters.molecularOxygenColor.red / 255.0,
+      auroraParameters.molecularOxygenColor.green / 255.0,
+      auroraParameters.molecularOxygenColor.blue / 255.0,
+    );
+    console.log(auroraParameters.molecularOxygenCutOff);
+    console.log(auroraParameters.molecularOxygenIntensity);
+    this.atmosphereMaterial.uniforms.molecularOxygenCutOff.value = auroraParameters.molecularOxygenCutOff;
+    this.atmosphereMaterial.uniforms.molecularOxygenIntensity.value = auroraParameters.molecularOxygenIntensity;
+
+    this.atmosphereMaterial.uniforms.atomicOxygenColor.value = new THREE.Vector3(
+      auroraParameters.atomicOxygenColor.red / 255.0,
+      auroraParameters.atomicOxygenColor.green / 255.0,
+      auroraParameters.atomicOxygenColor.blue / 255.0,
+    );
+    this.atmosphereMaterial.uniforms.atomicOxygenCutOff.value = auroraParameters.atomicOxygenCutOff;
+    this.atmosphereMaterial.uniforms.atomicOxygenIntensity.value = auroraParameters.atomicOxygenIntensity;
+
+    //Number of raymarching steps
+    this.atmosphereMaterial.uniforms.numberOfAuroraRaymarchingSteps.value = auroraParameters.raymarchSteps;
+  }
 
   if(this.skyDirector.assetManager.hasLoadedImages){
     this.atmosphereMaterial.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
@@ -78,8 +120,10 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       self.atmosphereMaterial.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
       self.atmosphereMaterial.uniforms.medStarData.value = self.skyDirector.stellarLUTLibrary.medStarDataMap;
       self.atmosphereMaterial.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
-      self.atmosphereMaterial.uniforms.auroraSampler1.value =  self.skyDirector.assetManager.images.auroraImages[0];
-      self.atmosphereMaterial.uniforms.auroraSampler2.value =  self.skyDirector.assetManager.images.auroraImages[1];
+      if(self.skyDirector.assetManager.data.skyAuroraParameters.auroraEnabled){
+        self.atmosphereMaterial.uniforms.auroraSampler1.value =  self.skyDirector.assetManager.images.auroraImages[0];
+        self.atmosphereMaterial.uniforms.auroraSampler2.value =  self.skyDirector.assetManager.images.auroraImages[1];
+      }
     }
 
     //Proceed with the first tick

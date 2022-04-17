@@ -33,13 +33,13 @@ class SkyLighting extends HTMLElement {
     //Hide the element
     this.style.display = "none";
 
-    let self = this;
+    const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
       //Get child tags and acquire their values.
-      let groundColorTags = self.getElementsByTagName('sky-ground-color');
-      let atmosphericPerspectiveDensityTags = self.getElementsByTagName('sky-atmospheric-perspective-density');
-      let shadowCameraSizeTags = self.getElementsByTagName('sky-shadow-camera-size');
-      let shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
+      const groundColorTags = self.getElementsByTagName('sky-ground-color');
+      const atmosphericPerspectiveDensityTags = self.getElementsByTagName('sky-atmospheric-perspective-density');
+      const shadowCameraSizeTags = self.getElementsByTagName('sky-shadow-camera-size');
+      const shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
 
       [groundColorTags, atmosphericPerspectiveDensityTags, shadowCameraSizeTags, shadowCameraResolutionTags].forEach(function(tags){
         if(tags.length > 1){
@@ -51,9 +51,9 @@ class SkyLighting extends HTMLElement {
       [groundColorTags].forEach(function(tags){
         if(tags.length === 1){
           //Check that it only contains one of each of the following child tags
-          let redTags = tags[0].getElementsByTagName('sky-ground-color-red');
-          let greenTags = tags[0].getElementsByTagName('sky-ground-color-green');
-          let blueTags = tags[0].getElementsByTagName('sky-ground-color-blue');
+          const redTags = tags[0].getElementsByTagName('sky-ground-color-red');
+          const greenTags = tags[0].getElementsByTagName('sky-ground-color-green');
+          const blueTags = tags[0].getElementsByTagName('sky-ground-color-blue');
           [redTags, greenTags, blueTags].forEach(function(colorTags){
             if(tags.length !== 1){
               console.error(`The <${tags[0].tagName}> tag must contain 1 and only 1 tag of type <${colorTags[0].tagName}>. ${colorTags.length} found.`);
@@ -69,8 +69,8 @@ class SkyLighting extends HTMLElement {
       self.data.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML) : self.data.shadowCameraResolution;
 
       //Clamp our results to the appropriate ranges
-      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        let result = Math.min(Math.max(inValue, minValue), maxValue);
+      const clampAndWarn = function(inValue, minValue, maxValue, tagName){
+        const result = Math.min(Math.max(inValue, minValue), maxValue);
         if(inValue > maxValue){
           console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
         }
@@ -92,10 +92,10 @@ class SkyLighting extends HTMLElement {
           self.data.groundColor.red = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red')[0].innerHTML), 0, 255, 'sky-ground-color-red');
         }
         if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green').length > 0){
-          self.data.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+          self.data.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML), 0, 255, 'sky-ground-color-green');
         }
         if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue').length > 0){
-          self.data.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+          self.data.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML), 0, 255, 'sky-ground-color-blue');
         }
       }
 

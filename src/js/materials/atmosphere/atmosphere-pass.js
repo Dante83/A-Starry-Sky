@@ -1,5 +1,5 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
-  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false){
+  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false, auroraEnabled = false){
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -16,10 +16,24 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {value: 1.4}
     }
 
-    if(!isSunShader){
-      uniforms.blueNoiseTexture = {value: null};
+    console.log(auroraEnabled);
+    if(auroraEnabled){
       uniforms.auroraSampler1 = {value: null};
       uniforms.auroraSampler2 = {value: null};
+
+      uniforms.nitrogenColor = {value: new THREE.Vector3()};
+      uniforms.nitrogenCutOff = {value: null};
+      uniforms.nitrogenIntensity = {value: null};
+
+      uniforms.molecularOxygenColor = {value: new THREE.Vector3()};
+      uniforms.molecularOxygenCutOff = {value: null};
+      uniforms.molecularOxygenIntensity = {value: null};
+
+      uniforms.atomicOxygenColor = {value: new THREE.Vector3()};
+      uniforms.atomicOxygenCutOff = {value: null};
+      uniforms.atomicOxygenIntensity = {value: null};
+
+      uniforms.numberOfAuroraRaymarchingSteps = {value: null};
     }
 
     //Pass our specific uniforms in here.
@@ -49,6 +63,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
 
     if(!isSunShader){
+      uniforms.blueNoiseTexture = {value: null};
       uniforms.starHashCubemap = {value: null};
       uniforms.dimStarData = {value: null};
       uniforms.medStarData = {value: null};
@@ -68,7 +83,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.saturnBrightness = {value: 0.0};
     }
 
-    if(!isSunShader && !isMeteringShader){
+    if(!isSunShader){
       uniforms.starsExposure = {value: -4.0};
     }
 
@@ -125,7 +140,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'gl_Position = projectionPosition;',
     '}',
   ].join('\n'),
-  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
+  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false, auroraEnabled = false){
     let originalGLSL = [
     'precision highp sampler3D;',
 
@@ -147,6 +162,19 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     '#if(!$isSunPass)',
       'uniform sampler2D blueNoiseTexture;',
+    '#endif',
+
+    '#if($auroraEnabled)',
+      'uniform float numberOfAuroraRaymarchingSteps;',
+      'uniform vec3 nitrogenColor;',
+      'uniform float nitrogenCutOff;',
+      'uniform float nitrogenIntensity;',
+      'uniform vec3 molecularOxygenColor;',
+      'uniform float molecularOxygenCutOff;',
+      'uniform float molecularOxygenIntensity;',
+      'uniform vec3 atomicOxygenColor;',
+      'uniform float atomicOxygenCutOff;',
+      'uniform float atomicOxygenIntensity;',
       'uniform sampler2D auroraSampler1;',
       'uniform sampler2D auroraSampler2;',
     '#endif',
@@ -182,6 +210,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'const float pi = 3.141592653589793238462;',
     'const vec3 inverseGamma = vec3(0.454545454545454545454545);',
     'const vec3 gamma = vec3(2.2);',
+    'const vec3 intensityVector = vec3(0.3, 0.59, 0.11);',
 
     '#if($isSunPass)',
       'uniform float sunAngularDiameterCos;',
@@ -217,6 +246,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'varying vec2 vUv;',
       'uniform float moonLuminosity;',
       'uniform float sunLuminosity;',
+      'uniform float starsExposure;',
     '#else',
       'uniform float starsExposure;',
     '#endif',
@@ -373,7 +403,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '}',
     '#endif',
 
-    '#if(!$isSunPass)',
+    '#if($auroraEnabled)',
       "//I'm gonna do something weird. I propose that aurora look an aweful lot",
       '//like water caustics - slower, with some texture ripples introduced with',
       '//perlin noise.',
@@ -412,10 +442,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'vec2 pSample = vec2(perlinOffset1, perlinOffset2);',
 
         '//Sample our caustic shader',
-        'float aSample1 = texture(auroraSampler1, (uv + vec2(0.8, 0.1) * quarterTime + pSample * 0.025) * 0.25).r;',
+        'float aSample1 = texture(auroraSampler1, (uv + vec2(0.8, 0.1) * quarterTime + pSample * 0.07) * 0.25).r;',
         'float aSample2 = texture(auroraSampler1, (uv + vec2(0.8, 0.1) * quarterTime) * 0.25).r;',
         'float aSample3 = texture(auroraSampler2, (uv - vec2(0.2, 0.7) * quarterTime) * 0.25).r;',
-        'float aSample4 = texture(auroraSampler2, (uv - vec2(0.2, 0.7) * quarterTime + pSample * 0.025) * 0.25).r;',
+        'float aSample4 = texture(auroraSampler2, (uv - vec2(0.2, 0.7) * quarterTime + pSample * 0.07) * 0.25).r;',
 
         '//Combine our caustic shader results',
         'float cSample1 = max(pow(aSample1, 2.2), pow(aSample2, 2.2));',
@@ -433,9 +463,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//to determine which aurora is visible. At this point, we are just faking it till',
       '//we can get more accurate values for simulating this.',
       'vec3 auroraColor(float auroraNoiseValue, float heightOfRay, float avgElectronVelocityScalar){',
-        'vec3 excitedNitrogenSpectrumEmission = pow(vec3(0.74, 0.384, 1.0), gamma); //Visible in intense displays below 60-120km. (magenta)',
-        'vec3 molecularO2SpectralEmission = pow(vec3(0.318, 1.0, 0.56), gamma); //Below 100km-250km.',
-        'vec3 atomicOxygenSpectralEmission = pow(vec3(1.0, 0.0, 0.145), gamma); //Beginning at 150km-600km (red)',
+        'vec3 excitedNitrogenSpectrumEmission = pow(nitrogenColor, gamma); //Visible in intense displays below 60-120km. (magenta)',
+        'vec3 molecularO2SpectralEmission = pow(molecularOxygenColor, gamma); //Below 100km-250km.',
+        'vec3 atomicOxygenSpectralEmission = pow(atomicOxygenColor, gamma); //Beginning at 150km-600km (red)',
 
         'float h = heightOfRay - RADIUS_OF_EARTH;',
         'vec3 outputLightIntensity = vec3(0.0);',
@@ -445,24 +475,22 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '//Nitrogen contribution',
         'if(h > 60.0 && h < 120.0){',
           'centroidValue = (h - 90.0) / 70.0;',
-          '//linearIntensityFader = clamp(auroraNoiseValue - 0.8, 0.0, 1.0) * clamp(avgElectronVelocityScalar - 0.8, 0.0, 1.0);',
-          'linearIntensityFader = clamp(auroraNoiseValue - 0.12, 0.0, 1.0);',
-          'outputLightIntensity += 4.0 * excitedNitrogenSpectrumEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
+          'linearIntensityFader = clamp(auroraNoiseValue - nitrogenCutOff, 0.0, 1.0);',
+          'outputLightIntensity += nitrogenIntensity * excitedNitrogenSpectrumEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
         '}',
 
         '//Molecular oxygen contribution',
         'if(h > 100.0 && h < 250.0){',
           'centroidValue = (h - 175.0) / 50.5;',
-          '//linearIntensityFader = clamp(auroraNoiseValue, 0.0, 1.0) * clamp(avgElectronVelocityScalar - 0.2, 0.0, 1.0);',
-          'linearIntensityFader = clamp(auroraNoiseValue - 0.02, 0.0, 1.0);',
-          'outputLightIntensity += 2.0 * molecularO2SpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
+          'linearIntensityFader = clamp(auroraNoiseValue - molecularOxygenCutOff, 0.0, 1.0);',
+          'outputLightIntensity += molecularOxygenIntensity * molecularO2SpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
         '}',
 
         '//Atomic oxygen contribution',
         'if(h > 150.0 && h < 600.0){',
           'centroidValue = (h - 375.0) / 80.5;',
-          'linearIntensityFader = clamp(auroraNoiseValue - 0.12, 0.0, 1.0);',
-          'outputLightIntensity += 0.3 * atomicOxygenSpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
+          'linearIntensityFader = clamp(auroraNoiseValue - atomicOxygenCutOff, 0.0, 1.0);',
+          'outputLightIntensity += atomicOxygenIntensity * atomicOxygenSpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
         '}',
 
         'return max(vec3(outputLightIntensity), 0.0);',
@@ -478,11 +506,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '//then a standard ray marcher as we expect less contributions from greater',
         '//heights, allowing us to take expontial steps to reduce the number of texture',
         '//samples.',
-        'float numberOfStepFloat = 64.0;',
         'float uvScaling = 4.0;',
         'float rayInterceptStartTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_BOTTOM), 2500.0);',
         'float rayInterceptEndTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_TOP), 3300.0);',
-        'float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfStepFloat;',
+        'float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfAuroraRaymarchingSteps;',
         'float auroraNoiseValue;',
         'vec3 auroraColorValue0;',
         'vec3 auroraColorValuef;',
@@ -495,7 +522,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
           'auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 512.0, uTime / 16000.0);',
           'auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.',
           'float totalD = 0.0;',
-          'for(float i = 1.0; i < numberOfStepFloat; i++){',
+          'for(float i = 1.0; i < numberOfAuroraRaymarchingSteps; i++){',
             '//Determine the position of our raymarcher in the sky',
             'float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x, lastPosition.z) / 128.0).r;',
             'vec3 currentPosition = lastPosition + rayDirection * (rayDeltaT  * blueNoise);',
@@ -577,12 +604,12 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);',
       'vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
 
+      '#if(!$isSunPass)',
+        'float starAndSkyExposureReduction = starsExposure - 10.0 * dot(pow(solarAtmosphericPass + lunarAtmosphericPass, inverseGamma), intensityVector);',
+      '#endif',
+
       '//This stuff never shows up near our sun, so we can exclude it',
       '#if(!$isSunPass && !$isMeteringPass)',
-        '//Get the intensity of our sky color',
-        'vec3 intensityVector = vec3(0.3, 0.59, 0.11);',
-        'float starAndSkyExposureReduction =  starsExposure - 10.0 * dot(pow(solarAtmosphericPass + lunarAtmosphericPass, inverseGamma), intensityVector);',
-
         '//Get the stellar starting id data from the galactic cube map',
         'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
         'vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);',
@@ -634,10 +661,16 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
         'galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
         'galacticLighting = pow(galacticLighting, gamma);',
+      '#elif($isMeteringPass)',
+        'vec3 galacticLighting = vec3(0.0);',
+      '#endif',
 
-        '//Add our aurora light to all of this',
+      '#if($auroraEnabled)',
+        '//Add aurora lighting if it exists',
         'galacticLighting += auroraRayMarchPass(vec3(0.0, RADIUS_OF_EARTH, 0.0), sphericalPosition, starAndSkyExposureReduction);',
+      '#endif',
 
+      '#if(!$isSunPass)',
         '//Apply the transmittance function to all of our light sources',
         'galacticLighting = galacticLighting * transmittanceFade;',
       '#endif',
@@ -663,7 +696,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#elif($isMeteringPass)',
         '//Cut this down to the circle of the sky ignoring the galatic lighting',
         'float circularMask = 1.0 - step(1.0, rho);',
-        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting) * circularMask;',
+        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting) * circularMask;',
 
         '//Combine the colors together and apply a transformation from the scattering intensity to the moon luminosity',
         'vec3 intensityPassColors = lunarAtmosphericPass * (moonLuminosity / scatteringMoonIntensity) + solarAtmosphericPass * (sunLuminosity / scatteringSunIntensity);',
@@ -739,6 +772,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         updatedGLSL = updatedGLSL.replace(/\$isSunPass/g, '0');
         updatedGLSL = updatedGLSL.replace(/\$draw_sun_pass/g, '');
         updatedGLSL = updatedGLSL.replace(/\$isMeteringPass/g, '0');
+      }
+
+      if(auroraEnabled){
+        updatedGLSL = updatedGLSL.replace(/\$auroraEnabled/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$auroraEnabled/g, '0');
       }
 
       updatedLines.push(updatedGLSL);

@@ -292,6 +292,90 @@ The final element of the sky lighting you will likely want to change is the atmo
 </a-scene>
 ```
 
+## Enabling Aurora Borealis
+
+**Tag** | **Description**
+:--- | :---
+`<sky-aurora-parameters>` | Parent tag. Required for enabling Aurora Borealis. Contains all child tags related to the the aurora.
+`<sky-nitrogen-color>` | Triggered by excited nitrogen molecules located between 60 and 120 meters from the planetary surface, nitrogen typically provides a magenta curtain around the base of aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*.
+`<sky-nitrogen-cutoff>` | Determines how much of the nitrogen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora.
+`<sky-nitrogen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5.
+`<sky-molecular-oxygen-color>` | Triggered by excited molecular oxygen molecules located between 100 and 250 meters from the planetary surface, molecular oxygen typically provides the iconic bright green associated with the aurora borealis and is typically seen in most displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*, just in case you want a different color for your aurora.
+`<sky-molecular-oxygen-cutoff>` | Determines how much of the molecular oxygen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora.
+`<sky-molecular-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5.
+`<sky-atomic-oxygen-color>` | Triggered by excited atomic oxygen molecules located between 150 and 600 meters from the planetary surface, atomic oxygen typically causes a bright red curtain at the top of the aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*.
+`<sky-atomic-oxygen-cutoff>` | Determines how much of the atomic oxygen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora.
+`<sky-atomic-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5.
+`<sky-aurora-color-red>` | Used to describe **red** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags.
+`<sky-aurora-color-green>` | Used to describe **green** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags.
+`<sky-aurora-color-blue>` | Used to describe **blue** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags.
+`<sky-aurora-raymarch-steps>` | Number of steps that the ray-marcher takes per pixel. Defaults to 64.
+
+Aurora Borealis provide some of the most beautiful backgrounds in nature. Typically existing near the north and south poles, these sky phenomena represent the interaction of high velocity particles from the sun as they are pulled into the Earth's magnetosphere and interact with various atoms and molecules. These excited molecules then radiate light in the visible spectrum, result in beautiful mesmerizing curtains that 'dance' in the night sky.
+
+Adding aurora borealis to your sky is relatively easy, but it is not enabled by default. *You must add the `<sky-aurora-parameters>` tag for aurora borealis to be enabled.*
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-aurora-parameters>
+      <!-- You don't require any additional parameters to get the default setup -->
+    </sky-aurora-parameters>
+  </a-starry-sky>
+</a-scene>
+```
+
+*WARNING: Doing this will also dramatically increase the computational weight of your sky, as the aurora shader provided uses a ray marching method to produce this beautiful natural phenomena.*
+
+Each of the different atomic and molecular aurora are controllable by the code above allowing you to customize your aurora displays and even change the colors that are emitted (realistic or not). For instance, if you wanted a cold blue aurora, covering the entire molecular oxygen range, you could do so with the following code.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-aurora-parameters>
+      <sky-aurora-parameters>
+        <sky-molecular-oxygen-cutoff>0.0</<sky-atomic-oxygen-cutoff>
+        <sky-molecular-oxygen-intensity>5.0</<sky-atomic-oxygen-cutoff>
+        <sky-molecular-oxygen-color>
+          <sky-aurora-color-red>0.0</sky-aurora-color-red>
+          <sky-aurora-color-green>0.0</sky-aurora-color-gree>
+          <sky-aurora-color-blue>255</sky-aurora-color-blue>
+        </sky-molecular-oxygen-color>
+        <sky-nitrogen-intensity>0.0</<sky-atomic-oxygen-cutoff>
+        <sky-atomic-oxygen-intensity>0.0</<sky-atomic-oxygen-cutoff>
+      </sky-aurora-parameters>
+    </sky-aurora-parameters>
+  </a-starry-sky>
+</a-scene>
+```
+
+On the other hand, if you only want a light amount of green aurora, you could go for a slightly more subtle effect with the following code.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-aurora-parameters>
+      <sky-molecular-oxygen-cutoff>0.2</<sky-molecular-oxygen-cutoff>
+      <sky-molecular-oxygen-intensity>1.5</<sky-molecular-oxygen-cutoff>
+      <sky-atomic-oxygen-intensity>0.0</<sky-atomic-oxygen-cutoff>
+      <sky-nitrogen-intensity>0.0</<sky-nitrogen-cutoff>
+    </sky-aurora-parameters>
+  </a-starry-sky>
+</a-scene>
+```
+
+In addition to changing the colors of the sky, you can also change the number of steps taken by the raymarcher when rendering the sky. The more steps you take, the better the sky will look, but the more of a load you will put on your GPU. Therefore, a balance is needed between performance and quality. By default, the shader uses 64 steps when raymarching the volume. To increase this, you can do the following
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-aurora-parameters>
+      <sky-aurora-raymarch-steps>128</<sky-aurora-raymarch-steps>
+    </sky-aurora-parameters>
+  </a-starry-sky>
+</a-scene>
+```
+
 ## Setting The Asset Directories
 
 **Tag** | **Description**
