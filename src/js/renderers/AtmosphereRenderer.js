@@ -47,8 +47,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       auroraParameters.molecularOxygenColor.green / 255.0,
       auroraParameters.molecularOxygenColor.blue / 255.0,
     );
-    console.log(auroraParameters.molecularOxygenCutOff);
-    console.log(auroraParameters.molecularOxygenIntensity);
     this.atmosphereMaterial.uniforms.molecularOxygenCutOff.value = auroraParameters.molecularOxygenCutOff;
     this.atmosphereMaterial.uniforms.molecularOxygenIntensity.value = auroraParameters.molecularOxygenIntensity;
 

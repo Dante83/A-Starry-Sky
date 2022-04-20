@@ -411,8 +411,17 @@ vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 spher
   //Interpolated scattering values
   vec3 interpolatedMieScattering = texture(mieLookupTable, uv3).rgb;
   vec3 interpolatedRayleighScattering = texture(rayleighLookupTable, uv3).rgb;
+  vec3 uv3_2 = vec3(parameterizationOfCosOfViewZenithToX(0.0), uv3.y, uv3.z);
+  vec3 mieShadow = intensityFader * texture(mieLookupTable, uv3_2).rgb;
+  vec3 rayleighShadow = intensityFader * texture(rayleighLookupTable, uv3_2).rgb;
 
-  return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);
+  //Percent of sun visible across the length of the ray extending in this direction
+  float percentShadowMie = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, 80.0, ONE_OVER_MIE_SCALE_HEIGHT);
+  float percentShadowRayleigh = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, 80.0, ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+  interpolatedMieScattering = mix(mieShadow, interpolatedMieScattering, percentShadowMie);
+  interpolatedRayleighScattering = mix(rayleighShadow, interpolatedRayleighScattering, percentShadowRayleigh);
+
+  return pow(intensityFader, 3.0) * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);
 }
 
 //Including this because someone removed this in a future version of THREE. Why?!

@@ -16,7 +16,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringMoonIntensity: {value: 1.4}
     }
 
-    console.log(auroraEnabled);
     if(auroraEnabled){
       uniforms.auroraSampler1 = {value: null};
       uniforms.auroraSampler2 = {value: null};
