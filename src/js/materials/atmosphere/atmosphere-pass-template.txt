@@ -13,7 +13,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       sunHorizonFade: {value: 1.0},
       moonHorizonFade: {value: 1.0},
       scatteringSunIntensity: {value: 20.0},
-      scatteringMoonIntensity: {value: 1.4}
+      scatteringMoonIntensity: {value: 1.4},
+      cloudLUTs: {value: new THREE.DataTexture3D()}
     }
 
     if(auroraEnabled){

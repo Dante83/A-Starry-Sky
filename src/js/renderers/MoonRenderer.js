@@ -87,6 +87,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   moonMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   moonMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   moonMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
+  moonMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
   moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
   moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
   const renderTargetGeometry = new THREE.PlaneBufferGeometry(2, 2);

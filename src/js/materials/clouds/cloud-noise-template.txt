@@ -1,0 +1,8 @@
+StarrySky.Materials.Clouds.cloudNoiseMaterial = {
+  uniforms: {
+    zDepth: {value: 0.0},
+  },
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+};

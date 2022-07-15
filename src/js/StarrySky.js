@@ -7,6 +7,7 @@ StarrySky = {
     Stars: {},
     Sun: {},
     Moon: {},
+    Clouds: {},
     Postprocessing: {},
     Autoexposure: {}
   },

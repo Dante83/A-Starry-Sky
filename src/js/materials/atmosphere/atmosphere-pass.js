@@ -13,7 +13,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       sunHorizonFade: {value: 1.0},
       moonHorizonFade: {value: 1.0},
       scatteringSunIntensity: {value: 20.0},
-      scatteringMoonIntensity: {value: 1.4}
+      scatteringMoonIntensity: {value: 1.4},
+      cloudLUTs: {value: new THREE.DataTexture3D()}
     }
 
     if(auroraEnabled){
@@ -158,6 +159,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform sampler3D mieInscatteringSum;',
     'uniform sampler3D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
+
+    '//If clouds enabled',
+    'uniform sampler3D cloudLUTs;',
 
     '#if(!$isSunPass)',
       'uniform sampler2D blueNoiseTexture;',
@@ -402,6 +406,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '}',
     '#endif',
 
+    'float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float height){',
+      'return rayDirection.y == 0.0 ? -1.0 : (height - rayStartPosition.y) / rayDirection.y;',
+    '}',
+
     '#if($auroraEnabled)',
       "//I'm gonna do something weird. I propose that aurora look an aweful lot",
       '//like water caustics - slower, with some texture ripples introduced with',
@@ -495,16 +503,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'return max(vec3(outputLightIntensity), 0.0);',
       '}',
 
-      'float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float height){',
-        'return rayDirection.y == 0.0 ? -1.0 : (height - rayStartPosition.y) / rayDirection.y;',
-      '}',
-
       'vec3 auroraRayMarchPass(vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction){',
-        '//Set up the initial conditions of our ray marcher.',
-        '//Note that our aurora ray marcher is a little different',
-        '//then a standard ray marcher as we expect less contributions from greater',
-        '//heights, allowing us to take expontial steps to reduce the number of texture',
-        '//samples.',
         'float uvScaling = 4.0;',
         'float rayInterceptStartTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_BOTTOM), 2500.0);',
         'float rayInterceptEndTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_TOP), 3300.0);',
@@ -528,8 +527,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
             'float d = distance(currentPosition, lastPosition);',
             'totalD += d;',
 
-            '//Get our spherical coordinates for spherical uv mapping',
-
             'auroraNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);',
             'auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);',
             'auroraColorValuef = auroraColor(auroraNoiseValue, currentPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.',
@@ -545,6 +542,47 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'return linearAuroraGlow * auroraBrightness; //Linear multiplier for artistic control',
       '}',
     '#endif',
+
+    '//If clouds enabled',
+    'vec3 cloudRayMarcher(float cloudCoverage, vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction){',
+      '//This is in meters while aurora is in km',
+      '// float numberOfCloudMarchSteps = 256.0;',
+      '// float rayInterceptStartTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, 500.0), 2500.0);',
+      '// float rayInterceptEndTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, 2500.0), 4500.0);',
+      '// float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfCloudMarchSteps;',
+      '// float currentCloudDensity;',
+      '// vec3 cloudColorValue0;',
+      '// vec3 cloudColorValuef;',
+      '// vec3 lastPosition;',
+      '// vec3 linearCloudGlow = vec3(0.0);',
+      '// if(rayInterceptStartTime > 0.0){',
+      '//   lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;',
+      '//   vec2 cloudNoiseTextureUV = vec2(lastPosition.x, lastPosition.z);',
+      '//   cloudNoiseValue = cloudDensityMap(auroraNoiseTextureUV / 512.0, uTime / 16000.0);',
+      '//   cloudColorValue0 = cloudColorMap(auroraNoiseValue, lastPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.',
+      '//   float totalD = 0.0;',
+      '//   for(float i = 1.0; i < numberOfAuroraRaymarchingSteps; i++){',
+      '//     //Determine the position of our raymarcher in the sky',
+      '//     float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x, lastPosition.z) / 128.0).r;',
+      '//     vec3 currentPosition = lastPosition + rayDirection * (rayDeltaT  * blueNoise);',
+      '//     float d = distance(currentPosition, lastPosition);',
+      '//     totalD += d;',
+      '//',
+      '//     cloudNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);',
+      '//     auroraNoiseValue = cloudDensityMap(cloudNoiseTextureUV / 1600.0, uTime / 16000.0);',
+      '//     cloudColorValuef = cloudColorMap(auroraNoiseValue, currentPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.',
+      '//     linearCloudGlow += 0.5 * (cloudColorValue0 + cloudColorValuef) * d;//We linearly scale by the longer distances to cancel out the effect of fewer samples',
+      '//',
+      '//     //Save the current position as the last position so we can determine the distance between points the next time',
+      '//     lastPosition = currentPosition;',
+      '//     cloudColorValue0 = cloudColorValuef;',
+      '//   }',
+      '//   linearCloudGlow = linearCloudGlow / (2500 - 500);',
+      '// }',
+
+      '//return linearAuroraGlow; //Linear multiplier for artistic control',
+      'return vec3(0.0);',
+    '}',
 
     'vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler3D mieLookupTable, sampler3D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){',
       'float cosOfAngleBetweenCameraPixelAndSource = dot(sourcePosition, sphericalPosition);',
@@ -683,6 +721,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'galacticLighting = galacticLighting * transmittanceFade;',
       '#endif',
 
+      '//vec3 cloudLighting = cloudRayMarcher(0.5);',
+
       '//Sun and Moon layers',
       '#if($isSunPass)',
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
@@ -729,7 +769,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'gl_FragColor = vec4(combinedPass, intensityPass);',
       '#else',
         '//Triangular Blue Noise Dithering Pass',
-        'gl_FragColor = vec4(combinedPass, 1.0);',
+        '//gl_FragColor = vec4(combinedPass, 1.0);',
+        'float zOffset = fModulo(uTime, 2048.0) / 2048.0;',
+        'gl_FragColor = vec4(vec3(texture(cloudLUTs, vec3(sphericalPosition.xz * 10.0, zOffset)).r), 1.0);',
       '#endif',
     '}',
     ];

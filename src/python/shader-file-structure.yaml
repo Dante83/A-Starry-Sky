@@ -71,3 +71,11 @@ groups:
         vertex: 'moon-and-sun-output-vertex.glsl'
         template: 'moon-and-sun-output-template.txt'
         material: 'moon-and-sun-output.js'
+  -
+    base_glsl_dir: '../glsl/clouds'
+    base_js_dir: '../js/materials/clouds'
+    shaders:
+      -
+        fragment: 'cloud-noise.glsl'
+        template: 'cloud-noise-template.txt'
+        material: 'cloud-noise.js'
