@@ -103,7 +103,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.distanceForSolarEclipse;
 
   //Set up our web assembly hooks
-  let self = this;
+  const self = this;
 
   //Called from the asset manager when all of our assets have finished loading
   //Also colled when our local web assembly has finished loading as both are pre-requisites
@@ -132,6 +132,22 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
       self.cloudLUTLibrary = new StarrySky.LUTlibraries.CloudLUTLibrary(self.assetManager.data, self.renderer, self.scene);
+
+      //TESTING
+      // const scenelEl = self.scene;
+      // const geo = new THREE.PlaneBufferGeometry(20.0, 20.0, 2, 2);
+      // self.testMat = new THREE.ShaderMaterial({
+      //   uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Clouds.cloudNoiseTesterMaterial.uniforms)),
+      //   side: THREE.DoubleSide,
+      //   blending: THREE.NormalBlending,
+      //   transparent: false,
+      //   fragmentShader: StarrySky.Materials.Clouds.cloudNoiseTesterMaterial.fragmentShader,
+      //   vertexShader: StarrySky.Materials.Clouds.cloudNoiseTesterMaterial.vertexShader
+      // });
+      // self.testMat.uniforms.noiseTester.value = self.cloudLUTLibrary.repeating3DCloudNoiseTextures;
+      // const plane = new THREE.Mesh(geo, self.testMat);
+      // scenelEl.add(plane);
+      // plane.position.set(0.0, 10.0, 0.0);
     }
   }
 
@@ -180,7 +196,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
   this.updateFinalSkyState = function(lsrt_0, lsrt_f){
     //Update the Module Heap and final LSRT
-    let intitialLSRT = self.finalLSRT;
+    const intitialLSRT = self.finalLSRT;
+
     //let strtingPtr2 = self.astroPositions_f_ptr;
     let insertIndex = self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT;
     let copyFromIndex = self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT;
@@ -198,7 +215,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
     //returned from our worker.
     Module._updateFinalAstronomicalValues(self.astroPositions_f_ptr, self.astronomicalLinearValues_f_ptr);
     self.finalAstronomicalT = self.interpolationT + TWENTY_MINUTES;
-    Module._updateAstronomicalTimeData(self.interpolationT, self.finalAstronomicalT, lsrt_0, self.finalLSRT);
+    Module._updateAstronomicalTimeData(self.interpolationT, self.finalAstronomicalT, intitialLSRT, self.finalLSRT);
 
     //Return the final state back to the worker thread so it can determine the state five minutes from now
     self.webAssemblyWorker.postMessage({
@@ -312,6 +329,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
         this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
         this.previousCameraHeight = self.camera.position.y;
       }
+
+      //TESTING
+      //self.testMat.uniforms.uTime.value = time;
     }
   }
 

@@ -13,12 +13,14 @@ StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
   const materials = StarrySky.Materials.Clouds;
 
   const CLOUD_RENDER_TEXTURE_SIZE = 128;
-  const cloudTextureRenderer = new THREE.StarrySkyComputationRenderer(CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, renderer);
+  const OUTPUT_RENDER_TEXTURE_WIDTH = 2048;
+  const OUTPUT_RENDER_TEXTURE_HEIGHT = 1024;
+  const cloudTextureRenderer = new THREE.StarrySkyComputationRenderer(OUTPUT_RENDER_TEXTURE_WIDTH, OUTPUT_RENDER_TEXTURE_HEIGHT, renderer);
 
   const BYTES_PER_32_BIT_FLOAT = 4;
   const cloud3DNoiseRenderTargetBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * 4);
   const cloud3DNoiseRenderTargetBufferFloat32Array = new Float32Array(cloud3DNoiseRenderTargetBuffer);
-  const cloud3DNoiseRenderTargetBufferSlice = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * 4);
+  const cloud3DNoiseRenderTargetBufferSlice = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * OUTPUT_RENDER_TEXTURE_WIDTH * OUTPUT_RENDER_TEXTURE_HEIGHT * 4);
   const cloud3DNoiseRenderTargetBufferFloat32ArraySlice = new Float32Array(cloud3DNoiseRenderTargetBufferSlice);
 
   const cloudNoiseSliceTexture = cloudTextureRenderer.createTexture();
@@ -44,18 +46,26 @@ StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
   //Read data one slice at a time into the 3D texture array buffer
   const inverseCloudRenderTextureSize = 1.0 / CLOUD_RENDER_TEXTURE_SIZE;
   const NUM_DATA_POINTS_IN_SLICE = CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * 4;
-  for(let i = 0; i < CLOUD_RENDER_TEXTURE_SIZE; ++i){
-    cloudNoiseSliceVar.material.uniforms.zDepth = i * inverseCloudRenderTextureSize;
-    cloudNoiseSliceVar.material.uniforms.zDepth.needsUpdate = true;
-    cloudTextureRenderer.compute();
-    const renderTarget = cloudTextureRenderer.getCurrentRenderTarget(cloudNoiseSliceVar);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, cloud3DNoiseRenderTargetBufferFloat32ArraySlice);
-    let test = 0.0;
-    for(let j = 0; j < NUM_DATA_POINTS_IN_SLICE; ++j){
-      test += cloud3DNoiseRenderTargetBufferFloat32ArraySlice[j];
-      cloud3DNoiseRenderTargetBufferFloat32Array[i * NUM_DATA_POINTS_IN_SLICE + j] = cloud3DNoiseRenderTargetBufferFloat32ArraySlice[j];
+  cloudTextureRenderer.compute();
+  const renderTarget = cloudTextureRenderer.getCurrentRenderTarget(cloudNoiseSliceVar);
+  renderer.readRenderTargetPixels(renderTarget, 0, 0, OUTPUT_RENDER_TEXTURE_WIDTH, OUTPUT_RENDER_TEXTURE_HEIGHT, cloud3DNoiseRenderTargetBufferFloat32ArraySlice);
+  for(let i = 0; i < OUTPUT_RENDER_TEXTURE_HEIGHT; ++i){
+    for(let j = 0; j < OUTPUT_RENDER_TEXTURE_WIDTH; ++j){
+      for(let k = 0; k < 4; ++k){
+        //Convert this 2D pixel coordinate into a position from our render target read
+        const xIndex = Math.floor(j / 128.0);
+      	const yIndex = Math.floor(i / 128.0);
+      	const z = (xIndex + yIndex * 16);
+      	const x = (j - xIndex * 128);
+      	const y = (i - yIndex * 128);
+
+        //Convert this 2D pixel coordinate into its' appropriate read position in the 3D texture render buffer
+        const inputLocation = (i * OUTPUT_RENDER_TEXTURE_WIDTH + j) * 4 + k;
+        const outputLocation = (x + y * 128 + z * 128 * 128) * 4 + k;
+
+        cloud3DNoiseRenderTargetBufferFloat32Array[outputLocation] = cloud3DNoiseRenderTargetBufferFloat32ArraySlice[inputLocation];
+      }
     }
-    console.log(test);
   }
 
   //Turn this array into a 3D texture

@@ -99,6 +99,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     self.sunMesh.updateMatrixWorld();
 
     //Update our shader material
+		const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+		baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
     baseSunMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
     baseSunMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
     baseSunMaterial.uniforms.uTime.value = t;
@@ -109,7 +111,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
     //Run our float shaders shaders
 		composer.render();
-    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 		outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 	  outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
 	  outputMaterial.uniforms.uTime.value = t;
@@ -127,6 +128,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.moonPosition.value = skyState.moon.position;
     baseSunMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
     baseSunMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
+		const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+    baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 
     //Connect up our images if they don't exist yet
     if(assetManager.hasLoadedImages){

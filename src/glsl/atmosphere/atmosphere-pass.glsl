@@ -18,10 +18,10 @@ uniform sampler2D transmittance;
 
 //If clouds enabled
 uniform sampler3D cloudLUTs;
+// uniform float cloudCoverage;
+// uniform vec2 cloudVelocity;
 
-#if(!$isSunPass)
-  uniform sampler2D blueNoiseTexture;
-#endif
+uniform sampler2D blueNoiseTexture;
 
 #if($auroraEnabled)
   uniform float numberOfAuroraRaymarchingSteps;
@@ -233,7 +233,9 @@ float noise(float x){
 
   vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){
     //Use the distance to the star to determine it's perceived twinkling
-    float planetBrightness = pow(100.0, (-planetMagnitude + starAndSkyExposureReduction) * 0.2);
+    //Planets can have higher magnitudes, but capping at -1.0 eliminates
+    //silly glow effects.
+    float planetBrightness = pow(100.0, (-max(planetMagnitude, -1.0) + starAndSkyExposureReduction) * 0.2);
     float approximateDistanceOnSphereStar = distance(skyPosition, planetPosition) * 1400.0;
 
     //Pass this brightness into the fast Airy function to make the star glow
@@ -263,7 +265,7 @@ vec3 getLunarEcclipseShadow(vec3 sphericalPosition){
 #endif
 
 float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float height){
-  return rayDirection.y == 0.0 ? -1.0 : (height - rayStartPosition.y) / rayDirection.y;
+  return rayDirection.y <= 0.0 ? -1.0 : (height - rayStartPosition.y) / rayDirection.y;
 }
 
 #if($auroraEnabled)
@@ -400,44 +402,214 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
 #endif
 
 //If clouds enabled
-vec3 cloudRayMarcher(float cloudCoverage, vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction){
-  //This is in meters while aurora is in km
-  // float numberOfCloudMarchSteps = 256.0;
-  // float rayInterceptStartTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, 500.0), 2500.0);
-  // float rayInterceptEndTime = min(interceptPlaneSurface(rayStartPosition, rayDirection, 2500.0), 4500.0);
-  // float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfCloudMarchSteps;
-  // float currentCloudDensity;
-  // vec3 cloudColorValue0;
-  // vec3 cloudColorValuef;
-  // vec3 lastPosition;
-  // vec3 linearCloudGlow = vec3(0.0);
-  // if(rayInterceptStartTime > 0.0){
-  //   lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
-  //   vec2 cloudNoiseTextureUV = vec2(lastPosition.x, lastPosition.z);
-  //   cloudNoiseValue = cloudDensityMap(auroraNoiseTextureUV / 512.0, uTime / 16000.0);
-  //   cloudColorValue0 = cloudColorMap(auroraNoiseValue, lastPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
-  //   float totalD = 0.0;
-  //   for(float i = 1.0; i < numberOfAuroraRaymarchingSteps; i++){
-  //     //Determine the position of our raymarcher in the sky
-  //     float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x, lastPosition.z) / 128.0).r;
-  //     vec3 currentPosition = lastPosition + rayDirection * (rayDeltaT  * blueNoise);
-  //     float d = distance(currentPosition, lastPosition);
-  //     totalD += d;
-  //
-  //     cloudNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);
-  //     auroraNoiseValue = cloudDensityMap(cloudNoiseTextureUV / 1600.0, uTime / 16000.0);
-  //     cloudColorValuef = cloudColorMap(auroraNoiseValue, currentPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
-  //     linearCloudGlow += 0.5 * (cloudColorValue0 + cloudColorValuef) * d;//We linearly scale by the longer distances to cancel out the effect of fewer samples
-  //
-  //     //Save the current position as the last position so we can determine the distance between points the next time
-  //     lastPosition = currentPosition;
-  //     cloudColorValue0 = cloudColorValuef;
-  //   }
-  //   linearCloudGlow = linearCloudGlow / (2500 - 500);
-  // }
 
-  //return linearAuroraGlow; //Linear multiplier for artistic control
-  return vec3(0.0);
+//For cloud rendering
+/* https://www.shadertoy.com/view/XsX3zB
+ *
+ * The MIT License
+ * Copyright © 2013 Nikita Miropolskiy
+ *
+ * ( license has been changed from CCA-NC-SA 3.0 to MIT
+ *
+ *   but thanks for attributing your source code when deriving from this sample
+ *   with a following link: https://www.shadertoy.com/view/XsX3zB )*/
+
+/* discontinuous pseudorandom uniformly distributed in [-0.5, +0.5]^3 */
+vec3 random3(vec3 c) {
+	float j = 4096.0*sin(dot(c,vec3(17.0, 59.4, 15.0)));
+	vec3 r;
+	r.z = fract(512.0*j);
+	j *= .125;
+	r.x = fract(512.0*j);
+	j *= .125;
+	r.y = fract(512.0*j);
+	return r-0.5;
+}
+
+/* skew constants for 3d simplex functions */
+const float F3 =  0.3333333;
+const float G3 =  0.1666667;
+
+/* 3d simplex noise */
+float simplex3d(vec3 p) {
+	 /* 1. find current tetrahedron T and it's four vertices */
+	 /* s, s+i1, s+i2, s+1.0 - absolute skewed (integer) coordinates of T vertices */
+	 /* x, x1, x2, x3 - unskewed coordinates of p relative to each of T vertices*/
+
+	 /* calculate s and x */
+	 vec3 s = floor(p + dot(p, vec3(F3)));
+	 vec3 x = p - s + dot(s, vec3(G3));
+
+	 /* calculate i1 and i2 */
+	 vec3 e = step(vec3(0.0), x - x.yzx);
+	 vec3 i1 = e*(1.0 - e.zxy);
+	 vec3 i2 = 1.0 - e.zxy*(1.0 - e);
+
+	 /* x1, x2, x3 */
+	 vec3 x1 = x - i1 + G3;
+	 vec3 x2 = x - i2 + 2.0*G3;
+	 vec3 x3 = x - 1.0 + 3.0*G3;
+
+	 /* 2. find four surflets and store them in d */
+	 vec4 w, d;
+
+	 /* calculate surflet weights */
+	 w.x = dot(x, x);
+	 w.y = dot(x1, x1);
+	 w.z = dot(x2, x2);
+	 w.w = dot(x3, x3);
+
+	 /* w fades from 0.6 at the center of the surflet to 0.0 at the margin */
+	 w = max(0.6 - w, 0.0);
+
+	 /* calculate surflet components */
+	 d.x = dot(random3(s), x);
+	 d.y = dot(random3(s + i1), x1);
+	 d.z = dot(random3(s + i2), x2);
+	 d.w = dot(random3(s + 1.0), x3);
+
+	 /* multiply d by w^4 */
+	 w *= w;
+	 w *= w;
+	 d *= w;
+
+	 /* 3. return the sum of the four surflets */
+	 return dot(d, vec4(52.0));
+}
+
+/* const matrices for 3d rotation */
+const mat3 rot1 = mat3(-0.37, 0.36, 0.85,-0.14,-0.93, 0.34,0.92, 0.01,0.4);
+const mat3 rot2 = mat3(-0.55,-0.39, 0.74, 0.33,-0.91,-0.24,0.77, 0.12,0.63);
+const mat3 rot3 = mat3(-0.71, 0.52,-0.47,-0.08,-0.72,-0.68,-0.7,-0.45,0.56);
+
+/* directional artifacts can be reduced by rotating each octave */
+float simplex3dFractal(vec3 m) {
+    return   0.5333333*simplex3d(m*rot1)
+			+0.2666667*simplex3d(2.0*m*rot2)
+			+0.1333333*simplex3d(4.0*m*rot3)
+			+0.0666667*simplex3d(8.0*m);
+}
+
+// cloudDensityFunction(){
+//
+// }
+//
+// cloudLuminance(){
+//
+// }
+
+vec3 calculateSingleScattering(float cloudCoverage, vec2 cloudVelocity, vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction, vec3 directSolarLightColor){
+  //This is in meters
+  vec3 cloudOffset = -vec3(cloudVelocity * uTime / 500.0, 0.0);
+  cloudOffset = vec3(cloudOffset.x, 0.0, cloudOffset.y);
+  float numberOfCloudMarchSteps = 3.0;
+  float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition, rayDirection, rayStartPosition.y + 500.0);
+  float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition, rayDirection, rayStartPosition.y + 2500.0);
+  float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfCloudMarchSteps;
+  vec3 lastPosition;
+  float transmittance = 1.0;
+  float transmittanceCoef0 = 1.0;
+  float transmittanceCoeff = 1.0;
+  float transmittanceCoef = 0.0;
+  if(rayInterceptStartTime > 0.0){
+    lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
+    float cloudDensity = simplex3dFractal((lastPosition + cloudOffset) * 0.001 * vec3(0.15, 1.0, 0.15));
+    cloudDensity = clamp(0.5 * cloudDensity + 0.5, 0.0, 1.0);
+    cloudDensity = 1.0 - smoothstep(cloudCoverage * 0.85, min(cloudCoverage * 1.15, 1.0), 1.0 - cloudDensity);
+    transmittanceCoef0 = -cloudDensity * 0.085;
+
+    float totalD = 0.0;
+    for(float i = 1.0; i < numberOfCloudMarchSteps; i++){
+      //Determine the position of our raymarcher in the sky
+      float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x, lastPosition.z) / 128.0).r;
+      vec3 currentPosition = lastPosition + rayDirection * (rayDeltaT * (1.0 + 1.0 * blueNoise));
+      float d = distance(currentPosition, lastPosition);
+      totalD += d;
+
+      float cloudDensity = simplex3dFractal((currentPosition + cloudOffset) * 0.001 * vec3(0.15, 1.0, 0.15));
+      cloudDensity = clamp(0.5 * cloudDensity + 0.5, 0.0, 1.0);
+      cloudDensity = 1.0 - smoothstep(cloudCoverage * 0.85, min(cloudCoverage * 1.15, 1.0), 1.0 - cloudDensity);
+
+      transmittanceCoeff = -cloudDensity * 0.085;
+      transmittanceCoef += 0.5 * (transmittanceCoef0 + transmittanceCoeff) * d;
+
+      if (transmittance < 0.003){
+          transmittance = 0.0;
+          break;
+      }
+
+      //Save the current position as the last position so we can determine the distance between points the next time
+      lastPosition = currentPosition;
+      transmittanceCoef0 = transmittanceCoeff;
+    }
+  }
+  transmittance = exp(transmittanceCoef * 0.8);
+
+  return transmittance * directSolarLightColor; //Linear multiplier for artistic control
+}
+
+vec4 cloudRayMarcher(float cloudCoverage, vec2 cloudVelocity, vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction, vec3 sunLightDirection, vec3 directSolarLightColor){
+  //This is in meters
+  vec3 cloudOffset = -vec3(cloudVelocity * uTime / 500.0, 0.0);
+  cloudOffset = vec3(cloudOffset.x, 0.0, cloudOffset.y);
+  float numberOfCloudMarchSteps = 32.0;
+  float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition, rayDirection, rayStartPosition.y + 500.0);
+  float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition, rayDirection, rayStartPosition.y + 2500.0);
+  float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfCloudMarchSteps;
+  vec3 lastPosition;
+  vec3 luminance0 = vec3(0.0, 0.0, 0.0);
+  vec3 luminancef = vec3(0.0, 0.0, 0.0);
+  vec3 luminance = vec3(0.0, 0.0, 0.0);
+  float transmittance = 1.0;
+  float transmittanceCoef0 = 1.0;
+  float transmittanceCoeff = 1.0;
+  float transmittanceCoef = 0.0;
+  if(rayInterceptStartTime > 0.0){
+    lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
+    float cloudDensity = simplex3dFractal((lastPosition + cloudOffset) * 0.001 * vec3(0.15, 1.0, 0.15));
+    cloudDensity = clamp(0.5 * cloudDensity + 0.5, 0.0, 1.0);
+    cloudDensity = 1.0 - smoothstep(cloudCoverage * 0.85, min(cloudCoverage * 1.15, 1.0), 1.0 - cloudDensity);
+    transmittanceCoef0 = -cloudDensity * 0.085;
+    if(cloudDensity > 0.03){
+      luminance0 = calculateSingleScattering(cloudCoverage, cloudVelocity, lastPosition, sunLightDirection, starAndSkyExposureReduction, directSolarLightColor);
+    }
+
+    float totalD = 0.0;
+    for(float i = 1.0; i < numberOfCloudMarchSteps; i++){
+      //Determine the position of our raymarcher in the sky
+      float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x, lastPosition.z) / 128.0).r;
+      vec3 currentPosition = lastPosition + rayDirection * (rayDeltaT * (1.0 + 0.015 * blueNoise));
+      float d = distance(currentPosition, lastPosition);
+      totalD += d;
+
+      float cloudDensity = simplex3dFractal((currentPosition + cloudOffset) * 0.001 * vec3(0.15, 1.0, 0.15));
+      cloudDensity = clamp(0.5 * cloudDensity + 0.5, 0.0, 1.0);
+      cloudDensity = 1.0 - smoothstep(cloudCoverage * 0.85, min(cloudCoverage * 1.15, 1.0), 1.0 - cloudDensity);
+
+      //float extinction = cloudDensityFunction(sdf);
+      transmittanceCoeff = -cloudDensity * 0.085;
+      transmittanceCoef += 0.5 * (transmittanceCoef0 + transmittanceCoeff) * d;
+      transmittance = exp(transmittanceCoef * 0.8);
+      if(cloudDensity > 0.03){
+        luminancef = calculateSingleScattering(cloudCoverage, cloudVelocity, currentPosition, sunLightDirection, starAndSkyExposureReduction, directSolarLightColor);
+        luminance += (0.5 * (luminance0 * exp(transmittanceCoef0 * 0.8) + luminancef * exp(transmittanceCoeff * 0.8)) * d);
+      }
+      else{
+        luminancef = vec3(0.0);
+      }
+
+      if (transmittance < 0.003){
+          transmittance = 0.0;
+          break;
+      }
+
+      //Save the current position as the last position so we can determine the distance between points the next time
+      lastPosition = currentPosition;
+      transmittanceCoef0 = transmittanceCoeff;
+    }
+  }
+
+  return vec4(luminance, transmittance); //Linear multiplier for artistic control
 }
 
 vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 sphericalPosition, sampler3D mieLookupTable, sampler3D rayleighLookupTable, float intensityFader, vec2 uv2OfTransmittance){
@@ -577,7 +749,21 @@ void main(){
     galacticLighting = galacticLighting * transmittanceFade;
   #endif
 
-  //vec3 cloudLighting = cloudRayMarcher(0.5);
+  //Calculate the impact of clouds on the scene
+  //These should be pulled out into uniforms that are determined by the initial parameters
+  vec3 dominantLightSourcePosition = moonPosition;
+  vec3 dominantLightSourceColor = scatteringMoonIntensity * moonLightColor;
+  vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH));
+  vec3 transmittanceOfPrimaryLightSource = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
+  if(sunPosition.y > 0.0){
+    dominantLightSourcePosition = sunPosition;
+    dominantLightSourceColor = scatteringSunIntensity * vec3(1.0);
+    uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(sunPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH));
+    transmittanceOfPrimaryLightSource = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
+  }
+  float cloudCoverage = 0.32;
+  vec2 cloudVelocity = vec2(30.0, 12.0);
+  vec4 cloudLighting = cloudRayMarcher(cloudCoverage, cloudVelocity, vec3(0.0, RADIUS_OF_EARTH * 1000.0, 0.0), sphericalPosition, 0.0, normalize(dominantLightSourcePosition), 0.0001 * dominantLightSourceColor * transmittanceOfPrimaryLightSource);
 
   //Sun and Moon layers
   #if($isSunPass)
@@ -585,7 +771,8 @@ void main(){
 
     $draw_sun_pass
 
-    combinedPass = pow(MyAESFilmicToneMapping(combinedPass + sunTexel), inverseGamma);
+    combinedPass = ((combinedPass + sunTexel) * cloudLighting.a) + cloudLighting.rgb;
+    combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
   #elif($isMoonPass)
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;
     vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);
@@ -596,6 +783,7 @@ void main(){
     combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarDiffuseTexel.a);
 
     //And bring it back to the normal gamma afterwards
+    combinedPass = (combinedPass * cloudLighting.a) + cloudLighting.rgb;
     combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
   #elif($isMeteringPass)
     //Cut this down to the circle of the sky ignoring the galatic lighting
@@ -609,12 +797,14 @@ void main(){
     float intensityPass = (0.3 * intensityPassColors.r + 0.59 * intensityPassColors.g + 0.11 * intensityPassColors.b) * circularMask;
 
     //Now apply the ACESFilmicTonemapping
+    combinedPass = (combinedPass * cloudLighting.a) + cloudLighting.rgb;
     combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
   #else
     //Regular atmospheric pass
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting;
 
     //Now apply the ACESFilmicTonemapping
+    combinedPass = (combinedPass * cloudLighting.a) + cloudLighting.rgb;
     combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);
 
     //Now apply the blue noise
@@ -625,8 +815,6 @@ void main(){
     gl_FragColor = vec4(combinedPass, intensityPass);
   #else
     //Triangular Blue Noise Dithering Pass
-    //gl_FragColor = vec4(combinedPass, 1.0);
-    float zOffset = fModulo(uTime, 2048.0) / 2048.0;
-    gl_FragColor = vec4(vec3(texture(cloudLUTs, vec3(sphericalPosition.xz * 10.0, zOffset)).r), 1.0);
+    gl_FragColor = vec4(combinedPass, 1.0);
   #endif
 }

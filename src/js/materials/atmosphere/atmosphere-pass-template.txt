@@ -14,7 +14,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       moonHorizonFade: {value: 1.0},
       scatteringSunIntensity: {value: 20.0},
       scatteringMoonIntensity: {value: 1.4},
-      cloudLUTs: {value: new THREE.DataTexture3D()}
+      cloudLUTs: {value: new THREE.DataTexture3D()},
+      blueNoiseTexture: {value: null}
     }
 
     if(auroraEnabled){
@@ -63,7 +64,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
 
     if(!isSunShader){
-      uniforms.blueNoiseTexture = {value: null};
       uniforms.starHashCubemap = {value: null};
       uniforms.dimStarData = {value: null};
       uniforms.medStarData = {value: null};
