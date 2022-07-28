@@ -15,5 +15,5 @@ void main(){
   float y = fModulo(p.y, 0.25) / 0.25;
   float z = fModulo(uTime, 20000.0) / 20000.0;
 
-  gl_FragColor = vec4(vec3(texture(noiseTester, vec3(x, y, 0.0)).a), 1.0);
+  gl_FragColor = vec4(vec3(texture(noiseTester, vec3(p,0.0)).a), 1.0);
 }

@@ -68,6 +68,12 @@ StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
     }
   }
 
+  //Delete the shader
+  for(let renderTarget of cloudNoiseSliceVar.renderTargets){
+    renderTarget.dispose();
+  }
+  cloudNoiseSliceVar.material.dispose();
+
   //Turn this array into a 3D texture
   this.repeating3DCloudNoiseTextures = new THREE.DataTexture3D(cloud3DNoiseRenderTargetBufferFloat32Array, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE);
   this.repeating3DCloudNoiseTextures.type = THREE.FloatType;

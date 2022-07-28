@@ -109,6 +109,11 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.localSiderealTime.value = skyState.LSRT;
     baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;
 
+		const lightingManager = skyDirector.lightingManager;
+		if(lightingManager){
+	    baseSunMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
+		}
+
     //Run our float shaders shaders
 		composer.render();
 		outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;

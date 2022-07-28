@@ -174,6 +174,11 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
     moonMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 
+    const lightingManager = skyDirector.lightingManager;
+    if(lightingManager){
+      moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
+    }
+
     //Update our bloom threshold so we don't bloom the moon during the day
     this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
 

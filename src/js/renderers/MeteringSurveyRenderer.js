@@ -87,22 +87,23 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   let self = this;
   this.render = function(sunPosition, moonPosition, sunFade, moonFade){
     //Update the uniforms so that we can see where we are on this sky.
-    self.meteringSurveyVar.material.uniforms.sunPosition.value = sunPosition;
-    self.meteringSurveyVar.material.uniforms.moonPosition.value = moonPosition;
-    self.meteringSurveyVar.material.uniforms.sunHorizonFade.value = sunFade;
-    self.meteringSurveyVar.material.uniforms.moonHorizonFade.value = Math.max(1.0 - sunFade, 0.0);
-    self.meteringSurveyVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
-    self.meteringSurveyVar.material.uniforms.sunLuminosity.value = self.skyDirector.skyState.sun.luminosity;
-    self.meteringSurveyVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
-    self.meteringSurveyVar.material.uniforms.moonLuminosity.value = self.skyDirector.skyState.moon.luminosity;
-    self.meteringSurveyVar.material.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
+    const uniforms = self.meteringSurveyVar.material.uniforms;
+    const skyState = skyDirector.skyState;
+    uniforms.sunPosition.value = sunPosition;
+    uniforms.moonPosition.value = moonPosition;
+    uniforms.sunHorizonFade.value = sunFade;
+    uniforms.moonHorizonFade.value = Math.max(1.0 - sunFade, 0.0);
+    uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
+    uniforms.sunLuminosity.value = skyState.sun.luminosity;
+    uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    uniforms.moonLuminosity.value = skyState.moon.luminosity;
+    uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     if(assetManager.data.skyAuroraParameters.auroraEnabled){
-      self.meteringSurveyVar.material.uniforms.auroraSampler1.value =  self.skyDirector?.assetManager.images.auroraImages[0];
-      self.meteringSurveyVar.material.uniforms.auroraSampler2.value =  self.skyDirector?.assetManager.images.auroraImages[1];
+      uniforms.auroraSampler1.value =  skyDirector?.assetManager.images.auroraImages[0];
+      uniforms.auroraSampler2.value =  skyDirector?.assetManager.images.auroraImages[1];
     }
-    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
-    self.meteringSurveyVar.material.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
-
+    const blueNoiseTextureRef = skyDirector.assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+    uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
     self.meteringSurveyRenderer.compute();
     const skyRenderTarget = self.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar);
     return skyRenderTarget;

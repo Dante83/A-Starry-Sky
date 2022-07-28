@@ -15,6 +15,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       scatteringSunIntensity: {value: 20.0},
       scatteringMoonIntensity: {value: 1.4},
       cloudLUTs: {value: new THREE.DataTexture3D()},
+      ambientLightPY: {value: new THREE.Vector3()},
       blueNoiseTexture: {value: null}
     }
 

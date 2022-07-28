@@ -49,6 +49,13 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       'return (a - (b * floor(a / b)));',
     '}',
 
+    'vec3 vec3Modulo(vec3 a, vec3 b){',
+      'float x = (a.x - (b.x * floor(a.x / b.x)));',
+      'float y = (a.y - (b.y * floor(a.y / b.y)));',
+      'float z = (a.z - (b.z * floor(a.z / b.z)));',
+      'return vec3(x, y, z);',
+    '}',
+
     '//',
     '//Scattering functions',
     '//',
