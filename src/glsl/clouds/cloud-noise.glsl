@@ -27,7 +27,7 @@ float tileableWorleyNoise(vec3 uv3, float numPoints){
     }
   }
 
-  return clamp(1.0 - sqrt(minDistance) * pow(numPoints, 1.0 / 3.0), 0.0, 1.0);
+  return clamp(1.0 - minDistance * pow(numPoints, 1.0 / 3.0), 0.0, 1.0);
 }
 
 //Presume the width of our texture is 128x128x128
@@ -50,6 +50,9 @@ void main(){
   float worleyNoise1 = tileableWorleyNoise(p3, 5.0);
   float worleyNoise2 = tileableWorleyNoise(p3, 45.0);
   float worleyNoise3 = tileableWorleyNoise(p3, 405.0);
+	// float worleyNoise1 = tileableWorleyNoise(p3, 2.0);
+  // float worleyNoise2 = tileableWorleyNoise(p3, 18.0);
+  // float worleyNoise3 = tileableWorleyNoise(p3, 162.0);
 	float cloudNoise = worleyNoise1 * .625 + worleyNoise2 * .125 + worleyNoise3 * 0.25;
 
   gl_FragColor = vec4(worleyNoise1, worleyNoise2, worleyNoise3, cloudNoise);
