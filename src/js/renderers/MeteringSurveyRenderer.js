@@ -23,7 +23,8 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
       false, //sun code
       false, //moon code
       true, //metering code
-      assetManager.data.skyAuroraParameters.auroraEnabled  //aurora enabled
+      assetManager.data.skyAuroraParameters.auroraEnabled,  //aurora enabled
+      false
     ),
     this.meteringSurveyTexture
   );
@@ -33,7 +34,8 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     false,
     false,
     true,
-    assetManager.data.skyAuroraParameters.auroraEnabled)));
+    assetManager.data.skyAuroraParameters.auroraEnabled,
+    false)));
   this.meteringSurveyVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.meteringSurveyVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.meteringSurveyVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;

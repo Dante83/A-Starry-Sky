@@ -37,7 +37,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       false,
       true,
       false,
-      assetManager.data.skyAuroraParameters.auroraEnabled
+      assetManager.data.skyAuroraParameters.auroraEnabled,
+      assetManager.data.skyCloudParameters.cloudsEnabled
     ))),
     vertexShader: StarrySky.Materials.Moon.baseMoonPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
@@ -50,9 +51,13 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       false, //Sun Code
       StarrySky.Materials.Moon.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians),
       false, //Metering Code
-      assetManager.data.skyAuroraParameters.auroraEnabled //aurora enabled
+      assetManager.data.skyAuroraParameters.auroraEnabled, //aurora enabled
+      assetManager.data.skyCloudParameters.cloudsEnabled  //clouds enabled
     )
   });
+  if(assetManager.data.skyCloudParameters.cloudsEnabled){
+    moonMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
+  }
   if(assetManager.data.skyAuroraParameters.auroraEnabled){
     moonMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
       auroraParameters.nitrogenColor.red / 255.0,
@@ -87,7 +92,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   moonMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   moonMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   moonMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
-  moonMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
   moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
   moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
   const renderTargetGeometry = new THREE.PlaneBufferGeometry(2, 2);
@@ -183,8 +187,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     const lightingManager = skyDirector.lightingManager;
     if(assetManager.data.skyCloudParameters.cloudsEnabled){
       moonMaterial.uniforms.cloudTime.value = assetManager.data.skyCloudParameters.startSeed + t;
-      if(lightingManager){
-        moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
+      if(assetManager && assetManager.data.skyCloudParameters.cloudsEnabled && lightingManager){
+        moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
       }
     }
 
@@ -245,13 +249,13 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       if(assetManager.data.skyCloudParameters.cloudsEnabled){
         const cloudParams = assetManager.data.skyCloudParameters;
 
-        moonMaterial.uniforms.cloudCoverage.value = (cloudParams.coverage / 100.0);
+        moonMaterial.uniforms.cloudCoverage.value = cloudParams.coverage;
         moonMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
         moonMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;
         moonMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
         moonMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
-        moonMaterial.uniforms.cloudFadeOutStartHeight.value = cloudParams.fadeOutStartPercent;
-        moonMaterial.uniforms.cloudFadeInEndHeight.value = cloudParams.fadeInEndPercentTags;
+        moonMaterial.uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
+        moonMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercentTags;
         moonMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
       }
       assetsNotReadyYet = false;

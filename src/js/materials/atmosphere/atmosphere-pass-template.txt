@@ -20,16 +20,16 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     if(cloudsEnabled && !isMeteringShader){
       uniforms.cloudLUTs = {value: new THREE.DataTexture3D()};
-      uniforms.ambientLightPY: {value: new THREE.Vector3(0, 181, 226)};
-      uniforms.cloudCoverage: {value: 0.5};
-      uniforms.cloudVelocity: {value: new THREE.Vector2(0.0, 0.0)};
-      uniforms.cloudStartHeight: {value: 1000.0};
-      uniforms.cloudEndHeight: {value: 2500.0};
-      uniforms.numberOfCloudMarchSteps: {value: 64.0};
-      uniforms.cloudFadeOutStartHeight: {value: 0.9};
-      uniforms.cloudFadeInEndHeight: {value: 0.05};
-      uniforms.cloudTime: {value: 0.0};
-      uniforms.cloudCutoffDistance: {value: 40000.0};
+      uniforms.ambientLightPY = {value: new THREE.Vector3(0, 181, 226)};
+      uniforms.cloudCoverage = {value: 0.5};
+      uniforms.cloudVelocity = {value: new THREE.Vector2(0.0, 0.0)};
+      uniforms.cloudStartHeight = {value: 1000.0};
+      uniforms.cloudEndHeight = {value: 2500.0};
+      uniforms.numberOfCloudMarchSteps = {value: 64.0};
+      uniforms.cloudFadeOutStartPercent = {value: 0.9};
+      uniforms.cloudFadeInEndPercent = {value: 0.05};
+      uniforms.cloudTime = {value: 0.0};
+      uniforms.cloudCutoffDistance = {value: 40000.0};
     }
 
     if(auroraEnabled){
@@ -111,7 +111,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   vertexShader: [
     {vertex_glsl}
   ].join('\n'),
-  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false, auroraEnabled = false){
+  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth,
+  packingHeight, atmosphereFunctions, sunCode = false, moonCode = false,
+  meteringCode = false, auroraEnabled = false, cloudsEnabled = false){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -169,6 +171,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       }
       else{
         updatedGLSL = updatedGLSL.replace(/\$auroraEnabled/g, '0');
+      }
+
+      if(cloudsEnabled){
+        updatedGLSL = updatedGLSL.replace(/\$cloudsEnabled/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$cloudsEnabled/g, '0');
       }
 
       updatedLines.push(updatedGLSL);

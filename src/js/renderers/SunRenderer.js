@@ -30,7 +30,13 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	composer.renderToScreen = false;
 
 	const baseSunMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true))),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
+      true, //sun pass
+      false, //moon pass
+      false, //metering pass
+      false,  //aurora enabled
+      assetManager.data.skyCloudParameters.cloudsEnabled  //clouds enabled
+    ))),
     vertexShader: StarrySky.Materials.Sun.baseSunPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
       assetManager.data.skyAtmosphericParameters.mieDirectionalG,
@@ -42,14 +48,17 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       StarrySky.Materials.Sun.baseSunPartial.fragmentShader(this.sunAngularRadiusInRadians),
       false, //Moon Code
       false, //Metering Code
-      false //aurora enabled
+      false, //aurora enabled
+			assetManager.data.skyCloudParameters.cloudsEnabled  //clouds enabled
     ),
   });
   baseSunMaterial.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
   baseSunMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   baseSunMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   baseSunMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
-	baseSunMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
+	if(assetManager.data.skyCloudParameters.cloudsEnabled){
+    baseSunMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
+  }
   baseSunMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
 	const renderBufferMesh = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(2, 2),
@@ -116,9 +125,12 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;
 
 		const lightingManager = skyDirector.lightingManager;
-		if(lightingManager){
-	    baseSunMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
-		}
+		if(assetManager.data.skyCloudParameters.cloudsEnabled){
+      baseSunMaterial.uniforms.cloudTime.value = assetManager.data.skyCloudParameters.startSeed + t;
+      if(assetManager && assetManager.data.skyCloudParameters.cloudsEnabled && lightingManager){
+        baseSunMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
+      }
+    }
 
     //Run our float shaders shaders
 		composer.render();
@@ -151,14 +163,14 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
 			if(assetManager.data.skyCloudParameters.cloudsEnabled){
 				const cloudParams = assetManager.data.skyCloudParameters;
-
-				baseSunMaterial.uniforms.cloudCoverage.value = (cloudParams.coverage / 100.0);
+				console.log(cloudParams);
+				baseSunMaterial.uniforms.cloudCoverage.value = cloudParams.coverage;
         baseSunMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
         baseSunMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;
         baseSunMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
         baseSunMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
-        baseSunMaterial.uniforms.cloudFadeOutStartHeight.value = cloudParams.fadeOutStartPercent;
-        baseSunMaterial.uniforms.cloudFadeInEndHeight.value = cloudParams.fadeInEndPercentTags;
+				baseSunMaterial.uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
+        baseSunMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercentTags;
         baseSunMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
 			}
 			assetsNotReadyYet = false;

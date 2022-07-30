@@ -17,8 +17,8 @@ StarrySky.DefaultData.cloudParameters = {
   fadeOutStartPercent: 90.0,
   fadeInEndPercent: 5.0,
   velocity: new THREE.Vector2(0.0, 0.0),
-  startSeed: Date.now(),
-  numberOfRayMarchSteps: 64,
+  startSeed: Date.now() % (86400 * 365),
+  numberOfRayMarchSteps: 64.0,
   cutoffDistance: 40000.0,
   cloudsEnabled: false
 };
@@ -72,22 +72,27 @@ class SkyClouds extends HTMLElement {
       dataRef.cutoffDistance = cutoffDistanceTags.length > 0 ? parseFloat(cutoffDistanceTags[0].innerHTML) : dataRef.cutoffDistance;
 
       //Handle the special case of our xy values
-      const velocityDataX = cloudVelocityXTags.length > 0 ? parseFloat(cloudVelocityXTags[0].innerHTML) : dataRef.velocity.x;
-      const velocityDataY = cloudVelocityYTags.length > 0 ? parseFloat(cloudVelocityYTags[0].innerHTML) : dataRef.velocity.y;
+      let velocityDataX = cloudVelocityXTags.length > 0 ? parseFloat(cloudVelocityXTags[0].innerHTML) : dataRef.velocity.x;
+      let velocityDataY = cloudVelocityYTags.length > 0 ? parseFloat(cloudVelocityYTags[0].innerHTML) : dataRef.velocity.y;
 
       //Clamp the values in our tags
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
       dataRef.coverage = clampAndWarn(dataRef.coverage, 0.0, 100.0, '<sky-cloud-coverage>');
+      dataRef.coverage = (100.0 - (dataRef.coverage + 20.0) * 0.5833333333333) / 100.0; //Clouds don't start until 20% and end at 70%
       dataRef.startHeight = clampAndWarn(dataRef.startHeight, 0.0, 100000.0, '<sky-cloud-start-height>');
       dataRef.endHeight = clampAndWarn(dataRef.endHeight, 0.1, 9999999.9, '<sky-cloud-end-height>');
-      dataRef.fadeOutStartPercent = clampAndWarn(dataRef.fadeOutStartPercent, 0.01, 100.0, '<sky-cloud-fade-out-start-percent>');
-      dataRef.fadeInEndPercent = clampAndWarn(dataRef.fadeInEndPercent, 0.0, 99.99, '<sky-cloud-fade-in-end-percent>');
-      dataRef.startSeed = clampAndWarn(dataRef.startSeed, 0, 999999999, '<sky-cloud-start-seed>');
+      dataRef.fadeOutStartPercent = clampAndWarn(dataRef.fadeOutStartPercent, 0.01, 100.0, '<sky-cloud-fade-out-start-percent>') / 100.0;
+      dataRef.fadeInEndPercent = clampAndWarn(dataRef.fadeInEndPercent, 0.0, 99.99, '<sky-cloud-fade-in-end-percent>') / 100.0;
+      dataRef.startSeed = clampAndWarn(dataRef.startSeed, 0, Number.MAX_SAFE_INTEGER, '<sky-cloud-start-seed>');
       dataRef.cutoffDistance = clampAndWarn(dataRef.cutoffDistance, 0.1, 9999999.9, '<sky-cloud-cutoff-distance>');
       velocityDataX = clampAndWarn(velocityDataX, -9999.0, 9999.0, '<sky-cloud-velocity-x>');
       velocityDataY = clampAndWarn(velocityDataY, -9999.0, 9999.0, '<sky-cloud-velocity-y>');
       dataRef.velocity.x = velocityDataX;
       dataRef.velocity.y = velocityDataY;
-  };
+
+      self.skyDataLoaded = true;
+      document.dispatchEvent(new Event('Sky-Data-Loaded'));
+    });
+  }
 }
-window.customElements.define('sky-cloud', SkyClouds);
+window.customElements.define('sky-clouds', SkyClouds);
