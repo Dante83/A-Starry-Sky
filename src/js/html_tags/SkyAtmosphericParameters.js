@@ -43,12 +43,15 @@ class SkyAtmosphericParameters extends HTMLElement {
     //Hide the element
     this.style.display = "none";
 
-    let self = this;
+    const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
+      //Data Ref
+      const dataRef = self.data;
+
       //Get child tags and acquire their values.
-      let mieDirectionalGTags = self.getElementsByTagName('sky-mie-directional-g');
-      let sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
-      let moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
+      const mieDirectionalGTags = self.getElementsByTagName('sky-mie-directional-g');
+      const sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
+      const moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
 
       [mieDirectionalGTags, sunAngularDiameterTags, moonAngularDiameterTags].forEach(function(tags){
         if(tags.length > 1){
@@ -57,25 +60,15 @@ class SkyAtmosphericParameters extends HTMLElement {
       });
 
       //Set the params to appropriate values or default
-      self.data.mieDirectionalG = mieDirectionalGTags.length > 0 ? parseFloat(mieDirectionalGTags[0].innerHTML) : self.data.mieDirectionalG;
-      self.data.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFloat(sunAngularDiameterTags[0].innerHTML) : self.data.sunAngularDiameter;
-      self.data.moonAngularDiameter = moonAngularDiameterTags.length > 0 ? parseFloat(moonAngularDiameterTags[0].innerHTML) : self.data.moonAngularDiameter;
+      dataRef.mieDirectionalG = mieDirectionalGTags.length > 0 ? parseFloat(mieDirectionalGTags[0].innerHTML) : dataRef.mieDirectionalG;
+      dataRef.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFloat(sunAngularDiameterTags[0].innerHTML) : dataRef.sunAngularDiameter;
+      dataRef.moonAngularDiameter = moonAngularDiameterTags.length > 0 ? parseFloat(moonAngularDiameterTags[0].innerHTML) : dataRef.moonAngularDiameter;
 
-      //Clamp our results to the appropriate ranges
-      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        let result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
-        }
-        else if(inValue < minValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
-        }
-        return result;
-      };
-
-      self.data.mieDirectionalG = clampAndWarn(self.data.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
-      self.data.sunAngularDiameter = clampAndWarn(self.data.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
-      self.data.moonAngularDiameter = clampAndWarn(self.data.moonAngularDiameter, 0.1, 90.0, '<sky-moon-angular-diameter>');
+      //Clamp and warn our values
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.mieDirectionalG = clampAndWarn(dataRef.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
+      dataRef.sunAngularDiameter = clampAndWarn(dataRef.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
+      dataRef.moonAngularDiameter = clampAndWarn(dataRef.moonAngularDiameter, 0.1, 90.0, '<sky-moon-angular-diameter>');
 
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));

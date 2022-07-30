@@ -27,6 +27,8 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;',
     'const float ELOK_Z_CONST = 0.9726762775527075;',
     'const float ONE_OVER_EIGHT_PI = 0.039788735772973836;',
+    'const float ONE_OVER_FOUR_PI = 0.0795774715459476678;',
+    'const float METERS_TO_KM = 0.001;',
 
     'const float MIE_G = $mieG;',
     'const float MIE_G_SQUARED = $mieGSquared;',

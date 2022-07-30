@@ -22,11 +22,14 @@ class SkyLocation extends HTMLElement {
     //Hide the element
     this.style.display = "none";
 
-    let self = this;
+    const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
+      //Data ref
+      const dataRef = self.dataRef;
+
       //Get child tags and acquire their values.
-      let latitudeTags = self.getElementsByTagName('sky-latitude');
-      let longitudeTags = self.getElementsByTagName('sky-longitude');
+      const latitudeTags = self.getElementsByTagName('sky-latitude');
+      const longitudeTags = self.getElementsByTagName('sky-longitude');
 
       [latitudeTags, longitudeTags].forEach(function(tags){
         if(tags.length > 1){
@@ -35,8 +38,8 @@ class SkyLocation extends HTMLElement {
       });
 
       //Logical XOR ( a || b ) && !( a && b )
-      let conditionA = latitudeTags.length === 1;
-      let conditionB = longitudeTags.length === 1;
+      const conditionA = latitudeTags.length === 1;
+      const conditionB = longitudeTags.length === 1;
       if((conditionA || conditionB) && !(conditionA && conditionB)){
         if(conditionA){
           console.error('The <sky-location> tag must contain both a <sky-latitude> and <sky-longitude> tag. Only a <sky-latitude> tag was found.');
@@ -47,24 +50,13 @@ class SkyLocation extends HTMLElement {
       }
 
       //Set the params to appropriate values or default
-      self.data.latitude = latitudeTags.length > 0 ? parseFloat(latitudeTags[0].innerHTML) : self.data.latitude;
-      self.data.longitude = longitudeTags.length > 0 ? parseFloat(longitudeTags[0].innerHTML) : self.data.longitude;
-
-      //Clamp the results
-      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        let result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
-        }
-        else if(inValue < minValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
-        }
-        return result;
-      };
+      dataRef.latitude = latitudeTags.length > 0 ? parseFloat(latitudeTags[0].innerHTML) : dataRef.latitude;
+      dataRef.longitude = longitudeTags.length > 0 ? parseFloat(longitudeTags[0].innerHTML) : dataRef.longitude;
 
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
-      self.data.latitude = self.data.latitude ? clampAndWarn(self.data.latitude, -90.0, 90.0, '<sky-latitude>') : null;
-      self.data.longitude = self.data.longitude ? clampAndWarn(self.data.longitude, -180.0, 180.0, '<sky-longitude>') : null;
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.latitude = dataRef.latitude ? clampAndWarn(dataRef.latitude, -90.0, 90.0, '<sky-latitude>') : null;
+      dataRef.longitude = dataRef.longitude ? clampAndWarn(dataRef.longitude, -180.0, 180.0, '<sky-longitude>') : null;
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });

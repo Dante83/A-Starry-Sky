@@ -35,6 +35,8 @@ class SkyLighting extends HTMLElement {
 
     const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
+      const dataRef = self.data;
+
       //Get child tags and acquire their values.
       const groundColorTags = self.getElementsByTagName('sky-ground-color');
       const atmosphericPerspectiveDensityTags = self.getElementsByTagName('sky-atmospheric-perspective-density');
@@ -63,39 +65,28 @@ class SkyLighting extends HTMLElement {
       });
 
       //Parse the values in our tags
-      self.data.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : self.data.atmosphericPerspectiveDensity;
-      self.data.atmosphericPerspectiveEnabled = self.data.atmosphericPerspectiveDensity > 0.0;
-      self.data.shadowCameraSize = shadowCameraSizeTags.length > 0 ? parseFloat(shadowCameraSizeTags[0].innerHTML) : self.data.shadowCameraSize;
-      self.data.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML) : self.data.shadowCameraResolution;
-
-      //Clamp our results to the appropriate ranges
-      const clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        const result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
-        }
-        else if(inValue < minValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
-        }
-        return result;
-      };
+      dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : dataRef.atmosphericPerspectiveDensity;
+      dataRef.atmosphericPerspectiveEnabled = dataRef.atmosphericPerspectiveDensity > 0.0;
+      dataRef.shadowCameraSize = shadowCameraSizeTags.length > 0 ? parseFloat(shadowCameraSizeTags[0].innerHTML) : dataRef.shadowCameraSize;
+      dataRef.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML) : dataRef.shadowCameraResolution;
 
       //Clamp the values in our tags
-      self.data.atmosphericPerspectiveDensity = clampAndWarn(self.data.atmosphericPerspectiveDensity, 0.0, Infinity, '<sky-atmospheric-perspective-density>');
-      self.data.shadowCameraSize = clampAndWarn(self.data.shadowCameraSize, 0.0, Infinity, '<sky-shadow-camera-size>');
-      self.data.shadowCameraResolution = clampAndWarn(self.data.shadowCameraResolution, 32, 15360, '<sky-shadow-camera-resolution>');
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDensity, 0.0, Infinity, '<sky-atmospheric-perspective-density>');
+      dataRef.shadowCameraSize = clampAndWarn(dataRef.shadowCameraSize, 0.0, Infinity, '<sky-shadow-camera-size>');
+      dataRef.shadowCameraResolution = clampAndWarn(dataRef.shadowCameraResolution, 32, 15360, '<sky-shadow-camera-resolution>');
 
       //Parse our ground color
       if(groundColorTags.length === 1){
         const firstGroundColorTagGroup = groundColorTags[0];
         if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red').length > 0){
-          self.data.groundColor.red = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+          dataRef.groundColor.red = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red')[0].innerHTML), 0, 255, 'sky-ground-color-red');
         }
         if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green').length > 0){
-          self.data.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML), 0, 255, 'sky-ground-color-green');
+          dataRef.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML), 0, 255, 'sky-ground-color-green');
         }
         if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue').length > 0){
-          self.data.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML), 0, 255, 'sky-ground-color-blue');
+          dataRef.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML), 0, 255, 'sky-ground-color-blue');
         }
       }
 

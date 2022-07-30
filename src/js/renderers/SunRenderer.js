@@ -82,7 +82,13 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	baseSunMaterial.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
 
 	const self = this;
+	let assetsNotReadyYet = true;
   this.tick = function(t){
+		if(assetsNotReadyYet){
+			this.firstTick(t);
+			return true;
+		}
+
 		//Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
 		const initialRenderTarget = renderer.getRenderTarget();
 		const currentXrEnabled = renderer.xr.enabled;
@@ -137,15 +143,34 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 
     //Connect up our images if they don't exist yet
-    if(assetManager.hasLoadedImages){
-      //Image of the solar corona for our solar ecclipse
-      baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
-    }
+		if(assetManager){
+	    if(assetManager.hasLoadedImages){
+	      //Image of the solar corona for our solar ecclipse
+	      baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
+	    }
 
-    //Proceed with the first tick
-    self.tick(t);
+			if(assetManager.data.skyCloudParameters.cloudsEnabled){
+				const cloudParams = assetManager.data.skyCloudParameters;
 
-    //Add this object to the scene
-    skyDirector.scene.add(self.sunMesh);
+				baseSunMaterial.uniforms.cloudCoverage.value = (cloudParams.coverage / 100.0);
+        baseSunMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
+        baseSunMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;
+        baseSunMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
+        baseSunMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
+        baseSunMaterial.uniforms.cloudFadeOutStartHeight.value = cloudParams.fadeOutStartPercent;
+        baseSunMaterial.uniforms.cloudFadeInEndHeight.value = cloudParams.fadeInEndPercentTags;
+        baseSunMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
+			}
+			assetsNotReadyYet = false;
+
+			//Proceed with the first tick
+      self.tick(t);
+
+			//Add this object to the scene
+	    skyDirector.scene.add(self.sunMesh);
+
+			//Delete this method when done
+			delete this.firstTick;
+		}
   }
 }

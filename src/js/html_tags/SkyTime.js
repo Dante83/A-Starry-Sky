@@ -53,18 +53,8 @@ class SkyTime extends HTMLElement {
       self.data.utcOffset = utcOffsetTags.length > 0 ? -parseFloat(utcOffsetTags[0].innerHTML) : self.data.utcOffset;
       self.data.speed = speedTags.length > 0 ? parseFloat(speedTags[0].innerHTML) : self.data.speed;
 
-      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        let result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
-        }
-        else if(inValue < minValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
-        }
-        return result;
-      };
-
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
       self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, -14.0, 12.0, '<sky-utc-offset>') : null;
       self.data.speed = self.data.speed ? clampAndWarn(self.data.speed, 0.0, 1000.0, '<sky-speed>') :null;
       self.skyDataLoaded = true;

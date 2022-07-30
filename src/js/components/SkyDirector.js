@@ -132,22 +132,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
       self.cloudLUTLibrary = new StarrySky.LUTlibraries.CloudLUTLibrary(self.assetManager.data, self.renderer, self.scene);
-
-      //TESTING
-      // const scenelEl = self.scene;
-      // const geo = new THREE.PlaneBufferGeometry(20.0, 20.0, 2, 2);
-      // self.testMat = new THREE.ShaderMaterial({
-      //   uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Clouds.cloudNoiseTesterMaterial.uniforms)),
-      //   side: THREE.DoubleSide,
-      //   blending: THREE.NormalBlending,
-      //   transparent: false,
-      //   fragmentShader: StarrySky.Materials.Clouds.cloudNoiseTesterMaterial.fragmentShader,
-      //   vertexShader: StarrySky.Materials.Clouds.cloudNoiseTesterMaterial.vertexShader
-      // });
-      // self.testMat.uniforms.noiseTester.value = self.cloudLUTLibrary.repeating3DCloudNoiseTextures;
-      // const plane = new THREE.Mesh(geo, self.testMat);
-      // scenelEl.add(plane);
-      // plane.position.set(0.0, 10.0, 0.0);
     }
   }
 
@@ -329,9 +313,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
         this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
         this.previousCameraHeight = self.camera.position.y;
       }
-
-      //TESTING
-      //self.testMat.uniforms.uTime.value = time;
     }
   }
 

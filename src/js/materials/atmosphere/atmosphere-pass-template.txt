@@ -1,5 +1,6 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
-  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false, auroraEnabled = false){
+  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false,
+  auroraEnabled = false, cloudsEnabled = false){
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -14,9 +15,21 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       moonHorizonFade: {value: 1.0},
       scatteringSunIntensity: {value: 20.0},
       scatteringMoonIntensity: {value: 1.4},
-      cloudLUTs: {value: new THREE.DataTexture3D()},
-      ambientLightPY: {value: new THREE.Vector3()},
       blueNoiseTexture: {value: null}
+    }
+
+    if(cloudsEnabled && !isMeteringShader){
+      uniforms.cloudLUTs = {value: new THREE.DataTexture3D()};
+      uniforms.ambientLightPY: {value: new THREE.Vector3(0, 181, 226)};
+      uniforms.cloudCoverage: {value: 0.5};
+      uniforms.cloudVelocity: {value: new THREE.Vector2(0.0, 0.0)};
+      uniforms.cloudStartHeight: {value: 1000.0};
+      uniforms.cloudEndHeight: {value: 2500.0};
+      uniforms.numberOfCloudMarchSteps: {value: 64.0};
+      uniforms.cloudFadeOutStartHeight: {value: 0.9};
+      uniforms.cloudFadeInEndHeight: {value: 0.05};
+      uniforms.cloudTime: {value: 0.0};
+      uniforms.cloudCutoffDistance: {value: 40000.0};
     }
 
     if(auroraEnabled){

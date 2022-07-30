@@ -14,22 +14,24 @@ StarrySky.AssetManager = function(skyDirector){
   //Capture all the information from our child elements for our usage here.
   //------------------------
   //Get all of our tags
-  var tagLists = [];
+  let tagLists = [];
   const skyLocationTags = starrySkyComponent.el.getElementsByTagName('sky-location');
   tagLists.push(skyLocationTags);
   const skyTimeTags = starrySkyComponent.el.getElementsByTagName('sky-time');
   tagLists.push(skyTimeTags);
   const skyAtmosphericParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
   tagLists.push(skyAtmosphericParametersTags);
+  const skyLightingTags = starrySkyComponent.el.getElementsByTagName('sky-lighting');
+  tagLists.push(skyLightingTags);
+  const skyAuroraTags = starrySkyComponent.el.getElementsByTagName('sky-aurora');
+  tagLists.push(skyAuroraTags);
+  const skyCloudTags = starrySkyComponent.el.getElementsByTagName('sky-clouds');
+  tagLists.push(skyCloudTags);
   tagLists.forEach(function(tags){
     if(tags.length > 1){
       console.error(`The <a-starry-sky> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
     }
   });
-  const skyLightingTags = starrySkyComponent.el.getElementsByTagName('sky-lighting');
-  tagLists.push(skyLightingTags);
-  const skyAuroraTags = starrySkyComponent.el.getElementsByTagName('sky-aurora');
-  tagLists.push(skyAuroraTags);
   //These are excluded from our search above :D
   const skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
 
@@ -155,7 +157,6 @@ StarrySky.AssetManager = function(skyDirector){
       loader.load(StarrySky.assetPaths.starHashCubemap, function(cubemap){resolve(cubemap);});
     });
     texturePromise2.then(function(cubemap){
-
       //Make sure that our cubemap is using the appropriate settings
       cubemap.format = THREE.RGBAFormat;
       cubemap.magFilter = THREE.NearestFilter;
@@ -322,7 +323,7 @@ StarrySky.AssetManager = function(skyDirector){
         numberOfBrightStarChannelsLoaded += 1;
         if(numberOfBrightStarChannelsLoaded === 4){
           //Create our Star Library LUTs if it does not exists
-          let skyDirector = self.skyDirector;
+          const skyDirector = self.skyDirector;
           if(skyDirector.stellarLUTLibrary === undefined){
             skyDirector.stellarLUTLibrary = new StarrySky.LUTlibraries.StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
           }
@@ -462,6 +463,7 @@ StarrySky.AssetManager = function(skyDirector){
       self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
       self.data.skyLighting = self.hasSkyLightingTag ? self.skyLightingTag.data : defaultValues.lighting;
       self.data.skyAuroraParameters = self.hasAuroraTag ? self.skyAuroraTag.data : defaultValues.auroraParameters;
+      self.data.skyCloudParameters = self.hasCloudTag ? self.skyCloudTag.data : defaultValues.cloudParameters;
       self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
       self.loadImageAssets(self.skyDirector.renderer);
 
@@ -529,6 +531,12 @@ StarrySky.AssetManager = function(skyDirector){
     this.skyAuroraTag = skyAuroraTags[0];
     this.hasAuroraTag = true;
     activeTags.push(this.skyAuroraTag);
+  }
+  if(skyCloudTags.length === 1){
+    this.skyDataSetsLength += 1;
+    this.skyCloudTag = skyCloudTags[0];
+    this.hasCloudTag = true;
+    activeTags.push(this.skyCloudTag);
   }
   for(let i = 0; i < activeTags.length; ++i){
     checkIfAllHTMLDataLoaded(activeTags[i]);

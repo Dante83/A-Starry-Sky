@@ -134,7 +134,13 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 	moonMaterial.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
 
   const self = this;
+  let assetsNotReadyYet = true;
   this.tick = function(t){
+    if(assetsNotReadyYet){
+      this.firstTick(t);
+      return true;
+    }
+
     //Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
     const initialRenderTarget = renderer.getRenderTarget();
     const currentXrEnabled = renderer.xr.enabled;
@@ -175,8 +181,11 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 
     const lightingManager = skyDirector.lightingManager;
-    if(lightingManager){
-      moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
+    if(assetManager.data.skyCloudParameters.cloudsEnabled){
+      moonMaterial.uniforms.cloudTime.value = assetManager.data.skyCloudParameters.startSeed + t;
+      if(lightingManager){
+        moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
+      }
     }
 
     //Update our bloom threshold so we don't bloom the moon during the day
@@ -232,12 +241,29 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
         moonMaterial.uniforms.auroraSampler1.value =  assetManager.images.auroraImages[0];
         moonMaterial.uniforms.auroraSampler2.value =  assetManager.images.auroraImages[1];
       }
+
+      if(assetManager.data.skyCloudParameters.cloudsEnabled){
+        const cloudParams = assetManager.data.skyCloudParameters;
+
+        moonMaterial.uniforms.cloudCoverage.value = (cloudParams.coverage / 100.0);
+        moonMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
+        moonMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;
+        moonMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
+        moonMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
+        moonMaterial.uniforms.cloudFadeOutStartHeight.value = cloudParams.fadeOutStartPercent;
+        moonMaterial.uniforms.cloudFadeInEndHeight.value = cloudParams.fadeInEndPercentTags;
+        moonMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
+      }
+      assetsNotReadyYet = false;
+
+      //Proceed with the first tick
+      self.tick(t);
+
+      //Add this object to the scene
+      skyDirector.scene.add(self.moonMesh);
+
+      //Delete this method when done
+			delete this.firstTick;
     }
-
-    //Proceed with the first tick
-    self.tick(t);
-
-    //Add this object to the scene
-    skyDirector.scene.add(self.moonMesh);
   }
 }

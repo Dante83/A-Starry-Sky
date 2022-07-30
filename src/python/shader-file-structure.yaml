@@ -79,8 +79,3 @@ groups:
         fragment: 'cloud-noise.glsl'
         template: 'cloud-noise-template.txt'
         material: 'cloud-noise.js'
-      -
-        fragment: 'cloud-noise-tester.glsl'
-        vertex: 'cloud-noise-tester-vertex.glsl'
-        template: 'cloud-noise-tester-template.txt'
-        material: 'cloud-noise-tester.js'

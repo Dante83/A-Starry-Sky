@@ -74,8 +74,14 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.skyMesh.receiveShadow = false;
   this.skyMesh.fog = false;
 
-  let self = this;
+  const self = this;
+  let assetsNotReadyYet = true;
   this.tick = function(t){
+    if(assetsNotReadyYet){
+      this.firstTick(t);
+      return true;
+    }
+
     const cameraPosition = skyDirector.camera.position;
     const uniforms = self.atmosphereMaterial.uniforms;
     const skyState = skyDirector.skyState;
@@ -132,12 +138,29 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
         uniforms.auroraSampler1.value =  assetManager.images.auroraImages[0];
         uniforms.auroraSampler2.value =  assetManager.images.auroraImages[1];
       }
+
+      if(assetManager.data.skyCloudParameters.cloudsEnabled){
+        const cloudParams = assetManager.data.skyCloudParameters;
+
+        uniforms.cloudCoverage.value = (cloudParams.coverage / 100.0);
+        uniforms.cloudVelocity.value = cloudParams.velocity;
+        uniforms.cloudStartHeight.value = cloudParams.startHeight;
+        uniforms.cloudEndHeight.value = cloudParams.endHeight;
+        uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
+        uniforms.cloudFadeOutStartHeight.value = cloudParams.fadeOutStartPercent;
+        uniforms.cloudFadeInEndHeight.value = cloudParams.fadeInEndPercentTags;
+        uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
+      }
+      assetsNotReadyYet = false;
+
+      //Proceed with the first tick
+      self.tick(t);
+
+      //Add this object to the scene
+      skyDirector.scene.add(self.skyMesh);
+
+      //Delete this method when done
+			delete this.firstTick;
     }
-
-    //Proceed with the first tick
-    self.tick(t);
-
-    //Add this object to the scene
-    skyDirector.scene.add(self.skyMesh);
   }
 }
