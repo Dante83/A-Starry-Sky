@@ -4,7 +4,6 @@ uniform float uTime;
 
 varying vec3 vWorldPosition;
 varying vec2 vUv;
-const vec3 inverseGamma = vec3(0.454545454545454545454545);
 const float sqrtOfOneHalf = 0.7071067811865475244008443;
 
 //From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/

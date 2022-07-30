@@ -1,6 +1,8 @@
 **Version 1.1.0**
+* Switch from gamma based correct to Linear-sRGB correction for lighting colors in shaders.
+* Added ray-marched clouds using 3D Simplex Noise combined with FBM worley noise, first contact transmittance/ambient lighting and Beer's Law/Henyay-Greenstein lighting. Based roughly around the ideas described in [Rendering volumetric clouds using signed distance fields](https://blog.uhawkvr.com/rendering/rendering-volumetric-clouds-using-signed-distance-fields/).
 * Approximated the Earth's shadow and fixed some bugs in our sphere ray tracing methods.
-* Added support for ray-marched aurora borealis using blue noise ray-jittering to reduce banding effects as described in [Ray Marching Fog With Blue Noise](https://blog.demofox.org/2020/05/10/ray-marching-fog-with-blue-noise/) and using the caustic shader effect from [Believable Caustics Reflectionsv](https://www.alanzucconi.com/2019/09/13/believable-caustics-reflections/). That is not a typo.
+* Added support for ray-marched aurora borealis using blue noise ray-jittering to reduce banding effects as described in [Ray Marching Fog With Blue Noise](https://blog.demofox.org/2020/05/10/ray-marching-fog-with-blue-noise/) and using the caustic shader effect from [Believable Caustics Reflectionsv](https://www.alanzucconi.com/2019/09/13/believable-caustics-reflections/).
 * Swapped out emulated 3D textures for Web GL 2 3D textures.
 * Fixed bug with lunar intensity and eliminated crusty moon edges by adding in mipmapping and increased anisotropic sampling.
 * Swapped out the native bloom effect for Three.js's bloom postprocessing pipeline.

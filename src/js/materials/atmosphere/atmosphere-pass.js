@@ -237,8 +237,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'const float piOver2 = 1.5707963267948966192313;',
     'const float piTimes2 = 6.283185307179586476925286;',
     'const float pi = 3.141592653589793238462;',
-    'const vec3 inverseGamma = vec3(0.454545454545454545454545);',
-    'const vec3 gamma = vec3(2.2);',
     'const vec3 intensityVector = vec3(0.3, 0.59, 0.11);',
 
     '#if($isSunPass)',
@@ -368,12 +366,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'vec2 uv = getUV2OffsetFromStarColorTemperature(zCoordinate, normalizedYPosition, noise);',
 
         'vec3 starColor = texture(starColorMap, uv).rgb;',
-        '//TODO: Vary these to change the color colors',
-        '// starColor *= starColor;',
-        '// starColor.r *= max((zCoordinate / 31.0), 1.0);',
-        '// starColor.g *= max((zCoordinate / 31.0), 1.0);',
-        '// starColor.b *= max((zCoordinate / 10.0), 1.0);',
-        '// starColor = sqrt(starColor);',
 
         '//Interpolate between the 2 colors (ZCoordinateC and zCoordinate are never more then 1 apart)',
         'return starColor;',
@@ -384,6 +376,12 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'float temperature = sqrt(dot(starData.xyz, starData.xyz));',
         'vec3 normalizedStarPosition = starData.xyz / temperature;',
 
+        "//Early out if we're too far away",
+        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;',
+        'if(approximateDistanceOnSphereStar > 20.0){',
+          'return vec3(0.0);',
+        '}',
+
         '//Get the distance the light ray travels',
         'vec2 skyIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), normalize(vec2(length(vec2(skyPosition.xz)), skyPosition.y)));',
         'vec2 normalizationIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), vec2(1.0, 0.0));',
@@ -391,7 +389,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         "//Use the distance to the star to determine it's perceived twinkling",
         'float starBrightness = pow(150.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);',
-        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;',
 
         '//Modify the intensity and color of this star using approximation of stellar scintillation',
         'vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));',
@@ -402,11 +399,18 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '}',
 
       'vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
+        '//Grab our distance to this planet',
+        'float approximateDistanceOnSphereStar = distance(skyPosition, planetPosition) * 1400.0;',
+
+        "//Early out if we're too far away",
+        'if(approximateDistanceOnSphereStar > 20.0){',
+          'return vec3(0.0);',
+        '}',
+
         "//Use the distance to the star to determine it's perceived twinkling",
         '//Planets can have higher magnitudes, but capping at -1.0 eliminates',
         '//silly glow effects.',
         'float planetBrightness = pow(100.0, (-max(planetMagnitude, -1.0) + starAndSkyExposureReduction) * 0.2);',
-        'float approximateDistanceOnSphereStar = distance(skyPosition, planetPosition) * 1400.0;',
 
         '//Pass this brightness into the fast Airy function to make the star glow',
         'planetBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0);',
@@ -499,9 +503,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//to determine which aurora is visible. At this point, we are just faking it till',
       '//we can get more accurate values for simulating this.',
       'vec3 auroraColor(float auroraNoiseValue, float heightOfRay, float avgElectronVelocityScalar){',
-        'vec3 excitedNitrogenSpectrumEmission = pow(nitrogenColor, gamma); //Visible in intense displays below 60-120km. (magenta)',
-        'vec3 molecularO2SpectralEmission = pow(molecularOxygenColor, gamma); //Below 100km-250km.',
-        'vec3 atomicOxygenSpectralEmission = pow(atomicOxygenColor, gamma); //Beginning at 150km-600km (red)',
+        'vec3 excitedNitrogenSpectrumEmission = sRGBToLinear(vec4(nitrogenColor, 1.0)).rgb; //Visible in intense displays below 60-120km. (magenta)',
+        'vec3 molecularO2SpectralEmission = sRGBToLinear(vec4(molecularOxygenColor, 1.0)).rgb; //Below 100km-250km.',
+        'vec3 atomicOxygenSpectralEmission = sRGBToLinear(vec4(atomicOxygenColor, 1.0)).rgb; //Beginning at 150km-600km (red)',
 
         'float h = heightOfRay - RADIUS_OF_EARTH;',
         'vec3 outputLightIntensity = vec3(0.0);',
@@ -669,10 +673,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'vec3 offsetM1 = offsetM * rot1;',
         'vec3 offsetM2 = offsetM * rot2;',
         'vec3 offsetM3 = offsetM * rot3;',
-        'float simplexFractal = 0.5*simplex3d(offsetM1) + 0.25*simplex3d(2.0*offsetM2)',
-        '+ 0.125*simplex3d(4.0*offsetM3) + 0.0625*simplex3d(8.0*offsetM)',
-        '+ 0.03125*simplex3d(16.0 * offsetM1) + 0.015625*simplex3d(32.0*offsetM2)',
-        '+ 0.0078125*simplex3d(64.0 * offsetM3) + 0.00390625*simplex3d(128.0*offsetM);',
+        'float simplexFractal = 0.5000152*simplex3d(offsetM1) + 0.2500305 * simplex3d(2.0 * offsetM2)',
+        '+ 0.125061*simplex3d(4.0 * offsetM3) + 0.0625221 * simplex3d(8.0 * offsetM)',
+        '+ 0.031494*simplex3d(16.0 * offsetM1) + 0.0161132 * simplex3d(32.0 * offsetM2)',
+        '+ 0.008789*simplex3d(64.0 * offsetM3) + 0.0058875 * simplex3d(128.0 * offsetM);',
         'simplexFractal = clamp(0.5 * simplexFractal + 0.5, 0.0, 1.0);',
         'simplexFractal = min(cloudDensity - simplexFractal, 0.0) / (cloudDensity - 1.0);',
         'if(simplexFractal > 0.0){',
@@ -836,7 +840,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;',
 
       '#if(!$isSunPass)',
-        'float starAndSkyExposureReduction = starsExposure - 10.0 * dot(pow(solarAtmosphericPass + lunarAtmosphericPass, inverseGamma), intensityVector);',
+        'float starAndSkyExposureReduction = starsExposure - 10.0 * dot(LinearTosRGB(vec4(solarAtmosphericPass + lunarAtmosphericPass, 1.0)).rgb, intensityVector);',
       '#endif',
 
       '//This stuff never shows up near our sun, so we can exclude it',
@@ -891,7 +895,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
         'galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
         'galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
-        'galacticLighting = pow(galacticLighting, gamma);',
+        'galacticLighting = sRGBToLinear(vec4(galacticLighting, 1.0)).rgb;',
       '#elif($isMeteringPass)',
         'vec3 galacticLighting = vec3(0.0);',
       '#endif',
@@ -927,12 +931,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '$draw_sun_pass',
 
+        '//Combine the cloud lights',
         '#if($cloudsEnabled)',
           'combinedPass = mix((combinedPass + sunTexel), cloudLighting.rgb, cloudLighting.a);',
         '#else',
           'combinedPass = combinedPass + sunTexel;',
         '#endif',
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+
+        '//And bring it back to the normal sRGB afterwards afterwards',
+        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
       '#elif($isMoonPass)',
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
         'vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);',
@@ -942,11 +949,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '//Now mix in the moon light',
         'combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarDiffuseTexel.a);',
 
-        '//And bring it back to the normal gamma afterwards',
+        '//Combine the cloud lights',
         '#if($cloudsEnabled)',
           'combinedPass = mix(combinedPass, cloudLighting.rgb, cloudLighting.a);',
         '#endif',
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+
+        '//And bring it back to the normal sRGB afterwards afterwards',
+        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
       '#elif($isMeteringPass)',
         '//Cut this down to the circle of the sky ignoring the galatic lighting',
         'float circularMask = 1.0 - step(1.0, rho);',
@@ -958,17 +967,19 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '//Get the greyscale color of the sky for the intensity pass verses the r, g and b channels',
         'float intensityPass = (0.3 * intensityPassColors.r + 0.59 * intensityPassColors.g + 0.11 * intensityPassColors.b) * circularMask;',
 
-        '//Now apply the ACESFilmicTonemapping',
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+        '//And bring it back to the normal sRGB afterwards afterwards',
+        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
       '#else',
         '//Regular atmospheric pass',
         'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting;',
 
-        '//Now apply the ACESFilmicTonemapping',
+        '//Combine the cloud lights',
         '#if($cloudsEnabled)',
           'combinedPass = mix(combinedPass, cloudLighting.rgb, cloudLighting.a);',
         '#endif',
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+
+        '//And bring it back to the normal sRGB afterwards afterwards',
+        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
 
         '//Now apply the blue noise',
         'combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + ivec2(128.0 * noise(uTime),  128.0 * noise(uTime + 511.0))) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);',
