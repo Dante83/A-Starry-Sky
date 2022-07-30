@@ -462,8 +462,8 @@ StarrySky.AssetManager = function(skyDirector){
       self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
       self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
       self.data.skyLighting = self.hasSkyLightingTag ? self.skyLightingTag.data : defaultValues.lighting;
-      self.data.skyAuroraParameters = self.hasAuroraTag ? self.skyAuroraTag.data : defaultValues.auroraParameters;
-      self.data.skyCloudParameters = self.hasCloudTag ? self.skyCloudTag.data : defaultValues.cloudParameters;
+      self.data.skyAurora = self.hasAuroraTag ? self.skyAuroraTag.data : defaultValues.skyAurora;
+      self.data.skyCloud = self.hasCloudTag ? self.skyCloudTag.data : defaultValues.skyCloud;
       self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
       self.loadImageAssets(self.skyDirector.renderer);
 

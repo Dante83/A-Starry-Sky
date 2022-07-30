@@ -10,7 +10,7 @@ window.customElements.define('sky-cloud-start-seed', class extends HTMLElement{}
 window.customElements.define('sky-cloud-raymarch-steps', class extends HTMLElement{});
 window.customElements.define('sky-cloud-cutoff-distance', class extends HTMLElement{});
 
-StarrySky.DefaultData.cloudParameters = {
+StarrySky.DefaultData.skyCloud = {
   coverage: 50.0,
   startHeight: 1000.0,
   endHeight: 2500.0,
@@ -29,7 +29,7 @@ class SkyClouds extends HTMLElement {
     super();
 
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.cloudParameters;
+    this.data = StarrySky.DefaultData.skyCloud;
   }
 
   connectedCallback(){

@@ -4,7 +4,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
 
   //Create our material late
   const assetManager = skyDirector.assetManager;
-  const auroraParameters = assetManager.data.skyAuroraParameters;
+  const auroraParameters = assetManager.data.skyAurora;
   const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const skyState = skyDirector.skyState;
   this.atmosphereMaterial = new THREE.ShaderMaterial({
@@ -12,8 +12,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       false, //sun pass
       false, //moon pass
       false, //metering pass
-      assetManager.data.skyAuroraParameters.auroraEnabled,  //aurora enabled
-      assetManager.data.skyCloudParameters.cloudsEnabled  //clouds enabled
+      assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
+      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
     ))),
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
@@ -29,17 +29,17 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       false, //sun pass
       false, //moon pass
       false, //metering pass
-      assetManager.data.skyAuroraParameters.auroraEnabled,  //aurora enabled
-      assetManager.data.skyCloudParameters.cloudsEnabled  //clouds enabled
+      assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
+      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
     )
   });
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  if(assetManager.data.skyCloudParameters.cloudsEnabled){
+  if(assetManager.data.skyCloud.cloudsEnabled){
     this.atmosphereMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
   }
-  if(assetManager.data.skyAuroraParameters.auroraEnabled){
+  if(assetManager.data.skyAurora.auroraEnabled){
     this.atmosphereMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
       auroraParameters.nitrogenColor.red / 255.0,
       auroraParameters.nitrogenColor.green / 255.0,
@@ -105,9 +105,9 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 
     const lightingManager = skyDirector.lightingManager;
-    if(assetManager.data.skyCloudParameters.cloudsEnabled){
-      uniforms.cloudTime.value = assetManager.data.skyCloudParameters.startSeed + t;
-      if(assetManager && assetManager.data.skyCloudParameters.cloudsEnabled && lightingManager){
+    if(assetManager.data.skyCloud.cloudsEnabled){
+      uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
+      if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
         uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
       }
     }
@@ -141,13 +141,13 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
       uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
       uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
-      if(assetManager.data.skyAuroraParameters.auroraEnabled){
+      if(assetManager.data.skyAurora.auroraEnabled){
         uniforms.auroraSampler1.value =  assetManager.images.auroraImages[0];
         uniforms.auroraSampler2.value =  assetManager.images.auroraImages[1];
       }
 
-      if(assetManager.data.skyCloudParameters.cloudsEnabled){
-        const cloudParams = assetManager.data.skyCloudParameters;
+      if(assetManager.data.skyCloud.cloudsEnabled){
+        const cloudParams = assetManager.data.skyCloud;
         uniforms.cloudCoverage.value = cloudParams.coverage;
         uniforms.cloudVelocity.value = cloudParams.velocity;
         uniforms.cloudStartHeight.value = cloudParams.startHeight;

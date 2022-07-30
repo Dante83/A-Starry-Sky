@@ -218,7 +218,7 @@ float noise(float x){
 
     //Early out if we're too far away
     float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;
-    if(approximateDistanceOnSphereStar > 20.0){
+    if(approximateDistanceOnSphereStar > 100.0){
       return vec3(0.0);
     }
 
@@ -243,7 +243,7 @@ float noise(float x){
     float approximateDistanceOnSphereStar = distance(skyPosition, planetPosition) * 1400.0;
 
     //Early out if we're too far away
-    if(approximateDistanceOnSphereStar > 20.0){
+    if(approximateDistanceOnSphereStar > 100.0){
       return vec3(0.0);
     }
 
@@ -394,9 +394,9 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
       auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
       for(float i = 1.0; i < numberOfAuroraRaymarchingSteps; i++){
         //Determine the position of our raymarcher in the sky
-        float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x, lastPosition.z) / 128.0).r;
-        vec3 currentPosition += rayDirection * (rayDeltaT  * blueNoise);
-        float d = distance(currentPosition, lastPosition);
+        float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x + uTime, lastPosition.z + uTime) * 0.0078125).r - 1.0;
+        float d = (rayDeltaT * (0.75 + 0.5 * blueNoise));
+        vec3 currentPosition = lastPosition + rayDirection * d;
 
         auroraNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);
         auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);
@@ -561,14 +561,12 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
 
       for(float i = 0.0; i < numberOfCloudMarchSteps; i++){
         //Determine the position of our raymarcher in the sky
-        float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x + cloudTime, lastPosition.z + cloudTime) * 0.0078125).r * 2.0 - 1.0;
-        float d = (rayDeltaT * (1.0 + 0.01 * blueNoise));
-        vec3 currentPosition = lastPosition + rayDirection * d;
+        vec3 currentPosition = lastPosition + rayDirection * rayDeltaT;
         heightPercentage = (currentPosition.y - globalCloudStartHeight) / (globalCloudEndHeight - globalCloudStartHeight);
 
         //Calculate our transmittance to this point
         float cloudDensityf = simplex3dFractal(currentPosition, cloudVelocity, cloudCoverage, heightPercentage);
-        cloudDensity += 0.5 * (cloudDensity0 + cloudDensityf) * d;
+        cloudDensity += 0.5 * (cloudDensity0 + cloudDensityf) * rayDeltaT;
         rayTransmittance = exp(-cloudDensity);
 
         //Determine the luminance
@@ -585,7 +583,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
         float scatteringToRayPoint = henyayGreenstein(dot(dominantLightDirection, dominantLightDirection));
         float scatteringToCamera = henyayGreenstein(dot(rayDirection, dominantLightDirection));
-        luminance += 0.0002 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * d * rayTransmittance * scatteringToRayPoint * scatteringToCamera;
+        luminance += 0.0002 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;
 
         //Update previous values
         cloudDensity0 = cloudDensityf;
@@ -594,7 +592,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
           firstContactPosition = lastPosition;
           hasFirstContact = true;
         }
-        if(rayTransmittance < 0.001){
+        if(rayTransmittance < 0.0001){
           break;
         }
       }

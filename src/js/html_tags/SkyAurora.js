@@ -13,7 +13,7 @@ window.customElements.define('sky-aurora-color-red', class extends HTMLElement{}
 window.customElements.define('sky-aurora-color-green', class extends HTMLElement{});
 window.customElements.define('sky-aurora-color-blue', class extends HTMLElement{});
 
-StarrySky.DefaultData.auroraParameters = {
+StarrySky.DefaultData.skyAurora = {
   nitrogenColor: {
     red: 189,
     green: 98,
@@ -45,7 +45,7 @@ class SkyAurora extends HTMLElement {
 
     //Check if there are any child elements. Otherwise set them to the default.
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.auroraParameters;
+    this.data = StarrySky.DefaultData.skyAurora;
   }
 
   connectedCallback(){
@@ -73,7 +73,7 @@ class SkyAurora extends HTMLElement {
       [nitrogenColorTags, nitrogenCutoffTags, nitrogenIntensityTags, molecularOxygenColorTags, molecularOxygenCutoffTags, molecularOxygenIntensityTags,
       atomicOxygenColorTags, atomicOxygenCutoffTags, atomicOxygenIntensityTags, raymarchStepsTags].forEach(function(tags){
         if(tags.length > 1){
-          console.error(`The <sky-aurora-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+          console.error(`The <sky-aurora> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
       });
 

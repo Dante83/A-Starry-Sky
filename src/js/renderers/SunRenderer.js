@@ -35,7 +35,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       false, //moon pass
       false, //metering pass
       false,  //aurora enabled
-      assetManager.data.skyCloudParameters.cloudsEnabled  //clouds enabled
+      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
     ))),
     vertexShader: StarrySky.Materials.Sun.baseSunPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
@@ -49,14 +49,14 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       false, //Moon Code
       false, //Metering Code
       false, //aurora enabled
-			assetManager.data.skyCloudParameters.cloudsEnabled  //clouds enabled
+			assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
     ),
   });
   baseSunMaterial.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
   baseSunMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   baseSunMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   baseSunMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
-	if(assetManager.data.skyCloudParameters.cloudsEnabled){
+	if(assetManager.data.skyCloud.cloudsEnabled){
     baseSunMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
   }
   baseSunMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
@@ -125,9 +125,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;
 
 		const lightingManager = skyDirector.lightingManager;
-		if(assetManager.data.skyCloudParameters.cloudsEnabled){
-      baseSunMaterial.uniforms.cloudTime.value = assetManager.data.skyCloudParameters.startSeed + t;
-      if(assetManager && assetManager.data.skyCloudParameters.cloudsEnabled && lightingManager){
+		if(assetManager.data.skyCloud.cloudsEnabled){
+      baseSunMaterial.uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
+      if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
         baseSunMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
       }
     }
@@ -161,9 +161,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	      baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
 	    }
 
-			if(assetManager.data.skyCloudParameters.cloudsEnabled){
-				const cloudParams = assetManager.data.skyCloudParameters;
-				console.log(cloudParams);
+			if(assetManager.data.skyCloud.cloudsEnabled){
+				const cloudParams = assetManager.data.skyCloud;
 				baseSunMaterial.uniforms.cloudCoverage.value = cloudParams.coverage;
         baseSunMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
         baseSunMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;

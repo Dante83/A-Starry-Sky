@@ -8,7 +8,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.meteringSurveyTextureSize = 64;
 
   const assetManager = skyDirector.assetManager;
-  const auroraParameters = assetManager.data.skyAuroraParameters;
+  const auroraParameters = assetManager.data.skyAurora;
   const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   this.meteringSurveyRenderer = new THREE.StarrySkyComputationRenderer(this.meteringSurveyTextureSize, this.meteringSurveyTextureSize, this.renderer);
   this.meteringSurveyTexture = this.meteringSurveyRenderer.createTexture();
@@ -23,7 +23,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
       false, //sun code
       false, //moon code
       true, //metering code
-      assetManager.data.skyAuroraParameters.auroraEnabled,  //aurora enabled
+      assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
       false
     ),
     this.meteringSurveyTexture
@@ -34,14 +34,14 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     false,
     false,
     true,
-    assetManager.data.skyAuroraParameters.auroraEnabled,
+    assetManager.data.skyAurora.auroraEnabled,
     false)));
   this.meteringSurveyVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.meteringSurveyVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.meteringSurveyVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
   this.meteringSurveyVar.material.uniforms.latitude.value = skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
   this.meteringSurveyVar.material.uniforms.moonLightColor.value = skyDirector.skyState.moon.lightingModifier;
-  if(assetManager.data.skyAuroraParameters.auroraEnabled){
+  if(assetManager.data.skyAurora.auroraEnabled){
     this.meteringSurveyVar.material.uniforms.nitrogenColor.value = new THREE.Vector3(
       auroraParameters.nitrogenColor.red / 255.0,
       auroraParameters.nitrogenColor.green / 255.0,
@@ -99,7 +99,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
     uniforms.moonLuminosity.value = skyState.moon.luminosity;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
-    if(assetManager.data.skyAuroraParameters.auroraEnabled){
+    if(assetManager.data.skyAurora.auroraEnabled){
       uniforms.auroraSampler1.value =  skyDirector?.assetManager.images.auroraImages[0];
       uniforms.auroraSampler2.value =  skyDirector?.assetManager.images.auroraImages[1];
     }
