@@ -79,3 +79,17 @@ groups:
         fragment: 'cloud-noise.glsl'
         template: 'cloud-noise-template.txt'
         material: 'cloud-noise.js'
+  -
+    base_glsl_dir: '../glsl/fog'
+    base_js_dir: '../js/materials/fog'
+    shaders:
+      -
+        fragment: 'fog-pars-fragment.glsl'
+        vertex: 'fog-pars-vertex.glsl'
+        template: 'fog-pars-template.txt'
+        material: 'fog-pars.js'
+      -
+        fragment: 'fog-fragment.glsl'
+        vertex: 'fog-vertex.glsl'
+        template: 'fog-template.txt'
+        material: 'fog.js'

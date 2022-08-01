@@ -1,0 +1,8 @@
+StarrySky.Materials.Fog.fogMaterial = {
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n'),
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n')
+};

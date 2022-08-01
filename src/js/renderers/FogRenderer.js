@@ -1,80 +1,34 @@
 StarrySky.Renderers.FogRenderer = function(skyDirector){
   this.skyDirector = skyDirector;
-  this.originalFragmentShader = THREE.ShaderChunk.fog_vertex;
-  this.originalFragmentShader = THREE.ShaderChunk.fog_fragment;
-  this.fragmentShaderRef = THREE.ShaderChunk.fog_vertex;
-  this.fragmentShaderRef = THREE.ShaderChunk.fog_fragment;
-
-  //Create our material late
   const assetManager = skyDirector.assetManager;
   const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const skyState = skyDirector.skyState;
-  const fragmentShader;
-  const vertexShader;
+  const mieCoefficient = 0.01;
+  const mieDirectionalG = atmosphericParameters.mieDirectionalG;
+  const turbidity = 10.0;
+  const rayleigh = 3.0;
+  const fogDensity = 0.0005;
+  const exposure = 1.0;
+  THREE.ShaderChunk.fog_pars_fragment = StarrySky.Materials.Fog.fogParsMaterial.fragmentShader(mieDirectionalG, rayleigh, fogDensity, exposure);
+  THREE.ShaderChunk.fog_pars_vertex = StarrySky.Materials.Fog.fogParsMaterial.vertexShader(rayleigh, turbidity, mieCoefficient);
+  THREE.ShaderChunk.fog_fragment = StarrySky.Materials.Fog.fogMaterial.fragmentShader;
+  THREE.ShaderChunk.fog_vertex = StarrySky.Materials.Fog.fogMaterial.vertexShader;
 
-  this.atmosphereMaterial = new THREE.ShaderMaterial({
-    uniforms: THREE.UniformsUtils.merge( [
-				THREE.UniformsLib['fog'],
-        THREE.uniformsLibrary. JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
-          false, //sun pass
-          false, //moon pass
-          false, //metering pass
-          false, //aurora enabled
-          false, //clouds enabled
-          true,  //Fog pass
-        )))
-      ] )
-    side: THREE.BackSide,
-    blending: THREE.NormalBlending,
-    transparent: false,
-    vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
-    fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      atmosphericParameters.mieDirectionalG,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
-      skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
-      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
-      false, //sun pass
-      false, //moon pass
-      false, //metering pass
-      false,  //aurora enabled
-      false,  //clouds enabled
-      true,  //Fog pass
-    )
-  });
-  this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
-  this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
-  this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
+  this.fog = new THREE.Fog(new THREE.Vector3(), 0.0, 1.0);
+  skyDirector.scene.fog = this.fog;
 
   const self = this;
   this.tick = function(t){
-    const cameraPosition = skyDirector.camera.position;
-    const uniforms = self.atmosphereMaterial.uniforms;
-    const skyState = skyDirector.skyState;
+    //Convert our sun and moon position to rho and phi
+    const sunAltitude = Math.acos(skyState.sun.position.y);
+    const sunAzimuth = Math.atan2(skyState.sun.position.x, skyState.sun.position.z) - Math.PI;
+    const moonAltitude = Math.acos(skyState.moon.position.y);
+    const moonAzimuth = Math.atan(skyState.moon.position.x / skyState.moon.position.z) - Math.PI;
+    const moonIntensity = skyState.moon.intensity;
 
-    //Update the uniforms so that we can see where we are on this sky.
-    uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
-    uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
-    uniforms.uTime.value = t;
-    uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
-    uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
-    uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
-  }
-
-  //Upon completion, this method self destructs
-  this.firstTick = function(t){
-    const uniforms = self.atmosphereMaterial.uniforms;
-
-    //Connect up our reference values
-    uniforms.sunPosition.value = skyState.sun.position;
-    uniforms.moonPosition.value = skyState.moon.position;
-    uniforms.moonLightColor.value = skyState.moon.lightingModifier;
-
-    //Proceed with the first tick
-    self.tick(t);
-
-    //Delete this method when done
-    delete this.firstTick;
+    //Inject the intensity for the moon
+    this.fog.color.fromArray([sunAltitude, sunAzimuth, moonAltitude]);
+    this.fog.near = moonAzimuth;
+    this.fog.far = (1000.0 * moonIntensity) / 20.0;
   }
 }

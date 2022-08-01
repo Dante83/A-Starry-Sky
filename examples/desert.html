@@ -52,6 +52,8 @@
     <script src="../src/js/materials/stars/star-data-map.js"></script>
     <script src="../src/js/materials/autoexposure/metering-survey.js"></script>
     <script src="../src/js/materials/clouds/cloud-noise.js"></script>
+    <script src="../src/js/materials/fog/fog-pars.js"></script>
+    <script src="../src/js/materials/fog/fog.js"></script>
 
     <!--- Custom HTML Tags -->
     <script src="../src/js/html_tags/HTMLTagUtils.js"></script>
@@ -69,6 +71,7 @@
     <script src="../src/js/lut_libraries/CloudLUTLibrary.js"></script>
 
     <!-- Renderers -->
+    <script src="../src/js/renderers/FogRenderer.js"></script>
     <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
     <script src="../src/js/renderers/SunRenderer.js"></script>
     <script src="../src/js/renderers/MoonRenderer.js"></script>
@@ -93,15 +96,15 @@
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
           <sky-time>
             <sky-date>1226-12-07 15:00:00</sky-date>
-            <sky-speed>200.0</sky-speed>
+            <sky-speed>700.0</sky-speed>
           </sky-time>
           <sky-atmospheric-parameters>
             <sky-sun-angular-diameter>3.1</sky-sun-angular-diameter>
             <sky-moon-angular-diameter>3.1</sky-moon-angular-diameter>
           </sky-atmospheric-parameters>
-          <sky-clouds>
+          <!-- <sky-clouds>
             <sky-cloud-coverage>70</sky-cloud-coverage>
-          </sky-clouds>
+          </sky-clouds> -->
       </a-starry-sky>
 
       <a-assets>

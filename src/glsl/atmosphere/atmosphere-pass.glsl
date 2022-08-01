@@ -581,7 +581,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         float lightSourceHeight = RADIUS_OF_EARTH + ((currentPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);
         vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(dominantLightDirection.y, 0.0)), parameterizationOfHeightToY(lightSourceHeight));
         vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
-        float scatteringToRayPoint = henyayGreenstein(dot(dominantLightDirection, dominantLightDirection));
+        float scatteringToRayPoint = henyayGreenstein(abs(dot(dominantLightDirection, dominantLightDirection)));
         float scatteringToCamera = henyayGreenstein(dot(rayDirection, dominantLightDirection));
         luminance += 0.0002 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;
 
@@ -752,7 +752,7 @@ void main(){
   //These should be pulled out into uniforms that are determined by the initial parameters
   #if(!$isMeteringPass && $cloudsEnabled)
     vec3 dominantLightSourcePosition = moonPosition;
-    vec3 dominantLightSourceColor = 0.2 * scatteringMoonIntensity * moonLightColor * moonPosition.y;
+    vec3 dominantLightSourceColor = 0.3 * scatteringMoonIntensity * moonLightColor * moonPosition.y;
     vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH));
     vec3 transmittanceOfPrimaryLightSource = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
     vec3 sunDominantLightSourceColor = scatteringSunIntensity * vec3(1.0) * sunPosition.y;

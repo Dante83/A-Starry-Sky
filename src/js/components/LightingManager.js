@@ -23,7 +23,7 @@ StarrySky.LightingManager = function(parentComponent){
   this.targetScalar = 0.5 * totalDistance - lightingData.shadowDrawBehindDistance;
   this.shadowTarget = new THREE.Vector3();
   this.shadowTargetOffset = new THREE.Vector3();
-  this.fogColorVector = new THREE.Color();
+  //this.fogColorVector = new THREE.Color();
   this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
   this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
   this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
@@ -31,12 +31,12 @@ StarrySky.LightingManager = function(parentComponent){
   this.yAxisHemisphericalLight.position.set(0,1,0);
   this.zAxisHemisphericalLight.position.set(0,0,1);
 
-  parentComponent.scene.fog = this.fog;
-  const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
-  if(lightingData.atmosphericPerspectiveEnabled){
-    this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
-    parentComponent.scene.fog = this.fog;
-  }
+  // parentComponent.scene.fog = this.fog;
+  // const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
+  // if(lightingData.atmosphericPerspectiveEnabled){
+  //   this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
+  //   parentComponent.scene.fog = this.fog;
+  // }
 
   const scene = parentComponent.scene;
   scene.add(this.sourceLight);
@@ -59,14 +59,14 @@ StarrySky.LightingManager = function(parentComponent){
     //sky-atmospheric-parameters and hook that value into this upon starting.
     //And drive the shadow type based on the shadow provided in sky-lighting.
     if(lightingData.atmosphericPerspectiveEnabled){
-      self.fogColorVector.fromArray(lightingState, 21);
-      const maxColor = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
+      // self.fogColorVector.fromArray(lightingState, 21);
+      // const maxColor = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
 
       //The fog color is taken from sky color hemispherical data alone (excluding ground color)
       //and is the color taken by dotting the camera direction with the colors of our
       //hemispherical lighting along the x, z axis.
-      self.fog.density = Math.pow(maxColor, 0.3) * maxFogDensity;
-      self.fog.color.copy(self.fogColorVector);
+      // self.fog.density = Math.pow(maxColor, 0.3) * maxFogDensity;
+      // self.fog.color.copy(self.fogColorVector);
     }
 
     //We update our directional light so that it's always targetting the camera.

@@ -168,6 +168,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
+      self.renderers.fogRenderer = new StarrySky.Renderers.FogRenderer(self);
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
       self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
@@ -630,6 +631,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.renderers.atmosphereRenderer.tick(time);
       self.renderers.sunRenderer.tick(time);
       self.renderers.moonRenderer.tick(time);
+      self.renderers.fogRenderer.tick();
     }
   }
 

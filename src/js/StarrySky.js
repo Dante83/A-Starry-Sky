@@ -1,16 +1,17 @@
 //Basic skeleton for the overall namespace of the A-Starry-Sky
 StarrySky = {
-  DefaultData: {},
   assetPaths: {},
+  DefaultData: {},
+  LUTlibraries: {},
   Materials: {
     Atmosphere: {},
-    Stars: {},
-    Sun: {},
-    Moon: {},
+    Autoexposure: {},
     Clouds: {},
+    Fog: {},
+    Moon: {},
     Postprocessing: {},
-    Autoexposure: {}
+    Stars: {},
+    Sun: {}
   },
-  Renderers: {},
-  LUTlibraries: {}
+  Renderers: {}
 };

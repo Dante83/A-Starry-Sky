@@ -1,0 +1,35 @@
+StarrySky.Materials.Fog.fogParsMaterial = {
+  fragmentShader: function(mieDirectionalG, rayleigh, fogDensity, exposure){
+    let originalGLSL = [
+      {fragment_glsl}
+    ];
+
+    let updatedLines = [];
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i].replace(/\$mieDirectionalG/g, mieDirectionalG.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleigh/g, rayleigh.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$fogDensity/g, fogDensity.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$exposure/g, exposure.toFixed(5));
+
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  },
+  vertexShader: function(rayleigh, turbidty, mieCoefficient){
+    let originalGLSL = [
+      {vertex_glsl}
+    ];
+
+    let updatedLines = [];
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i].replace(/\$rayleigh/g, rayleigh.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$turbidty/g, turbidty.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$mieCoefficient/g, mieCoefficient.toFixed(5));
+
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  }
+};
