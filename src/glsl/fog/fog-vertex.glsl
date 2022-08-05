@@ -9,7 +9,7 @@
     vec2 sunAltitudeAzimuth = fogColor.xy;
     vec3 sunPosition = convertRhoThetaToXYZ(sunAltitudeAzimuth);
   	vSunDirection = normalize(sunPosition);
-  	vSunE = sourceIntensity( dot( vSunDirection, up ), 1000.0 ); //Sun EE is constant at 1000.0
+  	vSunE = sourceIntensity( dot( vSunDirection, up ), 1300.0 ); //Sun EE is constant at 1300.0
   	vSunfade = 1.0 - clamp( 1.0 - exp( ( sunPosition.y ) ), 0.0, 1.0 );
 
   	float rayleighCoefficientSun = rayleigh - ( 1.0 * ( 1.0 - vSunfade ) );
@@ -36,5 +36,20 @@
   	// extinction (absorbtion + out scattering)
   	// rayleigh coefficients
   	vBetaRMoon = totalRayleigh * rayleighCoefficientMoon;
+
+    //Pixel
+    float fogPixelFade = 1.0 - clamp(1.0 - exp(normalize(vFogWorldPosition).y), 0.0, 1.0);
+    float rayleighCoefficientPixel = rayleigh - ( 1.0 * ( 1.0 - fogPixelFade ) );
+    vec3 betaRPixel = totalRayleigh * rayleighCoefficientPixel;
+    // optical length
+    // cutoff angle at 90 to avoid singularity in next formula.
+    float fogDistToPoint = length(vFogWorldPosition - cameraPosition) * groundFexDistanceMultiplier;
+
+    // combined extinction factor
+    float sR = fogDistToPoint;
+    float sM = fogDistToPoint;
+
+    // combined extinction factor
+    vFexPixel = sqrt(clamp(exp( -( betaRPixel * sR + vBetaM * sM ) ), 0.0, 1.0));
   #endif
 #endif

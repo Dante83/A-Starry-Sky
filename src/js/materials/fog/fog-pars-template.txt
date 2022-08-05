@@ -1,5 +1,5 @@
 StarrySky.Materials.Fog.fogParsMaterial = {
-  fragmentShader: function(mieDirectionalG, rayleigh, fogDensity, exposure){
+  fragmentShader: function(mieDirectionalG, rayleigh, exposure, groundFexDistanceMultiplier){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -8,15 +8,15 @@ StarrySky.Materials.Fog.fogParsMaterial = {
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$mieDirectionalG/g, mieDirectionalG.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$rayleigh/g, rayleigh.toFixed(5));
-      updatedGLSL = updatedGLSL.replace(/\$fogDensity/g, fogDensity.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$exposure/g, exposure.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundFexDistanceMultiplier.toFixed(5));
 
       updatedLines.push(updatedGLSL);
     }
 
     return updatedLines.join('\n');
   },
-  vertexShader: function(rayleigh, turbidty, mieCoefficient){
+  vertexShader: function(rayleigh, turbidty, mieCoefficient, groundDistanceMultp, solarRadius, lunarRadius, distanceForSolarEclipse){
     let originalGLSL = [
       {vertex_glsl}
     ];
@@ -26,6 +26,10 @@ StarrySky.Materials.Fog.fogParsMaterial = {
       let updatedGLSL = originalGLSL[i].replace(/\$rayleigh/g, rayleigh.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$turbidty/g, turbidty.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$mieCoefficient/g, mieCoefficient.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundDistanceMultp.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$solarRadius/g, solarRadius.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$lunarRadius/g, lunarRadius.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$distanceForSolarEclipse/g, distanceForSolarEclipse.toFixed(5));
 
       updatedLines.push(updatedGLSL);
     }

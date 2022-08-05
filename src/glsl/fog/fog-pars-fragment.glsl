@@ -14,10 +14,12 @@
     varying vec3 vBetaM;
     varying float vSunE;
     varying float vMoonE;
+    varying vec3 vFexPixel;
+
     const float mieDirectionalG = $mieDirectionalG;
     const float rayleigh = $rayleigh;
-    const float fogConstDensity = $fogDensity;
     const float fogLightExposure = $exposure;
+    const float groundFexDistanceMultiplier = $groundFexDistanceMultiplier;
 
     const vec3 up = vec3(0.0, 1.0, 0.0);
 
@@ -60,10 +62,10 @@
       return ONE_OVER_FOUR_PI * ( ( 1.0 - g * g ) * inverse );
     }
 
-    vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, float vLightE, vec3 vBetaR, out vec3 Fex){
+    vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, float vLightE, vec3 vBetaR, float distToPoint, out vec3 Fex){
       // optical length
       // cutoff angle at 90 to avoid singularity in next formula.
-      float zenithAngle = acos( max( 0.0, dot( up, viewDirection ) ) );
+      float zenithAngle = acos(dot( up, lightDirection ));
       float inverse = 1.0 / ( cos( zenithAngle ) + 0.15 * pow( 93.885 - ( ( zenithAngle * 180.0 ) / pi ), -1.253 ) );
       float sR = rayleighZenithLength * inverse;
       float sM = mieZenithLength * inverse;
@@ -77,56 +79,46 @@
       vec3 betaRTheta = vBetaR * rPhase;
       float mPhase = hgPhase( cosTheta, mieDirectionalG );
       vec3 betaMTheta = vBetaM * mPhase;
-      vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex ), vec3( 1.5 ) );
-      Lin *= mix( vec3( 1.0 ), pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 1.0 / 2.0 ) ), clamp( pow( 1.0 - dot( up, lightDirection ), 5.0 ), 0.0, 1.0 ) );
+      //Hacky... but works... not going to complain.
+      //Why no, I didn't do some physically accurate stuff here, it just looks okay so
+      //so I don't complain.
+      //vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex ), vec3( 1.5 ) );
+      vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - vFexPixel ), vec3( 1.5 ) );
+      //Lin *= mix( vec3( 1.0 ), pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 1.0 / 2.0 ) ), clamp( pow( 1.0 - dot( up, lightDirection ), 5.0 ), 0.0, 1.0 ) );
+      Lin *= pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 0.5 ) );
 
       return Lin;
     }
 
-    // vec3 groundLightingFex(){
-    //   //
-    //   //Ground Lighting
-    //   //
-    // 	float fragmentfade = 1.0 - clamp( 1.0 - exp( ( vFogWorldPosition.y / 450000.0 ) ), 0.0, 1.0 );
-    // 	float rayleighCoefficientFragment = rayleigh - ( 1.0 * ( 1.0 - vFragmentfade ) );
-    //
-    // 	// extinction (absorbtion + out scattering)
-    // 	// rayleigh coefficients
-    // 	return totalRayleigh * rayleighCoefficientMoon;
-    // }
-
-    vec4 atmosphericFogMethod() {
+    vec3 atmosphericFogMethod() {
       vec3 vecToPoint = vFogWorldPosition - cameraPosition;
-      float distToPoint = length(vecToPoint);
-      vec3 viewDirection = vecToPoint / distToPoint;
+      float distToPoint = length(vecToPoint) * groundFexDistanceMultiplier;
+      vec3 viewDirection = normalize(vecToPoint);
 
       // in scattering
 			float cosTheta = dot( viewDirection, vSunDirection );
 
       vec3 FexSun;
-      vec3 LSun = addLightSource(viewDirection, vSunDirection, vSunE, vBetaRSun, FexSun);
+      vec3 LSun = addLightSource(viewDirection, vSunDirection, vSunE, vBetaRSun, distToPoint, FexSun);
       vec3 FexMoon;
-      vec3 LMoon = addLightSource(viewDirection, vMoonDirection, vMoonE, vBetaRMoon, FexMoon);
+      vec3 LMoon = addLightSource(viewDirection, vMoonDirection, vMoonE, vBetaRMoon, distToPoint, FexMoon);
 
       // nightsky
 			float theta = acos( viewDirection.y ); // elevation --> y-axis, [-pi/2, pi/2]
 			float phi = atan( viewDirection.z, viewDirection.x ); // azimuth --> x-axis [-pi/2, pi/2]
 			vec2 uv = vec2( phi, theta ) / vec2( 2.0 * pi, pi ) + vec2( 0.5, 0.0 );
-			vec3 L0 = vec3( 0.1 ) * FexMoon;
 
       // 66 arc seconds -> degrees, and the cosine of that
   		float sunAngularDiameterCos = 0.999956676946448443553574619906976478926848692873900859324;
 
       // composition + solar disc
-			vec3 sunColorTex = (LSun + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
-      vec3 moonColorTex = (LMoon + L0 ) * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
+			vec3 sunColorTex = LSun * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
+      vec3 moonColorTex = LMoon * 0.04 + vec3( 0.0, 0.0003, 0.00075 );
       vec3 sunColor = pow( sunColorTex, vec3( 1.0 / ( 1.2 + ( 1.2 * vSunfade ) ) ) );
-      vec3 moonColor = pow( moonColorTex, vec3( 1.0 / ( 1.2 + ( 1.2 * 0.4 ) ) ) );
+      vec3 moonColor = pow( moonColorTex, vec3( 1.0 / ( 1.2 + ( 1.2 * vMoonfade ) ) ) );
 			vec3 retColor = fogLightExposure * max(sunColor, moonColor);
 
-      float transmittance = clamp(exp(-distToPoint * distToPoint * fogConstDensity * fogConstDensity), 0.0, 1.0);
-
-      return vec4( retColor, 1.0 - transmittance);
+      return vec3( retColor );
     }
   #endif
 #endif

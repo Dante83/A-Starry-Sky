@@ -12,6 +12,7 @@ varying float vFogDepth;
     varying vec3 vBetaM;
     varying float vSunE;
     varying float vMoonE;
+    varying vec3 vFexPixel;
 
     uniform vec3 fogColor; //Altitude, Azimuth of Sun and Altitude of Mooon
     uniform float fogNear; //Azimuth of moon
@@ -21,10 +22,13 @@ varying float vFogDepth;
   	const float rayleigh = $rayleigh;
   	const float turbidity = $turbidty;
   	const float mieCoefficient = $mieCoefficient;
+    const float groundFexDistanceMultiplier = $groundFexDistanceMultiplier;
   	const vec3 up = vec3(0.0, 1.0, 0.0);
   	const float e = 2.7182818284590452;
   	const float pi = 3.1415926535897932;
     const float piOver2 = 1.57079632679;
+    const float rayleighZenithLength = 8.4E3;
+    const float mieZenithLength = 1.25E3;
 
   	// wavelength of used primaries, according to preetham
   	const vec3 lambda = vec3( 680E-9, 550E-9, 450E-9 );
