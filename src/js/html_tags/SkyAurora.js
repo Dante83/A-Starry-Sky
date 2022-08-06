@@ -9,6 +9,7 @@ window.customElements.define('sky-atomic-oxygen-color', class extends HTMLElemen
 window.customElements.define('sky-atomic-oxygen-cutoff', class extends HTMLElement{});
 window.customElements.define('sky-atomic-oxygen-intensity', class extends HTMLElement{});
 window.customElements.define('sky-aurora-raymarch-steps', class extends HTMLElement{});
+window.customElements.define('sky-aurora-cutoff-distance', class extends HTMLElement{});
 window.customElements.define('sky-aurora-color-red', class extends HTMLElement{});
 window.customElements.define('sky-aurora-color-green', class extends HTMLElement{});
 window.customElements.define('sky-aurora-color-blue', class extends HTMLElement{});
@@ -36,6 +37,7 @@ StarrySky.DefaultData.skyAurora = {
   atomicOxygenCutOff: 0.12,
   atomicOxygenIntensity: 0.3,
   raymarchSteps: 64,
+  cutoffDistance: 1000,
   auroraEnabled: false
 };
 
@@ -69,9 +71,11 @@ class SkyAurora extends HTMLElement {
       const atomicOxygenCutoffTags = self.getElementsByTagName('sky-atomic-oxygen-cutoff');
       const atomicOxygenIntensityTags = self.getElementsByTagName('sky-atomic-oxygen-intensity');
       const raymarchStepsTags = self.getElementsByTagName('sky-aurora-raymarch-steps');
+      const raymarchCutoffDistanceTags = self.getElementsByTagName('sky-aurora-cutoff-distance');
 
       [nitrogenColorTags, nitrogenCutoffTags, nitrogenIntensityTags, molecularOxygenColorTags, molecularOxygenCutoffTags, molecularOxygenIntensityTags,
-      atomicOxygenColorTags, atomicOxygenCutoffTags, atomicOxygenIntensityTags, raymarchStepsTags].forEach(function(tags){
+      atomicOxygenColorTags, atomicOxygenCutoffTags, atomicOxygenIntensityTags, raymarchStepsTags,
+      raymarchCutoffDistanceTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-aurora> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -100,6 +104,7 @@ class SkyAurora extends HTMLElement {
       dataRef.atomicOxygenCutOff = atomicOxygenCutoffTags.length > 0 ? parseFloat(atomicOxygenCutoffTags[0].innerHTML) : dataRef.atomicOxygenCutOff;
       dataRef.atomicOxygenIntensity = atomicOxygenIntensityTags.length > 0 ? parseFloat(atomicOxygenIntensityTags[0].innerHTML) : dataRef.atomicOxygenIntensity;
       dataRef.raymarchSteps = raymarchStepsTags.length > 0 ? parseInt(raymarchStepsTags[0].innerHTML) : dataRef.raymarchSteps;
+      dataRef.cutoffDistance = raymarchCutoffDistanceTags.length > 0 ? parseInt(raymarchCutoffDistanceTags[0].innerHTML) : dataRef.cutoffDistance;
 
       //Clamp the values in our tags
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
@@ -112,6 +117,7 @@ class SkyAurora extends HTMLElement {
       dataRef.atomicOxygenIntensity = clampAndWarn(dataRef.atomicOxygenIntensity, 0.0, Infinity, '<sky-atomic-oxygen-intensity>');
 
       dataRef.raymarchSteps = clampAndWarn(dataRef.raymarchSteps, 4, Infinity, '<sky-aurora-raymarch-steps>');
+      dataRef.cutoffDistance = clampAndWarn(dataRef.cutoffDistance, 1, 10000, '<sky-aurora-cutoff-distance>');
 
       //Parse our nitrogen color
       if(nitrogenColorTags.length === 1){

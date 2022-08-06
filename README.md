@@ -10,7 +10,7 @@ A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It a
 
 ## Prerequisites
 
-This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.2.0+. It also requires a Web XR compatible web browser.
+This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.3.0+. It also requires a Web XR compatible web browser.
 
 `https://aframe.io/releases/1.3.0/aframe.min.js`
 
@@ -79,8 +79,8 @@ One important thing to notice is that our `<sky-latitude>` and `<sky-longitude>`
 :--- | :---
 `<sky-time>` | Parent tag. Contains all child tags related to the date or time elements.
 `<sky-date>` | The local date-time string in the format **YEAR-MONTH-DAY HOUR:MINUTE:SECOND**/*2021-03-21 13:45:51*. Hour values are also based on a 0-23 hour system. 0 is 12 AM and 23 is 11PM.
-`<sky-utc-offset>` | The UTC-Offset for this location. Negative values are west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian), contrary to longitude values. **Note that UTC Time does not follow DST**
 `<sky-speed>` | The time multiplier used to speed up the astronomical calculations, or slow them down.
+`<sky-utc-offset>` | The UTC-Offset for this location. Negative values are west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian), contrary to longitude values. **Note that UTC Time does not follow DST**
 
 The sister setting to the location tag is the time tag. There are two strategies here. Either you wish to set the sky-time to UTC time and the sky-utc-offset to 0, or you wish to set the sky-time to your users location and set the UTC time to match. For instance, if you were setting up a user known to be in New York City, the local time on their machine is expected to be 4 hours behind UTC time. Furthermore, to match their location, you would also need to set their latitude and longitude to the location of New York City.
 
@@ -152,9 +152,9 @@ Of course, if you're doing this in a persistent world, make sure to take the acc
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
 `<sky-atmospheric-parameters>` | Parent tag. Contains all child tags related to atmospheric settings. | N/A
-`<sky-sun-angular-diameter>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-moon-angular-diameter>` | The angular diameter of the moon as it appears in the sky.  | 3.15 degrees
 `<sky-mie-directional-g>` | Describes how much light is forward scattered by mie scattering, which is the whitish halo seen around the sun caused by larger particles in the atmosphere. The higher the mie-directional G, the dustier the atmosphere appears. | 0.8
+`<sky-moon-angular-diameter>` | The angular diameter of the moon as it appears in the sky.  | 3.15 degrees
+`<sky-sun-angular-diameter>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 
 The atmospheric parameters has one of the most extensive API in the entire code base. While these values can be used to create custom skies for the skilled developer most users will want to stick with the defaults. A few values in here are particularly useful however and fairly easy to understand.
 
@@ -176,13 +176,15 @@ One of the most likely elements you might want to change is the size of the sun 
 **Tag** | **Description**
 :--- | :---
 `<sky-lighting>` | Parent tag. Contains all child tags related to the lighting of the scene.
+`<sky-atmospheric-perspective-type>` | Can be set set to possible values of *normal* or *advanced* or *none*. Required for scene fog. *normal* uses the orginal exponential fog model while *advanced* uses a Preetham based lighting model for improved color variation at the expense of greater hardware pressure.
+`<sky-atmospheric-perspective-density>` | For *normal* fog only. Controls the density parameter for exponential scene fog. The color is set automatically from the scene lighting. Ignored if the scene fog type is *advanced*
+`<sky-atmospheric-perspective-distance-multiplier>` | For *advanced* fog only. Multiplies the distance to the fog for the advanced fog model.
 `<sky-ground-color>` | Parent tag. Contains `<sky-ground-color-{color-channel}>` tags to describe the base color of the ground for reflective lighting from the surface.
 `<sky-ground-color-red>` | Used to describe **red** color channel changes to `<sky-ground-color>` tags.
 `<sky-ground-color-green>` | Used to describe **green** color channel changes to `<sky-ground-color>` tags.
 `<sky-ground-color-blue>` | Used to describe **blue** color channel changes to `<sky-ground-color>` tags.
-`<sky-atmospheric-perspective-density>` | The maximum amount of atmospheric perspective possible. That is, the exponential fog effect that causes distant objects to appear more blue in the day.
-`<sky-shadow-camera-size>` | The size of the camera area used to cast shadows. Larger sizes result in more area covered by shadows, but also causes aliasing issues by spreading each pixel of the camera over a wider area.
 `<sky-shadow-camera-resolution>` | The resolution, in pixels, of the direct lighting camera used to produce shadows. Higher values produce higher quality shadows at an increased cost in code.
+`<sky-shadow-camera-size>` | The size of the camera area used to cast shadows. Larger sizes result in more area covered by shadows, but also causes aliasing issues by spreading each pixel of the camera over a wider area.
 
 The sky lighting tags are useful for controlling attributes of the direct and indirect lighting in the scene. In version 1.0.0, the sky has reduced the number of direction lights from 2 (sun and moon) to 1 (just one for the most dominant light source). The directional light is always focused on the users camera and creates shadows around this camera. While the directional light can support various shadow types, this library actually isn't the place to control this. Instead, the shadow type is set in the `<a-scene>` tag, as described [here](https://aframe.io/docs/1.2.0/components/light.html#adding-real-time-shadows). That is, you can set the values to any of the following.
 
@@ -276,17 +278,45 @@ Notice that the values above are normalized between values of 0 and 255. So, the
 
 That said, if any of your color channels go over 255, there is no way to 'strengthen the color' or to make the ground appear to 'glow in the dark' at this time, unfortunately. Furthermore, the ground color is a constant at all points, so if you have multiple colors in your scene it's probably best to choose one that exists in the middle of all the other colors.
 
-The final element of the sky lighting you will likely want to change is the atmospheric perspective density. Atmospheric perspective is the effect that causes distant mountains to turn blue with distance on a clear day. The effect is not constant, as more light is scattered back to the camera during the day then the night and the color of the distant mountains varies based on the overall lighting conditions in the sky and calculated on a separate web worker every half a second in user time. However, the effects chosen for the current atmospheric perspective tends to be a bit strong to insure that the effect is visible even in small scenes. That said, atmospheric perspective is typically visible over very long distances so you may wish to reduce the effect to provide a more realistic experience.
+The final element of the sky lighting you will likely want to change is the atmospheric perspective density. *a-starry-sky* comes with two different fog models according to your needs.
+For lower-end systems, it supports the basic exponential atmospheric perspective, which gathers light over the entire sky on a web worker, and then applies it just like normal exponential fog. To control the density parameter of the exponential lighting, use the `<sky-atmospheric-perspective-density>` tag. Initial values are set high to provide noticeable atmospheric perspective, even in small scenes, so you might wish to reduce the value from it's default of *0.007*. Also make sure to set the current perspective type to *normal* in the `<sky-atmospheric-perspective-type>` tag.
 
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
-      <sky-ground-color>
-        <!-- while the default is 0.007 the atmospheric perspective density is very
-        tempermental to change so only small changes are needed. -->
-        <sky-atmospheric-perspective-density>0.003</sky-atmospheric-perspective-density>
-      </sky-ground-color>
+      <!-- while the default is 0.007 the atmospheric perspective density is very
+      tempermental to change so only small changes are needed. -->
+      <sky-atmospheric-perspective-type>normal</sky-atmospheric-perspective-type>
+      <sky-atmospheric-perspective-density>0.003</sky-atmospheric-perspective-density>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+For higher end systems, however, you can simulate a Preetham based atmospheric shader that gives more variety to horizon colors instead of the constant colors used in the *normal* setting. The solution provided isn't an exact match for the Elok based sky lighting used for the sky due to limitations in *Three.js*'s fog shader, but it provides a solid improvement over the original atmospheric perspective. To enable the advanced lighting model, just enter in the value *advanced* into the `<sky-atmospheric-perspective-type>` tag. Similiar to `<sky-atmospheric-perspective-density>` you can multiply distance for the *advanced* lighting model by using the `<sky-atmospheric-perspective-distance-multiplier>` which multiplies all distances in the Preetham based model by the amount you provide. Initial values are set high to provide noticeable atmospheric perspective, even in small scenes, so you might wish to reduce the value from it's default of *5.0*.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-lighting>
+      <!-- while the default is 5.0 the atmospheric distance multiplier in the
+      advanced model we can reduce this down if we want to 1.0 for a less dramatic effect. -->
+      <sky-atmospheric-perspective-type>advanced</sky-atmospheric-perspective-type>
+      <sky-atmospheric-perspective-distance-multiplier>1.0</sky-atmospheric-perspective-distance-multiplier>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+Finally, you can disable all atmospheric perspective by setting the value in the `<sky-atmospheric-perspective-type>` tag to *none*.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-lighting>
+      <!-- Turn off atmospheric perspective -->
+      <sky-atmospheric-perspective-type>none</sky-atmospheric-perspective-type>
     </sky-lighting>
   </a-starry-sky>
 </a-scene>
@@ -294,22 +324,30 @@ The final element of the sky lighting you will likely want to change is the atmo
 
 ## Enabling Aurora Borealis
 
+*WARNING: Enabling Aurora Borealis will dramatically increase the computational weight of your sky, as the aurora shader provided uses a ray marching method to produce this beautiful natural phenomena.*
+
 **Tag** | **Description**
-:--- | :---
-`<sky-aurora>` | Parent tag. Required for enabling Aurora Borealis. Contains all child tags related to the the aurora.
-`<sky-nitrogen-color>` | Triggered by excited nitrogen molecules located between 60 and 120 meters from the planetary surface, nitrogen typically provides a magenta curtain around the base of aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*.
-`<sky-nitrogen-cutoff>` | Determines how much of the nitrogen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora.
-`<sky-nitrogen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5.
-`<sky-molecular-oxygen-color>` | Triggered by excited molecular oxygen molecules located between 100 and 250 meters from the planetary surface, molecular oxygen typically provides the iconic bright green associated with the aurora borealis and is typically seen in most displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*, just in case you want a different color for your aurora.
-`<sky-molecular-oxygen-cutoff>` | Determines how much of the molecular oxygen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora.
-`<sky-molecular-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5.
-`<sky-atomic-oxygen-color>` | Triggered by excited atomic oxygen molecules located between 150 and 600 meters from the planetary surface, atomic oxygen typically causes a bright red curtain at the top of the aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*.
-`<sky-atomic-oxygen-cutoff>` | Determines how much of the atomic oxygen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora.
-`<sky-atomic-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5.
-`<sky-aurora-color-red>` | Used to describe **red** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags.
-`<sky-aurora-color-green>` | Used to describe **green** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags.
-`<sky-aurora-color-blue>` | Used to describe **blue** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags.
-`<sky-aurora-raymarch-steps>` | Number of steps that the ray-marcher takes per pixel. Defaults to 64.
+:--- | :--- | :---
+`<sky-aurora>` | Parent tag. Required for enabling Aurora Borealis. Contains all child tags related to the aurora. | N/A
+:--- | :--- | :---
+`<sky-atomic-oxygen-color>` | Triggered by excited atomic oxygen molecules located between 150 and 600 meters from the planetary surface, atomic oxygen typically causes a bright red curtain at the top of the aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*. | RGB(255, 0, 37)
+`<sky-atomic-oxygen-cutoff>` | Determines how much of the atomic oxygen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora. | 0.12
+`<sky-atomic-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5. | 0.3
+:--- | :--- | :---
+`<sky-molecular-oxygen-color>` | Triggered by excited molecular oxygen molecules located between 100 and 250 meters from the planetary surface, molecular oxygen typically provides the iconic bright green associated with the aurora borealis and is typically seen in most displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*, just in case you want a different color for your aurora. | RGB(81, 255, 143)
+`<sky-molecular-oxygen-cutoff>` | Determines how much of the molecular oxygen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora. | 0.02
+`<sky-molecular-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5. | 2.0
+:--- | :--- | :---
+`<sky-nitrogen-color>` | Triggered by excited nitrogen molecules located between 60 and 120 meters from the planetary surface, nitrogen typically provides a magenta curtain around the base of aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*. | RGB(189, 98, 255)
+`<sky-nitrogen-cutoff>` | Determines how much of the nitrogen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora. | 0.12
+`<sky-nitrogen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5. | 4.0
+:--- | :--- | :---
+`<sky-aurora-raymarch-steps>` | Number of steps that the ray-marcher takes per pixel. | 64 (steps)
+`<sky-aurora-cutoff-distance>` | The distance after which the aurora no longer renders to help improve raymarching quality at the cost of not rendering clouds that are further away as SDF are not presently calculated for our noise generators. | 1000 (kilometers - approximate)
+:--- | :--- | :---
+`<sky-aurora-color-red>` | Used to describe **red** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags. | N/A
+`<sky-aurora-color-green>` | Used to describe **green** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags. | N/A
+`<sky-aurora-color-blue>` | Used to describe **blue** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags. | N/A
 
 Aurora Borealis provide some of the most beautiful backgrounds in nature. Typically existing near the north and south poles, these sky phenomena represent the interaction of high velocity particles from the sun as they are pulled into the Earth's magnetosphere and interact with various atoms and molecules. These excited molecules then radiate light in the visible spectrum, result in beautiful mesmerizing curtains that 'dance' in the night sky.
 
@@ -324,8 +362,6 @@ Adding aurora borealis to your sky is relatively easy, but it is not enabled by 
   </a-starry-sky>
 </a-scene>
 ```
-
-*WARNING: Doing this will also dramatically increase the computational weight of your sky, as the aurora shader provided uses a ray marching method to produce this beautiful natural phenomena.*
 
 Each of the different atomic and molecular aurora are controllable by the code above allowing you to customize your aurora displays and even change the colors that are emitted (realistic or not). For instance, if you wanted a cold blue aurora, covering the entire molecular oxygen range, you could do so with the following code.
 
@@ -374,23 +410,44 @@ In addition to changing the colors of the sky, you can also change the number of
 </a-scene>
 ```
 
+## Enabling Clouds
+
+*WARNING: Enabling clouds will dramatically increase the computational weight of your sky, as the cloud shader provided uses a ray marching method to produce this beautiful natural phenomena.*
+
+**Tag** | **Description** | **Default Value**
+:--- | :--- | :---
+`<sky-clouds>` | Parent tag. Contains all child tags related to clouds. Required for enabling Clouds. Contains all child tags related to clouds in the sky. | N/A
+`<sky-cloud-coverage>` | Roughly correlates to the amount of the sky covered in clouds. | 50 (percent)
+`<sky-cloud-start-height>` | The height, in meters, at which clouds start to form. | 1000 (meters)
+`<sky-cloud-end-height>` | The height, in meters at which clouds stop forming. | 2500 (meters)
+`<sky-cloud-fade-out-start-percent>` | Cloud coverage starts to *fade out* towards zero at this *percent* of height of the cloud. | 80 (percent)
+`<sky-cloud-fade-in-end-percent>` | Cloud coverage starts to *fade in* towards 100% at this *percent* of height of the cloud. | 20 (percent)
+`<sky-cloud-velocity-x>` | The x-component of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 0 (m/s)
+`<sky-cloud-velocity-y>` | The y-component (or actually z) of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 0 (m/s)
+`<sky-cloud-start-seed>` | Random seed used to set the current cloud noise overhead, if not set, it defaults to a variation on the current date time timestamp. | *Date.now() % (86400 * 365)*.
+`<sky-cloud-raymarch-steps>` | The number of ray-march steps used to provide the cloud color. | 64 (steps)
+`<sky-cloud-cutoff-distance>` | The distance after which the clouds no longer render to help improve raymarching quality at the cost of not rendering clouds that are further away as SDF are not presently calculated for our noise generators. | 40000 (meters - approximate)
+
+
+
 ## Setting The Asset Directories
 
 **Tag** | **Description**
 :--- | :---
 `<sky-assets-dir>` | Parent tag. Contains all child tags related to asset locations. Can contain *dir*, *texture-path*, *moon-path*, *star-path* and *wasm-path* attributes to guide the system to entire groups of data at a time.
+`<sky-aurora-maps>` | Defines the location of the aurora caustic textures used to create the basic aurora borealis curtains.
 `<sky-moon-diffuse-map>` | Defines a moon diffuse map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-moon-normal-map>` | Defines a moon normal map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-moon-roughness-map>` | Defines a moon roughness map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-moon-aperture-size-map>` | Defines a moon aperture size map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-moon-aperture-orientation-map>` | Defines a moon aperture orientation map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
+`<sky-blue-noise-maps>` | Defines the location the tiling blue noise maps which are used to provide temporal dithering to eliminate banding.
+`<sky-solar-eclipse-map>` | Defines the location of the solar eclipse texture used to provide the corona on the solar eclipse during a total solar eclipse.
 `<sky-star-cubemap-maps>` | Defines the location of all sky cubemap LUT keys that are used to find the stars in the sky.
 `<sky-dim-star-maps>` | Defines the location of all dim star LUTs used to show all the dim stars in the sky.
 `<sky-med-star-maps>` | Defines the location of all medium star LUTs used to show all the dim stars in the sky.
 `<sky-bright-star-maps>` | Defines the location of all bright star LUTs used to show all the dim stars in the sky.
 `<sky-star-color-map>` | Defines the location of the star color LUT, which is used to provide the correct colors to stars based on their temperature.
-`<sky-blue-noise-maps>` | Defines the location the tiling blue noise maps which are used to provide temporal dithering to eliminate banding.
-`<sky-solar-eclipse-map>` | Defines the location of the solar eclipse texture used to provide the corona on the solar eclipse during a total solar eclipse.
 
 While it is my hope that most people will rarely require it, experience has shown me that most web applications have their own ideas when it comes to asset pipelines. A website's image assets and JavaScript assets may not cohabitate the same folder structure and may indeed be scattered across the page at different URIs. To this end, I attempted to include a fairly robust asset system to help recollect these distant assets so that A-Starry-Sky knows where to gather resources.
 

@@ -17,7 +17,7 @@
       	vSunE = sourceIntensity( dot( vSunDirection, up ), 1300.0 ); //Sun EE is constant at 1300.0
       	vSunfade = 1.0 - clamp( 1.0 - exp( ( sunPosition.y ) ), 0.0, 1.0 );
 
-      	float rayleighCoefficientSun = rayleigh - ( 1.0 * ( 1.0 - vSunfade ) );
+      	float rayleighCoefficientSun = rayleigh - ( 1.0 - vSunfade );
 
         // extinction (absorbtion + out scattering)
       	// rayleigh coefficients

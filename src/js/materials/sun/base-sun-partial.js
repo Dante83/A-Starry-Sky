@@ -26,7 +26,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
     'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
     'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
     'float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);',
-    'vec3 sunTexel = (sundisk * sunDiskIntensity + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r)* transmittanceFade;',
+    'vec3 sunTexel = (3.0 * sundisk * sunDiskIntensity + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;',
     'sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);',
     ];
 

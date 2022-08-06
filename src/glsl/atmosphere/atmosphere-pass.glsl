@@ -45,6 +45,7 @@ uniform sampler2D blueNoiseTexture;
   uniform vec3 atomicOxygenColor;
   uniform float atomicOxygenCutOff;
   uniform float atomicOxygenIntensity;
+  uniform float auroraCutoffDistance;
   uniform sampler2D auroraSampler1;
   uniform sampler2D auroraSampler2;
 #endif
@@ -379,8 +380,8 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
 
   vec3 auroraRayMarchPass(vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction){
     float uvScaling = 4.0;
-    float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_BOTTOM, 5000.0);
-    float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_TOP, 5000.0);
+    float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_BOTTOM, auroraCutoffDistance);
+    float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition, rayDirection, RADIUS_OF_AURORA_TOP, auroraCutoffDistance);
     float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfAuroraRaymarchingSteps;
     float auroraNoiseValue;
     vec3 auroraColorValue0;

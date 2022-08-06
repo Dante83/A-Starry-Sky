@@ -1,5 +1,6 @@
 //A collection of utilities for creating our custom HTML tags
 StarrySky.HTMLTagUtils = {};
+
 StarrySky.HTMLTagUtils.clampAndWarn = function(inValue, minValue, maxValue, tagName){
   const result = Math.min(Math.max(inValue, minValue), maxValue);
   if(inValue > maxValue){

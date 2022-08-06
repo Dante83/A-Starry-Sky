@@ -98,6 +98,7 @@ StarrySky.Materials.Moon.baseMoonPartial = {
       'vLocalPosition = normalize(vWorldPosition.xyz);',
       'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
       'worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
+      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
 
       'vUv = uv;',
 

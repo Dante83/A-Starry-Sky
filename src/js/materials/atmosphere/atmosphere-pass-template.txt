@@ -49,6 +49,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.atomicOxygenIntensity = {value: null};
 
       uniforms.numberOfAuroraRaymarchingSteps = {value: null};
+      uniforms.auroraCutoffDistance = {value: null};
     }
 
     //Pass our specific uniforms in here.

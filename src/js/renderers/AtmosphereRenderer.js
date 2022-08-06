@@ -66,6 +66,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
 
     //Number of raymarching steps
     this.atmosphereMaterial.uniforms.numberOfAuroraRaymarchingSteps.value = auroraParameters.raymarchSteps;
+    this.atmosphereMaterial.uniforms.auroraCutoffDistance.value = auroraParameters.cutoffDistance;
   }
 
   if(assetManager.hasLoadedImages){

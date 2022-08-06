@@ -4,6 +4,8 @@ window.customElements.define('sky-ground-color-red', class extends HTMLElement{}
 window.customElements.define('sky-ground-color-green', class extends HTMLElement{});
 window.customElements.define('sky-ground-color-blue', class extends HTMLElement{});
 window.customElements.define('sky-atmospheric-perspective-density', class extends HTMLElement{});
+window.customElements.define('sky-atmospheric-perspective-type', class extends HTMLElement{});
+window.customElements.define('sky-atmospheric-perspective-distance-multiplier', class extends HTMLElement{});
 window.customElements.define('sky-shadow-camera-size', class extends HTMLElement{});
 window.customElements.define('sky-shadow-camera-resolution', class extends HTMLElement{});
 
@@ -13,8 +15,9 @@ StarrySky.DefaultData.lighting = {
     green: 44,
     blue: 2
   },
-  atmosphericPerspectiveEnabled: true,
   atmosphericPerspectiveDensity: 0.007,
+  atmosphericPerspectiveDistanceMultiplier: 5.0,
+  atmosphericPerspectiveType: Symbol('normal'),
   shadowCameraSize: 32.0,
   shadowCameraResolution: 2048
 };
@@ -39,11 +42,15 @@ class SkyLighting extends HTMLElement {
 
       //Get child tags and acquire their values.
       const groundColorTags = self.getElementsByTagName('sky-ground-color');
+      const atmosphericPerspectiveTypeTags = self.getElementsByTagName('sky-atmospheric-perspective-type');
       const atmosphericPerspectiveDensityTags = self.getElementsByTagName('sky-atmospheric-perspective-density');
+      const atmosphericPerspectiveDistanceMultiplierTags = self.getElementsByTagName('sky-atmospheric-perspective-distance-multiplier');
       const shadowCameraSizeTags = self.getElementsByTagName('sky-shadow-camera-size');
       const shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
 
-      [groundColorTags, atmosphericPerspectiveDensityTags, shadowCameraSizeTags, shadowCameraResolutionTags].forEach(function(tags){
+      [groundColorTags, atmosphericPerspectiveTypeTags, atmosphericPerspectiveDensityTags,
+      atmosphericPerspectiveDistanceMultiplierTags, shadowCameraSizeTags,
+      shadowCameraResolutionTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-lighting-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -65,14 +72,59 @@ class SkyLighting extends HTMLElement {
       });
 
       //Parse the values in our tags
-      dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : dataRef.atmosphericPerspectiveDensity;
-      dataRef.atmosphericPerspectiveEnabled = dataRef.atmosphericPerspectiveDensity > 0.0;
+      dataRef.atmosphericPerspectiveType = Symbol('none');
+      const hasAtmosphericPerspecitiveDensityTags = atmosphericPerspectiveDensityTags.length > 0;
+      const hasAtmosphericPerspecitiveDistanceMultiplierTags = atmosphericPerspectiveDistanceMultiplierTags.length > 0;
+      const hasAtmosphericPerspectiveTypeNamed = false;
+      if(atmosphericPerspectiveDensityTags.length > 0 &&
+      atmosphericPerspectiveDistanceMultiplierTags.length > 0){
+        console.warn("Having both the <sky-atmospheric-perspective-density> and " +
+        "<sky-atmospheric-perspective-distance-multiplier> tags are unnecessary. " +
+        "Please choose one based on the atmospheric perspective model of your choice. " +
+        "<sky-atmospheric-perspective-density> for normal and <sky-atmospheric-perspective-distance-multiplier> " +
+        "for advanced, respectively.");
+      }
+      if(atmosphericPerspectiveTypeTags.length > 0){
+        const atmType = atmosphericPerspectiveDensityTags[0].innerHTML;
+        const lcAtmType = atmType.toLowerCase();veDensityTags[0].innerHTML.toLowerCase();
+        if(['none', 'normal', 'advanced'].includes(lcAtmType)){
+          hasAtmosphericPerspectiveTypeNamed = true;
+          dataRef.atmosphericPerspectiveType = Symbol(lcAtmType);
+        }
+        else{
+          console.error(`The value ${atmType} is not a valid value of the <sky-atmospheric-perspective-type> tag. Please use the values none, normal or advanced.`);
+        }
+      }
+      if(hasAtmosphericPerspectiveTypeNamed){
+        if(dataRef.atmosphericPerspectiveType == Symbol('normal')){
+          dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : dataRef.atmosphericPerspectiveDensity;
+        }
+        else if(dataRef.atmosphericPerspectiveType == Symbol('advanced')){
+          dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML) : dataRef.atmosphericPerspectiveDistanceMultiplier;
+        }
+      }
+      else{
+        if(hasAtmosphericPerspecitiveDensityTags){
+          console.warn('Atmospheric perspective type not explicitly named in a <sky-atmospheric-perspective> tag '+
+          'defaulting to normal because of the presense of an <sky-atmospheric-perspective-density> tag.');
+          dataRef.atmosphericPerspectiveType = Symbol('normal');
+          dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : dataRef.atmosphericPerspectiveDensity;
+        }
+        else if(hasAtmosphericPerspecitiveDistanceMultiplierTags){
+          dataRef.atmosphericPerspectiveType = Symbol('advanced');
+          dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML) : dataRef.atmosphericPerspectiveDistanceMultiplier;
+          console.warn('Atmospheric perspective type not explicitly named in a <sky-atmospheric-perspective> tag '+
+          'defaulting to advanced because of the presense of an <sky-atmospheric-perspective-distance-multiplier> tag.');
+        }
+      }
+
       dataRef.shadowCameraSize = shadowCameraSizeTags.length > 0 ? parseFloat(shadowCameraSizeTags[0].innerHTML) : dataRef.shadowCameraSize;
       dataRef.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML) : dataRef.shadowCameraResolution;
 
       //Clamp the values in our tags
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
       dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDensity, 0.0, Infinity, '<sky-atmospheric-perspective-density>');
+      dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDistanceMultiplier, 0.0, Infinity, '<sky-atmospheric-perspective-distance-multiplier>');
       dataRef.shadowCameraSize = clampAndWarn(dataRef.shadowCameraSize, 0.0, Infinity, '<sky-shadow-camera-size>');
       dataRef.shadowCameraResolution = clampAndWarn(dataRef.shadowCameraResolution, 32, 15360, '<sky-shadow-camera-resolution>');
 

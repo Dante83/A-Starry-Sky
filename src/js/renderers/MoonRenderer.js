@@ -85,6 +85,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
     //Number of raymarching steps
     moonMaterial.uniforms.numberOfAuroraRaymarchingSteps.value = auroraParameters.raymarchSteps;
+    moonMaterial.uniforms.auroraCutoffDistance.value = auroraParameters.cutoffDistance;
   }
 
   //Attach the material to our geometry

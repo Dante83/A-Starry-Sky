@@ -22,7 +22,7 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;',
     'const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333;',
     'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
-    '//Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
+    '//Mie Beta / 0.9, https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
     '//const float EARTH_MIE_BETA_EXTINCTION = 0.0000022222222222;',
     'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444;',
     'const float ELOK_Z_CONST = 0.97267627755;',
