@@ -35,10 +35,8 @@ StarrySky.LightingManager = function(parentComponent){
   parentComponent.scene.fog = this.fog;
   if(isNormalLighting){
     const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
-    if(lightingData.atmosphericPerspectiveEnabled){
-      this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
-      parentComponent.scene.fog = this.fog;
-    }
+    this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
+    parentComponent.scene.fog = this.fog;
   }
 
   const scene = parentComponent.scene;

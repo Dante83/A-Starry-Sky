@@ -685,57 +685,60 @@ void main(){
 
   //This stuff never shows up near our sun, so we can exclude it
   #if(!$isSunPass && !$isMeteringPass)
-    //Get the stellar starting id data from the galactic cube map
-    vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);
-    vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);
+    vec3 galacticLighting = vec3(0.0);
+    if(vLocalPosition.y >= 0.0){
+      //Get the stellar starting id data from the galactic cube map
+      vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);
+      vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);
 
-    //Red
-    float scaledBits = starHashData.r * 255.0;
-    float leftBits = floor(scaledBits / 2.0);
-    float starXCoordinate = leftBits / 127.0; //Dim Star
-    float rightBits = scaledBits - leftBits * 2.0;
+      //Red
+      float scaledBits = starHashData.r * 255.0;
+      float leftBits = floor(scaledBits / 2.0);
+      float starXCoordinate = leftBits / 127.0; //Dim Star
+      float rightBits = scaledBits - leftBits * 2.0;
 
-    //Green
-    scaledBits = starHashData.g * 255.0;
-    leftBits = floor(scaledBits / 8.0);
-    float starYCoordinate = (rightBits + leftBits * 2.0) / 63.0; //Dim Star
-    rightBits = scaledBits - leftBits * 8.0;
+      //Green
+      scaledBits = starHashData.g * 255.0;
+      leftBits = floor(scaledBits / 8.0);
+      float starYCoordinate = (rightBits + leftBits * 2.0) / 63.0; //Dim Star
+      rightBits = scaledBits - leftBits * 8.0;
 
-    //Add the dim stars lighting
-    vec4 starData = texture(dimStarData, vec2(starXCoordinate, starYCoordinate));
-    vec3 galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      //Add the dim stars lighting
+      vec4 starData = texture(dimStarData, vec2(starXCoordinate, starYCoordinate));
+      galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
-    //Blue
-    scaledBits = starHashData.b * 255.0;
-    leftBits = floor(scaledBits / 64.0);
-    starXCoordinate = (rightBits + leftBits * 8.0) / 31.0; //Medium Star
-    rightBits = scaledBits - leftBits * 64.0;
-    leftBits = floor(rightBits / 2.0);
-    starYCoordinate = (leftBits  / 31.0); //Medium Star
+      //Blue
+      scaledBits = starHashData.b * 255.0;
+      leftBits = floor(scaledBits / 64.0);
+      starXCoordinate = (rightBits + leftBits * 8.0) / 31.0; //Medium Star
+      rightBits = scaledBits - leftBits * 64.0;
+      leftBits = floor(rightBits / 2.0);
+      starYCoordinate = (leftBits  / 31.0); //Medium Star
 
-    //Add the medium stars lighting
-    starData = texture(medStarData, vec2(starXCoordinate, starYCoordinate));
-    galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      //Add the medium stars lighting
+      starData = texture(medStarData, vec2(starXCoordinate, starYCoordinate));
+      galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
-    //Alpha
-    scaledBits = starHashData.a * 255.0;
-    leftBits = floor(scaledBits / 32.0);
-    starXCoordinate = leftBits / 7.0;
-    rightBits = scaledBits - leftBits * 32.0;
-    leftBits = floor(rightBits / 4.0);
-    starYCoordinate = leftBits  / 7.0;
+      //Alpha
+      scaledBits = starHashData.a * 255.0;
+      leftBits = floor(scaledBits / 32.0);
+      starXCoordinate = leftBits / 7.0;
+      rightBits = scaledBits - leftBits * 32.0;
+      leftBits = floor(rightBits / 4.0);
+      starYCoordinate = leftBits  / 7.0;
 
-    //Add the bright stars lighting
-    starData = texture(brightStarData, vec2(starXCoordinate, starYCoordinate));
-    galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      //Add the bright stars lighting
+      starData = texture(brightStarData, vec2(starXCoordinate, starYCoordinate));
+      galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
-    //Check our distance from each of the four primary planets
-    galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
-    galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
-    galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
-    galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
-    galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
-    galacticLighting = sRGBToLinear(vec4(galacticLighting, 1.0)).rgb;
+      //Check our distance from each of the four primary planets
+      galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      galacticLighting = sRGBToLinear(vec4(galacticLighting, 1.0)).rgb;
+    }
   #elif($isMeteringPass)
     vec3 galacticLighting = vec3(0.0);
   #endif

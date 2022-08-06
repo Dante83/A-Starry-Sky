@@ -5,20 +5,23 @@
 //solar bloom enough room to expand into without clipping the edge.
 //We also fade out our quad towards the edge to reduce the visibility of sharp
 //edges.
-float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));
+vec3 sunTexel = vec3(0.0);
+if(vLocalPosition.y >= 0.0){
+  float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));
 
-//From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl
-float sundisk = smoothstep(0.0, 0.1, (0.5 - (pixelDistanceFromSun)));
+  //From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl
+  float sundisk = smoothstep(0.0, 0.1, (0.5 - (pixelDistanceFromSun)));
 
-//We can use this for our solar limb darkening
-//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf
-float rOverR = pixelDistanceFromSun / 0.5;
-float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));
-float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);
+  //We can use this for our solar limb darkening
+  //From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf
+  float rOverR = pixelDistanceFromSun / 0.5;
+  float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));
+  float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);
 
-//Apply transmittance to our sun disk direct lighting
-vec3 normalizedWorldPosition = normalize(vWorldPosition);
-vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;
-float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);
-vec3 sunTexel = (3.0 * sundisk * sunDiskIntensity + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;
-sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);
+  //Apply transmittance to our sun disk direct lighting
+  vec3 normalizedWorldPosition = normalize(vWorldPosition);
+  vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;
+  float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);
+  sunTexel = (3.0 * sundisk * sunDiskIntensity + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;
+  sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);
+}
