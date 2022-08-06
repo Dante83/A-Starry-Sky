@@ -1,5 +1,5 @@
 StarrySky.Materials.Fog.fogParsMaterial = {
-  fragmentShader: function(mieDirectionalG, rayleigh, exposure, groundFexDistanceMultiplier){
+  fragmentShader: function(mieDirectionalG, rayleigh, exposure, groundFexDistanceMultiplier, useAdvancedAtmospehericPerspective){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -11,12 +11,19 @@ StarrySky.Materials.Fog.fogParsMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$exposure/g, exposure.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundFexDistanceMultiplier.toFixed(5));
 
+      if(useAdvancedAtmospehericPerspective){
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '0');
+      }
+
       updatedLines.push(updatedGLSL);
     }
 
     return updatedLines.join('\n');
   },
-  vertexShader: function(rayleigh, turbidty, mieCoefficient, groundDistanceMultp, solarRadius, lunarRadius, distanceForSolarEclipse){
+  vertexShader: function(rayleigh, turbidty, mieCoefficient, groundDistanceMultp, solarRadius, lunarRadius, distanceForSolarEclipse, useAdvancedAtmospehericPerspective){
     let originalGLSL = [
       {vertex_glsl}
     ];
@@ -30,6 +37,13 @@ StarrySky.Materials.Fog.fogParsMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$solarRadius/g, solarRadius.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$lunarRadius/g, lunarRadius.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$distanceForSolarEclipse/g, distanceForSolarEclipse.toFixed(5));
+
+      if(useAdvancedAtmospehericPerspective){
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '0');
+      }
 
       updatedLines.push(updatedGLSL);
     }

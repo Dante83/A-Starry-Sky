@@ -72,6 +72,7 @@ StarrySky.Materials.Moon.baseMoonPartial = {
     'uniform vec3 sunLightDirection;',
 
     'varying vec3 vWorldPosition;',
+    'varying vec3 vLocalPosition;',
     'varying vec2 vUv;',
     'varying vec3 tangentSpaceSunLightDirection;',
     'varying vec3 tangentSpaceViewDirection;',
@@ -91,7 +92,9 @@ StarrySky.Materials.Moon.baseMoonPartial = {
     'void main() {',
       'vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
       'vec3 normalizedWorldPosition = normalize(worldPosition.xyz);',
-      'vWorldPosition = vec3(-normalizedWorldPosition.z, normalizedWorldPosition.y, -normalizedWorldPosition.x);',
+      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
+      'vLocalPosition = normalize(vWorldPosition - cameraPosition);',
+      'vWorldPosition = normalize(vWorldPosition);',
 
       'vUv = uv;',
 
@@ -107,8 +110,8 @@ StarrySky.Materials.Moon.baseMoonPartial = {
       'tangentSpaceViewDirection = normalize(TBNMatrix * -normalizedWorldPosition);',
 
       '//Convert coordinate position to RA and DEC',
-      'float altitude = piOver2 - acos(vWorldPosition.y);',
-      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
+      'float altitude = piOver2 - acos(vLocalPosition.y);',
+      'float azimuth = pi - atan(vLocalPosition.z, vLocalPosition.x);',
       'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
       'float hourAngle = atan(sin(azimuth), (cos(azimuth) * sin(latitude) + tan(altitude) * cos(latitude)));',
 

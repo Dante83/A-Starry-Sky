@@ -59,6 +59,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.worldMatrix = {value: new THREE.Matrix4()};
       uniforms.solarEclipseMap = {value: null};
       uniforms.moonDiffuseMap = {value: null};
+      uniforms.cameraPosition = {value: new THREE.Vector3()};
     }
     else if(isMoonShader){
       uniforms.moonExposure = {value: 1.0};
@@ -75,6 +76,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonRoughnessMap = {value: null};
       uniforms.moonApertureSizeMap = {value: null};
       uniforms.moonApertureOrientationMap = {value: null};
+      uniforms.cameraPosition = {value: new THREE.Vector3()};
     }
 
     if(!isSunShader){
@@ -110,6 +112,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   },
   vertexShader: [
     'varying vec3 vWorldPosition;',
+    'varying vec3 vLocalPosition;',
     'varying vec3 galacticCoordinates;',
     'varying vec2 screenPosition;',
     'uniform float latitude;',
@@ -126,10 +129,11 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
       'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
+      'vLocalPosition = normalize(vec3(-position.z, position.y, -position.x));',
 
       '//Convert coordinate position to RA and DEC',
-      'float altitude = piOver2 - acos(vWorldPosition.y);',
-      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
+      'float altitude = piOver2 - acos(vLocalPosition.y);',
+      'float azimuth = pi - atan(vLocalPosition.z, vLocalPosition.x);',
       'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
       'float hourAngle = atan(sin(azimuth), (cos(azimuth) * sin(latitude) + tan(altitude) * cos(latitude)));',
 
@@ -161,6 +165,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'precision highp sampler3D;',
 
     'varying vec3 vWorldPosition;',
+    'varying vec3 vLocalPosition;',
     'varying vec3 galacticCoordinates;',
     'varying vec2 screenPosition;',
 
@@ -810,7 +815,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'sphericalPosition.y = cos(phi);',
         'sphericalPosition = normalize(sphericalPosition);',
       '#else',
-        'vec3 sphericalPosition = normalize(vWorldPosition);',
+        'vec3 sphericalPosition = normalize(vLocalPosition);',
       '#endif',
 
       '//Get our transmittance for this texel',

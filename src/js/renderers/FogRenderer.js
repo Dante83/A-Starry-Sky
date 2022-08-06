@@ -13,11 +13,11 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
   const DEG_2_RAD = 0.017453292519943295769236907684886;
   const sunRadius = Math.sin(atmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
   const moonRadius = Math.sin(atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
-  const distanceForSolarEclipse = 2.0 * Math.SQRT2 * Math.max(self.sunRadius, self.moonRadius);
-  THREE.ShaderChunk.fog_pars_fragment = StarrySky.Materials.Fog.fogParsMaterial.fragmentShader(mieDirectionalG, rayleigh, exposure, groundDistanceMultp);
-  THREE.ShaderChunk.fog_pars_vertex = StarrySky.Materials.Fog.fogParsMaterial.vertexShader(rayleigh, turbidity, mieCoefficient, groundDistanceMultp, sunRadius, moonRadius, distanceForSolarEclipse);
-  THREE.ShaderChunk.fog_fragment = StarrySky.Materials.Fog.fogMaterial.fragmentShader;
-  THREE.ShaderChunk.fog_vertex = StarrySky.Materials.Fog.fogMaterial.vertexShader;
+  const distanceForSolarEclipse = 2.0 * Math.SQRT2 * Math.max(skyDirector.sunRadius, skyDirector.moonRadius);
+  THREE.ShaderChunk.fog_pars_fragment = StarrySky.Materials.Fog.fogParsMaterial.fragmentShader(mieDirectionalG, rayleigh, exposure, groundDistanceMultp, true);
+  THREE.ShaderChunk.fog_pars_vertex = StarrySky.Materials.Fog.fogParsMaterial.vertexShader(rayleigh, turbidity, mieCoefficient, groundDistanceMultp, sunRadius, moonRadius, distanceForSolarEclipse, true);
+  THREE.ShaderChunk.fog_fragment = StarrySky.Materials.Fog.fogMaterial.fragmentShader(true);
+  THREE.ShaderChunk.fog_vertex = StarrySky.Materials.Fog.fogMaterial.vertexShader(true);
 
   this.fog = new THREE.Fog(new THREE.Vector3(), 0.0, 1.0);
   skyDirector.scene.fog = this.fog;
@@ -34,6 +34,6 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
     //Inject the intensity for the moon
     this.fog.color.fromArray([sunAltitude, sunAzimuth, moonAltitude]);
     this.fog.near = moonAzimuth;
-    this.fog.far = (1300.0 * moonIntensity) / 20.0;
+    this.fog.far = -(1300.0 * moonIntensity) / 20.0;
   }
 }

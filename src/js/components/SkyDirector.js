@@ -211,6 +211,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
   this.i = 0;
 
+  this.globalCameraPosition = new THREE.Vector3();
   this.tick = function(time, timeDelta){
     if(parentComponent.initialized){
       const timeDeltaInSeconds = timeDelta * 0.001;
@@ -220,6 +221,14 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
       //Update our sky state
       self.skyState.LSRT = Module._tick_astronomicalInterpolations(self.interpolationT);
+
+      //Get our camera position
+      if(!self.camera){
+        //Attach the scene camera if it does not exist yet
+        self.camera = self.parentComponent.el.sceneEl.camera;
+      }
+      const sceneCamera = self.camera;
+      sceneCamera.getWorldPosition(self.globalCameraPosition);
 
       //Update our astronomical positions
       self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));

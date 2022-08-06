@@ -1,4 +1,5 @@
 varying vec3 vWorldPosition;
+varying vec3 vLocalPosition;
 varying vec3 galacticCoordinates;
 varying vec2 screenPosition;
 uniform float latitude;
@@ -15,10 +16,11 @@ const float pi = 3.141592653589793238462;
 void main() {
   vec4 worldPosition = modelMatrix * vec4(position, 1.0);
   vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));
+  vLocalPosition = normalize(vec3(-position.z, position.y, -position.x));
 
   //Convert coordinate position to RA and DEC
-  float altitude = piOver2 - acos(vWorldPosition.y);
-  float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);
+  float altitude = piOver2 - acos(vLocalPosition.y);
+  float azimuth = pi - atan(vLocalPosition.z, vLocalPosition.x);
   float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));
   float hourAngle = atan(sin(azimuth), (cos(azimuth) * sin(latitude) + tan(altitude) * cos(latitude)));
 

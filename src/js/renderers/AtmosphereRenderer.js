@@ -90,9 +90,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     const uniforms = self.atmosphereMaterial.uniforms;
     const skyState = skyDirector.skyState;
     const skyMesh = self.skyMesh;
-    skyMesh.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-    skyMesh.updateMatrix();
-    skyMesh.updateMatrixWorld();
+    skyMesh.position.copy(skyDirector.globalCameraPosition);
 
     //Update the uniforms so that we can see where we are on this sky.
     uniforms.sunHorizonFade.value = skyState.sun.horizonFade;

@@ -93,6 +93,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   moonMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   moonMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
   moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
+  moonMaterial.uniforms.cameraPosition.value = new THREE.Vector3();
   moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
   const renderTargetGeometry = new THREE.PlaneBufferGeometry(2, 2);
   THREE.BufferGeometryUtils.computeTangents(renderTargetGeometry);
@@ -161,14 +162,15 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     }
 
     //Update the position of our mesh
-    const cameraPosition = skyDirector.camera.position;
+    const cameraPosition = skyDirector.globalCameraPosition;
     const quadOffset = skyState.moon.quadOffset;
+    moonMaterial.uniforms.cameraPosition.value.copy(cameraPosition);
     self.moonMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.parallacticAxis.copy(quadOffset).normalize();
     self.moonMesh.lookAt(cameraPosition); //Use the basic look-at function to always have this plane face the camera.
     self.moonMesh.rotateOnWorldAxis(self.parallacticAxis, -skyState.moon.parallacticAngle); //And rotate the mesh by the parallactic angle.
     self.moonMesh.updateMatrix();
-    self.moonMesh.updateMatrixWorld();
+    self.moonMesh.updateMatrixWorld(1);
 
     //Update our shader material
     moonMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;

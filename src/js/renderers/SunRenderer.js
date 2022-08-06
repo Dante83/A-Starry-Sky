@@ -56,6 +56,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   baseSunMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   baseSunMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   baseSunMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
+	baseSunMaterial.uniforms.cameraPosition.value = new THREE.Vector3(0.0);
 	if(assetManager.data.skyCloud.cloudsEnabled){
     baseSunMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
   }
@@ -106,8 +107,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 		renderer.shadowMap.autoUpdate = false;
 
     //Update the position of our mesh
-    const cameraPosition = skyDirector.camera.position;
+    const cameraPosition = skyDirector.globalCameraPosition;
     const quadOffset = skyDirector.skyState.sun.quadOffset;
+		baseSunMaterial.uniforms.cameraPosition.value.copy(cameraPosition);
     self.sunMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.sunMesh.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
     self.sunMesh.updateMatrix();

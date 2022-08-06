@@ -1,6 +1,7 @@
 precision highp sampler3D;
 
 varying vec3 vWorldPosition;
+varying vec3 vLocalPosition;
 varying vec3 galacticCoordinates;
 varying vec2 screenPosition;
 
@@ -650,7 +651,7 @@ void main(){
     sphericalPosition.y = cos(phi);
     sphericalPosition = normalize(sphericalPosition);
   #else
-    vec3 sphericalPosition = normalize(vWorldPosition);
+    vec3 sphericalPosition = normalize(vLocalPosition);
   #endif
 
   //Get our transmittance for this texel

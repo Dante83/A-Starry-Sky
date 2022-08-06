@@ -59,6 +59,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.worldMatrix = {value: new THREE.Matrix4()};
       uniforms.solarEclipseMap = {value: null};
       uniforms.moonDiffuseMap = {value: null};
+      uniforms.cameraPosition = {value: new THREE.Vector3()};
     }
     else if(isMoonShader){
       uniforms.moonExposure = {value: 1.0};
@@ -75,6 +76,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonRoughnessMap = {value: null};
       uniforms.moonApertureSizeMap = {value: null};
       uniforms.moonApertureOrientationMap = {value: null};
+      uniforms.cameraPosition = {value: new THREE.Vector3()};
     }
 
     if(!isSunShader){
