@@ -128,7 +128,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-      'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
+      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
       'vLocalPosition = normalize(vec3(-position.z, position.y, -position.x));',
 
       '//Convert coordinate position to RA and DEC',
@@ -925,7 +925,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
           'dominantLightSourceColor = sunDominantLightSourceColor;',
           'dominantLightSourcePosition = sunPosition;',
         '}',
-        'vec4 cloudLighting = cloudRayMarcher(vec3(0.0, RADIUS_OF_EARTH * 1000.0, 0.0), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass);',
+        'vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + vWorldPosition.y, vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass);',
       '#endif',
 
       '//Sun and Moon layers',

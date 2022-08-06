@@ -1,5 +1,6 @@
 **Version 1.1.0**
-* Provide advanced atmospheric perspective using Preetham model described via the code in [Three.js]().
+* Fixed bug where sky, moon and sun would not track the camera position as it moved.
+* Provide advanced atmospheric perspective using a modified Preetham model described via the code in [Three.js](https://github.com/mrdoob/three.js/blob/master/examples/jsm/objects/Sky.js) as the basic source.
 * Switch from gamma based correct to Linear-sRGB correction for lighting colors in shaders.
 * Added ray-marched clouds using 3D Simplex Noise combined with FBM worley noise, first contact transmittance/ambient lighting and Beer's Law/Henyay-Greenstein lighting. Based roughly around the ideas described in [Rendering volumetric clouds using signed distance fields](https://blog.uhawkvr.com/rendering/rendering-volumetric-clouds-using-signed-distance-fields/).
 * Approximated the Earth's shadow and fixed some bugs in our sphere ray tracing methods.

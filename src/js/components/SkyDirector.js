@@ -223,7 +223,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.skyState.LSRT = Module._tick_astronomicalInterpolations(self.interpolationT);
 
       //Get our camera position
-      if(!self.camera){
+      if(self.camera !== self.parentComponent.el.sceneEl.camera){
         //Attach the scene camera if it does not exist yet
         self.camera = self.parentComponent.el.sceneEl.camera;
       }

@@ -761,7 +761,7 @@ void main(){
       dominantLightSourceColor = sunDominantLightSourceColor;
       dominantLightSourcePosition = sunPosition;
     }
-    vec4 cloudLighting = cloudRayMarcher(vec3(0.0, RADIUS_OF_EARTH * 1000.0, 0.0), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass);
+    vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + vWorldPosition.y, vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass);
   #endif
 
   //Sun and Moon layers

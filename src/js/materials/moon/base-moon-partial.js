@@ -90,11 +90,14 @@ StarrySky.Materials.Moon.baseMoonPartial = {
     'const float pi = 3.141592653589793238462;',
 
     'void main() {',
-      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
-      'vec3 normalizedWorldPosition = normalize(worldPosition.xyz);',
+      'mat4 worldMatrixIn = worldMatrix;',
+      'vec4 worldMatrixTranslation = worldMatrixIn[3];',
+      'worldMatrixIn[3] = worldMatrixTranslation - vec4(cameraPosition, 0.0);',
+      'vec4 worldPosition = worldMatrixIn * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
       'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
-      'vLocalPosition = normalize(vWorldPosition - cameraPosition);',
-      'vWorldPosition = normalize(vWorldPosition);',
+      'vLocalPosition = normalize(vWorldPosition.xyz);',
+      'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
+      'worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
 
       'vUv = uv;',
 

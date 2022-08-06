@@ -15,7 +15,7 @@ const float pi = 3.141592653589793238462;
 
 void main() {
   vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-  vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));
+  vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);
   vLocalPosition = normalize(vec3(-position.z, position.y, -position.x));
 
   //Convert coordinate position to RA and DEC
