@@ -1,11 +1,12 @@
 //The lighting for our scene contains 3 hemispherical lights and 1 directional light
 //with shadows enabled. The shadow enabled directional light is shared between the sun
 //and the moon in order to reduce the rendering load.
-StarrySky.LightingManager = function(parentComponent){
+StarrySky.LightingManager = function(skyDirector){
   const RADIUS_OF_SKY = 5000.0;
-  this.skyDirector = parentComponent;
-  const lightingData = this.skyDirector.assetManager.data.skyLighting;
-  const lunarEclipseLightingModifier = this.skyDirector.skyState.moon.lightingModifier;
+  const lightingData = skyDirector.assetManager.data.skyLighting;
+  const skyState = skyDirector.skyState;
+  const sunRenderer = skyDirector.renderers.sunRenderer;
+  const lunarEclipseLightingModifier = skyState.moon.lightingModifier;
   this.sourceLight = new THREE.DirectionalLight(0xffffff, 4.0);
   const shadow = this.sourceLight.shadow;
   this.sourceLight.castShadow = true;
@@ -18,15 +19,15 @@ StarrySky.LightingManager = function(parentComponent){
   shadow.camera.right = directLightingCameraSize;
   shadow.camera.bottom = -directLightingCameraSize;
   shadow.camera.top = directLightingCameraSize;
-  this.sourceLight.target = this.skyDirector.camera;
+  this.sourceLight.target = skyDirector.camera;
   const  totalDistance = lightingData.shadowDrawDistance + lightingData.shadowDrawBehindDistance;
   this.targetScalar = 0.5 * totalDistance - lightingData.shadowDrawBehindDistance;
   this.shadowTarget = new THREE.Vector3();
   this.shadowTargetOffset = new THREE.Vector3();
   this.fogColorVector = new THREE.Color();
-  this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
+  this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
   this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
-  this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
+  this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
   this.xAxisHemisphericalLight.position.set(1,0,0);
   this.yAxisHemisphericalLight.position.set(0,1,0);
   this.zAxisHemisphericalLight.position.set(0,0,1);
@@ -35,15 +36,15 @@ StarrySky.LightingManager = function(parentComponent){
   if(isNormalLighting){
     const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
     this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
-    parentComponent.scene.fog = this.fog;
+    skyDirector.scene.fog = this.fog;
   }
 
-  const scene = parentComponent.scene;
+  const scene = skyDirector.scene;
   scene.add(this.sourceLight);
   scene.add(this.xAxisHemisphericalLight);
   scene.add(this.yAxisHemisphericalLight);
   scene.add(this.zAxisHemisphericalLight);
-  this.cameraRef = parentComponent.camera;
+  this.cameraRef = skyDirector.camera;
   const self = this;
   this.tick = function(lightingState){
     //I also need to hook in the code from our tags for fog density under
@@ -60,6 +61,9 @@ StarrySky.LightingManager = function(parentComponent){
       self.fog.color.copy(self.fogColorVector);
     }
 
+    const sunRadius = Math.sin(sunRenderer.sunAngularRadiusInRadians * skyState.sun.scale);
+    const dominantLightIsSun = skyState.sun.position.y >= -sunRadius;
+
     //We update our directional light so that it's always targetting the camera.
     //We originally were going to target a point in front of the camera
     //but this resulted in terrible artifacts that caused the shadow to shimer
@@ -74,8 +78,7 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
     self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
     self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
-    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) * 10.0;
-    self.sourceLight.intensity = lightingState[24] * 0.5;
+    self.sourceLight.intensity = lightingState[24] * 0.5 * (dominantLightIsSun ? lightingData.sunIntensity : lightingData.moonIntensity);
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
@@ -86,7 +89,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
     self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
     self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    const indirectLightIntensity = 0.01 + intensityModifier * 0.15;
+    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) * 10.0;
+    const indirectLightIntensity = Math.min(Math.max(lightingData.ambientIntensity * intensityModifier * 0.15, lightingData.minimumAmbientLighting), lightingData.maximumAmbientLighting);
     self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.zAxisHemisphericalLight.intensity = indirectLightIntensity;

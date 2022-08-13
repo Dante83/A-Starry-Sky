@@ -63,7 +63,6 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
         'float r_p;',
         'float sunAngle;',
         'vec3 inscattering;',
-        '#pragma unroll',
         'for(int i = 1; i < $numberOfChunksInt; i++){',
           'p += deltaP;',
           'r_p = length(p);',

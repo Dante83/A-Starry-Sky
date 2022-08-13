@@ -95,10 +95,14 @@
       <!-- Sky Setup -->
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
           <sky-time>
-             <sky-speed>400</sky-speed>
+             <sky-speed>800</sky-speed>
           </sky-time>
           <sky-lighting>
-            <sky-atmospheric-perspective-type>advanced</sky-atmospheric-perspective-type>
+            <!-- Let's brighten things up -->
+            <sky-minimum-ambient-lighting>0.5</sky-minimum-ambient-lighting>
+
+            <!-- But don't make it too much. -->
+            <sky-maximum-ambient-lighting>1.0</sky-maximum-ambient-lighting>
           </sky-lighting>
       </a-starry-sky>
 

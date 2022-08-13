@@ -1,13 +1,14 @@
 **Version 1.1.0**
-* Fixed bug where sky, moon and sun would not track the camera position as it moved.
-* Provide advanced atmospheric perspective using a modified Preetham model described via the code in [Three.js](https://github.com/mrdoob/three.js/blob/master/examples/jsm/objects/Sky.js) as the basic source.
-* Switch from gamma based correct to Linear-sRGB correction for lighting colors in shaders.
 * Added ray-marched clouds using 3D Simplex Noise combined with FBM worley noise, first contact transmittance/ambient lighting and Beer's Law/Henyay-Greenstein lighting. Based roughly around the ideas described in [Rendering volumetric clouds using signed distance fields](https://blog.uhawkvr.com/rendering/rendering-volumetric-clouds-using-signed-distance-fields/).
-* Approximated the Earth's shadow and fixed some bugs in our sphere ray tracing methods.
 * Added support for ray-marched aurora borealis using blue noise ray-jittering to reduce banding effects as described in [Ray Marching Fog With Blue Noise](https://blog.demofox.org/2020/05/10/ray-marching-fog-with-blue-noise/) and using the caustic shader effect from [Believable Caustics Reflectionsv](https://www.alanzucconi.com/2019/09/13/believable-caustics-reflections/).
+* Provide advanced atmospheric perspective using a modified Preetham model described via the code in [Three.js](https://github.com/mrdoob/three.js/blob/master/examples/jsm/objects/Sky.js) as the basic source.
+* Approximated the Earth's shadow and fixed some bugs in our sphere ray tracing methods.
 * Swapped out emulated 3D textures for Web GL 2 3D textures.
 * Fixed bug with lunar intensity and eliminated crusty moon edges by adding in mipmapping and increased anisotropic sampling.
 * Swapped out the native bloom effect for Three.js's bloom postprocessing pipeline.
+* Switch from gamma based correct to Linear-sRGB correction for lighting colors in shaders.
+* Added support for changing the intensity of the sun, moon and ambient lighting intensities.
+* Fixed bug where sky, moon and sun would not track the camera position as it moved.
 
 **Version 1.0.1**
 * Fixed issues associated with build 137 of THREE which is found in A-Frame Version 1.3.0.

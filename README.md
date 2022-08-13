@@ -173,18 +173,23 @@ One of the most likely elements you might want to change is the size of the sun 
 
 ## Modifying Lighting Defaults
 
-**Tag** | **Description**
-:--- | :---
-`<sky-lighting>` | Parent tag. Contains all child tags related to the lighting of the scene.
-`<sky-atmospheric-perspective-type>` | Can be set set to possible values of *normal* or *advanced* or *none*. Required for scene fog. *normal* uses the orginal exponential fog model while *advanced* uses a Preetham based lighting model for improved color variation at the expense of greater hardware pressure.
-`<sky-atmospheric-perspective-density>` | For *normal* fog only. Controls the density parameter for exponential scene fog. The color is set automatically from the scene lighting. Ignored if the scene fog type is *advanced*
-`<sky-atmospheric-perspective-distance-multiplier>` | For *advanced* fog only. Multiplies the distance to the fog for the advanced fog model.
-`<sky-ground-color>` | Parent tag. Contains `<sky-ground-color-{color-channel}>` tags to describe the base color of the ground for reflective lighting from the surface.
-`<sky-ground-color-red>` | Used to describe **red** color channel changes to `<sky-ground-color>` tags.
-`<sky-ground-color-green>` | Used to describe **green** color channel changes to `<sky-ground-color>` tags.
-`<sky-ground-color-blue>` | Used to describe **blue** color channel changes to `<sky-ground-color>` tags.
-`<sky-shadow-camera-resolution>` | The resolution, in pixels, of the direct lighting camera used to produce shadows. Higher values produce higher quality shadows at an increased cost in code.
-`<sky-shadow-camera-size>` | The size of the camera area used to cast shadows. Larger sizes result in more area covered by shadows, but also causes aliasing issues by spreading each pixel of the camera over a wider area.
+**Tag** | **Description** | **Default Value**
+:--- | :--- | :---
+`<sky-lighting>` | Parent tag. Contains all child tags related to the lighting of the scene. | N/A
+`<sky-sun-intensity>` | Intensity multiplier for sunlight, can be used to brighten or dim the intensity of solar directional lighting. | 1.0
+`<sky-moon-intensity>` | Intensity multiplier for moonlight, can be used to brighten or dim the intensity of lunar directional lighting. | 1.0
+`<sky-ambient-intensity>` | Intensity multiplier for ambient lighting, can be used to brighten or dim the intensity of the ambient lighting system. | 1.0
+`<sky-minimum-ambient-lighting>` | The minimum amount of ambient light in the system. | 0.01
+`<sky-maximum-ambient-lighting>` | The minimum amount of ambient light in the system. | INF
+`<sky-atmospheric-perspective-type>` | Can be set set to possible values of *normal* or  *advanced* or *none*. Required for scene fog. *normal* uses the orginal exponential fog model while *advanced* uses a Preetham based lighting model for improved color variation at the expense of greater hardware pressure. | normal
+`<sky-atmospheric-perspective-density>` | For *normal* fog only. Controls the density parameter for exponential scene fog. The color is set automatically from the scene lighting. Ignored if the scene fog type is *advanced* | 0.007
+`<sky-atmospheric-perspective-distance-multiplier>` | For *advanced* fog only. Multiplies the distance to the fog for the advanced fog model. | 5.0
+`<sky-ground-color>` | Parent tag. Contains `<sky-ground-color-{color-channel}>` tags to describe the base color of the ground for reflective lighting from the surface. | N/A
+`<sky-ground-color-red>` | Used to describe **red** color channel changes to `<sky-ground-color>` tags. | 66
+`<sky-ground-color-green>` | Used to describe **green** color channel changes to `<sky-ground-color>` tags. | 44
+`<sky-ground-color-blue>` | Used to describe **blue** color channel changes to `<sky-ground-color>` tags. | 2
+`<sky-shadow-camera-resolution>` | The resolution, in pixels, of the direct lighting camera used to produce shadows. Higher values produce higher quality shadows at an increased cost in code. | 2048
+`<sky-shadow-camera-size>` | The size of the camera area used to cast shadows. Larger sizes result in more area covered by shadows, but also causes aliasing issues by spreading each pixel of the camera over a wider area. | 32.0
 
 The sky lighting tags are useful for controlling attributes of the direct and indirect lighting in the scene. In version 1.0.0, the sky has reduced the number of direction lights from 2 (sun and moon) to 1 (just one for the most dominant light source). The directional light is always focused on the users camera and creates shadows around this camera. While the directional light can support various shadow types, this library actually isn't the place to control this. Instead, the shadow type is set in the `<a-scene>` tag, as described [here](https://aframe.io/docs/1.2.0/components/light.html#adding-real-time-shadows). That is, you can set the values to any of the following.
 
@@ -277,6 +282,41 @@ Notice that the values above are normalized between values of 0 and 255. So, the
 ```
 
 That said, if any of your color channels go over 255, there is no way to 'strengthen the color' or to make the ground appear to 'glow in the dark' at this time, unfortunately. Furthermore, the ground color is a constant at all points, so if you have multiple colors in your scene it's probably best to choose one that exists in the middle of all the other colors.
+
+In addition to support for ground lighting, you can now directly control the intensities of the direct lighting and ambient lighting intensities. Changing the intensity of the sun or moon is easy, as you just use a multiple of the default value to set how much brighter or dimmer you want that astronomical body to be. You can also use the same method to amplify or dim ambient intensity to increase or decrease the amount of ambient lighting in the scene.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-lighting>
+      <!-- Let's make the sun twice as bright -->
+      <sky-sun-intensity>2.0</sky-sun-intensity>
+
+      <!-- But let's make the moon half as bright -->
+      <sky-moon-intensity>0.5</sky-moon-intensity>
+
+      <!-- But let's have ten times the amount of ambient lighting -->
+      <sky-moon-intensity>10.0</sky-moon-intensity>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+You may also wish to control the floor or ceiling for the ambient lighting, to ensure that you always have a certain amount of light, or a maximum amount of light.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-lighting>
+      <!-- Let's brighten things up -->
+      <sky-minimum-ambient-lighting>0.5</sky-minimum-ambient-lighting>
+
+      <!-- But don't make it too much. -->
+      <sky-maximum-ambient-lighting>1.0</sky-maximum-ambient-lighting>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
 
 The final element of the sky lighting you will likely want to change is the atmospheric perspective density. *a-starry-sky* comes with two different fog models according to your needs.
 For lower-end systems, it supports the basic exponential atmospheric perspective, which gathers light over the entire sky on a web worker, and then applies it just like normal exponential fog. To control the density parameter of the exponential lighting, use the `<sky-atmospheric-perspective-density>` tag. Initial values are set high to provide noticeable atmospheric perspective, even in small scenes, so you might wish to reduce the value from it's default of *0.007*. Also make sure to set the current perspective type to *normal* in the `<sky-atmospheric-perspective-type>` tag.

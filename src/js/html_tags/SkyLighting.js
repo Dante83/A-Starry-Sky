@@ -3,6 +3,11 @@ window.customElements.define('sky-ground-color', class extends HTMLElement{});
 window.customElements.define('sky-ground-color-red', class extends HTMLElement{});
 window.customElements.define('sky-ground-color-green', class extends HTMLElement{});
 window.customElements.define('sky-ground-color-blue', class extends HTMLElement{});
+window.customElements.define('sky-sun-intensity', class extends HTMLElement{});
+window.customElements.define('sky-moon-intensity', class extends HTMLElement{});
+window.customElements.define('sky-ambient-intensity', class extends HTMLElement{});
+window.customElements.define('sky-minimum-ambient-lighting', class extends HTMLElement{});
+window.customElements.define('sky-maximum-ambient-lighting', class extends HTMLElement{});
 window.customElements.define('sky-atmospheric-perspective-density', class extends HTMLElement{});
 window.customElements.define('sky-atmospheric-perspective-type', class extends HTMLElement{});
 window.customElements.define('sky-atmospheric-perspective-distance-multiplier', class extends HTMLElement{});
@@ -15,6 +20,11 @@ StarrySky.DefaultData.lighting = {
     green: 44,
     blue: 2
   },
+  sunIntensity: 1.0,
+  moonIntensity: 1.0,
+  ambientIntensity: 1.0,
+  minimumAmbientLighting: 0.01,
+  maximumAmbientLighting: Infinity,
   atmosphericPerspectiveDensity: 0.007,
   atmosphericPerspectiveDistanceMultiplier: 5.0,
   atmosphericPerspectiveType: 'normal',
@@ -42,15 +52,21 @@ class SkyLighting extends HTMLElement {
 
       //Get child tags and acquire their values.
       const groundColorTags = self.getElementsByTagName('sky-ground-color');
+      const sunIntensityTags = self.getElementsByTagName('sky-sun-intensity');
+      const moonIntensityTags = self.getElementsByTagName('sky-moon-intensity');
+      const ambientIntensityTags = self.getElementsByTagName('sky-ambient-intensity');
+      const minimumAmbientLightingTags = self.getElementsByTagName('sky-minimum-ambient-lighting');
+      const maximumAmbientLightingTags = self.getElementsByTagName('sky-maximum-ambient-lighting');
       const atmosphericPerspectiveTypeTags = self.getElementsByTagName('sky-atmospheric-perspective-type');
       const atmosphericPerspectiveDensityTags = self.getElementsByTagName('sky-atmospheric-perspective-density');
       const atmosphericPerspectiveDistanceMultiplierTags = self.getElementsByTagName('sky-atmospheric-perspective-distance-multiplier');
       const shadowCameraSizeTags = self.getElementsByTagName('sky-shadow-camera-size');
       const shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
 
-      [groundColorTags, atmosphericPerspectiveTypeTags, atmosphericPerspectiveDensityTags,
-      atmosphericPerspectiveDistanceMultiplierTags, shadowCameraSizeTags,
-      shadowCameraResolutionTags].forEach(function(tags){
+      [groundColorTags, sunIntensityTags, moonIntensityTags, ambientIntensityTags,
+      minimumAmbientLightingTags, maximumAmbientLightingTags, atmosphericPerspectiveTypeTags,
+      atmosphericPerspectiveDensityTags, atmosphericPerspectiveDistanceMultiplierTags,
+      shadowCameraSizeTags, shadowCameraResolutionTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-lighting-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -118,11 +134,28 @@ class SkyLighting extends HTMLElement {
         }
       }
 
+      dataRef.sunIntensity = sunIntensityTags.length > 0 ? parseFloat(sunIntensityTags[0].innerHTML) : dataRef.sunIntensity;
+      dataRef.moonIntensity = moonIntensityTags.length > 0 ? parseFloat(moonIntensityTags[0].innerHTML) : dataRef.moonIntensity;
+      dataRef.ambientIntensity = ambientIntensityTags.length > 0 ? parseFloat(ambientIntensityTags[0].innerHTML) : dataRef.ambientIntensity;
+      const minimumAmbientLighting = minimumAmbientLightingTags.length > 0 ? parseFloat(minimumAmbientLightingTags[0].innerHTML) : dataRef.minimumAmbientLighting;
+      const maximumAmbientLighting = maximumAmbientLightingTags.length > 0 ? parseFloat(maximumAmbientLightingTags[0].innerHTML) : dataRef.maximumAmbientLighting;
+      if(minimumAmbientLighting <= maximumAmbientLighting){
+        dataRef.minimumAmbientLighting = minimumAmbientLighting;
+        dataRef.maximumAmbientLighting = maximumAmbientLighting;
+      }
+      else{
+        console.error("Cannot set the minimum ambient lighting greater than the maximum ambient lighting. Setting to defaults.");
+      }
       dataRef.shadowCameraSize = shadowCameraSizeTags.length > 0 ? parseFloat(shadowCameraSizeTags[0].innerHTML) : dataRef.shadowCameraSize;
       dataRef.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML) : dataRef.shadowCameraResolution;
 
       //Clamp the values in our tags
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.sunIntensity = clampAndWarn(dataRef.sunIntensity, 0.0, Infinity, '<sky-sun-intensity>');
+      dataRef.moonIntensity = clampAndWarn(dataRef.moonIntensity, 0.0, Infinity, '<sky-moon-intensity>');
+      dataRef.ambientIntensity = clampAndWarn(dataRef.ambientIntensity, 0.0, Infinity, '<sky-ambient-intensity>');
+      dataRef.minimumAmbientLighting = clampAndWarn(dataRef.minimumAmbientLighting, 0.0, Infinity, '<sky-minimum-ambient-lighting>');
+      dataRef.maximumAmbientLighting = clampAndWarn(dataRef.maximumAmbientLighting, 0.0, Infinity, '<sky-maximum-ambient-lighting>');
       dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDensity, 0.0, Infinity, '<sky-atmospheric-perspective-density>');
       dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDistanceMultiplier, 0.0, Infinity, '<sky-atmospheric-perspective-distance-multiplier>');
       dataRef.shadowCameraSize = clampAndWarn(dataRef.shadowCameraSize, 0.0, Infinity, '<sky-shadow-camera-size>');
