@@ -21,6 +21,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
           'varying float vSunE;',
           'varying float vMoonE;',
           'varying vec3 vFexPixel;',
+          'varying vec3 vMoonLightColor;',
 
           'const float mieDirectionalG = $mieDirectionalG;',
           'const float rayleigh = $rayleigh;',
@@ -68,7 +69,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
             'return ONE_OVER_FOUR_PI * ( ( 1.0 - g * g ) * inverse );',
           '}',
 
-          'vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, float vLightE, vec3 vBetaR, float distToPoint, out vec3 Fex){',
+          'vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, vec3 vLightE, vec3 vBetaR, float distToPoint, out vec3 Fex){',
             '// optical length',
             '// cutoff angle at 90 to avoid singularity in next formula.',
             'float zenithAngle = acos(dot( up, lightDirection ));',
@@ -105,9 +106,9 @@ StarrySky.Materials.Fog.fogParsMaterial = {
       '			float cosTheta = dot( viewDirection, vSunDirection );',
 
             'vec3 FexSun;',
-            'vec3 LSun = addLightSource(viewDirection, vSunDirection, vSunE, vBetaRSun, distToPoint, FexSun);',
+            'vec3 LSun = addLightSource(viewDirection, vSunDirection, vec3(vSunE), vBetaRSun, distToPoint, FexSun);',
             'vec3 FexMoon;',
-            'vec3 LMoon = addLightSource(viewDirection, vMoonDirection, vMoonE, vBetaRMoon, distToPoint, FexMoon);',
+            'vec3 LMoon = vMoonLightColor * addLightSource(viewDirection, vMoonDirection, vec3(vMoonE), vBetaRMoon, distToPoint, FexMoon);',
 
             '// nightsky',
       '			float theta = acos( viewDirection.y ); // elevation --> y-axis, [-pi/2, pi/2]',
@@ -150,7 +151,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
 
     return updatedLines.join('\n');
   },
-  vertexShader: function(rayleigh, turbidty, mieCoefficient, groundDistanceMultp, solarRadius, lunarRadius, distanceForSolarEclipse, useAdvancedAtmospehericPerspective){
+  vertexShader: function(rayleigh, turbidty, mieCoefficient, groundDistanceMultp, solarRadius, lunarRadius, useAdvancedAtmospehericPerspective){
     let originalGLSL = [
     '#ifdef USE_FOG',
     'varying float vFogDepth;',
@@ -168,6 +169,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
           'varying float vSunE;',
           'varying float vMoonE;',
           'varying vec3 vFexPixel;',
+          'varying vec3 vMoonLightColor;',
 
           'uniform vec3 fogColor; //Altitude, Azimuth of Sun and Altitude of Mooon',
           'uniform float fogNear; //Azimuth of moon',
@@ -178,10 +180,13 @@ StarrySky.Materials.Fog.fogParsMaterial = {
         '	const float turbidity = $turbidty;',
         '	const float mieCoefficient = $mieCoefficient;',
           'const float groundFexDistanceMultiplier = $groundFexDistanceMultiplier;',
+          'const float sunRadius = $solarRadius;',
+          'const float moonRadius = $lunarRadius;',
         '	const vec3 up = vec3(0.0, 1.0, 0.0);',
         '	const float e = 2.7182818284590452;',
         '	const float pi = 3.1415926535897932;',
           'const float piOver2 = 1.57079632679;',
+          'const float sqrtOf2 = 1.41421356237;',
           'const float rayleighZenithLength = 8.4E3;',
           'const float mieZenithLength = 1.25E3;',
 
@@ -221,6 +226,45 @@ StarrySky.Materials.Fog.fogParsMaterial = {
             'outPosition.y = cos(altitudeAzimuth.x);',
             'return normalize(outPosition);',
           '}',
+
+          'float solarEclipseLightingModifier(vec3 sunPosition, vec3 moonPosition){',
+            'float distanceBetweenSunAndMoon = distance(sunPosition, moonPosition);',
+            'float lightingModifier = 1.0;',
+            'if(distanceBetweenSunAndMoon <= (2.0 * sqrtOf2 * max(sunRadius, moonRadius))){',
+              'float sunRadiusSquared = sunRadius * sunRadius;',
+              'float moonRadiusSquared = moonRadius * moonRadius;',
+              'float x = (sunRadiusSquared - moonRadiusSquared + distanceBetweenSunAndMoon * distanceBetweenSunAndMoon)/(2.0 * distanceBetweenSunAndMoon);',
+              'float z = x * x;',
+              'float y = sqrt(sunRadiusSquared - z);',
+
+              'float ecclipsedArea = 0.0;',
+              'if (distanceBetweenSunAndMoon < abs(moonRadius - sunRadius)) {',
+                'ecclipsedArea = pi * min(sunRadiusSquared, moonRadiusSquared);',
+              '}',
+              'else{',
+                'ecclipsedArea = sunRadiusSquared * asin(y / sunRadius) + moonRadiusSquared * asin(y / moonRadius) - y * (x + sqrt(z + moonRadiusSquared - sunRadiusSquared));',
+              '}',
+              'float surfaceAreaOfSun = pi * sunRadiusSquared;',
+              'lightingModifier = clamp((surfaceAreaOfSun - ecclipsedArea) / surfaceAreaOfSun, 0.0, 1.0);',
+            '}',
+            'return lightingModifier;',
+          '}',
+
+          'vec3 lunarEclipseLightingModifier(vec3 sunPosition, vec3 moonPosition){',
+            'float distanceBetweenMoonAndAntiSun = distance(-sunPosition, moonPosition);',
+            'vec3 lightingColor = vec3(1.0, 0.5, 0.1);',
+            'if(distanceBetweenMoonAndAntiSun <= (2.0 * sqrtOf2 * max(sunRadius, moonRadius))){',
+              'float moonRadiusSquared = moonRadius * moonRadius;',
+              'float distanceToEarthsShadowSquared = distanceBetweenMoonAndAntiSun * distanceBetweenMoonAndAntiSun;',
+
+              '//Determine the color of the moonlight used for atmospheric scattering',
+              'float colorIntensity = clamp(distanceToEarthsShadowSquared / moonRadiusSquared, 0.0, 1.0);',
+              'float lightIntensity = clamp(distanceToEarthsShadowSquared / moonRadiusSquared, 0.0, 0.8);',
+              'lightingColor = clamp(lightingColor + (vec3(1.0) - lightingColor) * colorIntensity, vec3(0.0), vec3(1.0));',
+              'lightingColor *= lightIntensity + 0.2;',
+            '}',
+            'return lightingColor;',
+          '}',
         '#endif',
       '#endif',
     '#endif',
@@ -234,7 +278,6 @@ StarrySky.Materials.Fog.fogParsMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundDistanceMultp.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$solarRadius/g, solarRadius.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$lunarRadius/g, lunarRadius.toFixed(5));
-      updatedGLSL = updatedGLSL.replace(/\$distanceForSolarEclipse/g, distanceForSolarEclipse.toFixed(5));
 
       if(useAdvancedAtmospehericPerspective){
         updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');

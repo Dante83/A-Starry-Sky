@@ -33,8 +33,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
 
     if(auroraEnabled){
-      uniforms.auroraSampler1 = {value: null};
-      uniforms.auroraSampler2 = {value: null};
+      uniforms.auroraSampler = {value: null};
 
       uniforms.nitrogenColor = {value: new THREE.Vector3()};
       uniforms.nitrogenCutOff = {value: null};

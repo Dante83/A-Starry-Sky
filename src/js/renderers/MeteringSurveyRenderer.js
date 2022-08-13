@@ -100,8 +100,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     uniforms.moonLuminosity.value = skyState.moon.luminosity;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     if(assetManager.data.skyAurora.auroraEnabled){
-      uniforms.auroraSampler1.value =  skyDirector?.assetManager.images.auroraImages[0];
-      uniforms.auroraSampler2.value =  skyDirector?.assetManager.images.auroraImages[1];
+      uniforms.auroraSampler.value =  skyDirector?.assetManager.images.auroraImages[0];
     }
     const blueNoiseTextureRef = skyDirector.assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
     uniforms.blueNoiseTexture.value = blueNoiseTextureRef;

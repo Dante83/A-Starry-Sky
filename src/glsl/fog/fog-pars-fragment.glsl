@@ -18,6 +18,7 @@
       varying float vSunE;
       varying float vMoonE;
       varying vec3 vFexPixel;
+      varying vec3 vMoonLightColor;
 
       const float mieDirectionalG = $mieDirectionalG;
       const float rayleigh = $rayleigh;
@@ -65,7 +66,7 @@
         return ONE_OVER_FOUR_PI * ( ( 1.0 - g * g ) * inverse );
       }
 
-      vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, float vLightE, vec3 vBetaR, float distToPoint, out vec3 Fex){
+      vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, vec3 vLightE, vec3 vBetaR, float distToPoint, out vec3 Fex){
         // optical length
         // cutoff angle at 90 to avoid singularity in next formula.
         float zenithAngle = acos(dot( up, lightDirection ));
@@ -102,9 +103,9 @@
   			float cosTheta = dot( viewDirection, vSunDirection );
 
         vec3 FexSun;
-        vec3 LSun = addLightSource(viewDirection, vSunDirection, vSunE, vBetaRSun, distToPoint, FexSun);
+        vec3 LSun = addLightSource(viewDirection, vSunDirection, vec3(vSunE), vBetaRSun, distToPoint, FexSun);
         vec3 FexMoon;
-        vec3 LMoon = addLightSource(viewDirection, vMoonDirection, vMoonE, vBetaRMoon, distToPoint, FexMoon);
+        vec3 LMoon = vMoonLightColor * addLightSource(viewDirection, vMoonDirection, vec3(vMoonE), vBetaRMoon, distToPoint, FexMoon);
 
         // nightsky
   			float theta = acos( viewDirection.y ); // elevation --> y-axis, [-pi/2, pi/2]

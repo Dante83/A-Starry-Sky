@@ -67,11 +67,10 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    const moonEncodings = [THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
     const oneSolarEclipseImage = 1;
-    const numberOfAuroraTextures = 2;
+    const numberOfAuroraTextures = 1;
     this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + numberOfAuroraTextures;
 
     //Recursive based functional for loop, with asynchronous execution because
@@ -97,7 +96,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.anisotropy = 4;
         texture.samples = 8;
         texture.generateMipmaps = true;
-        texture.encoding = moonEncodings[i];
+        texture.encoding = THREE.LinearEncoding;
         self.images.moonImages[moonTextures[i]] = texture;
 
         //If the renderer already exists, go in and update the uniform

@@ -14,11 +14,11 @@ StarrySky.DefaultData.skyCloud = {
   coverage: 50.0,
   startHeight: 1000.0,
   endHeight: 2500.0,
-  fadeOutStartPercent: 80.0,
-  fadeInEndPercent: 20.0,
+  fadeOutStartPercent: 90.0,
+  fadeInEndPercent: 10.0,
   velocity: new THREE.Vector2(0.0, 0.0),
   startSeed: Date.now() % (86400 * 365),
-  numberOfRayMarchSteps: 64.0,
+  numberOfRayMarchSteps: 42.0,
   cutoffDistance: 40000.0,
   cloudsEnabled: false
 };

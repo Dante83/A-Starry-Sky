@@ -12,7 +12,7 @@
     <!-- Built for A-Frame -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <script src="https://unpkg.com/aframe-fps-counter-component/dist/aframe-fps-counter-component.min.js"></script>
+    <!-- <script src="https://unpkg.com/aframe-fps-counter-component/dist/aframe-fps-counter-component.min.js"></script> -->
     <!--This commented out code is the unfurled stack which I use for debugging-->
 
     <!-- A-Starry-Sky Version 1.0 -->
@@ -90,21 +90,16 @@
   </head>
   <body>
     <a-scene physics light="defaultLightsEnabled: false" shadow="type: pcfsoft">
-      <a-entity fps-counter></a-entity>
+      <!-- <a-entity fps-counter></a-entity> -->
 
       <!-- Sky Setup -->
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
           <sky-time>
-            <sky-date>1226-12-07 15:00:00</sky-date>
-            <sky-speed>700.0</sky-speed>
+             <sky-speed>400</sky-speed>
           </sky-time>
-          <sky-atmospheric-parameters>
-            <sky-sun-angular-diameter>3.1</sky-sun-angular-diameter>
-            <sky-moon-angular-diameter>3.1</sky-moon-angular-diameter>
-          </sky-atmospheric-parameters>
-          <!-- <sky-clouds>
-            <sky-cloud-coverage>70</sky-cloud-coverage>
-          </sky-clouds> -->
+          <sky-lighting>
+            <sky-atmospheric-perspective-type>advanced</sky-atmospheric-perspective-type>
+          </sky-lighting>
       </a-starry-sky>
 
       <a-assets>
@@ -116,7 +111,7 @@
       </a-entity>
 
       <!-- Scene Setup-->
-      <!-- <a-entity gltf-model="#low-poly-desert" position="0 0.0 0" shadow="cast: false"></a-entity> -->
+      <a-entity gltf-model="#low-poly-desert" position="0 0.0 0" shadow="cast: false"></a-entity>
     </a-scene>
   </body>
 </html>

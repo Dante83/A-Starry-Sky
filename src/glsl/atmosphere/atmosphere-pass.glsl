@@ -46,8 +46,7 @@ uniform sampler2D blueNoiseTexture;
   uniform float atomicOxygenCutOff;
   uniform float atomicOxygenIntensity;
   uniform float auroraCutoffDistance;
-  uniform sampler2D auroraSampler1;
-  uniform sampler2D auroraSampler2;
+  uniform sampler2D auroraSampler;
 #endif
 
 #if(!$isSunPass && !$isMeteringPass)
@@ -327,10 +326,10 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     //Sample our caustic shader
     vec2 uv1 = uv + vec2(0.8, 0.1) * quarterTime;
     vec2 uv2 = uv - vec2(0.2, 0.7) * quarterTime;
-    float aSample1 = texture(auroraSampler1, (uv1 + pSample) * 0.25).r;
-    float aSample2 = texture(auroraSampler1, uv1 * 0.25).r;
-    float aSample3 = texture(auroraSampler2, uv2 * 0.25).r;
-    float aSample4 = texture(auroraSampler2, (uv2 + pSample) * 0.25).r;
+    float aSample1 = texture(auroraSampler, (uv1 + pSample) * 0.25).r;
+    float aSample2 = texture(auroraSampler, uv1 * 0.25).r;
+    float aSample3 = texture(auroraSampler, uv2 * 0.25).g;
+    float aSample4 = texture(auroraSampler, (uv2 + pSample) * 0.25).g;
 
     //Combine our caustic shader results
     float cCombined1 = 1.7 * min(max(aSample1, aSample2), max(aSample3, aSample4));
@@ -524,7 +523,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     if(simplexFractal > 0.0){
       float cloudNoise = dot(texture(cloudLUTs, offsetM * 8.0).rgb, vec3(0.625, 0.125, 0.25));
       float simplexFractal2 = max(simplexFractal - 0.25 * (1.0 - cloudNoise), 0.0);
-      simplexFractal = mix(simplexFractal, simplexFractal2, linearGradient(0.0, min(cloudFadeInEndPercent * 1.5, cloudFadeOutStartPercent), heightPercentage));
+      simplexFractal = mix(simplexFractal, simplexFractal2, linearGradient(0.0, min(cloudFadeInEndPercent + 0.05, 1.0), heightPercentage));
       simplexFractal *= linearGradient(0.0, cloudFadeInEndPercent, heightPercentage);
       simplexFractal *= linearGradient(1.0, cloudFadeOutStartPercent, heightPercentage);
       return simplexFractal;
@@ -572,7 +571,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         rayTransmittance = exp(-cloudDensity);
 
         //Determine the luminance
-        float innerTransmittance = 1.0;
+        float innerTransmittance = clamp(1.0 - (1.0 - rayTransmittance), 0.0, 1.0);
         //
         //NOTE: Turning this off because it's too hard on the GPU
         //We will return to add this in when we get some performance improvements...
@@ -584,7 +583,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(dominantLightDirection.y, 0.0)), parameterizationOfHeightToY(lightSourceHeight));
         vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
         float scatteringToRayPoint = henyayGreenstein(abs(dot(dominantLightDirection, dominantLightDirection)));
-        float scatteringToCamera = henyayGreenstein(dot(rayDirection, dominantLightDirection));
+        float scatteringToCamera = henyayGreenstein(dot(-rayDirection, dominantLightDirection));
         luminance += 0.0002 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;
 
         //Update previous values
@@ -599,10 +598,10 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         }
       }
     }
-    luminance += 0.11 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);
+    luminance += 0.03 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);
     if(hasFirstContact){
       float lightSourceHeight = RADIUS_OF_EARTH + 2.0 * ((rayStartPosition.y / 1000.0) - RADIUS_OF_EARTH);
-      vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(firstContactPosition.y, 0.0)), parameterizationOfHeightToY(lightSourceHeight));
+      vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(normalize(firstContactPosition.y), 0.0)), parameterizationOfHeightToY(lightSourceHeight));
       vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
       vec3 distVect = firstContactPosition - rayStartPosition;
       luminance *= dominantLightSourceAtmosphericTransmittance * exp(-2.5E-5 * sqrt(dot(distVect, distVect)));
@@ -743,9 +742,11 @@ void main(){
     vec3 galacticLighting = vec3(0.0);
   #endif
 
+  vec3 auroraLighting = vec3(0.0);
   #if($auroraEnabled)
     //Add aurora lighting if it exists
-    galacticLighting += auroraRayMarchPass(vec3(0.0, RADIUS_OF_EARTH, 0.0), sphericalPosition, starAndSkyExposureReduction);
+    auroraLighting = auroraRayMarchPass(vec3(0.0, RADIUS_OF_EARTH, 0.0), sphericalPosition, starAndSkyExposureReduction);
+    auroraLighting = auroraLighting * transmittanceFade;
   #endif
 
   #if(!$isSunPass)
@@ -765,7 +766,8 @@ void main(){
       dominantLightSourceColor = sunDominantLightSourceColor;
       dominantLightSourcePosition = sunPosition;
     }
-    vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + vWorldPosition.y, vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass);
+
+    vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + vWorldPosition.y, vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass + auroraLighting);
   #endif
 
   //Sun and Moon layers
@@ -792,6 +794,10 @@ void main(){
     //Now mix in the moon light
     combinedPass = mix(combinedPass + galacticLighting, combinedPass + moonTexel, lunarDiffuseTexel.a);
 
+    #if($auroraEnabled)
+      combinedPass = combinedPass + auroraLighting;
+    #endif
+
     //Combine the cloud lights
     #if($cloudsEnabled)
       combinedPass = mix(combinedPass, cloudLighting.rgb, cloudLighting.a);
@@ -804,6 +810,10 @@ void main(){
     float circularMask = 1.0 - step(1.0, rho);
     vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting) * circularMask;
 
+    #if($auroraEnabled)
+      combinedPass = combinedPass + auroraLighting;
+    #endif
+
     //Combine the colors together and apply a transformation from the scattering intensity to the moon luminosity
     vec3 intensityPassColors = lunarAtmosphericPass * (moonLuminosity / scatteringMoonIntensity) + solarAtmosphericPass * (sunLuminosity / scatteringSunIntensity);
 
@@ -815,6 +825,10 @@ void main(){
   #else
     //Regular atmospheric pass
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting;
+
+    #if($auroraEnabled)
+      combinedPass = combinedPass + auroraLighting;
+    #endif
 
     //Combine the cloud lights
     #if($cloudsEnabled)

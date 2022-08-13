@@ -245,8 +245,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       moonMaterial.uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
       moonMaterial.uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
       if(assetManager.data.skyAurora.auroraEnabled){
-        moonMaterial.uniforms.auroraSampler1.value =  assetManager.images.auroraImages[0];
-        moonMaterial.uniforms.auroraSampler2.value =  assetManager.images.auroraImages[1];
+        moonMaterial.uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
       }
 
       if(assetManager.data.skyCloud.cloudsEnabled){

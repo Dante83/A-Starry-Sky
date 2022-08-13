@@ -25,7 +25,7 @@ class SkyLocation extends HTMLElement {
     const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
       //Data ref
-      const dataRef = self.dataRef;
+      const dataRef = self.data;
 
       //Get child tags and acquire their values.
       const latitudeTags = self.getElementsByTagName('sky-latitude');

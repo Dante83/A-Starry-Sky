@@ -23,7 +23,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
 
     return updatedLines.join('\n');
   },
-  vertexShader: function(rayleigh, turbidty, mieCoefficient, groundDistanceMultp, solarRadius, lunarRadius, distanceForSolarEclipse, useAdvancedAtmospehericPerspective){
+  vertexShader: function(rayleigh, turbidty, mieCoefficient, groundDistanceMultp, solarRadius, lunarRadius, useAdvancedAtmospehericPerspective){
     let originalGLSL = [
       {vertex_glsl}
     ];
@@ -36,7 +36,6 @@ StarrySky.Materials.Fog.fogParsMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundDistanceMultp.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$solarRadius/g, solarRadius.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$lunarRadius/g, lunarRadius.toFixed(5));
-      updatedGLSL = updatedGLSL.replace(/\$distanceForSolarEclipse/g, distanceForSolarEclipse.toFixed(5));
 
       if(useAdvancedAtmospehericPerspective){
         updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');

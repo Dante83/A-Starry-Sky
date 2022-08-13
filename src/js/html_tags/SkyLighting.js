@@ -17,7 +17,7 @@ StarrySky.DefaultData.lighting = {
   },
   atmosphericPerspectiveDensity: 0.007,
   atmosphericPerspectiveDistanceMultiplier: 5.0,
-  atmosphericPerspectiveType: Symbol('normal'),
+  atmosphericPerspectiveType: 'normal',
   shadowCameraSize: 32.0,
   shadowCameraResolution: 2048
 };
@@ -72,10 +72,10 @@ class SkyLighting extends HTMLElement {
       });
 
       //Parse the values in our tags
-      dataRef.atmosphericPerspectiveType = Symbol('none');
+      dataRef.atmosphericPerspectiveType = 'none';
       const hasAtmosphericPerspecitiveDensityTags = atmosphericPerspectiveDensityTags.length > 0;
       const hasAtmosphericPerspecitiveDistanceMultiplierTags = atmosphericPerspectiveDistanceMultiplierTags.length > 0;
-      const hasAtmosphericPerspectiveTypeNamed = false;
+      let hasAtmosphericPerspectiveTypeNamed = false;
       if(atmosphericPerspectiveDensityTags.length > 0 &&
       atmosphericPerspectiveDistanceMultiplierTags.length > 0){
         console.warn("Having both the <sky-atmospheric-perspective-density> and " +
@@ -85,21 +85,21 @@ class SkyLighting extends HTMLElement {
         "for advanced, respectively.");
       }
       if(atmosphericPerspectiveTypeTags.length > 0){
-        const atmType = atmosphericPerspectiveDensityTags[0].innerHTML;
-        const lcAtmType = atmType.toLowerCase();veDensityTags[0].innerHTML.toLowerCase();
+        const atmType = atmosphericPerspectiveTypeTags[0].innerHTML;
+        const lcAtmType = atmType.toLowerCase();
         if(['none', 'normal', 'advanced'].includes(lcAtmType)){
           hasAtmosphericPerspectiveTypeNamed = true;
-          dataRef.atmosphericPerspectiveType = Symbol(lcAtmType);
+          dataRef.atmosphericPerspectiveType = lcAtmType;
         }
         else{
           console.error(`The value ${atmType} is not a valid value of the <sky-atmospheric-perspective-type> tag. Please use the values none, normal or advanced.`);
         }
       }
       if(hasAtmosphericPerspectiveTypeNamed){
-        if(dataRef.atmosphericPerspectiveType == Symbol('normal')){
+        if(dataRef.atmosphericPerspectiveType == 'normal'){
           dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : dataRef.atmosphericPerspectiveDensity;
         }
-        else if(dataRef.atmosphericPerspectiveType == Symbol('advanced')){
+        else if(dataRef.atmosphericPerspectiveType == 'advanced'){
           dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML) : dataRef.atmosphericPerspectiveDistanceMultiplier;
         }
       }
@@ -107,11 +107,11 @@ class SkyLighting extends HTMLElement {
         if(hasAtmosphericPerspecitiveDensityTags){
           console.warn('Atmospheric perspective type not explicitly named in a <sky-atmospheric-perspective> tag '+
           'defaulting to normal because of the presense of an <sky-atmospheric-perspective-density> tag.');
-          dataRef.atmosphericPerspectiveType = Symbol('normal');
+          dataRef.atmosphericPerspectiveType = 'normal';
           dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : dataRef.atmosphericPerspectiveDensity;
         }
         else if(hasAtmosphericPerspecitiveDistanceMultiplierTags){
-          dataRef.atmosphericPerspectiveType = Symbol('advanced');
+          dataRef.atmosphericPerspectiveType = 'advanced';
           dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML) : dataRef.atmosphericPerspectiveDistanceMultiplier;
           console.warn('Atmospheric perspective type not explicitly named in a <sky-atmospheric-perspective> tag '+
           'defaulting to advanced because of the presense of an <sky-atmospheric-perspective-distance-multiplier> tag.');

@@ -14,6 +14,7 @@ varying float vFogDepth;
       varying float vSunE;
       varying float vMoonE;
       varying vec3 vFexPixel;
+      varying vec3 vMoonLightColor;
 
       uniform vec3 fogColor; //Altitude, Azimuth of Sun and Altitude of Mooon
       uniform float fogNear; //Azimuth of moon
@@ -24,10 +25,13 @@ varying float vFogDepth;
     	const float turbidity = $turbidty;
     	const float mieCoefficient = $mieCoefficient;
       const float groundFexDistanceMultiplier = $groundFexDistanceMultiplier;
+      const float sunRadius = $solarRadius;
+      const float moonRadius = $lunarRadius;
     	const vec3 up = vec3(0.0, 1.0, 0.0);
     	const float e = 2.7182818284590452;
     	const float pi = 3.1415926535897932;
       const float piOver2 = 1.57079632679;
+      const float sqrtOf2 = 1.41421356237;
       const float rayleighZenithLength = 8.4E3;
       const float mieZenithLength = 1.25E3;
 
@@ -66,6 +70,45 @@ varying float vFogDepth;
         outPosition.z = sin(altitudeAzimuth.x) * sin(altitudeAzimuth.y);
         outPosition.y = cos(altitudeAzimuth.x);
         return normalize(outPosition);
+      }
+
+      float solarEclipseLightingModifier(vec3 sunPosition, vec3 moonPosition){
+        float distanceBetweenSunAndMoon = distance(sunPosition, moonPosition);
+        float lightingModifier = 1.0;
+        if(distanceBetweenSunAndMoon <= (2.0 * sqrtOf2 * max(sunRadius, moonRadius))){
+          float sunRadiusSquared = sunRadius * sunRadius;
+          float moonRadiusSquared = moonRadius * moonRadius;
+          float x = (sunRadiusSquared - moonRadiusSquared + distanceBetweenSunAndMoon * distanceBetweenSunAndMoon)/(2.0 * distanceBetweenSunAndMoon);
+          float z = x * x;
+          float y = sqrt(sunRadiusSquared - z);
+
+          float ecclipsedArea = 0.0;
+          if (distanceBetweenSunAndMoon < abs(moonRadius - sunRadius)) {
+            ecclipsedArea = pi * min(sunRadiusSquared, moonRadiusSquared);
+          }
+          else{
+            ecclipsedArea = sunRadiusSquared * asin(y / sunRadius) + moonRadiusSquared * asin(y / moonRadius) - y * (x + sqrt(z + moonRadiusSquared - sunRadiusSquared));
+          }
+          float surfaceAreaOfSun = pi * sunRadiusSquared;
+          lightingModifier = clamp((surfaceAreaOfSun - ecclipsedArea) / surfaceAreaOfSun, 0.0, 1.0);
+        }
+        return lightingModifier;
+      }
+
+      vec3 lunarEclipseLightingModifier(vec3 sunPosition, vec3 moonPosition){
+        float distanceBetweenMoonAndAntiSun = distance(-sunPosition, moonPosition);
+        vec3 lightingColor = vec3(1.0, 0.5, 0.1);
+        if(distanceBetweenMoonAndAntiSun <= (2.0 * sqrtOf2 * max(sunRadius, moonRadius))){
+          float moonRadiusSquared = moonRadius * moonRadius;
+          float distanceToEarthsShadowSquared = distanceBetweenMoonAndAntiSun * distanceBetweenMoonAndAntiSun;
+
+          //Determine the color of the moonlight used for atmospheric scattering
+          float colorIntensity = clamp(distanceToEarthsShadowSquared / moonRadiusSquared, 0.0, 1.0);
+          float lightIntensity = clamp(distanceToEarthsShadowSquared / moonRadiusSquared, 0.0, 0.8);
+          lightingColor = clamp(lightingColor + (vec3(1.0) - lightingColor) * colorIntensity, vec3(0.0), vec3(1.0));
+          lightingColor *= lightIntensity + 0.2;
+        }
+        return lightingColor;
       }
     #endif
   #endif

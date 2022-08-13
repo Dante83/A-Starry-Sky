@@ -30,9 +30,8 @@ StarrySky.LightingManager = function(parentComponent){
   this.xAxisHemisphericalLight.position.set(1,0,0);
   this.yAxisHemisphericalLight.position.set(0,1,0);
   this.zAxisHemisphericalLight.position.set(0,0,1);
-  const isNormalLighting = lightingData.atmosphericPerspectiveType == Symbol('normal');
+  const isNormalLighting = lightingData.atmosphericPerspectiveType === 'normal';
 
-  parentComponent.scene.fog = this.fog;
   if(isNormalLighting){
     const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
     this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
@@ -75,7 +74,7 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
     self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
     self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
-    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) / 0.1;
+    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) * 10.0;
     self.sourceLight.intensity = lightingState[24] * 0.5;
 
     //The hemispherical light colors replace ambient lighting and are calculated

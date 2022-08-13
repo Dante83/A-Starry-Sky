@@ -55,8 +55,7 @@ StarrySky.DefaultData.fileNames = {
   ],
   solarEclipseMap: 'solar-eclipse-map.webp',
   auroraMaps: [
-    'aurora-map-1.webp',
-    'aurora-map-2.webp',
+    'aurora-map.webp'
   ]
 };
 
@@ -213,7 +212,7 @@ class SkyAssetsDir extends HTMLElement {
       }
       else if(self.hasAttribute('aurora-map-path') && self.getAttribute('aurora-map-path').toLowerCase() !== 'false'){
         const auroraMapPaths = StarrySky.assetPaths['auroraMaps'];
-        for(let i = 0; i < 2; ++i){
+        for(let i = 0; i < 1; ++i){
           auroraMapPaths[i] = `${path}/${StarrySky.DefaultData.fileNames['auroraMaps'][i]}`;
         }
       }

@@ -141,8 +141,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
       uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
       if(assetManager.data.skyAurora.auroraEnabled){
-        uniforms.auroraSampler1.value =  assetManager.images.auroraImages[0];
-        uniforms.auroraSampler2.value =  assetManager.images.auroraImages[1];
+        uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
       }
 
       if(assetManager.data.skyCloud.cloudsEnabled){

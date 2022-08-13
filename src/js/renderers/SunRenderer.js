@@ -71,8 +71,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	composer.addPass(renderPass);
 	const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85 );
 	bloomPass.threshold = 0.98;
-	bloomPass.strength = 0.5;
-	bloomPass.radius = 0.2;
+	bloomPass.strength = 1.0;
+	bloomPass.radius = 1.0;
 	composer.addPass(bloomPass);
 
 	//Attach the material to our geometry

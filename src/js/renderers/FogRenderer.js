@@ -3,9 +3,10 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
   const assetManager = skyDirector.assetManager;
   const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const lightingData = assetManager.data.skyLighting;
-  const isAdvancedAtmosphericPerspective = lightingData.atmosphericPerspectiveType == Symbol('advanced');
+  const skyState = skyDirector.skyState;
+  const isAdvancedAtmosphericPerspective = lightingData.atmosphericPerspectiveType === 'advanced';
+  this.fog = null;
   if(isAdvancedAtmosphericPerspective){
-    const skyState = skyDirector.skyState;
     const mieCoefficient = 0.005;
     const mieDirectionalG = atmosphericParameters.mieDirectionalG;
     const turbidity = 2.53;
@@ -15,9 +16,8 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
     const DEG_2_RAD = 0.017453292519943295769236907684886;
     const sunRadius = Math.sin(atmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
     const moonRadius = Math.sin(atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
-    const distanceForSolarEclipse = 2.0 * Math.SQRT2 * Math.max(skyDirector.sunRadius, skyDirector.moonRadius);
     THREE.ShaderChunk.fog_pars_fragment = StarrySky.Materials.Fog.fogParsMaterial.fragmentShader(mieDirectionalG, rayleigh, exposure, groundDistanceMultp, true);
-    THREE.ShaderChunk.fog_pars_vertex = StarrySky.Materials.Fog.fogParsMaterial.vertexShader(rayleigh, turbidity, mieCoefficient, groundDistanceMultp, sunRadius, moonRadius, distanceForSolarEclipse, true);
+    THREE.ShaderChunk.fog_pars_vertex = StarrySky.Materials.Fog.fogParsMaterial.vertexShader(rayleigh, turbidity, mieCoefficient, groundDistanceMultp, sunRadius, moonRadius, true);
     THREE.ShaderChunk.fog_fragment = StarrySky.Materials.Fog.fogMaterial.fragmentShader(true);
     THREE.ShaderChunk.fog_vertex = StarrySky.Materials.Fog.fogMaterial.vertexShader(true);
 
