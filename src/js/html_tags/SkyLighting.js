@@ -13,12 +13,32 @@ window.customElements.define('sky-atmospheric-perspective-type', class extends H
 window.customElements.define('sky-atmospheric-perspective-distance-multiplier', class extends HTMLElement{});
 window.customElements.define('sky-shadow-camera-size', class extends HTMLElement{});
 window.customElements.define('sky-shadow-camera-resolution', class extends HTMLElement{});
+window.customElements.define('sky-moon-bloom', class extends HTMLElement{});
+window.customElements.define('sky-sun-bloom', class extends HTMLElement{});
+window.customElements.define('sky-bloom-enabled', class extends HTMLElement{});
+window.customElements.define('sky-bloom-exposure', class extends HTMLElement{});
+window.customElements.define('sky-bloom-threshold', class extends HTMLElement{});
+window.customElements.define('sky-bloom-strength', class extends HTMLElement{});
 
 StarrySky.DefaultData.lighting = {
   groundColor: {
     red: 66,
     green: 44,
     blue: 2
+  },
+  sunBloom: {
+    bloomEnabled: true,
+    exposure: 1.0,
+    threshold: 0.98,
+    strength: 1.0,
+    radius: 1.0
+  },
+  moonBloom: {
+    bloomEnabled: true,
+    exposure: 1.0,
+    threshold: 0.55,
+    strength: 0.9,
+    radius: 1.4
   },
   sunIntensity: 1.0,
   moonIntensity: 1.0,
@@ -62,13 +82,46 @@ class SkyLighting extends HTMLElement {
       const atmosphericPerspectiveDistanceMultiplierTags = self.getElementsByTagName('sky-atmospheric-perspective-distance-multiplier');
       const shadowCameraSizeTags = self.getElementsByTagName('sky-shadow-camera-size');
       const shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
+      const sunBloomtags = self.getElementsByTagName('sky-sun-bloom');
+      const moonBloomtags = self.getElementsByTagName('sky-moon-bloom');
 
       [groundColorTags, sunIntensityTags, moonIntensityTags, ambientIntensityTags,
       minimumAmbientLightingTags, maximumAmbientLightingTags, atmosphericPerspectiveTypeTags,
       atmosphericPerspectiveDensityTags, atmosphericPerspectiveDistanceMultiplierTags,
-      shadowCameraSizeTags, shadowCameraResolutionTags].forEach(function(tags){
+      shadowCameraSizeTags, shadowCameraResolutionTags, sunBloomtags, moonBloomtags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-lighting-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+        }
+      });
+
+      //And make sure they only have one of their respective child elements
+      //then set their values if they exist...
+      [sunBloomtags, moonBloomtags].forEach(function(tags){
+        const tag = tags.length > 0 ? tags[0] : false;
+        if(tag){
+          const bloomEnabledTags = tag.getElementsByTagName('sky-bloom-enabled');
+          const exposureTags = tag.getElementsByTagName('sky-bloom-exposure');
+          const thresholdTags = tag.getElementsByTagName('sky-bloom-threshold');
+          const strengthTags = tag.getElementsByTagName('sky-bloom-strength');
+          const radiusTags = tag.getElementsByTagName('sky-bloom-radius');
+          let bloomEnabled = true;
+          if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.toLowerCase() !== 'true'){
+            bloomEnabled = false;
+          }
+          if(bloomEnabled){
+            [bloomEnabledTags, exposureTags, thresholdTags, strengthTags, radiusTags].forEach(function(childTags){
+              if(childTags.length > 1){
+                console.error(`The <${tag.tagName}> tag must contain 1 and only 1 tag of type <${childTags[0].tagName}>. ${childTags.length} found.`);
+              }
+            });
+          }
+          else{
+            [exposureTags, thresholdTags, strengthTags, radiusTags].forEach(function(childTags){
+              if(childTags.length !== 0){
+                console.warning(`The <${tag.tagName}> cannot contain any tags of type <${childTags[0].tagName}>. It won't break, it just won't do anything.`);
+              }
+            });
+          }
         }
       });
 
@@ -160,6 +213,64 @@ class SkyLighting extends HTMLElement {
       dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDistanceMultiplier, 0.0, Infinity, '<sky-atmospheric-perspective-distance-multiplier>');
       dataRef.shadowCameraSize = clampAndWarn(dataRef.shadowCameraSize, 0.0, Infinity, '<sky-shadow-camera-size>');
       dataRef.shadowCameraResolution = clampAndWarn(dataRef.shadowCameraResolution, 32, 15360, '<sky-shadow-camera-resolution>');
+
+      //Parse our sky sun bloom data
+      if(sunBloomtags.length === 1){
+        const tagGroup = sunBloomtags[0];
+        const bloomDataRef = dataRef.sunBloom;
+        const bloomEnabledTags = tagGroup.getElementsByTagName('sky-bloom-enabled');
+        let bloomEnabled = true;
+        if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.toLowerCase() !== 'true'){
+          bloomEnabled = false;
+        }
+        if(bloomEnabled){
+          if(tagGroup.getElementsByTagName('sky-bloom-exposure').length > 0){
+            bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML), 0.0, 2.0, 'sky-bloom-exposure');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-threshold').length > 0){
+            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML), 0.0, 1.0, 'sky-bloom-threshold');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-strength').length > 0){
+            bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML), 0.0, 3.0, 'sky-bloom-strength');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-radius').length > 0){
+            bloomDataRef.radius = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-radius')[0].innerHTML), 0.0, 1.0, 'sky-bloom-radius');
+          }
+          bloomDataRef.bloomEnabled = true;
+        }
+        else{
+          bloomDataRef.bloomEnabled = false;
+        }
+      }
+
+      //Parse our sky moon bloom data
+      if(moonBloomtags.length === 1){
+        const tagGroup = moonBloomtags[0];
+        const bloomDataRef = dataRef.moonBloom;
+        const bloomEnabledTags = tagGroup.getElementsByTagName('sky-bloom-enabled');
+        let bloomEnabled = true;
+        if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.toLowerCase() !== 'true'){
+          bloomEnabled = false;
+        }
+        if(bloomEnabled){
+          if(tagGroup.getElementsByTagName('sky-bloom-exposure').length > 0){
+            bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML), 0.0, 2.0, 'sky-bloom-exposure');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-threshold').length > 0){
+            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML), 0.0, 1.0, 'sky-bloom-threshold');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-strength').length > 0){
+            bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML), 0.0, 3.0, 'sky-bloom-strength');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-radius').length > 0){
+            bloomDataRef.radius = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-radius')[0].innerHTML), 0.0, 1.0, 'sky-bloom-radius');
+          }
+          bloomDataRef.bloomEnabled = true;
+        }
+        else{
+          bloomDataRef.bloomEnabled = false;
+        }
+      }
 
       //Parse our ground color
       if(groundColorTags.length === 1){

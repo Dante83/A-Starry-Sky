@@ -81,7 +81,7 @@ class SkyAurora extends HTMLElement {
         }
       });
 
-      //With special subcases for our ground color tags
+      //With special subcases for our aurora color tags
       [nitrogenColorTags, molecularOxygenColorTags, atomicOxygenColorTags].forEach(function(tags){
         if(tags.length === 1){
           //Check that it only contains one of each of the following child tags

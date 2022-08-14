@@ -117,11 +117,15 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
   const renderPass = new THREE.RenderPass(scene, camera);
   composer.addPass(renderPass);
-  this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85);
-  this.bloomPass.threshold = 0.55;
-  this.bloomPass.strength = 0.9;
-  this.bloomPass.radius = 1.4;
-  composer.addPass(this.bloomPass);
+  const moonBloomDataRef = assetManager.data.skyLighting.moonBloom;
+  if(moonBloomDataRef.bloomEnabled){
+    this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85);
+    this.bloomPass.exposure = moonBloomDataRef.exposure;
+    this.bloomPass.threshold = moonBloomDataRef.threshold;
+    this.bloomPass.strength = moonBloomDataRef.strength;
+    this.bloomPass.radius = moonBloomDataRef.radius;
+    composer.addPass(this.bloomPass);
+  }
 
   //Attach the material to our geometry
 	const outputMaterial = new THREE.ShaderMaterial({
@@ -196,7 +200,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     }
 
     //Update our bloom threshold so we don't bloom the moon during the day
-    this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
+    if(moonBloomDataRef.bloomEnabled){
+      this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
+    }
 
     //Run our float shaders shaders
     composer.render();

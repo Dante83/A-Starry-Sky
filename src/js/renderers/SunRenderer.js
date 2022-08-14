@@ -69,11 +69,15 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
 	const renderPass = new THREE.RenderPass(scene, camera);
 	composer.addPass(renderPass);
-	const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85 );
-	bloomPass.threshold = 0.98;
-	bloomPass.strength = 1.0;
-	bloomPass.radius = 1.0;
-	composer.addPass(bloomPass);
+	const sunBloomDataRef = assetManager.data.skyLighting.sunBloom;
+  if(sunBloomDataRef.bloomEnabled){
+    this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85);
+		this.bloomPass.exposure = sunBloomDataRef.exposure;
+    this.bloomPass.threshold = sunBloomDataRef.threshold;
+    this.bloomPass.strength = sunBloomDataRef.strength;
+    this.bloomPass.radius = sunBloomDataRef.radius;
+    composer.addPass(this.bloomPass);
+  }
 
 	//Attach the material to our geometry
 	const outputMaterial = new THREE.ShaderMaterial({

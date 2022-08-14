@@ -32,9 +32,9 @@ StarrySky.LightingManager = function(skyDirector){
   this.yAxisHemisphericalLight.position.set(0,1,0);
   this.zAxisHemisphericalLight.position.set(0,0,1);
   const isNormalLighting = lightingData.atmosphericPerspectiveType === 'normal';
-
+  let maxFogDensity;
   if(isNormalLighting){
-    const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
+    maxFogDensity = lightingData.atmosphericPerspectiveDensity;
     this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
     skyDirector.scene.fog = this.fog;
   }

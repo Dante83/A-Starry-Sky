@@ -8,6 +8,7 @@
 * Swapped out the native bloom effect for Three.js's bloom postprocessing pipeline.
 * Switch from gamma based correct to Linear-sRGB correction for lighting colors in shaders.
 * Added support for changing the intensity of the sun, moon and ambient lighting intensities.
+* Added the ability to change the bloom parameters for the sun and moon.
 * Fixed bug where sky, moon and sun would not track the camera position as it moved.
 
 **Version 1.0.1**

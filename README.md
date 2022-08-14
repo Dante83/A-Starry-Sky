@@ -190,6 +190,13 @@ One of the most likely elements you might want to change is the size of the sun 
 `<sky-ground-color-blue>` | Used to describe **blue** color channel changes to `<sky-ground-color>` tags. | 2
 `<sky-shadow-camera-resolution>` | The resolution, in pixels, of the direct lighting camera used to produce shadows. Higher values produce higher quality shadows at an increased cost in code. | 2048
 `<sky-shadow-camera-size>` | The size of the camera area used to cast shadows. Larger sizes result in more area covered by shadows, but also causes aliasing issues by spreading each pixel of the camera over a wider area. | 32.0
+`<sky-sun-bloom>` | Parent tag, contains all properties of the sun bloom render pass. | N/A
+`<sky-moon-bloom>` | Parent tag, contains all properties of the moon bloom render pass. | N/A
+`<sky-bloom-enabled>` | Enables (true) or disables (false) bloom on this astronomical object. | true
+`<sky-bloom-exposure>` | Changes the exposure parameter on the bloom filter - the amount to multiply light by returned to the camera. | 1.0
+`<sky-bloom-threshold>` | Changes the threshold parameter on the bloom filter - the minimum amount of intensity to enable bloom. | {sun: 0.98, moon: 0.55}
+`<sky-bloom-strength>` | Changes the strength parameter on the bloom filter - how much to 'bloom' for selected pixels. | {sun: 1.0, moon: 0.9}
+`<sky-bloom-radius>` | Changes the radius parameter on the bloom filter - the distance for the bloom filter to spread over. | {sun: 1.0, moon: 1.4}
 
 The sky lighting tags are useful for controlling attributes of the direct and indirect lighting in the scene. In version 1.0.0, the sky has reduced the number of direction lights from 2 (sun and moon) to 1 (just one for the most dominant light source). The directional light is always focused on the users camera and creates shadows around this camera. While the directional light can support various shadow types, this library actually isn't the place to control this. Instead, the shadow type is set in the `<a-scene>` tag, as described [here](https://aframe.io/docs/1.2.0/components/light.html#adding-real-time-shadows). That is, you can set the values to any of the following.
 
@@ -313,6 +320,48 @@ You may also wish to control the floor or ceiling for the ambient lighting, to e
 
       <!-- But don't make it too much. -->
       <sky-maximum-ambient-lighting>1.0</sky-maximum-ambient-lighting>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+At some point, you may wish to change the parameters for the bloom effects added to the sun or the moon in the sky. *a-starry-sky* makes use of the [Unreal Bloom Pass](https://threejs.org/examples/webgl_postprocessing_unreal_bloom.html) from THREE.JS. The intensity for all astronomical objects are controlled separately with parent `<sky-sun-bloom>` and `<sky-moon-bloom>` tags respectively. The child tags for these control the features of the bloom.
+
+Let's start by changing a few parameters
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-lighting>
+      <!-- Let's dim the sun down a bit -->
+      <sky-sun-bloom>
+        <sky-bloom-strength>0.1</sky-bloom-strength>
+        <sky-bloom-radius>0.1</sky-bloom-radius>
+      </sky-sun-bloom>
+
+      <!-- But let's also increase the intensity of the moon -->
+      <sky-moon-bloom>
+        <sky-bloom-strength>2.0</sky-bloom-strength>
+        <sky-bloom-radius>1.0</sky-bloom-radius>
+        <sky-bloom-threshold>0.0</sky-bloom-threshold>
+      </sky-moon-bloom>
+    </sky-lighting>
+  </a-starry-sky>
+</a-scene>
+```
+
+But we can also disable the bloom entirely, which reduces the load on the GPU by just a little.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-lighting>
+      <sky-sun-bloom>
+        <sky-bloom-enabled>false</sky-bloom-enabled>
+      </sky-sun-bloom>
+      <sky-moon-bloom>
+        <sky-bloom-enabled>false</sky-bloom-enabled>
+      </sky-moon-bloom>
     </sky-lighting>
   </a-starry-sky>
 </a-scene>

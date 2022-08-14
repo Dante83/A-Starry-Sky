@@ -33,10 +33,10 @@ def main():
     'materials/stars/star-data-map.js',\
     'materials/autoexposure/metering-survey.js',\
     'html_tags/SkyAssetsDir.js',\
+    'html_tags/SkyLighting.js',\
     'html_tags/SkyAtmosphericParameters.js',\
     'html_tags/SkyLocation.js',\
     'html_tags/SkyTime.js',\
-    'html_tags/SkyLighting.js',\
     'lut_libraries/AtmosphericLUTLibrary.js',\
     'lut_libraries/StellarLUTLibrary.js',\
     'renderers/AtmosphereRenderer.js',\
