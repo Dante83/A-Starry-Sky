@@ -1,7 +1,7 @@
 //This is not your usual file, instead it is a kind of fragment file that contains
 //a partial glsl fragment file with functions that are used in multiple locations
 StarrySky.Materials.Atmosphere.atmosphereFunctions = {
-  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, mieG){
+  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, atmosphericParameters){
     let originalGLSL = [
     '//Based on the work of Oskar Elek',
     '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
@@ -233,6 +233,7 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     '}',
     ];
 
+    const mieG = atmosphericParameters.mieDirectionalG;
     const textureDepth = packingWidth * packingHeight;
     const mieGSquared = mieG * mieG;
     const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared))

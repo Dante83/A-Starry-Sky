@@ -22,7 +22,6 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.scatteringTextureHeight = 32;
   this.scatteringTexturePackingWidth = 1;
   this.scatteringTexturePackingHeight = 32;
-  const mieGCoefficient = data.skyAtmosphericParameters.mieDirectionalG;
 
   //Grab our atmospheric functions partial, we also store it in the library
   //as we use it in the final atmospheric material.
@@ -31,14 +30,14 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     this.scatteringTextureHeight,
     this.scatteringTexturePackingWidth,
     this.scatteringTexturePackingHeight,
-    this.data.skyAtmosphericParameters.mieDirectionalG
+    this.data.skyAtmosphericParameters
   );
   let atmosphereFunctions = this.atmosphereFunctionsString;
 
   //Set up our transmittance texture
   let transmittanceTexture = transmittanceRenderer.createTexture();
   let transmittanceVar = transmittanceRenderer.addVariable('transmittanceTexture',
-    materials.transmittanceMaterial.fragmentShader(data.skyAtmosphericParameters.numberOfRaySteps, atmosphereFunctions),
+    materials.transmittanceMaterial.fragmentShader(this.data.skyAtmosphericParameters.numberOfRaySteps, atmosphereFunctions),
     transmittanceTexture
   );
   transmittanceRenderer.setVariableDependencies(transmittanceVar, []);
@@ -73,13 +72,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let singleScatteringMieTexture = singleScatteringRenderer.createTexture();
   let singleScatteringMieVar = singleScatteringRenderer.addVariable('kthInscatteringMie',
     materials.singleScatteringMaterial.fragmentShader(
-      data.skyAtmosphericParameters.numberOfRaySteps,
       this.scatteringTextureWidth,
       this.scatteringTextureHeight,
       this.scatteringTexturePackingWidth,
       this.scatteringTexturePackingHeight,
       false, //Is Rayleigh
-      atmosphereFunctions
+      atmosphereFunctions,
+      this.data.skyAtmosphericParameters
     ),
     singleScatteringMieTexture
   );
@@ -98,13 +97,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let singleScatteringRayleighTexture = singleScatteringRenderer.createTexture();
   let singleScatteringRayleighVar = singleScatteringRenderer.addVariable('kthInscatteringRayleigh',
     materials.singleScatteringMaterial.fragmentShader(
-      data.skyAtmosphericParameters.numberOfRaySteps,
       this.scatteringTextureWidth,
       this.scatteringTextureHeight,
       this.scatteringTexturePackingWidth,
       this.scatteringTexturePackingHeight,
       true, //Is Rayleigh
-      atmosphereFunctions
+      atmosphereFunctions,
+      this.data.skyAtmosphericParameters
     ),
     singleScatteringRayleighTexture
   );
@@ -213,14 +212,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let multipleScatteringMieTexture = multipleScatteringRenderer.createTexture();
   let multipleScatteringMieVar = multipleScatteringRenderer.addVariable('kthInscatteringMie',
     materials.kthInscatteringMaterial.fragmentShader(
-      data.skyAtmosphericParameters.numberOfRaySteps,
       this.scatteringTextureWidth,
       this.scatteringTextureHeight,
       this.scatteringTexturePackingWidth,
       this.scatteringTexturePackingHeight,
-      mieGCoefficient,
       false, //Is Rayleigh
-      atmosphereFunctions
+      atmosphereFunctions,
+      data.skyAtmosphericParameters
     ),
     multipleScatteringMieTexture
   );
@@ -240,14 +238,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let multipleScatteringRayleighTexture = multipleScatteringRenderer.createTexture();
   let multipleScatteringRayleighVar = multipleScatteringRenderer.addVariable('kthInscatteringRayleigh',
     materials.kthInscatteringMaterial.fragmentShader(
-      data.skyAtmosphericParameters.numberOfRaySteps,
       this.scatteringTextureWidth,
       this.scatteringTextureHeight,
       this.scatteringTexturePackingWidth,
       this.scatteringTexturePackingHeight,
-      mieGCoefficient,
       true, //Is Rayleigh
-      atmosphereFunctions
+      atmosphereFunctions,
+      data.skyAtmosphericParameters
     ),
     multipleScatteringRayleighTexture
   );
@@ -316,7 +313,8 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
 
   // Let's just focus on the second order scattering until that looks correct, possibly giving
   // another look over the first order scattering to make sure we have that correct as well.
-  for(let i = 0; i < 7; ++i){
+  console.log(data.skyAtmosphericParameters);
+  for(let i = 0; i < data.skyAtmosphericParameters.numberOfScatteringOrders; ++i){
     multipleScatteringMieVar.material.uniforms.inscatteredLightLUT.value = multipleScatteringMie3DLUT;
     multipleScatteringRayleighVar.material.uniforms.inscatteredLightLUT.value = multipleScatteringRayleigh3DLUT;
 
@@ -326,7 +324,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     multipleRayleighScatteringRenderTarget = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringRayleighVar);
 
     //And create our 3-D textures again...
-    if(i !== 6){
+    if(i !== (data.skyAtmosphericParameters.numberOfScatteringOrders - 1)){
       multipleScatteringMieFloat32Array = new Float32Array(SCATTERING_TEXTURE_WIDTH * SCATTERING_TEXTURE_HEIGHT * 4);
       renderer.readRenderTargetPixels(multipleMieScatteringRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, multipleScatteringMieFloat32Array);
       multipleScatteringMie3DLUT = new THREE.DataTexture3D(multipleScatteringMieFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);

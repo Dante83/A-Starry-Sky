@@ -3,19 +3,21 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
     transmittanceTexture: {value: null},
     inscatteredLightLUT: {value: null},
   },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
-    let originalGLSL = [
+  fragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions, atmosphericParameters){
+    const originalGLSL = [
       {fragment_glsl}
     ];
 
     let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
-    let textureDepth = packingWidth * packingHeight;
+    const numberOfChunks = atmosphericParameters.numberOfRaySteps - 1;
+    const numberOfGatheringChunks = atmosphericParameters.numberOfGatheringSteps - 1;
+    const textureDepth = packingWidth * packingHeight;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+      updatedGLSL = updatedGLSL.replace(/\$numberOfGatheringChunksInt/g, numberOfGatheringChunks);
       updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, mieGCoefficient.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, atmosphericParameters.mieDirectionalG.toFixed(16));
 
       //Texture constants
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));

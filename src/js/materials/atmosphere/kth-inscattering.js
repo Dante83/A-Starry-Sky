@@ -3,8 +3,8 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
     transmittanceTexture: {value: null},
     inscatteredLightLUT: {value: null},
   },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
-    let originalGLSL = [
+  fragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions, atmosphericParameters){
+    const originalGLSL = [
     '//Based on the work of Oskar Elek',
     '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
     '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
@@ -35,7 +35,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
       'float depthInPixels = $textureDepth;',
 
       '#pragma unroll',
-      'for(int i = 1; i < $numberOfChunksInt; i++){',
+      'for(int i = 1; i < $numberOfGatheringChunksInt; i++){',
         'theta += deltaTheta;',
         'uv3.x = parameterizationOfCosOfViewZenithToX(cos(theta));',
 
@@ -153,13 +153,15 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
     ];
 
     let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
-    let textureDepth = packingWidth * packingHeight;
+    const numberOfChunks = atmosphericParameters.numberOfRaySteps - 1;
+    const numberOfGatheringChunks = atmosphericParameters.numberOfGatheringSteps - 1;
+    const textureDepth = packingWidth * packingHeight;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+      updatedGLSL = updatedGLSL.replace(/\$numberOfGatheringChunksInt/g, numberOfGatheringChunks);
       updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, mieGCoefficient.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, atmosphericParameters.mieDirectionalG.toFixed(16));
 
       //Texture constants
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));

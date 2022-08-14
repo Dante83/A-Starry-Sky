@@ -9,6 +9,7 @@ window.customElements.define('sky-rayleigh-beta', class extends HTMLElement{});
 window.customElements.define('sky-ozone-beta', class extends HTMLElement{});
 window.customElements.define('sky-number-of-atmospheric-lut-ray-steps', class extends HTMLElement{});
 window.customElements.define('sky-number-of-atmospheric-lut-gathering-steps', class extends HTMLElement{});
+window.customElements.define('sky-number-of-scattering-orders', class extends HTMLElement{});
 window.customElements.define('sky-camera-height', class extends HTMLElement{});
 window.customElements.define('sky-atmosphere-height', class extends HTMLElement{});
 window.customElements.define('sky-radius-of-earth', class extends HTMLElement{});
@@ -60,7 +61,7 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
   mieDirectionalG: 0.8,
   numberOfRaySteps: 30,
   numberOfGatheringSteps: 30,
-  ozoneEnabled: true,
+  numberOfScatteringOrders: 7,
   sunAngularDiameter: 3.38,
   moonAngularDiameter: 3.15,
 };
@@ -97,6 +98,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       const skyOzoneBetaTags = self.getElementsByTagName('sky-ozone-beta');
       const numberOfRayStepTags = self.getElementsByTagName('sky-number-of-atmospheric-lut-ray-steps');
       const numberOfLUTGatheringStepsTags = self.getElementsByTagName('sky-number-of-atmospheric-lut-gathering-steps');
+      const numberOfScatteringOrderTags = self.getElementsByTagName('sky-number-of-scattering-orders');
       const cameraHeightTags = self.getElementsByTagName('sky-camera-height');
       const ozonePercentOfRayleighTags = self.getElementsByTagName('sky-ozone-percent-of-rayleigh');
       const radiusOfEarthTags = self.getElementsByTagName('sky-radius-of-earth');
@@ -104,7 +106,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       const moonIntensityTags = self.getElementsByTagName('sky-moon-intensity');
 
       [mieDirectionalGTags, sunAngularDiameterTags, moonAngularDiameterTags,
-      mieScaleHeightTags, rayleighScaleHeightTags, numberOfRayStepTags,
+      mieScaleHeightTags, rayleighScaleHeightTags, numberOfRayStepTags, numberOfScatteringOrderTags,
       numberOfLUTGatheringStepsTags, cameraHeightTags, ozonePercentOfRayleighTags,
       radiusOfEarthTags, sunIntensityTags, moonIntensityTags].forEach(function(tags){
         if(tags.length > 1){
@@ -133,9 +135,10 @@ class SkyAtmosphericParameters extends HTMLElement {
       dataRef.moonAngularDiameter = moonAngularDiameterTags.length > 0 ? parseFloat(moonAngularDiameterTags[0].innerHTML) : dataRef.moonAngularDiameter;
       dataRef.numberOfRaySteps = numberOfRayStepTags.length > 0 ? parseInt(numberOfRayStepTags[0].innerHTML) : dataRef.numberOfRaySteps;
       dataRef.numberOfGatheringSteps = numberOfLUTGatheringStepsTags.length > 0 ? parseInt(numberOfLUTGatheringStepsTags[0].innerHTML) : dataRef.numberOfGatheringSteps;
+      dataRef.numberOfScatteringOrders = numberOfScatteringOrderTags.length > 0 ? parseInt(numberOfScatteringOrderTags[0].innerHTML) : dataRef.numberOfScatteringOrders;
       dataRef.mieScaleHeight = mieScaleHeightTags.length > 0 ? parseFloat(parseFloat(mieScaleHeightTags[0].innerHTML)) : dataRef.mieScaleHeight;
       dataRef.rayleighScaleHeight = rayleighScaleHeightTags.length > 0 ? parseFloat(parseFloat(rayleighScaleHeightTags[0].innerHTML)) : dataRef.rayleighScaleHeight;
-      dataRef.cameraHeight = cameraheightTags.length > 0 ? parseFloat(cameraHeightTags[0].innerHTML) : dataRef.cameraHeight;
+      dataRef.cameraHeight = cameraHeightTags.length > 0 ? parseFloat(cameraHeightTags[0].innerHTML) : dataRef.cameraHeight;
       dataRef.ozonePercentOfRayleigh = ozonePercentOfRayleighTags.length > 0 ? parseFloat(ozonePercentOfRayleighTags[0].innerHTML) : dataRef.ozonePercentOfRayleigh;
       dataRef.radiusOfEarth = radiusOfEarthTags.length > 0 ? parseFloat(radiusOfEarthTags[0].innerHTML) : dataRef.radiusOfEarth;
       dataRef.solarIntensity = sunIntensityTags.length > 0 ? parseFloat(sunIntensityTags[0].innerHTML) : dataRef.solarIntensity;
@@ -148,6 +151,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       dataRef.moonAngularDiameter = clampAndWarn(dataRef.moonAngularDiameter, 0.1, 90.0, '<sky-moon-angular-diameter>');
       dataRef.numberOfRaySteps = clampAndWarn(dataRef.numberOfRaySteps, 4, 1024, '<sky-number-of-atmospheric-lut-ray-steps>');
       dataRef.numberOfGatheringSteps = clampAndWarn(dataRef.numberOfGatheringSteps, 4, 1024, '<sky-number-of-atmospheric-lut-gathering-steps>');
+      dataRef.numberOfScatteringOrders = clampAndWarn(dataRef.numberOfScatteringOrders, 1, 100, '<sky-number-of-scattering-orders>');
       dataRef.mieScaleHeight = clampAndWarn(dataRef.mieScaleHeight, 0.0, 1000.0, '<sky-mie-scale-height>');
       dataRef.rayleighScaleHeight = clampAndWarn(dataRef.rayleighScaleHeight, 0.0, 1E6, '<sky-rayleigh-scale-height>');
       dataRef.cameraHeight = clampAndWarn(dataRef.cameraHeight, 0.0, 80.0, '<sky-camera-height>');

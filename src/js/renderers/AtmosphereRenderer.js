@@ -140,6 +140,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
       uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
       uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+      uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
       if(assetManager.data.skyAurora.auroraEnabled){
         uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
       }

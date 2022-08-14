@@ -2,8 +2,8 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
   uniforms: {
     transmittanceTexture: {value: null}
   },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions){
-    let originalGLSL = [
+  fragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions, atmosphericParameters){
+    const originalGLSL = [
     '//Based on the work of Oskar Elek',
     '//http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf',
     '//and the thesis from http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf',
@@ -116,9 +116,11 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
     ];
 
     let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
+    const numberOfChunks = atmosphericParameters.numberOfRaySteps - 1;
+    const numberOfGatheringChunks = atmosphericParameters.numberOfGatheringSteps - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+      updatedGLSL = updatedGLSL.replace(/\$numberOfGatheringChunksInt/g, numberOfGatheringChunks);
       updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));

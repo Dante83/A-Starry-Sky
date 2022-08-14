@@ -28,7 +28,7 @@ vec3 gatherInscatteredLight(float r, float sunAngleAtP){
   float depthInPixels = $textureDepth;
 
   #pragma unroll
-  for(int i = 1; i < $numberOfChunksInt; i++){
+  for(int i = 1; i < $numberOfGatheringChunksInt; i++){
     theta += deltaTheta;
     uv3.x = parameterizationOfCosOfViewZenithToX(cos(theta));
 

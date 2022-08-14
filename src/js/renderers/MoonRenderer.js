@@ -250,6 +250,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       moonMaterial.uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
       moonMaterial.uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
       moonMaterial.uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
+
+      //Update sky parameters
+      moonMaterial.uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
+
       if(assetManager.data.skyAurora.auroraEnabled){
         moonMaterial.uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
       }

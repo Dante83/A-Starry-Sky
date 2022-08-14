@@ -15,7 +15,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       moonHorizonFade: {value: 1.0},
       scatteringSunIntensity: {value: 20.0},
       scatteringMoonIntensity: {value: 1.4},
-      blueNoiseTexture: {value: null}
+      blueNoiseTexture: {value: null},
+      cameraHeight: {value: 0.0}
     }
 
     if(cloudsEnabled && !isMeteringShader){

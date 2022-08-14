@@ -155,13 +155,16 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //Connect up our reference values
     baseSunMaterial.uniforms.sunPosition.value = skyState.sun.position;
     baseSunMaterial.uniforms.moonPosition.value = skyState.moon.position;
-    baseSunMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
     baseSunMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
-		const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
-    baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 
     //Connect up our images if they don't exist yet
 		if(assetManager){
+			//Update sky parameters
+			const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+	    baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+			baseSunMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+			baseSunMaterial.uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
+
 	    if(assetManager.hasLoadedImages){
 	      //Image of the solar corona for our solar ecclipse
 	      baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;

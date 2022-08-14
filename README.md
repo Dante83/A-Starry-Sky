@@ -39,11 +39,11 @@ your sky state.
 
 ## Setting The Location
 
-**Tag** | **Description**
-:--- | :---
-`<sky-location>` | Parent tag. Contains sky latitude and sky-longitude child tags.
-`<sky-latitude>` | Set latitude of the location. North of the equator is **positive**.
-`<sky-longitude>` | Set the longitude of the location. West of [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian) is **negative**.
+**Tag** | **Description** | **Default Value**
+:--- | :--- | :---
+`<sky-location>` | Parent tag. Contains sky latitude and sky-longitude child tags. | N/A
+`<sky-latitude>` | Set latitude of the location. North of the equator is **positive**. | 38
+`<sky-longitude>` | Set the longitude of the location. West of [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian) is **negative**. | -122
 
 You can set your sky to any latitude and longitude on planet Earth. Locations are useful to provide a sense of seasons to your players, by changing the arcs of the sun or the moon. The latitude will also dictate which stars are visible in your night sky. Both the latitude and longitude are also critical to time-dependent events such as solar and lunar eclipses. This is especially true for solar eclipses if you are looking to experience a total solar eclipse. That said, setting the location is easier then deciding where to be. Just grab the location you want from [Google Earth](https://earth.google.com/web/) or some other map source, and enter the values into their respective tags like so,
 
@@ -75,12 +75,12 @@ One important thing to notice is that our `<sky-latitude>` and `<sky-longitude>`
 
 ## Setting The Time
 
-**Tag** | **Description**
+**Tag** | **Description** | **Default Value**
 :--- | :---
 `<sky-time>` | Parent tag. Contains all child tags related to the date or time elements.
-`<sky-date>` | The local date-time string in the format **YEAR-MONTH-DAY HOUR:MINUTE:SECOND**/*2021-03-21 13:45:51*. Hour values are also based on a 0-23 hour system. 0 is 12 AM and 23 is 11PM.
-`<sky-speed>` | The time multiplier used to speed up the astronomical calculations, or slow them down.
-`<sky-utc-offset>` | The UTC-Offset for this location. Negative values are west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian), contrary to longitude values. **Note that UTC Time does not follow DST**
+`<sky-date>` | The local date-time string in the format **YEAR-MONTH-DAY HOUR:MINUTE:SECOND**/*2021-03-21 13:45:51*. Hour values are also based on a 0-23 hour system. 0 is 12 AM and 23 is 11PM. | Current Date
+`<sky-speed>` | The time multiplier used to speed up the astronomical calculations, or slow them down. | 1.0
+`<sky-utc-offset>` | The UTC-Offset for this location. Negative values are west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian), contrary to longitude values. **Note that UTC Time does not follow DST** | 7
 
 The sister setting to the location tag is the time tag. There are two strategies here. Either you wish to set the sky-time to UTC time and the sky-utc-offset to 0, or you wish to set the sky-time to your users location and set the UTC time to match. For instance, if you were setting up a user known to be in New York City, the local time on their machine is expected to be 4 hours behind UTC time. Furthermore, to match their location, you would also need to set their latitude and longitude to the location of New York City.
 
@@ -152,9 +152,24 @@ Of course, if you're doing this in a persistent world, make sure to take the acc
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
 `<sky-atmospheric-parameters>` | Parent tag. Contains all child tags related to atmospheric settings. | N/A
+`<sky-camera-height>` | The height of the camera above the earth. | 0.0km
 `<sky-mie-directional-g>` | Describes how much light is forward scattered by mie scattering, which is the whitish halo seen around the sun caused by larger particles in the atmosphere. The higher the mie-directional G, the dustier the atmosphere appears. | 0.8
+`<sky-sun-intensity>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-moon-intensity>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-sun-color>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-moon-color>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-mie-beta>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-rayleigh-beta>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-ozone-beta>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-atmosphere-height>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-radius-of-earth>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-rayleigh-scale-height>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-mie-scale-height>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-ozone-percent-of-rayleigh>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 `<sky-moon-angular-diameter>` | The angular diameter of the moon as it appears in the sky.  | 3.15 degrees
 `<sky-sun-angular-diameter>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-number-of-atmospheric-lut-ray-steps>` | The number of steps to the edge of the sky the ray tracer takes when gathering light for atmospheric LUTs. | 30 steps
+`<sky-number-of-atmospheric-lut-gathering-steps>` | The number of angular steps taken at each point along the ray for kth order scattering. | 30 steps
 
 The atmospheric parameters has one of the most extensive API in the entire code base. While these values can be used to create custom skies for the skilled developer most users will want to stick with the defaults. A few values in here are particularly useful however and fairly easy to understand.
 
@@ -167,6 +182,63 @@ One of the most likely elements you might want to change is the size of the sun 
       <sky-sun-angular-diameter>0.53</sky-sun-angular-diameter>
       <sky-moon-angular-diameter>0.5</sky-moon-angular-diameter>
     </sky-atmospheric-parameters>
+  </a-starry-sky>
+</a-scene>
+```
+
+You might also wish to change your starting height above the planet. This can easily be set with the `<sky-camera-height>` tag, although the sky will also dynamically adapt to your height as you move the camera higher or lower. This sets the initial height of the scene, in kilometers, with the maximum height being *80km*, and the minimum being *0km*.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-atmospheric-parameters>
+      <!--Let's go a bit higher up. The air is thinner up here. -->
+      <sky-camera-height>20.0</sky-camera-height>
+    </sky-atmospheric-parameters>
+  </a-starry-sky>
+</a-scene>
+```
+
+Although it's unlikely you will wish to modify the setup for the sky LUT tables, you can increase or decrease the number of ray steps as you desire for the number of steps taken between the camera and the edge of the planetary atmosphere, or angular steps for higher order scattering.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-atmospheric-parameters>
+      <!-- Less Accurate -->
+      <sky-number-of-atmospheric-lut-ray-steps>
+        2
+      </sky-number-of-atmospheric-lut-ray-steps>
+
+      <sky-number-of-atmospheric-lut-gathering-steps>
+        2
+      </sky-number-of-atmospheric-lut-gathering-steps>
+
+      <sky-number-of-scattering-orders>
+        1
+      </sky-number-of-scattering-orders>
+  </a-starry-sky>
+</a-scene>
+```
+
+Or if you want more details... Though if you run the below, it doesn't appear to make a major difference as the default values are pretty much optimal.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-atmospheric-parameters>
+      <!-- More Accurate (You can't really tell) -->
+      <sky-number-of-atmospheric-lut-ray-steps>
+        64
+      </sky-number-of-atmospheric-lut-ray-steps>
+
+      <sky-number-of-atmospheric-lut-gathering-steps>
+        64
+      </sky-number-of-atmospheric-lut-gathering-steps>
+
+      <sky-number-of-scattering-orders>
+        12
+      </sky-number-of-scattering-orders>
   </a-starry-sky>
 </a-scene>
 ```

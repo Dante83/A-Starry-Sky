@@ -15,7 +15,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       moonHorizonFade: {value: 1.0},
       scatteringSunIntensity: {value: 20.0},
       scatteringMoonIntensity: {value: 1.4},
-      blueNoiseTexture: {value: null}
+      blueNoiseTexture: {value: null},
+      cameraHeight: {value: 0.0}
     }
 
     if(cloudsEnabled && !isMeteringShader){
@@ -180,6 +181,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform sampler3D mieInscatteringSum;',
     'uniform sampler3D rayleighInscatteringSum;',
     'uniform sampler2D transmittance;',
+    'uniform float cameraHeight;',
 
     '//If clouds enabled',
     '#if($cloudsEnabled && !$isMeteringPass)',
@@ -822,7 +824,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//Note that for uv2OfTransmittance, I am clamping the cosOfViewAngle',
       '//to avoid edge interpolation in the 2-D texture with a different z',
       'float cosOfViewAngle = sphericalPosition.y;',
-      'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
+      'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, 80.0)));',
       'vec3 transmittanceFade = texture(transmittance, uv2OfTransmittance).rgb;',
 
       '//In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon',
@@ -923,7 +925,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#if(!$isMeteringPass && $cloudsEnabled)',
         'vec3 dominantLightSourcePosition = moonPosition;',
         'vec3 dominantLightSourceColor = 0.3 * scatteringMoonIntensity * moonLightColor * moonPosition.y;',
-        'vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
+        'vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, 80.0)));',
         'vec3 transmittanceOfPrimaryLightSource = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;',
         'vec3 sunDominantLightSourceColor = scatteringSunIntensity * vec3(1.0) * sunPosition.y;',
         'if(sunDominantLightSourceColor.b > dominantLightSourceColor.b){',
@@ -931,7 +933,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
           'dominantLightSourcePosition = sunPosition;',
         '}',
 
-        'vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + vWorldPosition.y, vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass + auroraLighting);',
+        'vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + clamp(cameraHeight * 1000.0 + vWorldPosition.y, 0.0, 80.0), vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass + auroraLighting);',
       '#endif',
 
       '//Sun and Moon layers',

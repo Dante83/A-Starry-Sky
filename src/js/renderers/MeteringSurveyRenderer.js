@@ -41,6 +41,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.meteringSurveyVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
   this.meteringSurveyVar.material.uniforms.latitude.value = skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
   this.meteringSurveyVar.material.uniforms.moonLightColor.value = skyDirector.skyState.moon.lightingModifier;
+  this.meteringSurveyVar.material.uniforms.cameraHeight.value = skyDirector.assetManager.data.skyAtmosphericParameters.cameraHeight;
   if(assetManager.data.skyAurora.auroraEnabled){
     this.meteringSurveyVar.material.uniforms.nitrogenColor.value = new THREE.Vector3(
       auroraParameters.nitrogenColor.red / 255.0,
