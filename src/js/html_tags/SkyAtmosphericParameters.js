@@ -74,37 +74,21 @@ class SkyAtmosphericParameters extends HTMLElement {
       const dataRef = self.data;
 
       //Get child tags and acquire their values.
-      //DONE
       const mieDirectionalGTags = self.getElementsByTagName('sky-mie-directional-g');
-      //DONE
       const sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
-      //DONE
       const moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
-      //DONE
       const skyMieBetaTags = self.getElementsByTagName('sky-mie-beta');
-      //DONE
       const skyRayleighBetaTags = self.getElementsByTagName('sky-rayleigh-beta');
-      //DONE
       const mieScaleHeightTags = self.getElementsByTagName('sky-mie-scale-height');
-      //DONE
       const rayleighScaleHeightTags = self.getElementsByTagName('sky-rayleigh-scale-height');
-      //DONE
       const skyOzoneBetaTags = self.getElementsByTagName('sky-ozone-beta');
-      //DONE
       const numberOfRayStepTags = self.getElementsByTagName('sky-number-of-atmospheric-lut-ray-steps');
-      //DONE
       const numberOfLUTGatheringStepsTags = self.getElementsByTagName('sky-number-of-atmospheric-lut-gathering-steps');
-      //DONE
       const numberOfScatteringOrderTags = self.getElementsByTagName('sky-number-of-scattering-orders');
-      //DONE
       const cameraHeightTags = self.getElementsByTagName('sky-camera-height');
-      //DONE
       const ozonePercentOfRayleighTags = self.getElementsByTagName('sky-ozone-percent-of-rayleigh');
-      //DONE
       const radiusOfEarthTags = self.getElementsByTagName('sky-radius-of-earth');
-      //DONE
       const sunIntensityTags = self.getElementsByTagName('sky-sun-intensity');
-      //DONE
       const moonIntensityTags = self.getElementsByTagName('sky-moon-intensity');
 
       [mieDirectionalGTags, sunAngularDiameterTags, moonAngularDiameterTags,
