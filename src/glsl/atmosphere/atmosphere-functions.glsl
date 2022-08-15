@@ -19,7 +19,7 @@ const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333;
 const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;
 //Mie Beta / 0.9, https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf
 //const float EARTH_MIE_BETA_EXTINCTION = 0.0000022222222222;
-const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444;
+const vec3 EARTH_MIE_BETA_EXTINCTION = $mieBeta;
 const float ELOK_Z_CONST = 0.97267627755;
 const float ONE_OVER_EIGHT_PI = 0.039788735772;
 const float ONE_OVER_FOUR_PI = 0.079577471545;
@@ -33,11 +33,11 @@ const float MIE_PHASE_FUNCTION_COEFFICIENT = $miePhaseFunctionCoefficient; //(1.
 //I actually found the values from the ET Engine by Illation
 //https://github.com/Illation/ETEngine
 //Far more helpful for determining my mie and rayleigh values
-const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);
+const vec3 RAYLEIGH_BETA = $rayleighBeta;
 
 //As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html
-const float OZONE_PERCENT_OF_RAYLEIGH = 6e-7;
-const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);
+const float OZONE_PERCENT_OF_RAYLEIGH = $ozonePercentOfRayleigh;
+const vec3 OZONE_BETA = $ozoneBeta;
 
 //
 //General methods

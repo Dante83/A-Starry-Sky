@@ -40,7 +40,7 @@ varying float vFogDepth;
 
     	// this pre-calcuation replaces older TotalRayleigh(vec3 lambda) function:
     	// (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn))
-    	const vec3 totalRayleigh = vec3( 5.804542996261093E-6, 1.3562911419845635E-5, 3.0265902468824876E-5 );
+    	const vec3 totalRayleigh = $rayleighBeta;
 
     	// mie stuff
     	// K coefficient for the primaries

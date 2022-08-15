@@ -7,8 +7,6 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
   const isAdvancedAtmosphericPerspective = lightingData.atmosphericPerspectiveType === 'advanced';
   this.fog = null;
   if(isAdvancedAtmosphericPerspective){
-    const mieCoefficient = 0.005;
-    const mieDirectionalG = atmosphericParameters.mieDirectionalG;
     const turbidity = 2.53;
     const rayleigh = 3.0;
     const groundDistanceMultp = lightingData.atmosphericPerspectiveDistanceMultiplier;
@@ -16,8 +14,8 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
     const DEG_2_RAD = 0.017453292519943295769236907684886;
     const sunRadius = Math.sin(atmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
     const moonRadius = Math.sin(atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
-    THREE.ShaderChunk.fog_pars_fragment = StarrySky.Materials.Fog.fogParsMaterial.fragmentShader(mieDirectionalG, rayleigh, exposure, groundDistanceMultp, true);
-    THREE.ShaderChunk.fog_pars_vertex = StarrySky.Materials.Fog.fogParsMaterial.vertexShader(rayleigh, turbidity, mieCoefficient, groundDistanceMultp, sunRadius, moonRadius, true);
+    THREE.ShaderChunk.fog_pars_fragment = StarrySky.Materials.Fog.fogParsMaterial.fragmentShader(rayleigh, exposure, groundDistanceMultp, true, atmosphericParameters);
+    THREE.ShaderChunk.fog_pars_vertex = StarrySky.Materials.Fog.fogParsMaterial.vertexShader(rayleigh, turbidity, groundDistanceMultp, sunRadius, moonRadius, true, atmosphericParameters);
     THREE.ShaderChunk.fog_fragment = StarrySky.Materials.Fog.fogMaterial.fragmentShader(true);
     THREE.ShaderChunk.fog_vertex = StarrySky.Materials.Fog.fogMaterial.vertexShader(true);
 

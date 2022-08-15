@@ -38,9 +38,9 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
     blue: 4.75E-7
   },
   mieBeta: {
-    red: 2E-6,
-    green: 2E-6,
-    blue: 2E-6
+    red: 4.44E-3,
+    green: 4.44E-3,
+    blue: 4.44E-3
   },
   rayleighBeta: {
     red: 5.8e-3,
@@ -86,20 +86,31 @@ class SkyAtmosphericParameters extends HTMLElement {
       const dataRef = self.data;
 
       //Get child tags and acquire their values.
+      //DONE
       const mieDirectionalGTags = self.getElementsByTagName('sky-mie-directional-g');
+      //DONE
       const sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
+      //DONE
       const moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
       const skySunColorTags = self.getElementsByTagName('sky-sun-color');
       const skyMoonColorTags = self.getElementsByTagName('sky-moon-color');
+      //DONE
       const skyMieBetaTags = self.getElementsByTagName('sky-mie-beta');
+      //DONE
       const skyRayleighBetaTags = self.getElementsByTagName('sky-rayleigh-beta');
       const mieScaleHeightTags = self.getElementsByTagName('sky-mie-scale-height');
       const rayleighScaleHeightTags = self.getElementsByTagName('sky-rayleigh-scale-height');
+      //DONE
       const skyOzoneBetaTags = self.getElementsByTagName('sky-ozone-beta');
+      //DONE
       const numberOfRayStepTags = self.getElementsByTagName('sky-number-of-atmospheric-lut-ray-steps');
+      //DONE
       const numberOfLUTGatheringStepsTags = self.getElementsByTagName('sky-number-of-atmospheric-lut-gathering-steps');
+      //DONE
       const numberOfScatteringOrderTags = self.getElementsByTagName('sky-number-of-scattering-orders');
+      //DONE
       const cameraHeightTags = self.getElementsByTagName('sky-camera-height');
+      //DONE
       const ozonePercentOfRayleighTags = self.getElementsByTagName('sky-ozone-percent-of-rayleigh');
       const radiusOfEarthTags = self.getElementsByTagName('sky-radius-of-earth');
       const sunIntensityTags = self.getElementsByTagName('sky-sun-intensity');
@@ -195,13 +206,13 @@ class SkyAtmosphericParameters extends HTMLElement {
         const tagGroup = skyMieBetaTags[0];
         const colorRef = dataRef.mieBeta;
         if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
-          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-red');
+          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-red');
         }
         if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){
-          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-green');
+          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-green');
         }
         if(tagGroup.getElementsByTagName('sky-parameters-color-blue').length > 0){
-          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-blue');
+          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-blue');
         }
       }
 
@@ -210,13 +221,14 @@ class SkyAtmosphericParameters extends HTMLElement {
         const tagGroup = skyRayleighBetaTags[0];
         const colorRef = dataRef.rayleighBeta;
         if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
-          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-red');
+          console.log("TEST!");
+          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-red');
         }
         if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){
-          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-green');
+          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-green');
         }
         if(tagGroup.getElementsByTagName('sky-parameters-color-blue').length > 0){
-          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-blue');
+          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-blue');
         }
       }
 
@@ -225,13 +237,13 @@ class SkyAtmosphericParameters extends HTMLElement {
         const tagGroup = skyOzoneBetaTags[0];
         const colorRef = dataRef.ozoneBeta;
         if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
-          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-red');
+          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-red');
         }
         if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){
-          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-green');
+          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-green');
         }
         if(tagGroup.getElementsByTagName('sky-parameters-color-blue').length > 0){
-          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-blue');
+          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-blue');
         }
       }
 

@@ -1,5 +1,5 @@
 StarrySky.Materials.Fog.fogParsMaterial = {
-  fragmentShader: function(mieDirectionalG, rayleigh, exposure, groundFexDistanceMultiplier, useAdvancedAtmospehericPerspective){
+  fragmentShader: function(rayleigh, exposure, groundFexDistanceMultiplier, useAdvancedAtmospehericPerspective, atmosphericParameters){
     let originalGLSL = [
     '#ifdef USE_FOG',
       'uniform vec3 fogColor; //Phi-Theta of Sun and Phi of Mooon',
@@ -40,7 +40,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
 
           '// this pre-calcuation replaces older TotalRayleigh(vec3 lambda) function:',
         '	// (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn))',
-        '	const vec3 totalRayleigh = vec3( 5.804542996261093E-6, 1.3562911419845635E-5, 3.0265902468824876E-5 );',
+        '	const vec3 totalRayleigh = $rayleighBeta;',
 
           '// 3.0 / ( 16.0 * pi )',
           'const float THREE_OVER_SIXTEEN_PI = 0.05968310365946075;',
@@ -133,11 +133,17 @@ StarrySky.Materials.Fog.fogParsMaterial = {
     ];
 
     let updatedLines = [];
+    let rayBet = JSON.parse(JSON.stringify(atmosphericParameters.rayleighBeta));
+    rayBet.r *= 0.001;
+    rayBet.g *= 0.001;
+    rayBet.b *= 0.001;
+    const rayleighBeta = `vec3(${rayBet.r.toFixed(16)}, ${rayBet.g.toFixed(16)}, ${rayBet.b.toFixed(16)})`;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$mieDirectionalG/g, mieDirectionalG.toFixed(5));
+      let updatedGLSL = originalGLSL[i].replace(/\$mieDirectionalG/g, atmosphericParameters.mieDirectionalG.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$rayleigh/g, rayleigh.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$exposure/g, exposure.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundFexDistanceMultiplier.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta.toFixed(5));
 
       if(useAdvancedAtmospehericPerspective){
         updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
@@ -151,7 +157,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
 
     return updatedLines.join('\n');
   },
-  vertexShader: function(rayleigh, turbidty, mieCoefficient, groundDistanceMultp, solarRadius, lunarRadius, useAdvancedAtmospehericPerspective){
+  vertexShader: function(rayleigh, turbidty, groundDistanceMultp, solarRadius, lunarRadius, useAdvancedAtmospehericPerspective, atmosphericParameters){
     let originalGLSL = [
     '#ifdef USE_FOG',
     'varying float vFogDepth;',
@@ -195,7 +201,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
 
         '	// this pre-calcuation replaces older TotalRayleigh(vec3 lambda) function:',
         '	// (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn))',
-        '	const vec3 totalRayleigh = vec3( 5.804542996261093E-6, 1.3562911419845635E-5, 3.0265902468824876E-5 );',
+        '	const vec3 totalRayleigh = $rayleighBeta;',
 
         '	// mie stuff',
         '	// K coefficient for the primaries',
@@ -271,6 +277,12 @@ StarrySky.Materials.Fog.fogParsMaterial = {
     ];
 
     let updatedLines = [];
+    let rayBet = JSON.parse(JSON.stringify(atmosphericParameters.rayleighBeta));
+    rayBet.red *= 0.001;
+    rayBet.green *= 0.001;
+    rayBet.blue *= 0.001;
+    const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
+    const mieCoefficient = atmosphericParameters.mieBeta.red / 10.0;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$rayleigh/g, rayleigh.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$turbidty/g, turbidty.toFixed(5));
@@ -278,6 +290,7 @@ StarrySky.Materials.Fog.fogParsMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundDistanceMultp.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$solarRadius/g, solarRadius.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$lunarRadius/g, lunarRadius.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta.toFixed(5));
 
       if(useAdvancedAtmospehericPerspective){
         updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');

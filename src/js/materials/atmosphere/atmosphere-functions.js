@@ -24,7 +24,7 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
     '//Mie Beta / 0.9, https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
     '//const float EARTH_MIE_BETA_EXTINCTION = 0.0000022222222222;',
-    'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444;',
+    'const vec3 EARTH_MIE_BETA_EXTINCTION = $mieBeta;',
     'const float ELOK_Z_CONST = 0.97267627755;',
     'const float ONE_OVER_EIGHT_PI = 0.039788735772;',
     'const float ONE_OVER_FOUR_PI = 0.079577471545;',
@@ -38,11 +38,11 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     '//I actually found the values from the ET Engine by Illation',
     '//https://github.com/Illation/ETEngine',
     '//Far more helpful for determining my mie and rayleigh values',
-    'const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);',
+    'const vec3 RAYLEIGH_BETA = $rayleighBeta;',
 
     '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
-    'const float OZONE_PERCENT_OF_RAYLEIGH = 6e-7;',
-    'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
+    'const float OZONE_PERCENT_OF_RAYLEIGH = $ozonePercentOfRayleigh;',
+    'const vec3 OZONE_BETA = $ozoneBeta;',
 
     '//',
     '//General methods',
@@ -236,7 +236,15 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     const mieG = atmosphericParameters.mieDirectionalG;
     const textureDepth = packingWidth * packingHeight;
     const mieGSquared = mieG * mieG;
-    const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared))
+    const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared));
+    console.log(atmosphericParameters);
+    const ozBet = atmosphericParameters.ozoneBeta;
+    const mieBet = atmosphericParameters.mieBeta;
+    const rayBet = atmosphericParameters.rayleighBeta;
+    const ozoneBeta = `vec3(${ozBet.red.toFixed(16)}, ${ozBet.green.toFixed(16)}, ${ozBet.blue.toFixed(16)})`;
+    const mieBeta = `vec3(${mieBet.red.toFixed(16)}, ${mieBet.green.toFixed(16)}, ${mieBet.blue.toFixed(16)})`;
+    console.log(rayBet);
+    const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
 
     let updatedLines = [];
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
@@ -245,6 +253,11 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$ozonePercentOfRayleigh/g, atmosphericParameters.ozonePercentOfRayleigh.toFixed(16));
+
+      updatedGLSL = updatedGLSL.replace(/\$ozoneBeta/g, ozoneBeta);
+      updatedGLSL = updatedGLSL.replace(/\$mieBeta/g, mieBeta);
+      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta);
 
       updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient.toFixed(16));

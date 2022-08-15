@@ -158,9 +158,9 @@ Of course, if you're doing this in a persistent world, make sure to take the acc
 `<sky-moon-intensity>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 `<sky-sun-color>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 `<sky-moon-color>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-mie-beta>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-rayleigh-beta>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-ozone-beta>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-mie-beta>` | Color dependence of light scattering for mie scattering, which is primarily responsible for the 'glow' close the sun. Scattering is pretty uniform across all frequencies. | rgb(4.44E-3, 4.44E-3, 4.44E-3)
+`<sky-rayleigh-beta>` | Color dependence of light scattering for rayleigh scattering, which is primarily responsible for the blue scattering in the sky. Notice that the blue channel has the most scattering by default. | rgb(5.8e-3, 1.35e-2, 3.31e-2)
+`<sky-ozone-beta>` | Color dependence of light scattering for the ozone layer, which is critical for the deep blues around sunset. | rgb(413.470734338, 413.470734338, 2.1112886E-13)
 `<sky-atmosphere-height>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 `<sky-radius-of-earth>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 `<sky-rayleigh-scale-height>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees

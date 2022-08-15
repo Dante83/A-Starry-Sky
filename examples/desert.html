@@ -99,18 +99,17 @@
              <sky-speed>400</sky-speed>
           </sky-time>
           <sky-atmospheric-parameters>
-            <!-- More Accurate -->
-            <sky-number-of-atmospheric-lut-ray-steps>
-              64
-            </sky-number-of-atmospheric-lut-ray-steps>
-
-            <sky-number-of-atmospheric-lut-gathering-steps>
-              64
-            </sky-number-of-atmospheric-lut-gathering-steps>
-
-            <sky-number-of-scattering-orders>
-              12
-            </sky-number-of-scattering-orders>
+            <sky-rayleigh-beta>
+              <sky-parameters-color-red>5.19673E-3</sky-parameters-color-red>
+              <sky-parameters-color-green>1.21427E-2</sky-parameters-color-green>
+              <sky-parameters-color-blue>2.96453E-2</sky-parameters-color-blue>
+            </sky-rayleigh-beta>
+            <!--https://argos.vu/wp-content/uploads/2021/06/18591764.pdf -->
+            <!-- <sky-rayleigh-beta>
+              <sky-parameters-color-red>19.918E-3</sky-parameters-color-red>
+              <sky-parameters-color-green>13.577E-3</sky-parameters-color-green>
+              <sky-parameters-color-blue>5.57E-3</sky-parameters-color-blue>
+            </sky-rayleigh-beta> -->
           </sky-atmospheric-parameters>
       </a-starry-sky>
 
