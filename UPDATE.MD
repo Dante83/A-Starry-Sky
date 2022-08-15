@@ -9,6 +9,7 @@
 * Switch from gamma based correct to Linear-sRGB correction for lighting colors in shaders.
 * Added support for changing the intensity of the sun, moon and ambient lighting intensities.
 * Added the ability to change the bloom parameters for the sun and moon.
+* Added the ability to change more atmospheric parameters, including starting camera height, sun intensity, moon intensity, mie beta, rayleigh beta, ozone beta, atmospheric height, radius of the planet, rayleigh scale height, mie scale height, ozone percent of rayleigh, number of lut raytrace steps and lut rotational ray trace steps.
 * Fixed bug where sky, moon and sun would not track the camera position as it moved.
 
 **Version 1.0.1**
