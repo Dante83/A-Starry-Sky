@@ -32,8 +32,8 @@ varying float vFogDepth;
     	const float pi = 3.1415926535897932;
       const float piOver2 = 1.57079632679;
       const float sqrtOf2 = 1.41421356237;
-      const float rayleighZenithLength = 8.4E3;
-      const float mieZenithLength = 1.25E3;
+      const float rayleighZenithLength = $rayleighScaleHeight;
+      const float mieZenithLength = $mieScaleHeight;
 
     	// wavelength of used primaries, according to preetham
     	const vec3 lambda = vec3( 680E-9, 550E-9, 450E-9 );

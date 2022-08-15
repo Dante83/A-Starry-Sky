@@ -99,17 +99,34 @@
              <sky-speed>400</sky-speed>
           </sky-time>
           <sky-atmospheric-parameters>
+            <!-- Notice that Mars scatters red light more -->
             <sky-rayleigh-beta>
-              <sky-parameters-color-red>5.19673E-3</sky-parameters-color-red>
-              <sky-parameters-color-green>1.21427E-2</sky-parameters-color-green>
-              <sky-parameters-color-blue>2.96453E-2</sky-parameters-color-blue>
-            </sky-rayleigh-beta>
-            <!--https://argos.vu/wp-content/uploads/2021/06/18591764.pdf -->
-            <!-- <sky-rayleigh-beta>
               <sky-parameters-color-red>19.918E-3</sky-parameters-color-red>
               <sky-parameters-color-green>13.577E-3</sky-parameters-color-green>
               <sky-parameters-color-blue>5.57E-3</sky-parameters-color-blue>
-            </sky-rayleigh-beta> -->
+            </sky-rayleigh-beta>
+            <sky-rayleigh-scale-height>30.0</sky-rayleigh-scale-height>
+
+            <!-- A few modifications to mie also help -->
+            <sky-mie-beta>
+              <sky-parameters-color-red>10.0E-3</sky-parameters-color-red>
+              <sky-parameters-color-green>10.0E-3</sky-parameters-color-green>
+              <sky-parameters-color-blue>10.0E-3</sky-parameters-color-blue>
+            </sky-mie-beta>
+            <sky-mie-scale-height>2.0</sky-mie-scale-height>
+
+            <!-- Make sure to disable the ozone -->
+            <sky-ozone-percent-of-rayleigh>0.0</sky-ozone-percent-of-rayleigh>
+
+            <!-- Well, in our case, Mars... -->
+            <sky-radius-of-earth>3389.5</sky-radius-of-earth>
+            <sky-atmosphere-height>10.8</sky-atmosphere-height>
+
+            <!-- The sun is smaller and the moon we can eliminate entirely -->
+            <sky-sun-angular-diameter>0.35</sky-sun-angular-diameter>
+            <sky-moon-angular-diameter>0.0</sky-moon-angular-diameter>
+            <sky-sun-intensity>590.0</sky-sun-intensity>
+            <sky-moon-intensity>0.0</sky-moon-intensity>
           </sky-atmospheric-parameters>
       </a-starry-sky>
 

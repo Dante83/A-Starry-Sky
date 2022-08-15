@@ -35,7 +35,7 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
       //Inject the intensity for the moon
       this.fog.color.fromArray([sunAltitude, sunAzimuth, moonAltitude]);
       this.fog.near = moonAzimuth;
-      this.fog.far = -(1300.0 * moonIntensity) / 20.0;
+      this.fog.far = -(atmosphericParameters.lunarMaxIntensity / 29.0) * (1300.0 * moonIntensity) / 20.0;
     }
   }
 }

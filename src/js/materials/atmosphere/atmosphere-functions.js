@@ -12,18 +12,17 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'const float PI_TIMES_FOUR = 12.5663706144;',
     'const float PI_TIMES_TWO = 6.28318530718;',
     'const float PI_OVER_TWO = 1.57079632679;',
-    'const float RADIUS_OF_EARTH = 6366.7;',
-    'const float RADIUS_OF_AURORA_BOTTOM = 6446.7;',
-    'const float RADIUS_OF_AURORA_TOP = 7006.7;',
-    'const float RADIUS_OF_EARTH_SQUARED = 40534868.89;',
-    'const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = 41559940.89;',
-    'const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = 1025072.0;',
-    'const float ATMOSPHERE_HEIGHT = 80.0;',
-    'const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;',
-    'const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333;',
-    'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
+    'const float RADIUS_OF_EARTH = $radiusOfEarth;',
+    'const float RADIUS_OF_AURORA_BOTTOM = $radiusOfAuroraBottom;',
+    'const float RADIUS_OF_AURORA_TOP = $radiusOfAuroraTop;',
+    'const float RADIUS_OF_EARTH_SQUARED = $radiusOfEarthSquared;',
+    'const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = $radiusOfEarthPlusRadiusOfAtmospherSquared;',
+    'const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = $radiusAtmosphereSquaredMinusRadiusOfEarthSquared;',
+    'const float ATMOSPHERE_HEIGHT = $atmosphereHeight;',
+    'const float ATMOSPHERE_HEIGHT_SQUARED = $atmosphereHeightSquared;',
+    'const float ONE_OVER_MIE_SCALE_HEIGHT = $oneOverMieScaleHeight;',
+    'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = $oneOverRayleighScaleHeight;',
     '//Mie Beta / 0.9, https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
-    '//const float EARTH_MIE_BETA_EXTINCTION = 0.0000022222222222;',
     'const vec3 EARTH_MIE_BETA_EXTINCTION = $mieBeta;',
     'const float ELOK_Z_CONST = 0.97267627755;',
     'const float ONE_OVER_EIGHT_PI = 0.039788735772;',
@@ -237,14 +236,23 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     const textureDepth = packingWidth * packingHeight;
     const mieGSquared = mieG * mieG;
     const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared));
-    console.log(atmosphericParameters);
     const ozBet = atmosphericParameters.ozoneBeta;
     const mieBet = atmosphericParameters.mieBeta;
     const rayBet = atmosphericParameters.rayleighBeta;
     const ozoneBeta = `vec3(${ozBet.red.toFixed(16)}, ${ozBet.green.toFixed(16)}, ${ozBet.blue.toFixed(16)})`;
     const mieBeta = `vec3(${mieBet.red.toFixed(16)}, ${mieBet.green.toFixed(16)}, ${mieBet.blue.toFixed(16)})`;
-    console.log(rayBet);
     const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
+
+    const atmosphereHeight = atmosphericParameters.atmosphereHeight;
+    const atmosphereHeightSquared = atmosphereHeight * atmosphereHeight;
+    const radiusOfEarth = atmosphericParameters.radiusOfEarth;
+    const radiusOfAuroraBottom = radiusOfEarth + 80.0;
+    const radiusOfAuroraTop = radiusOfEarth + 640.0;
+    const radiusOfEarthSquared = radiusOfEarth * radiusOfEarth;
+    const radiusOfEarthPlusRadiusOfAtmospherSquared = (radiusOfEarth + atmosphereHeight) * (radiusOfEarth + atmosphereHeight);
+    const radiusAtmosphereSquaredMinusRadiusOfEarthSquared = radiusOfEarthPlusRadiusOfAtmospherSquared - (radiusOfEarth * radiusOfEarth);
+    const oneOverMieScaleHeight = 1.0 / atmosphericParameters.mieScaleHeight;
+    const oneOverRayleighScaleHeight = 1.0 / atmosphericParameters.rayleighScaleHeight;
 
     let updatedLines = [];
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
@@ -254,6 +262,16 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$ozonePercentOfRayleigh/g, atmosphericParameters.ozonePercentOfRayleigh.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$atmosphereHeightSquared/g, atmosphereHeightSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfAuroraBottom/g, radiusOfAuroraBottom.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfAuroraTop/g, radiusOfAuroraTop.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfEarthSquared/g, radiusOfEarthSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfEarthPlusRadiusOfAtmospherSquared/g, radiusOfEarthPlusRadiusOfAtmospherSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusAtmosphereSquaredMinusRadiusOfEarthSquared/g, radiusAtmosphereSquaredMinusRadiusOfEarthSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$oneOverMieScaleHeight/g, oneOverMieScaleHeight.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$oneOverRayleighScaleHeight/g, oneOverRayleighScaleHeight.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfEarth/g, radiusOfEarth.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$atmosphereHeight/g, atmosphereHeight.toFixed(16));
 
       updatedGLSL = updatedGLSL.replace(/\$ozoneBeta/g, ozoneBeta);
       updatedGLSL = updatedGLSL.replace(/\$mieBeta/g, mieBeta);

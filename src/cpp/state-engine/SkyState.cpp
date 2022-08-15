@@ -27,7 +27,7 @@ extern "C" {
   void initializeMeteringAndLightingDependencies(int widthOfMeteringTexture, int transmittanceTextureSize, float* xyzPtr, float* pixelWeightsPtr, float* groundColorPtr, float* transmittanceLUTPtr, float* fogColorPtr);
   float updateMeteringData(float* skyColorIntensitiesPtr);
   void updateHemisphericalLightingData(float* skyColorIntensitiesPtr, float* hemisphericalAndDirectSkyLightPtr, float hmdViewX, float hmdViewZ);
-  float updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer, float* indirectLightingPointer);
+  float updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float radiusOfEarth, float radiusOfAtmosphere, float* directLightingPointer, float* indirectLightingPointer);
 }
 
 void SkyState::updateHeap32Memory(){
@@ -93,7 +93,7 @@ void EMSCRIPTEN_KEEPALIVE updateHemisphericalLightingData(float* skyColorIntensi
   skyState->lightingAnalyzer->updateHemisphericalLightingData(skyColorIntensitiesPtr, hemisphericalAndDirectSkyLightPtr, hmdViewX, hmdViewZ);
 }
 
-float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float* directLightingPointer, float* indirectLightingPointer){
+float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunYPosition, float sunRadius, float moonRadius, float moonYPosition, float sunIntensity, float moonIntensity, float meteringIntensity, float radiusOfEarth, float radiusOfAtmosphere, float* directLightingPointer, float* indirectLightingPointer){
   //Determine whether sun or moon is dominant based on the height
   float dominantLightRadius = sunRadius;
   float nightTimeTrigger = -3.0f * sunRadius;
@@ -144,8 +144,10 @@ float EMSCRIPTEN_KEEPALIVE updateDirectLighting(float heightOfCamera, float sunY
   //Use this height information to acquire the appropriate position on the transmittance LUT
   int widthOfTransmittanceTexture = skyState->lightingAnalyzer->widthOfTransmittanceTexture;
   float xPosition = 0.5f * (1.0f + dominantLightY) * static_cast<float>(widthOfTransmittanceTexture);
-  float r = heightOfCamera + RADIUS_OF_EARTH;
-  float yPosition = sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED) * static_cast<float>(widthOfTransmittanceTexture);
+  float r = heightOfCamera + radiusOfEarth;
+  float radiusOfAtmospherePlusEarth = radiusOfAtmosphere + radiusOfEarth;
+  float radiusOfAtmosphereSquaredMinusRadiusOfEarthSquared = (radiusOfAtmospherePlusEarth * radiusOfAtmospherePlusEarth) - (radiusOfEarth * radiusOfEarth);
+  float yPosition = sqrt((r * r - radiusOfEarth * radiusOfEarth) / radiusOfAtmosphereSquaredMinusRadiusOfEarthSquared) * static_cast<float>(widthOfTransmittanceTexture);
 
   //Get the look-up color for the LUT for the weighted nearest 4 colors
   float transmittance[3] = {0.0, 0.0, 0.0};

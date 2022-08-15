@@ -601,7 +601,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     }
     luminance += 0.03 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);
     if(hasFirstContact){
-      float lightSourceHeight = RADIUS_OF_EARTH + 2.0 * ((rayStartPosition.y / 1000.0) - RADIUS_OF_EARTH);
+      float lightSourceHeight = RADIUS_OF_EARTH + 2.0 * ((rayStartPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);
       vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(normalize(firstContactPosition.y), 0.0)), parameterizationOfHeightToY(lightSourceHeight));
       vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
       vec3 distVect = firstContactPosition - rayStartPosition;
@@ -626,8 +626,8 @@ vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 spher
   vec3 rayleighShadow = intensityFader * texture(rayleighLookupTable, uv3_2).rgb;
 
   //Percent of sun visible across the length of the ray extending in this direction
-  float percentShadowMie = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, 80.0, ONE_OVER_MIE_SCALE_HEIGHT);
-  float percentShadowRayleigh = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, 80.0, ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+  float percentShadowMie = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT, ONE_OVER_MIE_SCALE_HEIGHT);
+  float percentShadowRayleigh = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT, ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
   interpolatedMieScattering = mix(mieShadow, interpolatedMieScattering, percentShadowMie);
   interpolatedRayleighScattering = mix(rayleighShadow, interpolatedRayleighScattering, percentShadowRayleigh);
 
@@ -659,7 +659,7 @@ void main(){
   //Note that for uv2OfTransmittance, I am clamping the cosOfViewAngle
   //to avoid edge interpolation in the 2-D texture with a different z
   float cosOfViewAngle = sphericalPosition.y;
-  vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, 80.0)));
+  vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, ATMOSPHERE_HEIGHT)));
   vec3 transmittanceFade = texture(transmittance, uv2OfTransmittance).rgb;
 
   //In the event that we have a moon shader, we need to block out all astronomical light blocked by the moon
@@ -760,7 +760,7 @@ void main(){
   #if(!$isMeteringPass && $cloudsEnabled)
     vec3 dominantLightSourcePosition = moonPosition;
     vec3 dominantLightSourceColor = 0.3 * scatteringMoonIntensity * moonLightColor * moonPosition.y;
-    vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, 80.0)));
+    vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, ATMOSPHERE_HEIGHT)));
     vec3 transmittanceOfPrimaryLightSource = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
     vec3 sunDominantLightSourceColor = scatteringSunIntensity * vec3(1.0) * sunPosition.y;
     if(sunDominantLightSourceColor.b > dominantLightSourceColor.b){
@@ -768,7 +768,7 @@ void main(){
       dominantLightSourcePosition = sunPosition;
     }
 
-    vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + clamp(cameraHeight * 1000.0 + vWorldPosition.y, 0.0, 80.0), vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass + auroraLighting);
+    vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + clamp(cameraHeight * 1000.0 + vWorldPosition.y, 0.0, ATMOSPHERE_HEIGHT), vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass + auroraLighting);
   #endif
 
   //Sun and Moon layers

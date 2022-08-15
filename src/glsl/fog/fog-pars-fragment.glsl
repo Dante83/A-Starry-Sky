@@ -32,8 +32,8 @@
       const float n = 1.0003; // refractive index of air
       const float N = 2.545E25; // number of molecules per unit volume for air at 288.15K and 1013mb (sea level -45 celsius)
       // optical length at zenith for molecules
-      const float rayleighZenithLength = 8.4E3;
-      const float mieZenithLength = 1.25E3;
+      const float rayleighZenithLength = $rayleighScaleHeight;
+      const float mieZenithLength = $mieScaleHeight;
 
       // this pre-calcuation replaces older TotalRayleigh(vec3 lambda) function:
     	// (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn))

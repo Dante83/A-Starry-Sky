@@ -95,9 +95,9 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     uniforms.moonPosition.value = moonPosition;
     uniforms.sunHorizonFade.value = sunFade;
     uniforms.moonHorizonFade.value = Math.max(1.0 - sunFade, 0.0);
-    uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
+    uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
     uniforms.sunLuminosity.value = skyState.sun.luminosity;
-    uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.moonLuminosity.value = skyState.moon.luminosity;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     if(assetManager.data.skyAurora.auroraEnabled){

@@ -154,22 +154,23 @@ Of course, if you're doing this in a persistent world, make sure to take the acc
 `<sky-atmospheric-parameters>` | Parent tag. Contains all child tags related to atmospheric settings. | N/A
 `<sky-camera-height>` | The height of the camera above the earth. | 0.0km
 `<sky-mie-directional-g>` | Describes how much light is forward scattered by mie scattering, which is the whitish halo seen around the sun caused by larger particles in the atmosphere. The higher the mie-directional G, the dustier the atmosphere appears. | 0.8
-`<sky-sun-intensity>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-moon-intensity>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-sun-color>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-moon-color>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-sun-intensity>` | The intensity of the sun in the atmospheric shader. | 1367.0
+`<sky-moon-intensity>` | The intensity of the moon in the atmospheric shader. | 29.0
 `<sky-mie-beta>` | Color dependence of light scattering for mie scattering, which is primarily responsible for the 'glow' close the sun. Scattering is pretty uniform across all frequencies. | rgb(4.44E-3, 4.44E-3, 4.44E-3)
 `<sky-rayleigh-beta>` | Color dependence of light scattering for rayleigh scattering, which is primarily responsible for the blue scattering in the sky. Notice that the blue channel has the most scattering by default. | rgb(5.8e-3, 1.35e-2, 3.31e-2)
 `<sky-ozone-beta>` | Color dependence of light scattering for the ozone layer, which is critical for the deep blues around sunset. | rgb(413.470734338, 413.470734338, 2.1112886E-13)
-`<sky-atmosphere-height>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-radius-of-earth>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-rayleigh-scale-height>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-mie-scale-height>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
-`<sky-ozone-percent-of-rayleigh>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
+`<sky-atmosphere-height>` | The cutoff height after which the atmosphere 'ends'. | 80.0 km
+`<sky-radius-of-earth>` | The radius of the planet or Earth. | 6366.7 km
+`<sky-rayleigh-scale-height>` | The falloff scale height for mie scattering, assuming exponential falloff. Rayleigh scattering tends to comes from atmospheric gases and hence is much larger. | 8.4
+`<sky-mie-scale-height>` | The falloff scale height for mie scattering, assuming exponential falloff. Mie scattering comes from larger particles, so it tends to falloff faster, hence a smaller characteristic height scaler. | 1.25
+`<sky-ozone-percent-of-rayleigh>` | The percent of ozone currently in the sky, which is used to set the ozone return at sunset. | 6E-7
 `<sky-moon-angular-diameter>` | The angular diameter of the moon as it appears in the sky.  | 3.15 degrees
 `<sky-sun-angular-diameter>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 `<sky-number-of-atmospheric-lut-ray-steps>` | The number of steps to the edge of the sky the ray tracer takes when gathering light for atmospheric LUTs. | 30 steps
 `<sky-number-of-atmospheric-lut-gathering-steps>` | The number of angular steps taken at each point along the ray for kth order scattering. | 30 steps
+`<sky-parameters-color-red>` | the red component used in the `<sky-rayleigh-beta>`, `<sky-mie-beta>` and `<sky-ozone-beta>` tags. | N/A
+`<sky-parameters-color-green>` | the green component used in the `<sky-rayleigh-beta>`, `<sky-mie-beta>` and `<sky-ozone-beta>` tags. | N/A
+`<sky-parameters-color-blue>` | the blue component used in the `<sky-rayleigh-beta>`, `<sky-mie-beta>` and `<sky-ozone-beta>` tags. | N/A
 
 The atmospheric parameters has one of the most extensive API in the entire code base. While these values can be used to create custom skies for the skilled developer most users will want to stick with the defaults. A few values in here are particularly useful however and fairly easy to understand.
 
@@ -194,6 +195,66 @@ You might also wish to change your starting height above the planet. This can ea
     <sky-atmospheric-parameters>
       <!--Let's go a bit higher up. The air is thinner up here. -->
       <sky-camera-height>20.0</sky-camera-height>
+    </sky-atmospheric-parameters>
+  </a-starry-sky>
+</a-scene>
+```
+
+You might also wish to change the composition of your atmosphere. This element grants you access to a variety of different mechanisms for controlling your skies to look as you want. Say, for instance, you preferred the rayleigh values presented in [The Mathematics of Rayleigh Scattering](https://www.alanzucconi.com/2017/10/10/atmospheric-scattering-3/) instead of our native values (5.8e-3, 1.35e-2, 3.31e-2) -> (5.19E-3, 1.21E-2, 2.96E-2), and you wished to use a beta of 4.44E-3 -> 2E-3, you could easily swap these out in the code.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-atmospheric-parameters>
+      <sky-rayleigh-beta>
+        <sky-parameters-color-red>5.19E-3</sky-parameters-color-red>
+        <sky-parameters-color-green>1.21E-2</sky-parameters-color-green>
+        <sky-parameters-color-blue>2.96E-2</sky-parameters-color-blue>
+      </sky-rayleigh-beta>
+      <sky-mie-beta>
+        <sky-parameters-color-red>2E-3</sky-parameters-color-red>
+        <sky-parameters-color-green>2E-3</sky-parameters-color-green>
+        <sky-parameters-color-blue>2E-3</sky-parameters-color-blue>
+      </sky-mie-beta>
+    </sky-atmospheric-parameters>
+  </a-starry-sky>
+</a-scene>
+```
+
+That's not too exciting though, let's say we wanted something a bit more crazy. Let's follow the work of [Physically Based Rendering of the Martian Atmosphere](https://argos.vu/wp-content/uploads/2021/06/18591764.pdf) and go to Mars! Here they swap the usage of Rayleigh and Mei, so we should probably swap out their characteristic heights as well. Most of the scattering on Mars comes from Mie scattering of large particles, with a very thin atmosphere. Consequently, we can pretty much disable mie (rayleigh) and swap their characteristic heights as well. We should also change the planets radius as well and might wish to swap out the atmospheric height for better values in the ray tracer.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-atmospheric-parameters>
+      <!-- Notice that Mars scatters red light more -->
+      <sky-rayleigh-beta>
+        <sky-parameters-color-red>19.918E-3</sky-parameters-color-red>
+        <sky-parameters-color-green>13.577E-3</sky-parameters-color-green>
+        <sky-parameters-color-blue>5.57E-3</sky-parameters-color-blue>
+      </sky-rayleigh-beta>
+      <sky-rayleigh-scale-height>30.0</sky-rayleigh-scale-height>
+
+      <!-- A few modifications to mie also help -->
+      <sky-mie-beta>
+        <sky-parameters-color-red>10.0E-3</sky-parameters-color-red>
+        <sky-parameters-color-green>10.0E-3</sky-parameters-color-green>
+        <sky-parameters-color-blue>10.0E-3</sky-parameters-color-blue>
+      </sky-mie-beta>
+      <sky-mie-scale-height>2.0</sky-mie-scale-height>
+
+      <!-- Make sure to disable the ozone -->
+      <sky-ozone-percent-of-rayleigh>0.0</sky-ozone-percent-of-rayleigh>
+
+      <!-- Well, in our case, Mars... -->
+      <sky-radius-of-earth>3389.5</sky-radius-of-earth>
+      <sky-atmosphere-height>10.8</sky-atmosphere-height>
+
+      <!-- The sun is smaller and the moon we can eliminate entirely -->
+      <sky-sun-angular-diameter>0.35</sky-sun-angular-diameter>
+      <sky-moon-angular-diameter>0.0</sky-moon-angular-diameter>
+      <sky-sun-intensity>590.0</sky-sun-intensity>
+      <sky-moon-intensity>0.0</sky-moon-intensity>
     </sky-atmospheric-parameters>
   </a-starry-sky>
 </a-scene>

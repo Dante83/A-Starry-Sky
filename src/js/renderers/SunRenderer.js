@@ -2,13 +2,14 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	const renderer = skyDirector.renderer;
 	const assetManager = skyDirector.assetManager;
 	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
+	const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
 	const skyState = skyDirector.skyState;
 	const RENDER_TARGET_SIZE = 256;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const moonAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const moonAngularRadiusInRadians = atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
   const baseRadiusOfTheMoon = Math.sin(moonAngularRadiusInRadians)
-	this.sunAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+	this.sunAngularRadiusInRadians = atmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(this.sunAngularRadiusInRadians) * 2.0;
   const diameterOfSunPlane = 4.0 * radiusOfSunPlane;
 
@@ -39,7 +40,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     ))),
     vertexShader: StarrySky.Materials.Sun.baseSunPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphericParameters.mieDirectionalG,
       atmosphereLUTLibrary.scatteringTextureWidth,
       atmosphereLUTLibrary.scatteringTextureHeight,
       atmosphereLUTLibrary.scatteringTexturePackingWidth,
@@ -125,8 +126,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
     baseSunMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
     baseSunMaterial.uniforms.uTime.value = t;
-    baseSunMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
-    baseSunMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    baseSunMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    baseSunMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     baseSunMaterial.uniforms.localSiderealTime.value = skyState.LSRT;
     baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;
 
@@ -163,7 +164,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 			const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 	    baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 			baseSunMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
-			baseSunMaterial.uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
+			baseSunMaterial.uniforms.cameraHeight.value = atmosphericParameters.cameraHeight;
 
 	    if(assetManager.hasLoadedImages){
 	      //Image of the solar corona for our solar ecclipse

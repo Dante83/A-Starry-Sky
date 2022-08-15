@@ -35,8 +35,8 @@ StarrySky.Materials.Fog.fogParsMaterial = {
           'const float n = 1.0003; // refractive index of air',
           'const float N = 2.545E25; // number of molecules per unit volume for air at 288.15K and 1013mb (sea level -45 celsius)',
           '// optical length at zenith for molecules',
-          'const float rayleighZenithLength = 8.4E3;',
-          'const float mieZenithLength = 1.25E3;',
+          'const float rayleighZenithLength = $rayleighScaleHeight;',
+          'const float mieZenithLength = $mieScaleHeight;',
 
           '// this pre-calcuation replaces older TotalRayleigh(vec3 lambda) function:',
         '	// (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn))',
@@ -138,12 +138,16 @@ StarrySky.Materials.Fog.fogParsMaterial = {
     rayBet.g *= 0.001;
     rayBet.b *= 0.001;
     const rayleighBeta = `vec3(${rayBet.r.toFixed(16)}, ${rayBet.g.toFixed(16)}, ${rayBet.b.toFixed(16)})`;
+    const mieScaleHeight = atmosphericParameters.mieScaleHeight * 1000.0;
+    const rayleighScaleHeight = atmosphericParameters.rayleighScaleHeight * 1000.0;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$mieDirectionalG/g, atmosphericParameters.mieDirectionalG.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$rayleigh/g, rayleigh.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$exposure/g, exposure.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundFexDistanceMultiplier.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$mieScaleHeight/g, mieScaleHeight.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighScaleHeight/g, rayleighScaleHeight.toFixed(5));
 
       if(useAdvancedAtmospehericPerspective){
         updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
@@ -193,8 +197,8 @@ StarrySky.Materials.Fog.fogParsMaterial = {
         '	const float pi = 3.1415926535897932;',
           'const float piOver2 = 1.57079632679;',
           'const float sqrtOf2 = 1.41421356237;',
-          'const float rayleighZenithLength = 8.4E3;',
-          'const float mieZenithLength = 1.25E3;',
+          'const float rayleighZenithLength = $rayleighScaleHeight;',
+          'const float mieZenithLength = $mieScaleHeight;',
 
         '	// wavelength of used primaries, according to preetham',
         '	const vec3 lambda = vec3( 680E-9, 550E-9, 450E-9 );',
@@ -283,6 +287,8 @@ StarrySky.Materials.Fog.fogParsMaterial = {
     rayBet.blue *= 0.001;
     const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
     const mieCoefficient = atmosphericParameters.mieBeta.red / 10.0;
+    const mieScaleHeight = atmosphericParameters.mieScaleHeight * 1000.0;
+    const rayleighScaleHeight = atmosphericParameters.rayleighScaleHeight * 1000.0;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$rayleigh/g, rayleigh.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$turbidty/g, turbidty.toFixed(5));
@@ -291,6 +297,8 @@ StarrySky.Materials.Fog.fogParsMaterial = {
       updatedGLSL = updatedGLSL.replace(/\$solarRadius/g, solarRadius.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$lunarRadius/g, lunarRadius.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$mieScaleHeight/g, mieScaleHeight.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighScaleHeight/g, rayleighScaleHeight.toFixed(5));
 
       if(useAdvancedAtmospehericPerspective){
         updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');

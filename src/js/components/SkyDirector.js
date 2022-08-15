@@ -537,9 +537,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Pass this information to our web worker to get our exposure value
       self.webAssemblyWorker.postMessage({
         eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
-        heightOfCamera: this.previousCameraHeight,
-        hmdViewX: this.previousCameraLookAtVector.x,
-        hmdViewZ: this.previousCameraLookAtVector.z,
+        heightOfCamera: self.previousCameraHeight,
+        hmdViewX: self.previousCameraLookAtVector.x,
+        hmdViewZ: self.previousCameraLookAtVector.z,
         sunYPosition0: sunYPos0,
         sunYPositionf: sunYPosf,
         sunRadius0: sunRadius0,
@@ -558,6 +558,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
         meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array,
         transmittanceTextureLUT: self.atmosphereLUTLibrary.transferableTransmittanceFloat32Array,
         groundColor: groundColorArray,
+        radiusOfEarth: self.assetManager.data.skyAtmosphericParameters.radiusOfEarth,
+        heightOfAtmosphere: self.assetManager.data.skyAtmosphericParameters.heightOfAtmosphere
       }, [
         transferableSkyIntialLightingBuffer,
         self.transferableSkyFinalLightingBuffer,

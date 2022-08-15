@@ -2,8 +2,6 @@
 window.customElements.define('sky-parameters-color-red', class extends HTMLElement{});
 window.customElements.define('sky-parameters-color-green', class extends HTMLElement{});
 window.customElements.define('sky-parameters-color-blue', class extends HTMLElement{});
-window.customElements.define('sky-sun-color', class extends HTMLElement{});
-window.customElements.define('sky-moon-color', class extends HTMLElement{});
 window.customElements.define('sky-mie-beta', class extends HTMLElement{});
 window.customElements.define('sky-rayleigh-beta', class extends HTMLElement{});
 window.customElements.define('sky-ozone-beta', class extends HTMLElement{});
@@ -27,16 +25,6 @@ window.customElements.define('sky-moon-angular-diameter', class extends HTMLElem
 StarrySky.DefaultData.skyAtmosphericParameters = {
   solarIntensity: 1367.0,
   lunarMaxIntensity: 29,
-  solarColor: {
-    red: 6.5E-7,
-    green: 5.1E-7,
-    blue: 4.75E-7
-  },
-  lunarColor: {
-    red: 6.5E-7,
-    green: 5.1E-7,
-    blue: 4.75E-7
-  },
   mieBeta: {
     red: 4.44E-3,
     green: 4.44E-3,
@@ -52,11 +40,11 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
     green: 413.470734338,
     blue: 2.1112886E-13
   },
-  mieScaleHeight: 1.2,
-  rayleighScaleHeight: 8.0,
+  mieScaleHeight: 1.25,
+  rayleighScaleHeight: 8.4,
   atmosphereHeight: 80.0,
   cameraHeight: 0.0,
-  radiusOfEarth: 6000.0,
+  radiusOfEarth: 6366.7,
   ozonePercentOfRayleigh: 6e-7,
   mieDirectionalG: 0.8,
   numberOfRaySteps: 30,
@@ -92,13 +80,13 @@ class SkyAtmosphericParameters extends HTMLElement {
       const sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
       //DONE
       const moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
-      const skySunColorTags = self.getElementsByTagName('sky-sun-color');
-      const skyMoonColorTags = self.getElementsByTagName('sky-moon-color');
       //DONE
       const skyMieBetaTags = self.getElementsByTagName('sky-mie-beta');
       //DONE
       const skyRayleighBetaTags = self.getElementsByTagName('sky-rayleigh-beta');
+      //DONE
       const mieScaleHeightTags = self.getElementsByTagName('sky-mie-scale-height');
+      //DONE
       const rayleighScaleHeightTags = self.getElementsByTagName('sky-rayleigh-scale-height');
       //DONE
       const skyOzoneBetaTags = self.getElementsByTagName('sky-ozone-beta');
@@ -112,8 +100,11 @@ class SkyAtmosphericParameters extends HTMLElement {
       const cameraHeightTags = self.getElementsByTagName('sky-camera-height');
       //DONE
       const ozonePercentOfRayleighTags = self.getElementsByTagName('sky-ozone-percent-of-rayleigh');
+      //DONE
       const radiusOfEarthTags = self.getElementsByTagName('sky-radius-of-earth');
+      //DONE
       const sunIntensityTags = self.getElementsByTagName('sky-sun-intensity');
+      //DONE
       const moonIntensityTags = self.getElementsByTagName('sky-moon-intensity');
 
       [mieDirectionalGTags, sunAngularDiameterTags, moonAngularDiameterTags,
@@ -126,7 +117,7 @@ class SkyAtmosphericParameters extends HTMLElement {
       });
 
       //With special subcases for our color tags
-      [skySunColorTags, skyMoonColorTags, skyMieBetaTags, skyRayleighBetaTags, skyOzoneBetaTags].forEach(function(tags){
+      [skyMieBetaTags, skyRayleighBetaTags, skyOzoneBetaTags].forEach(function(tags){
         if(tags.length === 1){
           //Check that it only contains one of each of the following child tags
           const redTags = tags[0].getElementsByTagName('sky-parameters-color-red');
@@ -170,36 +161,6 @@ class SkyAtmosphericParameters extends HTMLElement {
       dataRef.radiusOfEarth = clampAndWarn(dataRef.radiusOfEarth, 0.1, 1E6, '<sky-radius-of-earth>');
       dataRef.solarIntensity = clampAndWarn(dataRef.solarIntensity, 0.0, 1e6, '<sky-sun-intensity>');
       dataRef.lunarMaxIntensity = clampAndWarn(dataRef.lunarMaxIntensity, 0.0, 1e6, '<sky-moon-intensity>');
-
-      //Parse our sky sun color
-      if(skySunColorTags.length === 1){
-        const tagGroup = skySunColorTags[0];
-        const colorRef = dataRef.solarColor;
-        if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
-          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-red');
-        }
-        if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){
-          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-green');
-        }
-        if(tagGroup.getElementsByTagName('sky-parameters-color-blue').length > 0){
-          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-blue');
-        }
-      }
-
-      //Parse our sky moon color
-      if(skyMoonColorTags.length === 1){
-        const tagGroup = skyMoonColorTags[0];
-        const colorRef = dataRef.lunarColor;
-        if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
-          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-red');
-        }
-        if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){
-          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-green');
-        }
-        if(tagGroup.getElementsByTagName('sky-parameters-color-blue').length > 0){
-          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, 1.0, 'sky-parameters-color-blue');
-        }
-      }
 
       //Parse our mie beta color
       if(skyMieBetaTags.length === 1){

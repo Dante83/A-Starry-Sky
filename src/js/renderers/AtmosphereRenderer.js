@@ -99,8 +99,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     uniforms.uTime.value = t;
     uniforms.localSiderealTime.value = skyState.LSRT;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
-    uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
-    uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 
     const lightingManager = skyDirector.lightingManager;
