@@ -236,6 +236,7 @@ That's not too exciting though, let's say we wanted something a bit more crazy. 
       <sky-rayleigh-scale-height>30.0</sky-rayleigh-scale-height>
 
       <!-- A few modifications to mie also help -->
+      <sky-mie-directional-g>0.9</sky-mie-directional-g>
       <sky-mie-beta>
         <sky-parameters-color-red>10.0E-3</sky-parameters-color-red>
         <sky-parameters-color-green>10.0E-3</sky-parameters-color-green>

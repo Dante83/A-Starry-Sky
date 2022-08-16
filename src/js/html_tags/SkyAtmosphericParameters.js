@@ -133,18 +133,18 @@ class SkyAtmosphericParameters extends HTMLElement {
       //Clamp and warn our values
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
       dataRef.mieDirectionalG = clampAndWarn(dataRef.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
-      dataRef.sunAngularDiameter = clampAndWarn(dataRef.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
-      dataRef.moonAngularDiameter = clampAndWarn(dataRef.moonAngularDiameter, 0.1, 90.0, '<sky-moon-angular-diameter>');
-      dataRef.numberOfRaySteps = clampAndWarn(dataRef.numberOfRaySteps, 4, 1024, '<sky-number-of-atmospheric-lut-ray-steps>');
-      dataRef.numberOfGatheringSteps = clampAndWarn(dataRef.numberOfGatheringSteps, 4, 1024, '<sky-number-of-atmospheric-lut-gathering-steps>');
-      dataRef.numberOfScatteringOrders = clampAndWarn(dataRef.numberOfScatteringOrders, 1, 100, '<sky-number-of-scattering-orders>');
-      dataRef.mieScaleHeight = clampAndWarn(dataRef.mieScaleHeight, 0.0, 1000.0, '<sky-mie-scale-height>');
-      dataRef.rayleighScaleHeight = clampAndWarn(dataRef.rayleighScaleHeight, 0.0, 1E6, '<sky-rayleigh-scale-height>');
-      dataRef.cameraHeight = clampAndWarn(dataRef.cameraHeight, 0.0, 80.0, '<sky-camera-height>');
+      dataRef.sunAngularDiameter = clampAndWarn(dataRef.sunAngularDiameter, 0.0, 90.0, '<sky-sun-angular-diameter>');
+      dataRef.moonAngularDiameter = clampAndWarn(dataRef.moonAngularDiameter, 0.0, 90.0, '<sky-moon-angular-diameter>');
+      dataRef.numberOfRaySteps = clampAndWarn(dataRef.numberOfRaySteps, 4, 128, '<sky-number-of-atmospheric-lut-ray-steps>');
+      dataRef.numberOfGatheringSteps = clampAndWarn(dataRef.numberOfGatheringSteps, 4, 128, '<sky-number-of-atmospheric-lut-gathering-steps>');
+      dataRef.numberOfScatteringOrders = clampAndWarn(dataRef.numberOfScatteringOrders, 1, 64, '<sky-number-of-scattering-orders>');
+      dataRef.mieScaleHeight = clampAndWarn(dataRef.mieScaleHeight, 0.0, Infinity, '<sky-mie-scale-height>');
+      dataRef.rayleighScaleHeight = clampAndWarn(dataRef.rayleighScaleHeight, 0.0, Infinity, '<sky-rayleigh-scale-height>');
+      dataRef.cameraHeight = clampAndWarn(dataRef.cameraHeight, 0.0, Infinity, '<sky-camera-height>');
       dataRef.ozonePercentOfRayleigh = clampAndWarn(dataRef.ozonePercentOfRayleigh, 0.0, 1.0, '<sky-ozone-percent-of-rayleigh>');
-      dataRef.radiusOfEarth = clampAndWarn(dataRef.radiusOfEarth, 0.1, 1E6, '<sky-radius-of-earth>');
-      dataRef.solarIntensity = clampAndWarn(dataRef.solarIntensity, 0.0, 1e6, '<sky-sun-intensity>');
-      dataRef.lunarMaxIntensity = clampAndWarn(dataRef.lunarMaxIntensity, 0.0, 1e6, '<sky-moon-intensity>');
+      dataRef.radiusOfEarth = clampAndWarn(dataRef.radiusOfEarth, 0.1, Infinity, '<sky-radius-of-earth>');
+      dataRef.solarIntensity = clampAndWarn(dataRef.solarIntensity, 0.0, Infinity, '<sky-sun-intensity>');
+      dataRef.lunarMaxIntensity = clampAndWarn(dataRef.lunarMaxIntensity, 0.0, Infinity, '<sky-moon-intensity>');
 
       //Parse our mie beta color
       if(skyMieBetaTags.length === 1){
@@ -166,7 +166,6 @@ class SkyAtmosphericParameters extends HTMLElement {
         const tagGroup = skyRayleighBetaTags[0];
         const colorRef = dataRef.rayleighBeta;
         if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
-          console.log("TEST!");
           colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-red');
         }
         if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){

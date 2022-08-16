@@ -27,7 +27,7 @@ float tileableWorleyNoise(vec3 uv3, float numPoints){
     }
   }
 
-  return clamp(1.0 - minDistance * pow(numPoints, 1.0 / 3.0), 0.0, 1.0);
+  return clamp(1.0 - minDistance, 0.0, 1.0);
 }
 
 //Presume the width of our texture is 128x128x128
@@ -47,9 +47,9 @@ void main(){
 	vec3 p3 = pixel2DLocTo3DLoc(p);
 
   //Worley noise octaves
-  float worleyNoise1 = tileableWorleyNoise(p3, 5.0);
-  float worleyNoise2 = tileableWorleyNoise(p3, 45.0);
-  float worleyNoise3 = tileableWorleyNoise(p3, 405.0);
+  float worleyNoise1 = tileableWorleyNoise(p3, 3.0);
+  float worleyNoise2 = tileableWorleyNoise(p3, 27.0);
+  float worleyNoise3 = tileableWorleyNoise(p3, 81.0);
 	// float worleyNoise1 = tileableWorleyNoise(p3, 2.0);
   // float worleyNoise2 = tileableWorleyNoise(p3, 18.0);
   // float worleyNoise3 = tileableWorleyNoise(p3, 162.0);

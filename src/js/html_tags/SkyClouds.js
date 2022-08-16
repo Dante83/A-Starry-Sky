@@ -11,14 +11,14 @@ window.customElements.define('sky-cloud-raymarch-steps', class extends HTMLEleme
 window.customElements.define('sky-cloud-cutoff-distance', class extends HTMLElement{});
 
 StarrySky.DefaultData.skyCloud = {
-  coverage: 50.0,
+  coverage: 70.0,
   startHeight: 1000.0,
   endHeight: 2500.0,
   fadeOutStartPercent: 90.0,
   fadeInEndPercent: 10.0,
-  velocity: new THREE.Vector2(0.0, 0.0),
+  velocity: new THREE.Vector2(40.0, 40.0),
   startSeed: Date.now() % (86400 * 365),
-  numberOfRayMarchSteps: 42.0,
+  numberOfRayMarchSteps: 64.0,
   cutoffDistance: 40000.0,
   cloudsEnabled: false
 };
