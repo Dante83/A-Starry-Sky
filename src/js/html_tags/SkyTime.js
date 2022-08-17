@@ -56,7 +56,7 @@ class SkyTime extends HTMLElement {
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
       self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, -14.0, 12.0, '<sky-utc-offset>') : null;
-      self.data.speed = self.data.speed ? clampAndWarn(self.data.speed, 0.0, 1000.0, '<sky-speed>') :null;
+      self.data.speed = self.data.speed ? clampAndWarn(self.data.speed, 0.0, 10000.0, '<sky-speed>') :null;
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });

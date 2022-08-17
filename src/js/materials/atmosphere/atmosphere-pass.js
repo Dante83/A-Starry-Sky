@@ -128,7 +128,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
-      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
+      'vWorldPosition = vec3(-worldPosition.z, -worldPosition.y, -worldPosition.x);',
       'vLocalPosition = normalize(vec3(-position.z, position.y, -position.x));',
 
       '//Convert coordinate position to RA and DEC',
@@ -744,7 +744,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
             'vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;',
             'float scatteringToRayPoint = hillaireHenyayGreenstein(dot(dominantLightDirection, dominantLightDirection));',
             'float scatteringToCamera = hillaireHenyayGreenstein(dot(rayDirection, dominantLightDirection));',
-            'luminance += 0.0002 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;',
+            'luminance += 0.0003 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;',
 
             '//Update previous values',
             'cloudDensity0 = cloudDensityf;',
@@ -758,7 +758,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
             '}',
           '}',
         '}',
-        'luminance += 0.07 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);',
+        'luminance += 0.09 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);',
         'if(hasFirstContact){',
           'float lightSourceHeight = RADIUS_OF_EARTH + 2.0 * ((rayStartPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);',
           'vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(normalize(firstContactPosition.y), 0.0)), parameterizationOfHeightToY(lightSourceHeight));',

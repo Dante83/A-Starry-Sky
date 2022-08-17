@@ -12,7 +12,7 @@ void main() {
   vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);
   vLocalPosition = normalize(vWorldPosition.xyz);
   worldPosition = worldMatrix * vec4(position * radiusOfSunPlane * 2.0, 1.0);
-  vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);
+  vWorldPosition = vec3(-worldPosition.z, -worldPosition.y, -worldPosition.x);
 
   vUv = uv;
 

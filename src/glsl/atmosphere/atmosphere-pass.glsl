@@ -580,7 +580,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
         float scatteringToRayPoint = hillaireHenyayGreenstein(dot(dominantLightDirection, dominantLightDirection));
         float scatteringToCamera = hillaireHenyayGreenstein(dot(rayDirection, dominantLightDirection));
-        luminance += 0.0002 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;
+        luminance += 0.0003 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;
 
         //Update previous values
         cloudDensity0 = cloudDensityf;
@@ -594,7 +594,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         }
       }
     }
-    luminance += 0.07 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);
+    luminance += 0.09 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);
     if(hasFirstContact){
       float lightSourceHeight = RADIUS_OF_EARTH + 2.0 * ((rayStartPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);
       vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(normalize(firstContactPosition.y), 0.0)), parameterizationOfHeightToY(lightSourceHeight));

@@ -105,7 +105,7 @@ class SkyLighting extends HTMLElement {
           const strengthTags = tag.getElementsByTagName('sky-bloom-strength');
           const radiusTags = tag.getElementsByTagName('sky-bloom-radius');
           let bloomEnabled = true;
-          if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.toLowerCase() !== 'true'){
+          if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.trim().toLowerCase() !== 'true'){
             bloomEnabled = false;
           }
           if(bloomEnabled){
@@ -154,8 +154,8 @@ class SkyLighting extends HTMLElement {
         "for advanced, respectively.");
       }
       if(atmosphericPerspectiveTypeTags.length > 0){
-        const atmType = atmosphericPerspectiveTypeTags[0].innerHTML;
-        const lcAtmType = atmType.toLowerCase();
+        const atmType = atmosphericPerspectiveTypeTags[0].innerHTML.trim();
+        const lcAtmType = atmType.trim().toLowerCase();
         if(['none', 'normal', 'advanced'].includes(lcAtmType)){
           hasAtmosphericPerspectiveTypeNamed = true;
           dataRef.atmosphericPerspectiveType = lcAtmType;
@@ -166,10 +166,10 @@ class SkyLighting extends HTMLElement {
       }
       if(hasAtmosphericPerspectiveTypeNamed){
         if(dataRef.atmosphericPerspectiveType == 'normal'){
-          dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : dataRef.atmosphericPerspectiveDensity;
+          dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML.trim()) : dataRef.atmosphericPerspectiveDensity;
         }
         else if(dataRef.atmosphericPerspectiveType == 'advanced'){
-          dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML) : dataRef.atmosphericPerspectiveDistanceMultiplier;
+          dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML.trim()) : dataRef.atmosphericPerspectiveDistanceMultiplier;
         }
       }
       else{
@@ -177,21 +177,21 @@ class SkyLighting extends HTMLElement {
           console.warn('Atmospheric perspective type not explicitly named in a <sky-atmospheric-perspective> tag '+
           'defaulting to normal because of the presense of an <sky-atmospheric-perspective-density> tag.');
           dataRef.atmosphericPerspectiveType = 'normal';
-          dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : dataRef.atmosphericPerspectiveDensity;
+          dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML.trim()) : dataRef.atmosphericPerspectiveDensity;
         }
         else if(hasAtmosphericPerspecitiveDistanceMultiplierTags){
           dataRef.atmosphericPerspectiveType = 'advanced';
-          dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML) : dataRef.atmosphericPerspectiveDistanceMultiplier;
+          dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML.trim()) : dataRef.atmosphericPerspectiveDistanceMultiplier;
           console.warn('Atmospheric perspective type not explicitly named in a <sky-atmospheric-perspective> tag '+
           'defaulting to advanced because of the presense of an <sky-atmospheric-perspective-distance-multiplier> tag.');
         }
       }
 
-      dataRef.sunIntensity = sunIntensityTags.length > 0 ? parseFloat(sunIntensityTags[0].innerHTML) : dataRef.sunIntensity;
-      dataRef.moonIntensity = moonIntensityTags.length > 0 ? parseFloat(moonIntensityTags[0].innerHTML) : dataRef.moonIntensity;
-      dataRef.ambientIntensity = ambientIntensityTags.length > 0 ? parseFloat(ambientIntensityTags[0].innerHTML) : dataRef.ambientIntensity;
-      const minimumAmbientLighting = minimumAmbientLightingTags.length > 0 ? parseFloat(minimumAmbientLightingTags[0].innerHTML) : dataRef.minimumAmbientLighting;
-      const maximumAmbientLighting = maximumAmbientLightingTags.length > 0 ? parseFloat(maximumAmbientLightingTags[0].innerHTML) : dataRef.maximumAmbientLighting;
+      dataRef.sunIntensity = sunIntensityTags.length > 0 ? parseFloat(sunIntensityTags[0].innerHTML.trim()) : dataRef.sunIntensity;
+      dataRef.moonIntensity = moonIntensityTags.length > 0 ? parseFloat(moonIntensityTags[0].innerHTML.trim()) : dataRef.moonIntensity;
+      dataRef.ambientIntensity = ambientIntensityTags.length > 0 ? parseFloat(ambientIntensityTags[0].innerHTML.trim()) : dataRef.ambientIntensity;
+      const minimumAmbientLighting = minimumAmbientLightingTags.length > 0 ? parseFloat(minimumAmbientLightingTags[0].innerHTML.trim()) : dataRef.minimumAmbientLighting;
+      const maximumAmbientLighting = maximumAmbientLightingTags.length > 0 ? parseFloat(maximumAmbientLightingTags[0].innerHTML.trim()) : dataRef.maximumAmbientLighting;
       if(minimumAmbientLighting <= maximumAmbientLighting){
         dataRef.minimumAmbientLighting = minimumAmbientLighting;
         dataRef.maximumAmbientLighting = maximumAmbientLighting;
@@ -199,8 +199,8 @@ class SkyLighting extends HTMLElement {
       else{
         console.error("Cannot set the minimum ambient lighting greater than the maximum ambient lighting. Setting to defaults.");
       }
-      dataRef.shadowCameraSize = shadowCameraSizeTags.length > 0 ? parseFloat(shadowCameraSizeTags[0].innerHTML) : dataRef.shadowCameraSize;
-      dataRef.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML) : dataRef.shadowCameraResolution;
+      dataRef.shadowCameraSize = shadowCameraSizeTags.length > 0 ? parseFloat(shadowCameraSizeTags[0].innerHTML.trim()) : dataRef.shadowCameraSize;
+      dataRef.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML.trim()) : dataRef.shadowCameraResolution;
 
       //Clamp the values in our tags
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
@@ -220,21 +220,21 @@ class SkyLighting extends HTMLElement {
         const bloomDataRef = dataRef.sunBloom;
         const bloomEnabledTags = tagGroup.getElementsByTagName('sky-bloom-enabled');
         let bloomEnabled = true;
-        if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.toLowerCase() !== 'true'){
+        if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.trim().toLowerCase() !== 'true'){
           bloomEnabled = false;
         }
         if(bloomEnabled){
           if(tagGroup.getElementsByTagName('sky-bloom-exposure').length > 0){
-            bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML), 0.0, 2.0, 'sky-bloom-exposure');
+            bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML.trim()), 0.0, 2.0, 'sky-bloom-exposure');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-threshold').length > 0){
-            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML), 0.0, 1.0, 'sky-bloom-threshold');
+            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-threshold');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-strength').length > 0){
-            bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML), 0.0, 3.0, 'sky-bloom-strength');
+            bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML.trim()), 0.0, 3.0, 'sky-bloom-strength');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-radius').length > 0){
-            bloomDataRef.radius = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-radius')[0].innerHTML), 0.0, 1.0, 'sky-bloom-radius');
+            bloomDataRef.radius = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-radius')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-radius');
           }
           bloomDataRef.bloomEnabled = true;
         }
@@ -249,21 +249,21 @@ class SkyLighting extends HTMLElement {
         const bloomDataRef = dataRef.moonBloom;
         const bloomEnabledTags = tagGroup.getElementsByTagName('sky-bloom-enabled');
         let bloomEnabled = true;
-        if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.toLowerCase() !== 'true'){
+        if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.trim().toLowerCase() !== 'true'){
           bloomEnabled = false;
         }
         if(bloomEnabled){
           if(tagGroup.getElementsByTagName('sky-bloom-exposure').length > 0){
-            bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML), 0.0, 2.0, 'sky-bloom-exposure');
+            bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML.trim()), 0.0, 2.0, 'sky-bloom-exposure');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-threshold').length > 0){
-            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML), 0.0, 1.0, 'sky-bloom-threshold');
+            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-threshold');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-strength').length > 0){
-            bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML), 0.0, 3.0, 'sky-bloom-strength');
+            bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML.trim()), 0.0, 3.0, 'sky-bloom-strength');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-radius').length > 0){
-            bloomDataRef.radius = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-radius')[0].innerHTML), 0.0, 1.0, 'sky-bloom-radius');
+            bloomDataRef.radius = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-radius')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-radius');
           }
           bloomDataRef.bloomEnabled = true;
         }
@@ -276,13 +276,13 @@ class SkyLighting extends HTMLElement {
       if(groundColorTags.length === 1){
         const firstGroundColorTagGroup = groundColorTags[0];
         if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red').length > 0){
-          dataRef.groundColor.red = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+          dataRef.groundColor.red = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red')[0].innerHTML.trim()), 0, 255, 'sky-ground-color-red');
         }
         if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green').length > 0){
-          dataRef.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML), 0, 255, 'sky-ground-color-green');
+          dataRef.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML.trim()), 0, 255, 'sky-ground-color-green');
         }
         if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue').length > 0){
-          dataRef.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML), 0, 255, 'sky-ground-color-blue');
+          dataRef.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML.trim()), 0, 255, 'sky-ground-color-blue');
         }
       }
 

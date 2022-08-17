@@ -54,7 +54,7 @@ StarrySky.Materials.Postprocessing.moonAndSunOutput = {
     'void main() {',
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
       'vLocalPosition = normalize(vec3(-position.z, position.y, -position.x));',
-      'vWorldPosition = worldPosition.xyz;',
+      'vWorldPosition = vec3(-worldPosition.z, -worldPosition.y, -worldPosition.x);',
       'vUv = uv;',
 
       'vec4 projectionPosition = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',

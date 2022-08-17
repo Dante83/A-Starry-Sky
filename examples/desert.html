@@ -95,12 +95,17 @@
       <!-- Sky Setup -->
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
           <sky-time>
-             <sky-date>1226-12-05 23:00:00</sky-date>
-             <sky-speed>800</sky-speed>
+             <sky-date>1226-12-05 10:00:00</sky-date>
+             <sky-speed>800.0</sky-speed>
           </sky-time>
-          <!-- <sky-clouds>
-            <sky-cloud-coverage>50.0</sky-cloud-coverage>
-          </sky-clouds> -->
+          <sky-lighting>
+            <sky-atmospheric-perspective-type>
+              advanced
+            </sky-atmospheric-perspective-type>
+          </sky-lighting>
+          <sky-clouds>
+            <sky-cloud-coverage>70.0</sky-cloud-coverage>
+          </sky-clouds>
       </a-starry-sky>
 
       <a-assets>

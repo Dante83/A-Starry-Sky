@@ -134,20 +134,20 @@ StarrySky.Materials.Fog.fogParsMaterial = {
 
     let updatedLines = [];
     let rayBet = JSON.parse(JSON.stringify(atmosphericParameters.rayleighBeta));
-    rayBet.r *= 0.001;
-    rayBet.g *= 0.001;
-    rayBet.b *= 0.001;
-    const rayleighBeta = `vec3(${rayBet.r.toFixed(16)}, ${rayBet.g.toFixed(16)}, ${rayBet.b.toFixed(16)})`;
+    rayBet.red *= 0.001;
+    rayBet.green *= 0.001;
+    rayBet.blue *= 0.001;
+    const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
     const mieScaleHeight = atmosphericParameters.mieScaleHeight * 1000.0;
     const rayleighScaleHeight = atmosphericParameters.rayleighScaleHeight * 1000.0;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$mieDirectionalG/g, atmosphericParameters.mieDirectionalG.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta);
+      updatedGLSL = updatedGLSL.replace(/\$rayleighScaleHeight/g, rayleighScaleHeight.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$rayleigh/g, rayleigh.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$exposure/g, exposure.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundFexDistanceMultiplier.toFixed(5));
-      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$mieScaleHeight/g, mieScaleHeight.toFixed(5));
-      updatedGLSL = updatedGLSL.replace(/\$rayleighScaleHeight/g, rayleighScaleHeight.toFixed(5));
 
       if(useAdvancedAtmospehericPerspective){
         updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
@@ -286,19 +286,19 @@ StarrySky.Materials.Fog.fogParsMaterial = {
     rayBet.green *= 0.001;
     rayBet.blue *= 0.001;
     const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
-    const mieCoefficient = atmosphericParameters.mieBeta.red / 10.0;
+    const mieCoefficient = atmosphericParameters.mieBeta.red;
     const mieScaleHeight = atmosphericParameters.mieScaleHeight * 1000.0;
     const rayleighScaleHeight = atmosphericParameters.rayleighScaleHeight * 1000.0;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
-      let updatedGLSL = originalGLSL[i].replace(/\$rayleigh/g, rayleigh.toFixed(5));
-      updatedGLSL = updatedGLSL.replace(/\$turbidty/g, turbidty.toFixed(5));
+      let updatedGLSL = originalGLSL[i].replace(/\$turbidty/g, turbidty.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighScaleHeight/g, rayleighScaleHeight.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta);
+      updatedGLSL = updatedGLSL.replace(/\$rayleigh/g, rayleigh.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$mieCoefficient/g, mieCoefficient.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundDistanceMultp.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$solarRadius/g, solarRadius.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$lunarRadius/g, lunarRadius.toFixed(5));
-      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta.toFixed(5));
       updatedGLSL = updatedGLSL.replace(/\$mieScaleHeight/g, mieScaleHeight.toFixed(5));
-      updatedGLSL = updatedGLSL.replace(/\$rayleighScaleHeight/g, rayleighScaleHeight.toFixed(5));
 
       if(useAdvancedAtmospehericPerspective){
         updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');

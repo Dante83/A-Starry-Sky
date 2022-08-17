@@ -76,7 +76,7 @@ One important thing to notice is that our `<sky-latitude>` and `<sky-longitude>`
 ## Setting The Time
 
 **Tag** | **Description** | **Default Value**
-:--- | :---
+:--- | :--- | :---
 `<sky-time>` | Parent tag. Contains all child tags related to the date or time elements.
 `<sky-date>` | The local date-time string in the format **YEAR-MONTH-DAY HOUR:MINUTE:SECOND**/*2021-03-21 13:45:51*. Hour values are also based on a 0-23 hour system. 0 is 12 AM and 23 is 11PM. | Current Date
 `<sky-speed>` | The time multiplier used to speed up the astronomical calculations, or slow them down. | 1.0
