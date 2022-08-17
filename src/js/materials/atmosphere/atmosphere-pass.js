@@ -64,7 +64,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
     else if(isMoonShader){
       uniforms.moonExposure = {value: 1.0};
-      uniforms.moonAngularDiameterCos = {value: 1.0};
       uniforms.sunRadius = {value: 1.0};
       uniforms.radiusOfMoonPlane = {value: 1.0};
       uniforms.distanceToEarthsShadowSquared = {value: 1.0};
@@ -261,7 +260,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '#elif($isMoonPass)',
       'uniform float starsExposure;',
       'uniform float moonExposure;',
-      'uniform float moonAngularDiameterCos;',
       'uniform float sunRadius;',
       'uniform float distanceToEarthsShadowSquared;',
       'uniform float oneOverNormalizedLunarDiameter;',

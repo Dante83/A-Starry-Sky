@@ -96,7 +96,6 @@ const vec3 intensityVector = vec3(0.3, 0.59, 0.11);
 #elif($isMoonPass)
   uniform float starsExposure;
   uniform float moonExposure;
-  uniform float moonAngularDiameterCos;
   uniform float sunRadius;
   uniform float distanceToEarthsShadowSquared;
   uniform float oneOverNormalizedLunarDiameter;

@@ -210,9 +210,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
     outputMaterial.uniforms.uTime.value = t;
 
-    // console.log(moonMaterial.uniforms)
-    // console.log(outputMaterial.uniforms);
-    // debugger;
+    console.log(moonMaterial.uniforms)
+    console.log(outputMaterial.uniforms);
+    debugger;
 
     //Clean up shadows and XR stuff
     renderer.xr.enabled = currentXrEnabled;

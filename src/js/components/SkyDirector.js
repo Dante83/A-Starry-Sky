@@ -559,9 +559,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
         meteringSurveyFloatArray0: transferableIntialSkyLightingFloat32Array,
         meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array,
         transmittanceTextureLUT: self.atmosphereLUTLibrary.transferableTransmittanceFloat32Array,
-        groundColor: groundColorArray,
-        radiusOfEarth: self.assetManager.data.skyAtmosphericParameters.radiusOfEarth,
-        heightOfAtmosphere: self.assetManager.data.skyAtmosphericParameters.atmosphereHeight
+        groundColor: groundColorArray
       }, [
         transferableSkyIntialLightingBuffer,
         self.transferableSkyFinalLightingBuffer,
