@@ -320,14 +320,15 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
         //Set our previous lookup target
         const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
-        this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
+        self.previousCameraLookAtVector.x = cameraLookAtTarget.x;
+        self.previousCameraLookAtVector.y = cameraLookAtTarget.y;
+        self.previousCameraLookAtVector.z = cameraLookAtTarget.z;
         this.previousCameraHeight = self.camera.position.y;
       }
     }
   }
 
   //Prepare our WASM Modules
-  console.log(webWorkerURI);
   this.webAssemblyWorker = new Worker(webWorkerURI);
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
@@ -471,7 +472,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.initializeAutoExposure = async function(){
       const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
       const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize;
-      const numberOfColorChannelsInMeteringPixel = 4;
       const groundColorRef = self.assetManager.data.skyLighting.groundColor;
       const groundColorArray = new Float32Array(3);
       groundColorArray[0] = groundColorRef.red / 255.0;
@@ -492,7 +492,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
       self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
       let skyRenderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
-      transferableSkyIntialLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
+      transferableSkyIntialLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * 4);
       transferableIntialSkyLightingFloat32Array = new Float32Array(transferableSkyIntialLightingBuffer);
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, transferableIntialSkyLightingFloat32Array);
 
@@ -517,14 +517,16 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
       self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
       skyRenderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
-      self.transferableSkyFinalLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
+      self.transferableSkyFinalLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * 4);
       self.transferableSkyFinalLightingFloat32Array = new Float32Array(transferableSkyIntialLightingBuffer);
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transferableSkyFinalLightingFloat32Array);
 
       //Get the look at target for our camera to see where we are looking
       const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
-      this.previousCameraHeight = self.camera.position.y;
-      this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
+      self.previousCameraHeight = self.camera.position.y;
+      self.previousCameraLookAtVector.x = cameraLookAtTarget.x;
+      self.previousCameraLookAtVector.y = cameraLookAtTarget.y;
+      self.previousCameraLookAtVector.z = cameraLookAtTarget.z;
 
       //Determine if our sun is the dominant light source when we end this interpolation
       self.dominantLightIsSunf = true;
@@ -559,7 +561,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
         transmittanceTextureLUT: self.atmosphereLUTLibrary.transferableTransmittanceFloat32Array,
         groundColor: groundColorArray,
         radiusOfEarth: self.assetManager.data.skyAtmosphericParameters.radiusOfEarth,
-        heightOfAtmosphere: self.assetManager.data.skyAtmosphericParameters.heightOfAtmosphere
+        heightOfAtmosphere: self.assetManager.data.skyAtmosphericParameters.atmosphereHeight
       }, [
         transferableSkyIntialLightingBuffer,
         self.transferableSkyFinalLightingBuffer,
@@ -624,9 +626,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.tick(time, timeDelta);
 
       //Update all of our renderers
-      self.renderers.atmosphereRenderer.firstTick();
-      self.renderers.sunRenderer.firstTick();
-      self.renderers.moonRenderer.firstTick();
+      self.renderers.atmosphereRenderer.firstTick(time);
+      self.renderers.sunRenderer.firstTick(time);
+      self.renderers.moonRenderer.firstTick(time);
 
       self.setupNextTick();
     }

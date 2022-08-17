@@ -107,7 +107,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     if(assetManager.data.skyCloud.cloudsEnabled){
       uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
       if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
-        uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
+        uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
       }
     }
   }

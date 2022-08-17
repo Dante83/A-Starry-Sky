@@ -38,6 +38,8 @@ var lightingState = {};
 var update;
 var requests = [];
 var hemisphericalSkyColorFloatArray;
+var radiusOfEarth;
+var heightOfAtmosphere;
 
 var updateSkyState = function(arrayReference){
   if(wasmIsReady && skyStateIsReady){
@@ -144,6 +146,8 @@ function initializeHemisphericalLighting(postObject){
   const numPixelsInTransmittanceTexture = postObject.transmittanceTextureSize * postObject.transmittanceTextureSize;
   const transmittanceBufferLength = numPixelsInTransmittanceTexture * 3;
   let transmittanceRGB = new Float32Array(transmittanceBufferLength);
+  radiusOfEarth = postObject.radiusOfEarth;
+  heightOfAtmosphere = postObject.heightOfAtmosphere;
   for(let i = 0; i < numPixelsInTransmittanceTexture; ++i){
     const iTimes4 = i * 4;
     const iTimes3 = i * 3;
@@ -178,7 +182,8 @@ function initializeHemisphericalLighting(postObject){
   const exposureCoefficient0 = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
   const dominantLightY0 = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPosition0,
     postObject.sunRadius0, postObject.moonRadius0, postObject.moonYPosition0, postObject.sunIntensity0 * 0.01,
-    postObject.moonIntensity0, exposureCoefficient0, lightingState.directLightingColorPtr, lightingState.indirectLightingColorPtr);
+    postObject.moonIntensity0, exposureCoefficient0, radiusOfEarth, heightOfAtmosphere,
+    lightingState.directLightingColorPtr, lightingState.indirectLightingColorPtr);
   Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
   //Copy our results into a new transferrable buffer that we will pass back to CPU 0
@@ -198,7 +203,8 @@ function initializeHemisphericalLighting(postObject){
   const exposureCoefficientf = Module._updateMeteringData(lightingState.skyMeteringSurveyMemoryPtr);
   const dominantLightYf = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf,
     postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf * 0.01,
-    postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr, lightingState.indirectLightingColorIntensityPtr);
+    postObject.moonIntensityf, exposureCoefficientf, radiusOfEarth, heightOfAtmosphere,
+    lightingState.directLightingColorPtr, lightingState.indirectLightingColorIntensityPtr);
   Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr, postObject.hmdViewX, postObject.hmdViewZ);
 
   //Copy our results into a new transferrable buffer that we will pass back to CPU 0
@@ -234,7 +240,8 @@ onmessage = function(e){
     let directLightingColorf = new Float32Array(3);
     const dominantLightYf = Module._updateDirectLighting(postObject.heightOfCamera, postObject.sunYPositionf,
       postObject.sunRadiusf, postObject.moonRadiusf, postObject.moonYPositionf, postObject.sunIntensityf * 0.01,
-      postObject.moonIntensityf, exposureCoefficientf, lightingState.directLightingColorPtr, lightingState.indirectLightingColorIntensityPtr);
+      postObject.moonIntensityf, exposureCoefficientf, radiusOfEarth, heightOfAtmosphere,
+      lightingState.directLightingColorPtr, lightingState.indirectLightingColorIntensityPtr);
     Module._updateHemisphericalLightingData(lightingState.skyMeteringSurveyMemoryPtr, lightingState.skyHemisphericalLightColorPtr, postObject.hmdViewX, postObject.hmdViewZ);
     //
     // //Copy our results into a new transferrable buffer that we will pass back to CPU 0

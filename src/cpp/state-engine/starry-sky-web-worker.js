@@ -38,8 +38,8 @@ var lightingState = {};
 var update;
 var requests = [];
 var hemisphericalSkyColorFloatArray;
-var radiusOfTheEarth;
-var radiusOfTheAtmosphere;
+var radiusOfEarth;
+var heightOfAtmosphere;
 
 var updateSkyState = function(arrayReference){
   if(wasmIsReady && skyStateIsReady){
@@ -146,8 +146,8 @@ function initializeHemisphericalLighting(postObject){
   const numPixelsInTransmittanceTexture = postObject.transmittanceTextureSize * postObject.transmittanceTextureSize;
   const transmittanceBufferLength = numPixelsInTransmittanceTexture * 3;
   let transmittanceRGB = new Float32Array(transmittanceBufferLength);
-  radiusOfTheEarth = postObject.radiusOfTheEarth;
-  radiusOfTheAtmosphere = postObject.heightOfAtmosphere;
+  radiusOfEarth = postObject.radiusOfEarth;
+  heightOfAtmosphere = postObject.heightOfAtmosphere;
   for(let i = 0; i < numPixelsInTransmittanceTexture; ++i){
     const iTimes4 = i * 4;
     const iTimes3 = i * 3;

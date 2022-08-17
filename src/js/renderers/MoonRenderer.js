@@ -195,7 +195,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     if(assetManager.data.skyCloud.cloudsEnabled){
       moonMaterial.uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
       if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
-        moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.xAxisHemisphericalLight.intensity);
+        moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
       }
     }
 
@@ -209,6 +209,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
     outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
     outputMaterial.uniforms.uTime.value = t;
+
+    // console.log(moonMaterial.uniforms)
+    // console.log(outputMaterial.uniforms);
+    // debugger;
 
     //Clean up shadows and XR stuff
     renderer.xr.enabled = currentXrEnabled;
