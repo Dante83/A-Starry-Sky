@@ -12,35 +12,35 @@
     <!-- Built for A-Frame -->
     <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
-    <script src="https://unpkg.com/aframe-fps-counter-component/dist/aframe-fps-counter-component.min.js"></script>
+    <!-- <script src="https://unpkg.com/aframe-fps-counter-component/dist/aframe-fps-counter-component.min.js"></script> -->
     <!--This commented out code is the unfurled stack which I use for debugging-->
 
     <!-- A-Starry-Sky Version 1.0 -->
-    <!-- <script src="../dist/a-starry-sky.master.min.js"></script> -->
+    <script src="../dist/a-starry-sky.master.min.js"></script>
 
     <!-- Sky Interpolator -->
-    <!-- <script src="../dist/wasm/interpolation-engine.js"></script> -->
-    <script src="../src/cpp/interpolation-engine/interpolation-engine.js"></script>
+    <script src="../dist/wasm/interpolation-engine.js"></script>
+    <!-- <script src="../src/cpp/interpolation-engine/interpolation-engine.js"></script> -->
 
     <!-- The below are used for development purposes, it is advised that you use the files in the dist folder -->
     <!-- Three.js extensions -->
-    <script src="../src/js/three_js_extensions/BufferGeometryUtils.js"></script>
+    <!-- <script src="../src/js/three_js_extensions/BufferGeometryUtils.js"></script>
     <script src="../src/js/three_js_extensions/CopyShader.js"></script>
     <script src="../src/js/three_js_extensions/Pass.js"></script>
     <script src="../src/js/three_js_extensions/RenderPass.js"></script>
     <script src="../src/js/three_js_extensions/ShaderPass.js"></script>
     <script src="../src/js/three_js_extensions/EffectComposer.js"></script>
-    <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script>
+    <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script> -->
 
     <!-- Post Processing -->
-    <script src="../src/js/three_js_extensions/LuminosityHighPassShader.js"></script>
-    <script src="../src/js/three_js_extensions/UnrealBloom.js"></script>
+    <!-- <script src="../src/js/three_js_extensions/LuminosityHighPassShader.js"></script>
+    <script src="../src/js/three_js_extensions/UnrealBloom.js"></script> -->
 
     <!-- Namespace -->
-    <script src="../src/js/StarrySky.js"></script>
+    <!-- <script src="../src/js/StarrySky.js"></script> -->
 
     <!-- Materials -->
-    <script src="../src/js/materials/atmosphere/atmosphere-functions.js"></script>
+    <!-- <script src="../src/js/materials/atmosphere/atmosphere-functions.js"></script>
     <script src="../src/js/materials/atmosphere/transmittance.js"></script>
     <script src="../src/js/materials/atmosphere/single-scattering.js"></script>
     <script src="../src/js/materials/atmosphere/inscattering-sum.js"></script>
@@ -53,59 +53,60 @@
     <script src="../src/js/materials/autoexposure/metering-survey.js"></script>
     <script src="../src/js/materials/clouds/cloud-noise.js"></script>
     <script src="../src/js/materials/fog/fog-pars.js"></script>
-    <script src="../src/js/materials/fog/fog.js"></script>
+    <script src="../src/js/materials/fog/fog.js"></script> -->
 
     <!--- Custom HTML Tags -->
-    <script src="../src/js/html_tags/HTMLTagUtils.js"></script>
+    <!-- <script src="../src/js/html_tags/HTMLTagUtils.js"></script>
     <script src="../src/js/html_tags/SkyAssetsDir.js"></script>
     <script src="../src/js/html_tags/SkyLighting.js"></script>
     <script src="../src/js/html_tags/SkyAtmosphericParameters.js"></script>
     <script src="../src/js/html_tags/SkyLocation.js"></script>
     <script src="../src/js/html_tags/SkyTime.js"></script>
     <script src="../src/js/html_tags/SkyAurora.js"></script>
-    <script src="../src/js/html_tags/SkyClouds.js"></script>
+    <script src="../src/js/html_tags/SkyClouds.js"></script> -->
 
     <!-- LUT Libraries -->
-    <script src="../src/js/lut_libraries/AtmosphericLUTLibrary.js"></script>
+    <!-- <script src="../src/js/lut_libraries/AtmosphericLUTLibrary.js"></script>
     <script src="../src/js/lut_libraries/StellarLUTLibrary.js"></script>
-    <script src="../src/js/lut_libraries/CloudLUTLibrary.js"></script>
+    <script src="../src/js/lut_libraries/CloudLUTLibrary.js"></script> -->
 
     <!-- Renderers -->
-    <script src="../src/js/renderers/FogRenderer.js"></script>
+    <!-- <script src="../src/js/renderers/FogRenderer.js"></script>
     <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
     <script src="../src/js/renderers/SunRenderer.js"></script>
     <script src="../src/js/renderers/MoonRenderer.js"></script>
-    <script src="../src/js/renderers/MeteringSurveyRenderer.js"></script>
+    <script src="../src/js/renderers/MeteringSurveyRenderer.js"></script> -->
 
     <!--Players -->
-    <script src="../src/js/components/LightingManager.js"></script>
+    <!-- <script src="../src/js/components/LightingManager.js"></script>
     <script src="../src/js/components/AssetManager.js"></script>
-    <script src="../src/js/components/SkyDirector.js"></script>
+    <script src="../src/js/components/SkyDirector.js"></script> -->
 
     <!-- A-Frame Hooks -->
-    <script src="../src/js/primitives/a-starry-sky.js"></script>
-    <script src="../src/js/components/starry-sky-wrapper.js"></script>
+    <!-- <script src="../src/js/primitives/a-starry-sky.js"></script>
+    <script src="../src/js/components/starry-sky-wrapper.js"></script> -->
 
   <!--Scene Scripts-->
   </head>
   <body>
     <a-scene physics light="defaultLightsEnabled: false" shadow="type: pcfsoft">
-      <a-entity fps-counter></a-entity>
+      <!-- <a-entity fps-counter></a-entity> -->
 
       <!-- Sky Setup -->
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
           <sky-time>
-             <sky-date>1226-12-05 10:00:00</sky-date>
-             <sky-speed>800.0</sky-speed>
+             <sky-date>1226-12-05 22:00:00</sky-date>
+             <sky-speed>400.0</sky-speed>
           </sky-time>
-          <sky-lighting>
-            <sky-atmospheric-perspective-type>
-              advanced
-            </sky-atmospheric-perspective-type>
-          </sky-lighting>
           <sky-clouds>
             <sky-cloud-coverage>70.0</sky-cloud-coverage>
           </sky-clouds>
+          <sky-lighting>
+            <sky-atmospheric-perspective-type>advanced</sky-atmospheric-perspective-type>
+            <sky-atmospheric-perspective-distance-multiplier>8.0</sky-atmospheric-perspective-distance-multiplier>
+          </sky-lighting>
+          <!-- <sky-aurora>
+          </sky-aurora> -->
       </a-starry-sky>
 
       <a-assets>

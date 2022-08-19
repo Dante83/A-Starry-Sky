@@ -13,6 +13,21 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(this.sunAngularRadiusInRadians) * 2.0;
   const diameterOfSunPlane = 4.0 * radiusOfSunPlane;
 
+	//Setup external methods
+	const self = this;
+	StarrySky.Methods.getSunRadius = function(){
+		return self.sunAngularRadiusInRadians;
+	};
+
+	StarrySky.Methods.getSunPosition = function(){
+		return skyState.sun.position;
+	};
+
+	StarrySky.Methods.getIsDominantLightSun = function(){
+		const sunRadius = Math.sin(self.sunAngularRadiusInRadians * skyState.sun.scale);
+    return skyState.sun.position.y >= -sunRadius;
+	};
+
 	//All of this eventually gets drawn out to a single quad
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
 
@@ -96,7 +111,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	outputMaterial.transparent = true;
 	baseSunMaterial.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
 
-	const self = this;
 	let assetsNotReadyYet = true;
   this.tick = function(t){
 		if(assetsNotReadyYet){

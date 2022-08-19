@@ -16,11 +16,11 @@ This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.3.0+
 
 ## Installing
 
-When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.0.1.min.js* file, along with the *assets** and *wasm* folders into their own directory in your JavaScript folder. Afterwards, add the minified file into a script tag in your html, along with a reference to the interpolation engine JavaScript file in the WASM folder. You should not add a reference to the starry-sky-web-worker or state-engine JavaScript bootstrap file, here, however, but instead inject this into the `<a-starry-sky>` tag.
+When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.1.0.min.js* file, along with the *assets** and *wasm* folders into their own directory in your JavaScript folder. Afterwards, add the minified file into a script tag in your html, along with a reference to the interpolation engine JavaScript file in the WASM folder. You should not add a reference to the starry-sky-web-worker or state-engine JavaScript bootstrap file, here, however, but instead inject this into the `<a-starry-sky>` tag.
 
 ```html
 <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-<script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.0.1.min.js"></script>
+<script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.1.0.min.js"></script>
 <script src="{PATH_TO_JS_FOLDER}/wasm/interpolation-engine.js"></script>
 ```
 
@@ -640,18 +640,82 @@ In addition to changing the colors of the sky, you can also change the number of
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
 `<sky-clouds>` | Parent tag. Contains all child tags related to clouds. Required for enabling Clouds. Contains all child tags related to clouds in the sky. | N/A
-`<sky-cloud-coverage>` | Roughly correlates to the amount of the sky covered in clouds. | 50 (percent)
+`<sky-cloud-coverage>` | Roughly correlates to the amount of the sky covered in clouds. | 70 (percent)
 `<sky-cloud-start-height>` | The height, in meters, at which clouds start to form. | 1000 (meters)
 `<sky-cloud-end-height>` | The height, in meters at which clouds stop forming. | 2500 (meters)
-`<sky-cloud-fade-out-start-percent>` | Cloud coverage starts to *fade out* towards zero at this *percent* of height of the cloud. | 80 (percent)
-`<sky-cloud-fade-in-end-percent>` | Cloud coverage starts to *fade in* towards 100% at this *percent* of height of the cloud. | 20 (percent)
-`<sky-cloud-velocity-x>` | The x-component of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 0 (m/s)
-`<sky-cloud-velocity-y>` | The y-component (or actually z) of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 0 (m/s)
+`<sky-cloud-fade-out-start-percent>` | Cloud coverage starts to *fade out* towards zero at this *percent* of height of the cloud. | 90 (percent)
+`<sky-cloud-fade-in-end-percent>` | Cloud coverage starts to *fade in* towards 100% at this *percent* of height of the cloud. | 10 (percent)
+`<sky-cloud-velocity-x>` | The x-component of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 40
+`<sky-cloud-velocity-y>` | The y-component (or actually z) of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 40
 `<sky-cloud-start-seed>` | Random seed used to set the current cloud noise overhead, if not set, it defaults to a variation on the current date time timestamp. | *Date.now() % (86400 * 365)*.
 `<sky-cloud-raymarch-steps>` | The number of ray-march steps used to provide the cloud color. | 64 (steps)
-`<sky-cloud-cutoff-distance>` | The distance after which the clouds no longer render to help improve raymarching quality at the cost of not rendering clouds that are further away as SDF are not presently calculated for our noise generators. | 40000 (meters - approximate)
+`<sky-cloud-cutoff-distance>` | The distance after which the clouds no longer render to help improve raymarching quality at the cost of not rendering clouds that are further away as SDF are not presently calculated for our noise generators. | 40000
 
+Clouds are expensive. We'll start off saying that. There is a chance this might be able to reach playable levels of performance on the latest GPU hardware, such as the upcoming 40-series GPUS (Come on, 4090 TI, you can do it!), but right now, even on a significant gaming computer outside of VR, this asset takes up a ton of resources and murders frame rates.
 
+At the same time, clouds are insanely cool and I have wanted to add them into A-Starry-Sky since I first created the library. Each cloud is ray-marched, per pixel and ironically, at this stage, the more clouds you have, the less of a load it will be on the GPU. Of course, if you don't have any clouds, just turning them off altogether is your best bet. I'd
+
+Enabling clouds requires you to add the parent tag to `<a-starrry-sky>`, `<sky-clouds>`. Once you've added clouds, the most likely thing you will want to change is the cloud coverage, using the `<sky-cloud-coverage>` tag, which roughly corelates to the amount of the sky covered in clouds. You might also wish to control their speed as they zip across the sky.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-clouds>
+      <!-- Reduce the amount of clouds that are visible -->
+      <sky-cloud-coverage>25.0</<sky-cloud-coverage>
+
+      <!-- Velocity of the clouds in the x direction -->
+      <sky-cloud-velocity-x>22.0</<sky-cloud-velocity-x>
+
+      <!-- Velocity of the clouds in the y direction -->
+      <sky-cloud-velocity-y>-150.0</<sky-cloud-velocity-y>
+    </sky-clouds>
+  </a-starry-sky>
+</a-scene>
+```
+
+You might also wish to control some of the visible properties of the cloud, such as how high the clouds start to form, or how high they go. Note that your ray will have to trace through this distance and the great the heights the clouds go up our away from you, the less density you'll have in your ray tracing model. Clouds are also painted on the surface of moon/sun elements and sky dome, but are not a part of the fog renderer, so you will never have any cloud covered mountains unfortunately, or fog...
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-clouds>
+      <!-- Clouds are really really really low -->
+      <sky-cloud-start-height>500.0</<sky-cloud-start-height>
+
+      <!-- But they go super high! -->
+      <sky-cloud-end-height>3000.0</<sky-cloud-end-height>
+
+      <!-- The intensity of the clouds 'fades in' and goes from 0 to 1 by this percent of the total height.  -->
+      <sky-cloud-fade-in-end-percent>0.05</sky-cloud-fade-in-end-percent>
+
+      <!-- The intensity of the clouds 'fades out' starting at this height. The higher this is, the more likely you are to have 'anvil tops'. -->
+      <sky-cloud-fade-out-start-percent>0.99</<sky-cloud-fade-out-start-percent>
+
+      <!-- Locks the starting 'seed' of the clouds which is normally based around the current date time. Doing this lets your sky appear the same each time you start for more artistic control. -->
+      <sky-cloud-start-seed>400</sky-cloud-start-seed>
+    </sky-clouds>
+  </a-starry-sky>
+</a-scene>
+```
+
+Outside of this, most of the code associated with this tag controls the ray marching mechanisms, which are unfortunately rather strict and have the same general purpose as they do in the aurora borealis shader.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-clouds>
+      <!-- What type of terrifying GPU do you have?! -->
+      <!-- <sky-cloud-raymarch-steps>128</<sky-cloud-raymarch-steps> -->
+      <!-- Oh, yeah, me too... Though it is a bit choppy now... -->
+      <sky-cloud-raymarch-steps>32</<sky-cloud-raymarch-steps>
+
+      <!-- Reducing this distance will help with that a bit at least -->
+      <sky-cloud-cutoff-distance>10000</sky-cloud-cutoff-distance>
+    </sky-clouds>
+  </a-starry-sky>
+</a-scene>
+```
 
 ## Setting The Asset Directories
 
@@ -755,6 +819,30 @@ As you might notice, we could have also provided links to each of the individual
 
 Using the above methods, you should be able to direct A-Starry-Sky to your assets no matter where they live in your application.
 
+## PROGRAMATIC API
+
+While A-Starry-Sky is meant to be configured using the above XML style code, and is, as a general rule, immutable, there are a number of different methods you can access from the global `StarrySky.Methods` namespace. These are useful for situations where you need to know the lighting conditions, or the position of the sun or moon in the scene.
+
+**Method** | **Description**
+:--- | :---
+`getSunPosition()` | Returns the x, y, z position of the sun as a THREE.Vector3 object.
+`getMoonPosition()` | Returns the x, y, z position of the moon as a THREE.Vector3 object.
+`getSunRadius()` | Returns the angular radius of the sun in radians.
+`getMoonRadius()` | Returns the angular radius of the moon in radians.
+`getDominantLightColor()` | Gets the color of the current dominant light source (sun/moon) as a THREE.Color object.
+`getDominantLightIntensity()` | Returns the light intensity of the current dominant light source (sun/moon) as a float.
+`getIsDominantLightSun()` | Returns true if the dominant light is the sun, otherwise false.
+`getAmbientLights()` | Returns an object with properties x, y and z, that each have a hemispherical light object associated with the scene for ambient lighting colors.
+`getActiveCamera()` | Gets the currently active camera being used to drive the sky, center the lighting and the sky objects.
+`setActiveCamera(THREE.Camera camera)` | Sets the current camera being used to drive the sky, center the lighting and sky objects.
+
+All of the above are accessed via the `StarrySky.Methods` object in the global namespace. So if you wanted to say, grab the current sun position object and log it to the console, you would only need to do this,
+
+```JavaScript
+  //Let's log the sun position object
+  console.log(StarrySky.Methods.getSunPosition());
+```
+
 ## Author
 * **David Evans / Dante83** - *Main Developer*
 
@@ -765,6 +853,7 @@ Using the above methods, you should be able to direct A-Starry-Sky to your asset
 * The [Colour-Science Library](https://www.colour-science.org/) library for better star color LUTs.
 * The great blue noise textures by [Moments in Graphics  by Christoph Peters](http://momentsingraphics.de/BlueNoise.html).
 * The solar corona texture by [Carla Thomas](https://www.nasa.gov/centers/armstrong/multimedia/imagegallery/2017_total_solar_eclipse/AFRC2017-0233-006.html).
+* This super useful water caustics texture by [leeor_net](https://opengameart.org/content/water-caustics-effect-small), which is used, not for water caustics... but for the aurora borealis!
 * All the amazing work that has gone into [THREE.JS](https://threejs.org/), [A-Frame](https://aframe.io/) and [Emscripten](https://emscripten.org/).
 * *And so so many other websites and individuals. Thank you for giving us the opportunity to stand on your giant-like shoulders.*
 

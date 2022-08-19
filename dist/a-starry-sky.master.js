@@ -2171,24 +2171,52 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 
 //Basic skeleton for the overall namespace of the A-Starry-Sky
 StarrySky = {
-  DefaultData: {},
+  skyDirectorRef: null,
   assetPaths: {},
+  DefaultData: {},
+  LUTlibraries: {},
   Materials: {
     Atmosphere: {},
-    Stars: {},
-    Sun: {},
+    Autoexposure: {},
+    Clouds: {},
+    Fog: {},
     Moon: {},
     Postprocessing: {},
-    Autoexposure: {}
+    Stars: {},
+    Sun: {}
   },
   Renderers: {},
-  LUTlibraries: {}
+  Methods: {
+    getSunPosition: () => {return new Vector3();},
+    getMoonPosition: () => {return new Vector3();},
+    getSunRadius: () => {return 0.0;},
+    getMoonRadius: () => {return 0.0;},
+    getDominantLightColor: () => {return new Vector3();},
+    getDominantLightIntensity: () => {return 0.0;},
+    getIsDominantLightSun: () => {return false;},
+    getAmbientLights: () => {return {
+      x: null,
+      y: null,
+      z: null
+    }},
+    setActiveCamera: (camera) => {
+      if(StarrySky.skyDirectorRef !== null){
+        StarrySky.skyDirectorRef.camera = camera;
+      }
+    },
+    getActiveCamera: () => {
+      if(StarrySky.skyDirectorRef !== null){
+        return StarrySky.skyDirectorRef.camera;
+      }
+      return false;
+    }
+  }
 };
 
 //This is not your usual file, instead it is a kind of fragment file that contains
 //a partial glsl fragment file with functions that are used in multiple locations
 StarrySky.Materials.Atmosphere.atmosphereFunctions = {
-  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, mieG){
+  partialFragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, atmosphericParameters){
     let originalGLSL = [
 
     '//Based on the work of Oskar Elek',
@@ -2209,31 +2237,37 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
 
     'const float PI_OVER_TWO = 1.57079632679;',
 
-    'const float RADIUS_OF_EARTH = 6366.7;',
+    'const float RADIUS_OF_EARTH = $radiusOfEarth;',
 
-    'const float RADIUS_OF_EARTH_SQUARED = 40534868.89;',
+    'const float RADIUS_OF_AURORA_BOTTOM = $radiusOfAuroraBottom;',
 
-    'const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = 41559940.89;',
+    'const float RADIUS_OF_AURORA_TOP = $radiusOfAuroraTop;',
 
-    'const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = 1025072.0;',
+    'const float RADIUS_OF_EARTH_SQUARED = $radiusOfEarthSquared;',
 
-    'const float ATMOSPHERE_HEIGHT = 80.0;',
+    'const float RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED = $radiusOfEarthPlusRadiusOfAtmospherSquared;',
 
-    'const float ATMOSPHERE_HEIGHT_SQUARED = 6400.0;',
+    'const float RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED = $radiusAtmosphereSquaredMinusRadiusOfEarthSquared;',
 
-    'const float ONE_OVER_MIE_SCALE_HEIGHT = 0.833333333333333333333333333333333333;',
+    'const float ATMOSPHERE_HEIGHT = $atmosphereHeight;',
 
-    'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = 0.125;',
+    'const float ATMOSPHERE_HEIGHT_SQUARED = $atmosphereHeightSquared;',
 
-    '//Mie Beta / 0.9, http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
+    'const float ONE_OVER_MIE_SCALE_HEIGHT = $oneOverMieScaleHeight;',
 
-    '//const float EARTH_MIE_BETA_EXTINCTION = 0.00000222222222222222222222222222222222222222;',
+    'const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = $oneOverRayleighScaleHeight;',
 
-    'const float EARTH_MIE_BETA_EXTINCTION = 0.0044444444444444444444444444444444444444444444;',
+    '//Mie Beta / 0.9, https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf',
 
-    'const float ELOK_Z_CONST = 0.9726762775527075;',
+    'const vec3 EARTH_MIE_BETA_EXTINCTION = $mieBeta;',
 
-    'const float ONE_OVER_EIGHT_PI = 0.039788735772973836;',
+    'const float ELOK_Z_CONST = 0.97267627755;',
+
+    'const float ONE_OVER_EIGHT_PI = 0.039788735772;',
+
+    'const float ONE_OVER_FOUR_PI = 0.079577471545;',
+
+    'const float METERS_TO_KM = 0.001;',
 
 
 
@@ -2253,15 +2287,15 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
 
     '//Far more helpful for determining my mie and rayleigh values',
 
-    'const vec3 RAYLEIGH_BETA = vec3(5.8e-3, 1.35e-2, 3.31e-2);',
+    'const vec3 RAYLEIGH_BETA = $rayleighBeta;',
 
 
 
     '//As per http://skyrenderer.blogspot.com/2012/10/ozone-absorption.html',
 
-    'const float OZONE_PERCENT_OF_RAYLEIGH = 6e-7;',
+    'const float OZONE_PERCENT_OF_RAYLEIGH = $ozonePercentOfRayleigh;',
 
-    'const vec3 OZONE_BETA = vec3(413.470734338, 413.470734338, 2.1112886E-13);',
+    'const vec3 OZONE_BETA = $ozoneBeta;',
 
 
 
@@ -2274,6 +2308,28 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     'float fModulo(float a, float b){',
 
       'return (a - (b * floor(a / b)));',
+
+    '}',
+
+
+
+    'vec3 vec3Modulo(vec3 a, vec3 b){',
+
+      'float x = (a.x - (b.x * floor(a.x / b.x)));',
+
+      'float y = (a.y - (b.y * floor(a.y / b.y)));',
+
+      'float z = (a.z - (b.z * floor(a.z / b.z)));',
+
+      'return vec3(x, y, z);',
+
+    '}',
+
+
+
+    'vec4 sRGBToLinear( in vec4 value ) {',
+
+    '	return vec4( mix( pow( value.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), value.rgb * 0.0773993808, vec3( lessThanEqual( value.rgb, vec3( 0.04045 ) ) ) ), value.a );',
 
     '}',
 
@@ -2309,13 +2365,65 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
 
     'vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection) {',
 
-        'float b = dot(rayDirection, rayOrigin);',
+        'float radius = RADIUS_OF_EARTH + ATMOSPHERE_HEIGHT;',
 
-        'float c = dot(rayOrigin, rayOrigin) - RADIUS_OF_EARTH_PLUS_RADIUS_OF_ATMOSPHERE_SQUARED;',
+        'float a = dot(rayDirection, rayDirection);',
 
-        'float t = (-b + sqrt((b * b) - c));',
+        'float b = 2.0 * dot(rayDirection, rayOrigin);',
 
-        'return rayOrigin + t * rayDirection;',
+        'float c = dot(rayOrigin, rayOrigin) - radius * radius;',
+
+        'float discriminate = sqrt(b * b - 4.0 * a * c);',
+
+        'float t0 = (-b - discriminate) /  (2.0 * a);',
+
+        'float t1 = (-b + discriminate) /  (2.0 * a);',
+
+        'vec2 ray0 = rayOrigin + t0 * rayDirection;',
+
+        'vec2 ray1 = rayOrigin + t1 * rayDirection;',
+
+
+
+        'if(t1 > t0){',
+
+          'return ray1;',
+
+        '}',
+
+        'return ray0;',
+
+    '}',
+
+
+
+    'vec3 intersectRaySphere3D(vec3 rayOrigin, vec3 rayDirection, float radius) {',
+
+        'float a = dot(rayDirection, rayDirection);',
+
+        'float b = 2.0 * dot(rayDirection, rayOrigin);',
+
+        'float c = dot(rayOrigin, rayOrigin) - radius * radius;',
+
+        'float discriminate = sqrt(b * b - 4.0 * a * c);',
+
+        'float t0 = (-b - discriminate) /  (2.0 * a);',
+
+        'float t1 = (-b + discriminate) /  (2.0 * a);',
+
+        'vec3 ray0 = rayOrigin + t0 * rayDirection;',
+
+        'vec3 ray1 = rayOrigin + t1 * rayDirection;',
+
+
+
+        'if(dot(rayDirection, ray0) > 0.0){',
+
+          'return ray0;',
+
+        '}',
+
+        'return ray1;',
 
     '}',
 
@@ -2346,6 +2454,118 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       '}',
 
       'return collides;',
+
+    '}',
+
+
+
+    'bool intersectsSphere3D(vec3 origin, vec3 direction, float radius){',
+
+      '//presume that the sphere is located at the origin (0,0)',
+
+      'bool collides = true;',
+
+      'float b = dot(origin, direction);',
+
+      'float c = dot(origin, origin) - radius * radius;',
+
+      'if(c > 0.0 && b > 0.0){',
+
+        'collides = false;',
+
+      '}',
+
+      'else{',
+
+        'collides = (b * b - c) < 0.0 ? false : true;',
+
+      '}',
+
+      'return collides;',
+
+    '}',
+
+
+
+    'float earthsShadowIntensity(vec3 viewDirection, vec3 lightDirection, float startingHeight, float endingHeight, float scaleHeight){',
+
+      'float earthCentricStartingHeight = RADIUS_OF_EARTH + startingHeight + 0.01;',
+
+      'float earthCentricEndingHeight = RADIUS_OF_EARTH + endingHeight;',
+
+      'vec3 startingTargetPoint = vec3(0.0, earthCentricStartingHeight, 0.0);',
+
+      'vec3 finalTargetPoint = intersectRaySphere3D(startingTargetPoint, viewDirection, earthCentricEndingHeight);',
+
+
+
+      '//Test at the two ends of our ray path...',
+
+      'bool intersection1 = intersectsSphere3D(startingTargetPoint, lightDirection, RADIUS_OF_EARTH);',
+
+      'bool intersection2 = intersectsSphere3D(finalTargetPoint, lightDirection, RADIUS_OF_EARTH);',
+
+
+
+      '//If both can see the sun, return 1',
+
+      'if(!intersection1 && !intersection2){',
+
+        'return 1.0;',
+
+      '}',
+
+
+
+      '//If neither can see the sun, return 0',
+
+      'if(intersection1 && intersection2){',
+
+        'return 0.0;',
+
+      '}',
+
+
+
+      '//If the top one can see the sun, but not the bottom, use the bisection method to determine the',
+
+      '//distance along the ray at which the sun can be visible, get the integrated density to this point',
+
+      '//over the integrated density of the entire ray and return this as the percent of light to show',
+
+      'float heightDiff = (endingHeight - startingHeight) * 0.5;',
+
+      'vec3 sunsetPosition = finalTargetPoint;',
+
+      'float sunsetHeight = endingHeight - heightDiff;',
+
+      'for(int i = 0; i < 8; i++){',
+
+        'sunsetPosition = intersectRaySphere3D(startingTargetPoint, viewDirection, RADIUS_OF_EARTH + sunsetHeight);',
+
+        'intersection2 = intersectsSphere3D(sunsetPosition, lightDirection, RADIUS_OF_EARTH);',
+
+        'heightDiff *= 0.5;',
+
+        'if(intersection2){',
+
+          'sunsetHeight += heightDiff;',
+
+        '}',
+
+        'else{',
+
+          'sunsetHeight -= heightDiff;',
+
+        '}',
+
+      '}',
+
+
+
+      '//return clamp(1.0 - (distance(sunsetPosition, startingTargetPoint) / distance(finalTargetPoint, startingTargetPoint)), 0.0, 1.0);',
+
+      'return clamp(1.0 - (exp((sunsetPosition.y - startingTargetPoint.y) * scaleHeight) / exp((finalTargetPoint.y - startingTargetPoint.y) * scaleHeight)), 0.0, 1.0);',
 
     '}',
 
@@ -2454,9 +2674,27 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     '}',
     ];
 
+    const mieG = atmosphericParameters.mieDirectionalG;
     const textureDepth = packingWidth * packingHeight;
     const mieGSquared = mieG * mieG;
-    const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared))
+    const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared));
+    const ozBet = atmosphericParameters.ozoneBeta;
+    const mieBet = atmosphericParameters.mieBeta;
+    const rayBet = atmosphericParameters.rayleighBeta;
+    const ozoneBeta = `vec3(${ozBet.red.toFixed(16)}, ${ozBet.green.toFixed(16)}, ${ozBet.blue.toFixed(16)})`;
+    const mieBeta = `vec3(${mieBet.red.toFixed(16)}, ${mieBet.green.toFixed(16)}, ${mieBet.blue.toFixed(16)})`;
+    const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
+
+    const atmosphereHeight = atmosphericParameters.atmosphereHeight;
+    const atmosphereHeightSquared = atmosphereHeight * atmosphereHeight;
+    const radiusOfEarth = atmosphericParameters.radiusOfEarth;
+    const radiusOfAuroraBottom = radiusOfEarth + 80.0;
+    const radiusOfAuroraTop = radiusOfEarth + 640.0;
+    const radiusOfEarthSquared = radiusOfEarth * radiusOfEarth;
+    const radiusOfEarthPlusRadiusOfAtmospherSquared = (radiusOfEarth + atmosphereHeight) * (radiusOfEarth + atmosphereHeight);
+    const radiusAtmosphereSquaredMinusRadiusOfEarthSquared = radiusOfEarthPlusRadiusOfAtmospherSquared - (radiusOfEarth * radiusOfEarth);
+    const oneOverMieScaleHeight = 1.0 / atmosphericParameters.mieScaleHeight;
+    const oneOverRayleighScaleHeight = 1.0 / atmosphericParameters.rayleighScaleHeight;
 
     let updatedLines = [];
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
@@ -2465,6 +2703,21 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingWidth/g, packingWidth.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$packingHeight/g, packingHeight.toFixed(1));
+      updatedGLSL = updatedGLSL.replace(/\$ozonePercentOfRayleigh/g, atmosphericParameters.ozonePercentOfRayleigh.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$atmosphereHeightSquared/g, atmosphereHeightSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfAuroraBottom/g, radiusOfAuroraBottom.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfAuroraTop/g, radiusOfAuroraTop.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfEarthSquared/g, radiusOfEarthSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfEarthPlusRadiusOfAtmospherSquared/g, radiusOfEarthPlusRadiusOfAtmospherSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusAtmosphereSquaredMinusRadiusOfEarthSquared/g, radiusAtmosphereSquaredMinusRadiusOfEarthSquared.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$oneOverMieScaleHeight/g, oneOverMieScaleHeight.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$oneOverRayleighScaleHeight/g, oneOverRayleighScaleHeight.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$radiusOfEarth/g, radiusOfEarth.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$atmosphereHeight/g, atmosphereHeight.toFixed(16));
+
+      updatedGLSL = updatedGLSL.replace(/\$ozoneBeta/g, ozoneBeta);
+      updatedGLSL = updatedGLSL.replace(/\$mieBeta/g, mieBeta);
+      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta);
 
       updatedGLSL = updatedGLSL.replace(/\$mieGSquared/g, mieGSquared.toFixed(16));
       updatedGLSL = updatedGLSL.replace(/\$miePhaseFunctionCoefficient/g, miePhaseCoefficient.toFixed(16));
@@ -2623,8 +2876,8 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
   uniforms: {
     transmittanceTexture: {value: null}
   },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions){
-    let originalGLSL = [
+  fragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions, atmosphericParameters){
+    const originalGLSL = [
 
     '//Based on the work of Oskar Elek',
 
@@ -2846,9 +3099,11 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
     ];
 
     let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
+    const numberOfChunks = atmosphericParameters.numberOfRaySteps - 1;
+    const numberOfGatheringChunks = atmosphericParameters.numberOfGatheringSteps - 1;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+      updatedGLSL = updatedGLSL.replace(/\$numberOfGatheringChunksInt/g, numberOfGatheringChunks);
       updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
       updatedGLSL = updatedGLSL.replace(/\$textureWidth/g, textureWidth.toFixed(1));
@@ -2921,8 +3176,8 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
     transmittanceTexture: {value: null},
     inscatteredLightLUT: {value: null},
   },
-  fragmentShader: function(numberOfPoints, textureWidth, textureHeight, packingWidth, packingHeight, mieGCoefficient, isRayleigh, atmosphereFunctions){
-    let originalGLSL = [
+  fragmentShader: function(textureWidth, textureHeight, packingWidth, packingHeight, isRayleigh, atmosphereFunctions, atmosphericParameters){
+    const originalGLSL = [
 
     '//Based on the work of Oskar Elek',
 
@@ -2984,7 +3239,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
 
       '#pragma unroll',
 
-      'for(int i = 1; i < $numberOfChunksInt; i++){',
+      'for(int i = 1; i < $numberOfGatheringChunksInt; i++){',
 
         'theta += deltaTheta;',
 
@@ -3216,13 +3471,15 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
     ];
 
     let updatedLines = [];
-    let numberOfChunks = numberOfPoints - 1;
-    let textureDepth = packingWidth * packingHeight;
+    const numberOfChunks = atmosphericParameters.numberOfRaySteps - 1;
+    const numberOfGatheringChunks = atmosphericParameters.numberOfGatheringSteps - 1;
+    const textureDepth = packingWidth * packingHeight;
     for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
       let updatedGLSL = originalGLSL[i].replace(/\$numberOfChunksInt/g, numberOfChunks);
+      updatedGLSL = updatedGLSL.replace(/\$numberOfGatheringChunksInt/g, numberOfGatheringChunks);
       updatedGLSL = updatedGLSL.replace(/\$atmosphericFunctions/g, atmosphereFunctions);
       updatedGLSL = updatedGLSL.replace(/\$numberOfChunks/g, numberOfChunks.toFixed(1));
-      updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, mieGCoefficient.toFixed(16));
+      updatedGLSL = updatedGLSL.replace(/\$mieGCoefficient/g, atmosphericParameters.mieDirectionalG.toFixed(16));
 
       //Texture constants
       updatedGLSL = updatedGLSL.replace(/\$textureDepth/g, textureDepth.toFixed(1));
@@ -3243,7 +3500,8 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
 };
 
 StarrySky.Materials.Atmosphere.atmosphereShader = {
-  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false){
+  uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false,
+  auroraEnabled = false, cloudsEnabled = false){
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -3257,66 +3515,98 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       sunHorizonFade: {value: 1.0},
       moonHorizonFade: {value: 1.0},
       scatteringSunIntensity: {value: 20.0},
-      scatteringMoonIntensity: {value: 1.4}
+      scatteringMoonIntensity: {value: 1.4},
+      blueNoiseTexture: {value: null},
+      cameraHeight: {value: 0.0}
     }
 
-    if(!isSunShader && !isMeteringShader){
-      uniforms.blueNoiseTexture = {type: 't', value: null};
+    if(cloudsEnabled && !isMeteringShader){
+      uniforms.cloudLUTs = {value: new THREE.DataTexture3D()};
+      uniforms.ambientLightPY = {value: new THREE.Vector3(0, 181, 226)};
+      uniforms.cloudCoverage = {value: 0.5};
+      uniforms.cloudVelocity = {value: new THREE.Vector2(0.0, 0.0)};
+      uniforms.cloudStartHeight = {value: 1000.0};
+      uniforms.cloudEndHeight = {value: 2500.0};
+      uniforms.numberOfCloudMarchSteps = {value: 64.0};
+      uniforms.cloudFadeOutStartPercent = {value: 0.9};
+      uniforms.cloudFadeInEndPercent = {value: 0.05};
+      uniforms.cloudTime = {value: 0.0};
+      uniforms.cloudCutoffDistance = {value: 40000.0};
+    }
+
+    if(auroraEnabled){
+      uniforms.auroraSampler = {value: null};
+
+      uniforms.nitrogenColor = {value: new THREE.Vector3()};
+      uniforms.nitrogenCutOff = {value: null};
+      uniforms.nitrogenIntensity = {value: null};
+
+      uniforms.molecularOxygenColor = {value: new THREE.Vector3()};
+      uniforms.molecularOxygenCutOff = {value: null};
+      uniforms.molecularOxygenIntensity = {value: null};
+
+      uniforms.atomicOxygenColor = {value: new THREE.Vector3()};
+      uniforms.atomicOxygenCutOff = {value: null};
+      uniforms.atomicOxygenIntensity = {value: null};
+
+      uniforms.numberOfAuroraRaymarchingSteps = {value: null};
+      uniforms.auroraCutoffDistance = {value: null};
     }
 
     //Pass our specific uniforms in here.
     if(isSunShader){
-      uniforms.sunAngularDiameterCos = {type: 'f', value: 1.0};
-      uniforms.radiusOfSunPlane = {type: 'f', value: 1.0};
-      uniforms.moonRadius = {type: 'f', value: 1.0};
-      uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
-      uniforms.solarEclipseMap = {type: 't', value: null};
-      uniforms.moonDiffuseMap = {type: 't', value: null};
+      uniforms.sunAngularDiameterCos = {value: 1.0};
+      uniforms.radiusOfSunPlane = {value: 1.0};
+      uniforms.moonRadius = {value: 1.0};
+      uniforms.worldMatrix = {value: new THREE.Matrix4()};
+      uniforms.solarEclipseMap = {value: null};
+      uniforms.moonDiffuseMap = {value: null};
+      uniforms.cameraPosition = {value: new THREE.Vector3()};
     }
     else if(isMoonShader){
-      uniforms.moonExposure = {type: 'f', value: 1.0};
-      uniforms.moonAngularDiameterCos = {type: 'f', value: 1.0};
-      uniforms.sunRadius = {type: 'f', value: 1.0};
-      uniforms.radiusOfMoonPlane = {type: 'f', value: 1.0};
-      uniforms.distanceToEarthsShadowSquared = {type: 'f', value: 1.0};
-      uniforms.oneOverNormalizedLunarDiameter = {type: 'f', value: 1.0};
-      uniforms.worldMatrix = {type: 'mat4', value: new THREE.Matrix4()};
-      uniforms.sunLightDirection = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.earthsShadowPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.moonDiffuseMap = {type: 't', value: null};
-      uniforms.moonNormalMap = {type: 't', value: null};
-      uniforms.moonRoughnessMap = {type: 't', value: null};
-      uniforms.moonApertureSizeMap = {type: 't', value: null};
-      uniforms.moonApertureOrientationMap = {type: 't', value: null};
+      uniforms.moonExposure = {value: 1.0};
+      uniforms.sunRadius = {value: 1.0};
+      uniforms.radiusOfMoonPlane = {value: 1.0};
+      uniforms.distanceToEarthsShadowSquared = {value: 1.0};
+      uniforms.oneOverNormalizedLunarDiameter = {value: 1.0};
+      uniforms.worldMatrix = {value: new THREE.Matrix4()};
+      uniforms.sunLightDirection = {value: new THREE.Vector3()};
+      uniforms.earthsShadowPosition = {value: new THREE.Vector3()};
+      uniforms.moonDiffuseMap = {value: null};
+      uniforms.moonNormalMap = {value: null};
+      uniforms.moonRoughnessMap = {value: null};
+      uniforms.moonApertureSizeMap = {value: null};
+      uniforms.moonApertureOrientationMap = {value: null};
+      uniforms.cameraPosition = {value: new THREE.Vector3()};
     }
 
     if(!isSunShader){
-      uniforms.starHashCubemap = {type: 't', value: null};
-      uniforms.dimStarData = {type: 't', value: null};
-      uniforms.medStarData = {type: 't', value: null};
-      uniforms.brightStarData = {type: 't', value: null};
-      uniforms.starColorMap = {type: 't', value: null};
+      uniforms.starHashCubemap = {value: null};
+      uniforms.dimStarData = {value: null};
+      uniforms.medStarData = {value: null};
+      uniforms.brightStarData = {value: null};
+      uniforms.starColorMap = {value: null};
 
-      uniforms.mercuryPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.venusPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.marsPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.jupiterPosition = {type: 'vec3', value: new THREE.Vector3()};
-      uniforms.saturnPosition = {type: 'vec3', value: new THREE.Vector3()};
+      uniforms.mercuryPosition = {value: new THREE.Vector3()};
+      uniforms.venusPosition = {value: new THREE.Vector3()};
+      uniforms.marsPosition = {value: new THREE.Vector3()};
+      uniforms.jupiterPosition = {value: new THREE.Vector3()};
+      uniforms.saturnPosition = {value: new THREE.Vector3()};
 
-      uniforms.mercuryBrightness = {type: 'f', value: 0.0};
-      uniforms.venusBrightness = {type: 'f', value: 0.0};
-      uniforms.marsBrightness = {type: 'f', value: 0.0};
-      uniforms.jupiterBrightness = {type: 'f', value: 0.0};
-      uniforms.saturnBrightness = {type: 'f', value: 0.0};
+      uniforms.mercuryBrightness = {value: 0.0};
+      uniforms.venusBrightness = {value: 0.0};
+      uniforms.marsBrightness = {value: 0.0};
+      uniforms.jupiterBrightness = {value: 0.0};
+      uniforms.saturnBrightness = {value: 0.0};
     }
 
-    if(!isSunShader && !isMeteringShader){
-      uniforms.starsExposure = {type: 'f', value: -4.0};
+    if(!isSunShader){
+      uniforms.starsExposure = {value: -4.0};
     }
 
     if(isMeteringShader){
-      uniforms.sunLuminosity = {type: 'f', value: 20.0};
-      uniforms.moonLuminosity = {type: 'f', value: 1.4};
+      uniforms.sunLuminosity = {value: 20.0};
+      uniforms.moonLuminosity = {value: 1.4};
     }
 
     return uniforms;
@@ -3324,6 +3614,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   vertexShader: [
 
     'varying vec3 vWorldPosition;',
+
+    'varying vec3 vLocalPosition;',
 
     'varying vec3 galacticCoordinates;',
 
@@ -3355,15 +3647,17 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
 
-      'vWorldPosition = normalize(vec3(-worldPosition.z, worldPosition.y, -worldPosition.x));',
+      'vWorldPosition = vec3(-worldPosition.z, -worldPosition.y, -worldPosition.x);',
+
+      'vLocalPosition = normalize(vec3(-position.z, position.y, -position.x));',
 
 
 
       '//Convert coordinate position to RA and DEC',
 
-      'float altitude = piOver2 - acos(vWorldPosition.y);',
+      'float altitude = piOver2 - acos(vLocalPosition.y);',
 
-      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
+      'float azimuth = pi - atan(vLocalPosition.z, vLocalPosition.x);',
 
       'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
 
@@ -3411,7 +3705,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     '}',
   ].join('\n'),
-  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth, packingHeight, atmosphereFunctions, sunCode = false, moonCode = false, meteringCode = false){
+  fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth,
+  packingHeight, atmosphereFunctions, sunCode = false, moonCode = false,
+  meteringCode = false, auroraEnabled = false, cloudsEnabled = false){
     let originalGLSL = [
 
     'precision highp sampler3D;',
@@ -3419,6 +3715,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
     'varying vec3 vWorldPosition;',
+
+    'varying vec3 vLocalPosition;',
 
     'varying vec3 galacticCoordinates;',
 
@@ -3448,11 +3746,69 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     'uniform sampler2D transmittance;',
 
+    'uniform float cameraHeight;',
 
 
-    '#if(!$isSunPass && !$isMoonPass && !$isMeteringPass)',
+
+    '//If clouds enabled',
+
+    '#if($cloudsEnabled && !$isMeteringPass)',
+
+      'uniform sampler3D cloudLUTs;',
+
+      'uniform float cloudCoverage;',
+
+      'uniform vec2 cloudVelocity;',
+
+      'uniform float cloudStartHeight;',
+
+      'uniform float cloudEndHeight;',
+
+      'uniform float numberOfCloudMarchSteps;',
+
+      'uniform float cloudFadeOutStartPercent;',
+
+      'uniform float cloudFadeInEndPercent;',
+
+      'uniform float cloudTime;',
+
+      'uniform float cloudCutoffDistance;',
+
+      'uniform vec3 ambientLightPY;',
+
+    '#endif',
+
+
 
     'uniform sampler2D blueNoiseTexture;',
+
+
+
+    '#if($auroraEnabled)',
+
+      'uniform float numberOfAuroraRaymarchingSteps;',
+
+      'uniform vec3 nitrogenColor;',
+
+      'uniform float nitrogenCutOff;',
+
+      'uniform float nitrogenIntensity;',
+
+      'uniform vec3 molecularOxygenColor;',
+
+      'uniform float molecularOxygenCutOff;',
+
+      'uniform float molecularOxygenIntensity;',
+
+      'uniform vec3 atomicOxygenColor;',
+
+      'uniform float atomicOxygenCutOff;',
+
+      'uniform float atomicOxygenIntensity;',
+
+      'uniform float auroraCutoffDistance;',
+
+      'uniform sampler2D auroraSampler;',
 
     '#endif',
 
@@ -3516,9 +3872,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     'const float pi = 3.141592653589793238462;',
 
-    'const vec3 inverseGamma = vec3(0.454545454545454545454545);',
-
-    'const vec3 gamma = vec3(2.2);',
+    'const vec3 intensityVector = vec3(0.3, 0.59, 0.11);',
 
 
 
@@ -3551,8 +3905,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform float starsExposure;',
 
       'uniform float moonExposure;',
-
-      'uniform float moonAngularDiameterCos;',
 
       'uniform float sunRadius;',
 
@@ -3590,6 +3942,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       'uniform float sunLuminosity;',
 
+      'uniform float starsExposure;',
+
     '#else',
 
       'uniform float starsExposure;',
@@ -3602,51 +3956,55 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
 
+    '#if(!$isSunPass)',
+
+    '//From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/',
+
+    'float rand(float x){',
+
+      'float a = 12.9898;',
+
+      'float b = 78.233;',
+
+      'float c = 43758.5453;',
+
+      'float dt= dot(vec2(x, x) ,vec2(a,b));',
+
+      'float sn= mod(dt,3.14);',
+
+      'return fract(sin(sn) * c);',
+
+    '}',
+
+
+
+    '//From The Book of Shaders :D',
+
+    '//https://thebookofshaders.com/11/',
+
+    'float noise(float x){',
+
+      'float i = floor(x);',
+
+      'float f = fract(x);',
+
+      'float y = mix(rand(i), rand(i + 1.0), smoothstep(0.0,1.0,f));',
+
+
+
+      'return y;',
+
+    '}',
+
+    '#endif',
+
+
+
     '#if(!$isSunPass && !$isMeteringPass)',
 
       'vec3 getSpectralColor(){',
 
         'return vec3(1.0);',
-
-      '}',
-
-
-
-      '//From http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/',
-
-      'float rand(float x){',
-
-        'float a = 12.9898;',
-
-        'float b = 78.233;',
-
-        'float c = 43758.5453;',
-
-        'float dt= dot(vec2(x, x) ,vec2(a,b));',
-
-        'float sn= mod(dt,3.14);',
-
-        'return fract(sin(sn) * c);',
-
-      '}',
-
-
-
-      '//From The Book of Shaders :D',
-
-      '//https://thebookofshaders.com/11/',
-
-      'float noise(float x){',
-
-        'float i = floor(x);',
-
-        'float f = fract(x);',
-
-        'float y = mix(rand(i), rand(i + 1.0), smoothstep(0.0,1.0,f));',
-
-
-
-        'return y;',
 
       '}',
 
@@ -3770,18 +4128,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         'vec3 starColor = texture(starColorMap, uv).rgb;',
 
-        '//TODO: Vary these to change the color colors',
-
-        '// starColor *= starColor;',
-
-        '// starColor.r *= max((zCoordinate / 31.0), 1.0);',
-
-        '// starColor.g *= max((zCoordinate / 31.0), 1.0);',
-
-        '// starColor.b *= max((zCoordinate / 10.0), 1.0);',
-
-        '// starColor = sqrt(starColor);',
-
 
 
         '//Interpolate between the 2 colors (ZCoordinateC and zCoordinate are never more then 1 apart)',
@@ -3802,6 +4148,18 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
 
+        "//Early out if we're too far away",
+
+        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;',
+
+        'if(approximateDistanceOnSphereStar > 100.0){',
+
+          'return vec3(0.0);',
+
+        '}',
+
+
+
         '//Get the distance the light ray travels',
 
         'vec2 skyIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), normalize(vec2(length(vec2(skyPosition.xz)), skyPosition.y)));',
@@ -3815,8 +4173,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         "//Use the distance to the star to determine it's perceived twinkling",
 
         'float starBrightness = pow(150.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);',
-
-        'float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;',
 
 
 
@@ -3838,11 +4194,29 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       'vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
 
-        "//Use the distance to the star to determine it's perceived twinkling",
-
-        'float planetBrightness = pow(100.0, (-planetMagnitude + starAndSkyExposureReduction) * 0.2);',
+        '//Grab our distance to this planet',
 
         'float approximateDistanceOnSphereStar = distance(skyPosition, planetPosition) * 1400.0;',
+
+
+
+        "//Early out if we're too far away",
+
+        'if(approximateDistanceOnSphereStar > 100.0){',
+
+          'return vec3(0.0);',
+
+        '}',
+
+
+
+        "//Use the distance to the star to determine it's perceived twinkling",
+
+        '//Planets can have higher magnitudes, but capping at -1.0 eliminates',
+
+        '//silly glow effects.',
+
+        'float planetBrightness = pow(100.0, (-max(planetMagnitude, -1.0) + starAndSkyExposureReduction) * 0.2);',
 
 
 
@@ -3860,39 +4234,697 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
     '#if($isMoonPass)',
 
-    'vec3 getLunarEcclipseShadow(vec3 sphericalPosition){',
+      'vec3 getLunarEcclipseShadow(vec3 sphericalPosition){',
 
-      '//Determine the distance from this pixel to the center of the sun.',
+        '//Determine the distance from this pixel to the center of the sun.',
 
-      'float distanceToPixel = distance(sphericalPosition, earthsShadowPosition);',
+        'float distanceToPixel = distance(sphericalPosition, earthsShadowPosition);',
 
-      'float pixelToCenterDistanceInMoonDiameter = 4.0 * distanceToPixel * oneOverNormalizedLunarDiameter;',
+        'float pixelToCenterDistanceInMoonDiameter = 4.0 * distanceToPixel * oneOverNormalizedLunarDiameter;',
 
-      'float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter * 0.5;',
+        'float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter * 0.5;',
 
-      'float pUmbDistSq = umbDistSq * 0.3;',
+        'float pUmbDistSq = umbDistSq * 0.3;',
 
-      'float umbraBrightness = 0.5 + 0.5 * clamp(umbDistSq, 0.0, 1.0);',
+        'float umbraBrightness = 0.5 + 0.5 * clamp(umbDistSq, 0.0, 1.0);',
 
-      'float penumbraBrightness = 0.15 + 0.85 * clamp(pUmbDistSq, 0.0, 1.0);',
+        'float penumbraBrightness = 0.15 + 0.85 * clamp(pUmbDistSq, 0.0, 1.0);',
 
-      'float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);',
-
-
-
-      '//Get color intensity based on distance from penumbra',
-
-      'vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);',
-
-      'float colorIntensity = clamp(16.0 * distanceToEarthsShadowSquared * oneOverNormalizedLunarDiameter * oneOverNormalizedLunarDiameter, 0.0, 1.0);',
-
-      'colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);',
+        'float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);',
 
 
 
-      'return totalBrightness * colorOfLunarEcclipse;',
+        '//Get color intensity based on distance from penumbra',
+
+        'vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);',
+
+        'float colorIntensity = clamp(16.0 * distanceToEarthsShadowSquared * oneOverNormalizedLunarDiameter * oneOverNormalizedLunarDiameter, 0.0, 1.0);',
+
+        'colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);',
+
+
+
+        'return totalBrightness * colorOfLunarEcclipse;',
+
+      '}',
+
+    '#endif',
+
+
+
+    'float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float height, float maxDistance){',
+
+      'float tGoal = rayDirection.y <= 0.0 ? -1.0 : (height - rayStartPosition.y) / rayDirection.y;',
+
+      'float tMax = sqrt(maxDistance * maxDistance / dot(rayDirection, rayDirection));',
+
+      'return min(tGoal, tMax);',
 
     '}',
+
+
+
+    '#if($auroraEnabled)',
+
+      "//I'm gonna do something weird. I propose that aurora look an aweful lot",
+
+      '//like water caustics - slower, with some texture ripples introduced with',
+
+      '//perlin noise.',
+
+      '//',
+
+      "//To create my fake water caustics, I'm going to linearize and combine",
+
+      '//multiple tileable shader items to create the effect.',
+
+      '//From https://www.shadertoy.com/view/Msf3WH (MIT License)',
+
+      'vec2 hash(vec2 p){',
+
+        'vec2 p2 = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));',
+
+        'return 2.0 * fract(sin(p2) * 43758.5453123) - 1.0;',
+
+      '}',
+
+
+
+      'float perlinNoise(vec2 p){',
+
+        'const float K1 = 0.366025404; // (sqrt(3)-1)/2;',
+
+        'const float K2 = 0.211324865; // (3-sqrt(3))/6;',
+
+
+
+        'vec2  i = floor(p + (p.x + p.y) * K1);',
+
+        'vec2  a = p - i + (i.x + i.y) * K2;',
+
+        'float m = step(a.y, a.x);',
+
+        'vec2  o = vec2(m, 1.0 - m);',
+
+        'vec2  b = a - o + K2;',
+
+        'vec2  c = a - 1.0 + 2.0 * K2;',
+
+        'vec3  h = max(0.5 - vec3(dot(a, a), dot(b, b), dot(c, c) ), 0.0);',
+
+        'vec3  n = h * h * h * h * vec3(dot(a, hash(i + 0.0)), dot(b, hash(i + o)), dot(c, hash(i + 1.0)));',
+
+
+
+        'return dot(n, vec3(70.0));',
+
+      '}',
+
+
+
+      'float auroraHeightmap(vec2 uv, float t){',
+
+        'float halfTime = 0.5 * t;',
+
+        'float quarterTime = 0.5 * halfTime;',
+
+
+
+        '//Offsets from the perlin noise',
+
+        'float perlinOffset1 = perlinNoise(16.0 * (uv + vec2(0.1, 0.2) * t));',
+
+        'float perlinOffset2 = perlinNoise(16.0 * (uv - vec2(0.4, 0.3) * halfTime));',
+
+        'vec2 pSample = 0.07 * vec2(perlinOffset1, perlinOffset2);',
+
+
+
+        '//Sample our caustic shader',
+
+        'vec2 uv1 = uv + vec2(0.8, 0.1) * quarterTime;',
+
+        'vec2 uv2 = uv - vec2(0.2, 0.7) * quarterTime;',
+
+        'float aSample1 = texture(auroraSampler, (uv1 + pSample) * 0.25).r;',
+
+        'float aSample2 = texture(auroraSampler, uv1 * 0.25).r;',
+
+        'float aSample3 = texture(auroraSampler, uv2 * 0.25).g;',
+
+        'float aSample4 = texture(auroraSampler, (uv2 + pSample) * 0.25).g;',
+
+
+
+        '//Combine our caustic shader results',
+
+        'float cCombined1 = 1.7 * min(max(aSample1, aSample2), max(aSample3, aSample4));',
+
+        'return cCombined1 * cCombined1;',
+
+      '}',
+
+
+
+      '//Is this scientifically correct?! No, I doubt it. I just grabbed some relative values',
+
+      "//and I'm hoping this will give me a nice sense of varying these things.",
+
+      '//Note that both magenta nitrogen aurora and red aurora are rather rare, so you are',
+
+      '//unlikely to see them, their values are set as such below, and use electron velocity',
+
+      "//in combination with the aurora 'height' (which is a rough estimate for quantity)",
+
+      '//to determine which aurora is visible. At this point, we are just faking it till',
+
+      '//we can get more accurate values for simulating this.',
+
+      'vec3 auroraColor(float auroraNoiseValue, float heightOfRay, float avgElectronVelocityScalar){',
+
+        'vec3 excitedNitrogenSpectrumEmission = sRGBToLinear(vec4(nitrogenColor, 1.0)).rgb; //Visible in intense displays below 60-120km. (magenta)',
+
+        'vec3 molecularO2SpectralEmission = sRGBToLinear(vec4(molecularOxygenColor, 1.0)).rgb; //Below 100km-250km.',
+
+        'vec3 atomicOxygenSpectralEmission = sRGBToLinear(vec4(atomicOxygenColor, 1.0)).rgb; //Beginning at 150km-600km (red)',
+
+
+
+        'float h = heightOfRay - RADIUS_OF_EARTH;',
+
+        'vec3 outputLightIntensity = vec3(0.0);',
+
+        'float centroidValue;',
+
+        'float linearIntensityFader;',
+
+
+
+        '//Nitrogen contribution',
+
+        'if(h > 60.0 && h < 120.0){',
+
+          'centroidValue = (h - 90.0) / 70.0;',
+
+          'linearIntensityFader = clamp(auroraNoiseValue - nitrogenCutOff, 0.0, 1.0);',
+
+          'outputLightIntensity += nitrogenIntensity * excitedNitrogenSpectrumEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
+
+        '}',
+
+
+
+        '//Molecular oxygen contribution',
+
+        'if(h > 100.0 && h < 250.0){',
+
+          'centroidValue = (h - 175.0) / 50.5;',
+
+          'linearIntensityFader = clamp(auroraNoiseValue - molecularOxygenCutOff, 0.0, 1.0);',
+
+          'outputLightIntensity += molecularOxygenIntensity * molecularO2SpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
+
+        '}',
+
+
+
+        '//Atomic oxygen contribution',
+
+        'if(h > 150.0 && h < 600.0){',
+
+          'centroidValue = (h - 375.0) / 80.5;',
+
+          'linearIntensityFader = clamp(auroraNoiseValue - atomicOxygenCutOff, 0.0, 1.0);',
+
+          'outputLightIntensity += atomicOxygenIntensity * atomicOxygenSpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
+
+        '}',
+
+
+
+        'return max(vec3(outputLightIntensity), 0.0);',
+
+      '}',
+
+
+
+      'vec3 auroraRayMarchPass(vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction){',
+
+        'float uvScaling = 4.0;',
+
+        'float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, RADIUS_OF_AURORA_BOTTOM + RADIUS_OF_EARTH, auroraCutoffDistance);',
+
+        'float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, RADIUS_OF_AURORA_TOP + RADIUS_OF_EARTH, auroraCutoffDistance);',
+
+        'float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfAuroraRaymarchingSteps;',
+
+        'float auroraNoiseValue;',
+
+        'vec3 auroraColorValue0;',
+
+        'vec3 auroraColorValuef;',
+
+        'vec3 lastPosition;',
+
+        'vec3 linearAuroraGlow = vec3(0.0);',
+
+        'float auroraBrightness = pow(150.0, min(starAndSkyExposureReduction, 2.7) * 0.20);',
+
+        'if(rayInterceptStartTime > 0.0){',
+
+          'lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;',
+
+          'vec2 auroraNoiseTextureUV = vec2(lastPosition.x, lastPosition.z);',
+
+          'auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);',
+
+          'auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.',
+
+          'for(float i = 1.0; i < numberOfAuroraRaymarchingSteps; i++){',
+
+            '//Determine the position of our raymarcher in the sky',
+
+            'float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x + uTime, lastPosition.z + uTime) * 0.0078125).r - 1.0;',
+
+            'float d = (rayDeltaT * (0.75 + 0.5 * blueNoise));',
+
+            'vec3 currentPosition = lastPosition + rayDirection * d;',
+
+
+
+            'auroraNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);',
+
+            'auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);',
+
+            'auroraColorValuef = auroraColor(auroraNoiseValue, currentPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.',
+
+
+
+            '//Integrate using the trapezoidal rule',
+
+            'linearAuroraGlow += 0.5 * (auroraColorValue0 + auroraColorValuef) * d;//We linearly scale by the longer distances to cancel out the effect of fewer samples',
+
+
+
+            '//Save the current position as the last position so we can determine the distance between points the next time',
+
+            'lastPosition = currentPosition;',
+
+            'auroraColorValue0 = auroraColorValuef;',
+
+          '}',
+
+          'linearAuroraGlow = 0.00028 * linearAuroraGlow;',
+
+        '}',
+
+
+
+        'return linearAuroraGlow * auroraBrightness; //Linear multiplier for artistic control',
+
+      '}',
+
+    '#endif',
+
+
+
+    '//Cloud code',
+
+    '#if(!$isMeteringPass && $cloudsEnabled)',
+
+      '//For cloud rendering',
+
+      '/* https://www.shadertoy.com/view/XsX3zB',
+
+       '*',
+
+       '* The MIT License',
+
+       '* Copyright (c) 2013 Nikita Miropolskiy',
+
+       '*',
+
+       '* ( license has been changed from CCA-NC-SA 3.0 to MIT',
+
+       '*',
+
+       '*   but thanks for attributing your source code when deriving from this sample',
+
+       '*   with a following link: https://www.shadertoy.com/view/XsX3zB )*/',
+
+
+
+      '/* discontinuous pseudorandom uniformly distributed in [-0.5, +0.5]^3 */',
+
+      'vec3 random3(vec3 c) {',
+
+      '	float j = 4096.0*sin(dot(c,vec3(17.0, 59.4, 15.0)));',
+
+      '	vec3 r;',
+
+      '	r.z = fract(512.0*j);',
+
+      '	j *= .125;',
+
+      '	r.x = fract(512.0*j);',
+
+      '	j *= .125;',
+
+      '	r.y = fract(512.0*j);',
+
+      '	return r-0.5;',
+
+      '}',
+
+
+
+      '/* skew constants for 3d simplex functions */',
+
+      'const float F3 =  0.3333333;',
+
+      'const float G3 =  0.1666667;',
+
+
+
+      '/* 3d simplex noise */',
+
+      'float simplex3d(vec3 p) {',
+
+      "	 /* 1. find current tetrahedron T and it's four vertices */",
+
+      '	 /* s, s+i1, s+i2, s+1.0 - absolute skewed (integer) coordinates of T vertices */',
+
+      '	 /* x, x1, x2, x3 - unskewed coordinates of p relative to each of T vertices*/',
+
+
+
+      '	 /* calculate s and x */',
+
+      '	 vec3 s = floor(p + dot(p, vec3(F3)));',
+
+      '	 vec3 x = p - s + dot(s, vec3(G3));',
+
+
+
+      '	 /* calculate i1 and i2 */',
+
+      '	 vec3 e = step(vec3(0.0), x - x.yzx);',
+
+      '	 vec3 i1 = e*(1.0 - e.zxy);',
+
+      '	 vec3 i2 = 1.0 - e.zxy*(1.0 - e);',
+
+
+
+      '	 /* x1, x2, x3 */',
+
+      '	 vec3 x1 = x - i1 + G3;',
+
+      '	 vec3 x2 = x - i2 + 2.0*G3;',
+
+      '	 vec3 x3 = x - 1.0 + 3.0*G3;',
+
+
+
+      '	 /* 2. find four surflets and store them in d */',
+
+      '	 vec4 w, d;',
+
+
+
+      '	 /* calculate surflet weights */',
+
+      '	 w.x = dot(x, x);',
+
+      '	 w.y = dot(x1, x1);',
+
+      '	 w.z = dot(x2, x2);',
+
+      '	 w.w = dot(x3, x3);',
+
+
+
+      '	 /* w fades from 0.6 at the center of the surflet to 0.0 at the margin */',
+
+      '	 w = max(0.6 - w, 0.0);',
+
+
+
+      '	 /* calculate surflet components */',
+
+      '	 d.x = dot(random3(s), x);',
+
+      '	 d.y = dot(random3(s + i1), x1);',
+
+      '	 d.z = dot(random3(s + i2), x2);',
+
+      '	 d.w = dot(random3(s + 1.0), x3);',
+
+
+
+      '	 /* multiply d by w^4 */',
+
+      '	 w *= w;',
+
+      '	 w *= w;',
+
+      '	 d *= w;',
+
+
+
+      '	 /* 3. return the sum of the four surflets */',
+
+      '	 return dot(d, vec4(52.0));',
+
+      '}',
+
+
+
+      '/* const matrices for 3d rotation */',
+
+      'const mat3 rot1 = mat3(-0.37, 0.36, 0.85,-0.14,-0.93, 0.34,0.92, 0.01,0.4);',
+
+      'const mat3 rot2 = mat3(-0.55,-0.39, 0.74, 0.33,-0.91,-0.24,0.77, 0.12,0.63);',
+
+      'const mat3 rot3 = mat3(-0.71, 0.52,-0.47,-0.08,-0.72,-0.68,-0.7,-0.45,0.56);',
+
+
+
+      'float linearGradient(float zeroHeight, float oneHeight, float x){',
+
+        'return clamp((x - zeroHeight) / (oneHeight - zeroHeight), 0.0, 1.0);',
+
+      '}',
+
+
+
+      '/* directional artifacts can be reduced by rotating each octave */',
+
+      'float simplex3dFractal(vec3 m, vec2 cloudVelocity, float cloudDensity, float heightPercentage) {',
+
+        'vec3 cloudOffset = -vec3(cloudVelocity * cloudTime / 500.0, 0.0);',
+
+        'cloudOffset = vec3(cloudOffset.x, 0.0, cloudOffset.y);',
+
+        'vec3 offsetM = m + cloudOffset;',
+
+        'offsetM = offsetM * vec3(1.5E-4, 3.0E-4, 1.5E-4);',
+
+        'vec3 offsetM1 = offsetM * rot1;',
+
+        'vec3 offsetM2 = offsetM * rot2;',
+
+        'vec3 offsetM3 = offsetM * rot3;',
+
+        'float simplexFractal = 0.5000152*simplex3d(offsetM1) + 0.2500305 * simplex3d(2.0 * offsetM2)',
+
+        '+ 0.125061*simplex3d(4.0 * offsetM3) + 0.0625221 * simplex3d(8.0 * offsetM)',
+
+        '+ 0.031494*simplex3d(16.0 * offsetM1) + 0.0161132 * simplex3d(32.0 * offsetM2)',
+
+        '+ 0.008789*simplex3d(64.0 * offsetM3) + 0.0058875 * simplex3d(128.0 * offsetM);',
+
+        'simplexFractal = clamp(0.5 * simplexFractal + 0.5, 0.0, 1.0);',
+
+        'float fadeOut = linearGradient(1.0, cloudFadeOutStartPercent, heightPercentage);',
+
+        'float fadeIn = linearGradient(0.0, cloudFadeInEndPercent, heightPercentage);',
+
+        'float cloudNoise = clamp(dot(texture(cloudLUTs, offsetM * 7.0).rgb, vec3(0.625, 0.125, 0.25)) + 0.09, 0.00, 1.0);',
+
+        'float simplexFractal1 = min(cloudDensity - simplexFractal * fadeIn * fadeOut, 0.0) / (cloudDensity - 1.0);',
+
+        'float simplexFractal2 = min(cloudDensity - mix(0.0, simplexFractal, cloudNoise) * fadeIn * fadeOut, 0.0) / (cloudDensity - 1.0);',
+
+        'return mix(simplexFractal1, simplexFractal2, linearGradient(0.0, cloudFadeInEndPercent + 0.05, heightPercentage));',
+
+      '}',
+
+
+
+      'float henyayGreenstein(float g, float cosOfVAndL){',
+
+        'return ONE_OVER_FOUR_PI * (1.0 - g * g) /  pow(1.0 + g * g - 2.0 * g * cosOfVAndL, 1.5);',
+
+      '}',
+
+
+
+      '//https://www.shadertoy.com/view/4sjBDG',
+
+      'float hillaireHenyayGreenstein(float cosOfVAndL){',
+
+        'return mix(henyayGreenstein(-0.5, cosOfVAndL), henyayGreenstein(0.8, cosOfVAndL), 0.5);',
+
+      '}',
+
+
+
+      'vec4 cloudRayMarcher(vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction, vec3 dominantLightDirection, vec3 dominantLightSourceColor, vec3 atmosphericFog){',
+
+        '//This is in meters',
+
+        'float globalCloudStartHeight = cloudStartHeight + rayStartPosition.y;',
+
+        'float globalCloudEndHeight = cloudEndHeight + rayStartPosition.y;',
+
+        'float rayStartPositionInKm = rayStartPosition.y * METERS_TO_KM;',
+
+        'float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, rayStartPosition.y + cloudStartHeight  + RADIUS_OF_EARTH, cloudCutoffDistance);',
+
+        'float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, rayStartPosition.y + cloudEndHeight  + RADIUS_OF_EARTH, cloudCutoffDistance);',
+
+        'float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfCloudMarchSteps;',
+
+        'float rayTransmittance = 1.0;',
+
+        'vec3 luminance = vec3(0.0);',
+
+        'float cloudDensity0;',
+
+        'vec3 firstContactPosition = rayStartPosition;',
+
+        'bool hasFirstContact = false;',
+
+        'if(rayInterceptStartTime > 0.0){',
+
+          'vec3 lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;',
+
+          'float heightPercentage = (lastPosition.y - globalCloudStartHeight) / (globalCloudEndHeight - globalCloudStartHeight);',
+
+          'cloudDensity0 = simplex3dFractal(lastPosition, cloudVelocity, cloudCoverage, heightPercentage);',
+
+          'float cloudDensity = 0.0;',
+
+          'if(cloudDensity > 0.0){',
+
+            'firstContactPosition = lastPosition;',
+
+            'hasFirstContact = true;',
+
+          '}',
+
+
+
+          'for(float i = 0.0; i < numberOfCloudMarchSteps; i++){',
+
+            '//Determine the position of our raymarcher in the sky',
+
+            'vec3 currentPosition = lastPosition + rayDirection * rayDeltaT;',
+
+            'heightPercentage = (currentPosition.y - globalCloudStartHeight) / (globalCloudEndHeight - globalCloudStartHeight);',
+
+
+
+            '//Calculate our transmittance to this point',
+
+            'float cloudDensityf = simplex3dFractal(currentPosition, cloudVelocity, cloudCoverage, heightPercentage);',
+
+            'cloudDensity += 0.5 * (cloudDensity0 + cloudDensityf) * rayDeltaT;',
+
+            'rayTransmittance = exp(-0.2 * cloudDensity);',
+
+
+
+            '//Determine the luminance',
+
+            'float innerTransmittance = clamp(1.0 - (1.0 - rayTransmittance), 0.0, 1.0);',
+
+            '//',
+
+            "//NOTE: Turning this off because it's too hard on the GPU",
+
+            '//We will return to add this in when we get some performance improvements...',
+
+            '//Also, the GPU shortage over Mwah ha ha ha ha! This would be the inner loop',
+
+            '//scattering light back from the sun, but currently we allow 100% transmittance.',
+
+            '//',
+
+            '//Update our luminance',
+
+            'float lightSourceHeight = RADIUS_OF_EARTH + ((currentPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);',
+
+            'vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(dominantLightDirection.y, 0.0)), parameterizationOfHeightToY(lightSourceHeight));',
+
+            'vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;',
+
+            'float scatteringToRayPoint = hillaireHenyayGreenstein(dot(dominantLightDirection, dominantLightDirection));',
+
+            'float scatteringToCamera = hillaireHenyayGreenstein(dot(rayDirection, dominantLightDirection));',
+
+            'luminance += 0.0003 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;',
+
+
+
+            '//Update previous values',
+
+            'cloudDensity0 = cloudDensityf;',
+
+            'lastPosition = currentPosition;',
+
+            'if(cloudDensity > 0.0 && !hasFirstContact){',
+
+              'firstContactPosition = lastPosition;',
+
+              'hasFirstContact = true;',
+
+            '}',
+
+            'if(rayTransmittance < 0.0001){',
+
+              'break;',
+
+            '}',
+
+          '}',
+
+        '}',
+
+        'luminance += 0.09 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);',
+
+        'if(hasFirstContact){',
+
+          'float lightSourceHeight = RADIUS_OF_EARTH + 2.0 * ((rayStartPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);',
+
+          'vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(normalize(firstContactPosition.y), 0.0)), parameterizationOfHeightToY(lightSourceHeight));',
+
+          'vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;',
+
+          'vec3 distVect = firstContactPosition - rayStartPosition;',
+
+          'luminance *= dominantLightSourceAtmosphericTransmittance * exp(-2.5E-5 * sqrt(dot(distVect, distVect)));',
+
+          'luminance += atmosphericFog * (1.0 - exp(-2.5E-5 * sqrt(dot(distVect, distVect))));',
+
+        '}',
+
+
+
+        'return vec4(luminance * max(sunHorizonFade, moonHorizonFade), 1.0 - rayTransmittance); //Linear multiplier for artistic control',
+
+      '}',
 
     '#endif',
 
@@ -3914,9 +4946,27 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       'vec3 interpolatedRayleighScattering = texture(rayleighLookupTable, uv3).rgb;',
 
+      'vec3 uv3_2 = vec3(parameterizationOfCosOfViewZenithToX(0.0), uv3.y, uv3.z);',
+
+      'vec3 mieShadow = intensityFader * texture(mieLookupTable, uv3_2).rgb;',
+
+      'vec3 rayleighShadow = intensityFader * texture(rayleighLookupTable, uv3_2).rgb;',
 
 
-      'return intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
+
+      '//Percent of sun visible across the length of the ray extending in this direction',
+
+      'float percentShadowMie = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT, ONE_OVER_MIE_SCALE_HEIGHT);',
+
+      'float percentShadowRayleigh = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT, ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
+
+      'interpolatedMieScattering = mix(mieShadow, interpolatedMieScattering, percentShadowMie);',
+
+      'interpolatedRayleighScattering = mix(rayleighShadow, interpolatedRayleighScattering, percentShadowRayleigh);',
+
+
+
+      'return pow(intensityFader, 3.0) * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
 
     '}',
 
@@ -3958,7 +5008,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '#else',
 
-        'vec3 sphericalPosition = normalize(vWorldPosition);',
+        'vec3 sphericalPosition = normalize(vLocalPosition);',
 
       '#endif',
 
@@ -3972,7 +5022,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       'float cosOfViewAngle = sphericalPosition.y;',
 
-      'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH));',
+      'vec2 uv2OfTransmittance = vec2(parameterizationOfCosOfViewZenithToX(max(cosOfViewAngle, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, ATMOSPHERE_HEIGHT)));',
 
       'vec3 transmittanceFade = texture(transmittance, uv2OfTransmittance).rgb;',
 
@@ -4012,123 +5062,185 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
 
+      '#if(!$isSunPass)',
+
+        'float starAndSkyExposureReduction = starsExposure - 10.0 * dot(LinearTosRGB(vec4(solarAtmosphericPass + lunarAtmosphericPass, 1.0)).rgb, intensityVector);',
+
+      '#endif',
+
+
+
       '//This stuff never shows up near our sun, so we can exclude it',
 
       '#if(!$isSunPass && !$isMeteringPass)',
 
-        '//Get the intensity of our sky color',
+        'vec3 galacticLighting = vec3(0.0);',
 
-        'vec3 intensityVector = vec3(0.3, 0.59, 0.11);',
+        'if(vLocalPosition.y >= 0.0){',
 
-        'float starAndSkyExposureReduction =  starsExposure - 10.0 * dot(pow(solarAtmosphericPass + lunarAtmosphericPass, inverseGamma), intensityVector);',
+          '//Get the stellar starting id data from the galactic cube map',
 
+          'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
 
+          'vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);',
 
-        '//Get the stellar starting id data from the galactic cube map',
 
-        'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
 
-        'vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);',
+          '//Red',
 
+          'float scaledBits = starHashData.r * 255.0;',
 
+          'float leftBits = floor(scaledBits / 2.0);',
 
-        '//Red',
+          'float starXCoordinate = leftBits / 127.0; //Dim Star',
 
-        'float scaledBits = starHashData.r * 255.0;',
+          'float rightBits = scaledBits - leftBits * 2.0;',
 
-        'float leftBits = floor(scaledBits / 2.0);',
 
-        'float starXCoordinate = leftBits / 127.0; //Dim Star',
 
-        'float rightBits = scaledBits - leftBits * 2.0;',
+          '//Green',
 
+          'scaledBits = starHashData.g * 255.0;',
 
+          'leftBits = floor(scaledBits / 8.0);',
 
-        '//Green',
+          'float starYCoordinate = (rightBits + leftBits * 2.0) / 63.0; //Dim Star',
 
-        'scaledBits = starHashData.g * 255.0;',
+          'rightBits = scaledBits - leftBits * 8.0;',
 
-        'leftBits = floor(scaledBits / 8.0);',
 
-        'float starYCoordinate = (rightBits + leftBits * 2.0) / 63.0; //Dim Star',
 
-        'rightBits = scaledBits - leftBits * 8.0;',
+          '//Add the dim stars lighting',
 
+          'vec4 starData = texture(dimStarData, vec2(starXCoordinate, starYCoordinate));',
 
+          'galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
-        '//Add the dim stars lighting',
 
-        'vec4 starData = texture(dimStarData, vec2(starXCoordinate, starYCoordinate));',
 
-        'vec3 galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+          '//Blue',
 
+          'scaledBits = starHashData.b * 255.0;',
 
+          'leftBits = floor(scaledBits / 64.0);',
 
-        '//Blue',
+          'starXCoordinate = (rightBits + leftBits * 8.0) / 31.0; //Medium Star',
 
-        'scaledBits = starHashData.b * 255.0;',
+          'rightBits = scaledBits - leftBits * 64.0;',
 
-        'leftBits = floor(scaledBits / 64.0);',
+          'leftBits = floor(rightBits / 2.0);',
 
-        'starXCoordinate = (rightBits + leftBits * 8.0) / 31.0; //Medium Star',
+          'starYCoordinate = (leftBits  / 31.0); //Medium Star',
 
-        'rightBits = scaledBits - leftBits * 64.0;',
 
-        'leftBits = floor(rightBits / 2.0);',
 
-        'starYCoordinate = (leftBits  / 31.0); //Medium Star',
+          '//Add the medium stars lighting',
 
+          'starData = texture(medStarData, vec2(starXCoordinate, starYCoordinate));',
 
+          'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
-        '//Add the medium stars lighting',
 
-        'starData = texture(medStarData, vec2(starXCoordinate, starYCoordinate));',
 
-        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+          '//Alpha',
 
+          'scaledBits = starHashData.a * 255.0;',
 
+          'leftBits = floor(scaledBits / 32.0);',
 
-        '//Alpha',
+          'starXCoordinate = leftBits / 7.0;',
 
-        'scaledBits = starHashData.a * 255.0;',
+          'rightBits = scaledBits - leftBits * 32.0;',
 
-        'leftBits = floor(scaledBits / 32.0);',
+          'leftBits = floor(rightBits / 4.0);',
 
-        'starXCoordinate = leftBits / 7.0;',
+          'starYCoordinate = leftBits  / 7.0;',
 
-        'rightBits = scaledBits - leftBits * 32.0;',
 
-        'leftBits = floor(rightBits / 4.0);',
 
-        'starYCoordinate = leftBits  / 7.0;',
+          '//Add the bright stars lighting',
 
+          'starData = texture(brightStarData, vec2(starXCoordinate, starYCoordinate));',
 
+          'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
-        '//Add the bright stars lighting',
 
-        'starData = texture(brightStarData, vec2(starXCoordinate, starYCoordinate));',
 
-        'galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+          '//Check our distance from each of the four primary planets',
 
+          'galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
+          'galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
-        '//Check our distance from each of the four primary planets',
+          'galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
-        'galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+          'galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
-        'galacticLighting += max(drawPlanetLight(venusColor, venusBrightness, venusPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+          'galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
 
-        'galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+          'galacticLighting = sRGBToLinear(vec4(galacticLighting, 1.0)).rgb;',
 
-        'galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+        '}',
 
-        'galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+      '#elif($isMeteringPass)',
 
+        'vec3 galacticLighting = vec3(0.0);',
 
+      '#endif',
+
+
+
+      'vec3 auroraLighting = vec3(0.0);',
+
+      '#if($auroraEnabled)',
+
+        '//Add aurora lighting if it exists',
+
+        'auroraLighting = auroraRayMarchPass(vec3(0.0, RADIUS_OF_EARTH, 0.0), sphericalPosition, starAndSkyExposureReduction);',
+
+        'auroraLighting = auroraLighting * transmittanceFade;',
+
+      '#endif',
+
+
+
+      '#if(!$isSunPass)',
 
         '//Apply the transmittance function to all of our light sources',
 
-        'galacticLighting = pow(galacticLighting, gamma) * transmittanceFade;',
+        'galacticLighting = galacticLighting * transmittanceFade;',
+
+      '#endif',
+
+
+
+      '//Calculate the impact of clouds on the scene',
+
+      '//These should be pulled out into uniforms that are determined by the initial parameters',
+
+      '#if(!$isMeteringPass && $cloudsEnabled)',
+
+        'vec3 dominantLightSourcePosition = moonPosition;',
+
+        'vec3 dominantLightSourceColor = 0.3 * scatteringMoonIntensity * moonLightColor * moonPosition.y;',
+
+        'vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, ATMOSPHERE_HEIGHT)));',
+
+        'vec3 transmittanceOfPrimaryLightSource = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;',
+
+        'vec3 sunDominantLightSourceColor = scatteringSunIntensity * vec3(1.0) * sunPosition.y;',
+
+        'if(sunDominantLightSourceColor.b > dominantLightSourceColor.b){',
+
+          'dominantLightSourceColor = sunDominantLightSourceColor;',
+
+          'dominantLightSourcePosition = sunPosition;',
+
+        '}',
+
+
+
+        'vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + clamp(cameraHeight * 1000.0 + vWorldPosition.y, 0.0, ATMOSPHERE_HEIGHT), vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass + auroraLighting);',
 
       '#endif',
 
@@ -4146,7 +5258,23 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
 
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass + sunTexel), inverseGamma);',
+        '//Combine the cloud lights',
+
+        '#if($cloudsEnabled)',
+
+          'combinedPass = mix((combinedPass + sunTexel), cloudLighting.rgb, cloudLighting.a);',
+
+        '#else',
+
+          'combinedPass = combinedPass + sunTexel;',
+
+        '#endif',
+
+
+
+        '//And bring it back to the normal sRGB afterwards afterwards',
+
+        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
 
       '#elif($isMoonPass)',
 
@@ -4166,9 +5294,27 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
 
-        '//And bring it back to the normal gamma afterwards',
+        '#if($auroraEnabled)',
 
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+          'combinedPass = combinedPass + auroraLighting;',
+
+        '#endif',
+
+
+
+        '//Combine the cloud lights',
+
+        '#if($cloudsEnabled)',
+
+          'combinedPass = mix(combinedPass, cloudLighting.rgb, cloudLighting.a);',
+
+        '#endif',
+
+
+
+        '//And bring it back to the normal sRGB afterwards afterwards',
+
+        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
 
       '#elif($isMeteringPass)',
 
@@ -4176,7 +5322,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         'float circularMask = 1.0 - step(1.0, rho);',
 
-        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting) * circularMask;',
+        'vec3 combinedPass = (lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting) * circularMask;',
+
+
+
+        '#if($auroraEnabled)',
+
+          'combinedPass = combinedPass + auroraLighting;',
+
+        '#endif',
 
 
 
@@ -4192,9 +5346,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
 
-        '//Now apply the ACESFilmicTonemapping',
+        '//And bring it back to the normal sRGB afterwards afterwards',
 
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
 
       '#else',
 
@@ -4204,9 +5358,27 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
 
 
-        '//Now apply the ACESFilmicTonemapping',
+        '#if($auroraEnabled)',
 
-        'combinedPass = pow(MyAESFilmicToneMapping(combinedPass), inverseGamma);',
+          'combinedPass = combinedPass + auroraLighting;',
+
+        '#endif',
+
+
+
+        '//Combine the cloud lights',
+
+        '#if($cloudsEnabled)',
+
+          'combinedPass = mix(combinedPass, cloudLighting.rgb, cloudLighting.a);',
+
+        '#endif',
+
+
+
+        '//And bring it back to the normal sRGB afterwards afterwards',
+
+        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
 
 
 
@@ -4281,6 +5453,20 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         updatedGLSL = updatedGLSL.replace(/\$isMeteringPass/g, '0');
       }
 
+      if(auroraEnabled){
+        updatedGLSL = updatedGLSL.replace(/\$auroraEnabled/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$auroraEnabled/g, '0');
+      }
+
+      if(cloudsEnabled){
+        updatedGLSL = updatedGLSL.replace(/\$cloudsEnabled/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$cloudsEnabled/g, '0');
+      }
+
       updatedLines.push(updatedGLSL);
     }
 
@@ -4307,8 +5493,6 @@ StarrySky.Materials.Postprocessing.moonAndSunOutput = {
     'varying vec3 vWorldPosition;',
 
     'varying vec2 vUv;',
-
-    'const vec3 inverseGamma = vec3(0.454545454545454545454545);',
 
     'const float sqrtOfOneHalf = 0.7071067811865475244008443;',
 
@@ -4382,6 +5566,8 @@ StarrySky.Materials.Postprocessing.moonAndSunOutput = {
 
     'varying vec3 vWorldPosition;',
 
+    'varying vec3 vLocalPosition;',
+
     'varying vec2 vUv;',
 
 
@@ -4390,7 +5576,9 @@ StarrySky.Materials.Postprocessing.moonAndSunOutput = {
 
       'vec4 worldPosition = modelMatrix * vec4(position, 1.0);',
 
-      'vWorldPosition = worldPosition.xyz;',
+      'vLocalPosition = normalize(vec3(-position.z, position.y, -position.x));',
+
+      'vWorldPosition = vec3(-worldPosition.z, -worldPosition.y, -worldPosition.x);',
 
       'vUv = uv;',
 
@@ -4433,39 +5621,45 @@ StarrySky.Materials.Sun.baseSunPartial = {
 
     '//edges.',
 
-    'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
+    'vec3 sunTexel = vec3(0.0);',
+
+    'if(vLocalPosition.y >= 0.0){',
+
+      'float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));',
 
 
 
-    '//From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl',
+      '//From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl',
 
-    'float sundisk = smoothstep(0.0, 0.1, (0.5 - (pixelDistanceFromSun)));',
-
-
-
-    '//We can use this for our solar limb darkening',
-
-    '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
-
-    'float rOverR = pixelDistanceFromSun / 0.5;',
-
-    'float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));',
-
-    'float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);',
+      'float sundisk = smoothstep(0.0, 0.1, (0.5 - (pixelDistanceFromSun)));',
 
 
 
-    '//Apply transmittance to our sun disk direct lighting',
+      '//We can use this for our solar limb darkening',
 
-    'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
+      '//From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf',
 
-    'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
+      'float rOverR = pixelDistanceFromSun / 0.5;',
 
-    'float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);',
+      'float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));',
 
-    'vec3 sunTexel = (sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r)* transmittanceFade;',
+      'float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);',
 
-    'sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);',
+
+
+      '//Apply transmittance to our sun disk direct lighting',
+
+      'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
+
+      'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
+
+      'float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);',
+
+      'sunTexel = (3.0 * sundisk * sunDiskIntensity + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;',
+
+      'sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);',
+
+    '}',
     ];
 
     let updatedLines = [];
@@ -4485,15 +5679,29 @@ StarrySky.Materials.Sun.baseSunPartial = {
 
     'varying vec3 vWorldPosition;',
 
+    'varying vec3 vLocalPosition;',
+
     'varying vec2 vUv;',
 
 
 
     'void main() {',
 
-      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfSunPlane * 2.0, 1.0);',
+      'mat4 worldMatrixIn = worldMatrix;',
+
+      'vec4 worldMatrixTranslation = worldMatrixIn[3];',
+
+      'worldMatrixIn[3] = worldMatrixTranslation - vec4(cameraPosition, 0.0);',
+
+      'vec4 worldPosition = worldMatrixIn * vec4(position * radiusOfSunPlane * 2.0, 1.0);',
 
       'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
+
+      'vLocalPosition = normalize(vWorldPosition.xyz);',
+
+      'worldPosition = worldMatrix * vec4(position * radiusOfSunPlane * 2.0, 1.0);',
+
+      'vWorldPosition = vec3(-worldPosition.z, -worldPosition.y, -worldPosition.x);',
 
 
 
@@ -4528,89 +5736,95 @@ StarrySky.Materials.Moon.baseMoonPartial = {
 
     '//be our sun position in the sky.',
 
-    'vec3 texelNormal = normalize(2.0 * texture2D(moonNormalMap, offsetUV).rgb - 1.0);',
+    'vec3 moonTexel = vec3(0.0);',
+
+    'if(vLocalPosition.y >= 0.0){',
+
+      'vec3 texelNormal = normalize(2.0 * texture2D(moonNormalMap, offsetUV).rgb - 1.0);',
 
 
 
-    '//Lunar surface roughness from https://sos.noaa.gov/datasets/moon-surface-roughness/',
+      '//Lunar surface roughness from https://sos.noaa.gov/datasets/moon-surface-roughness/',
 
-    'float moonRoughnessTexel = piOver2 - (1.0 - texture2D(moonRoughnessMap, offsetUV).r);',
-
-
-
-    '//Implmentatation of the Ambient Appeture Lighting Equation',
-
-    'float sunArea = pi * sunRadius * sunRadius;',
-
-    'float apertureRadius = acos(1.0 - texture2D(moonApertureSizeMap, offsetUV).r);',
-
-    'vec3 apertureOrientation = normalize(2.0 * texture2D(moonApertureOrientationMap, offsetUV).rgb - 1.0);',
-
-    'float apertureToSunHaversineDistance = acos(dot(apertureOrientation, tangentSpaceSunLightDirection));',
+      'float moonRoughnessTexel = piOver2 - (1.0 - texture2D(moonRoughnessMap, offsetUV).r);',
 
 
 
-    'float observableSunFraction;',
+      '//Implmentatation of the Ambient Appeture Lighting Equation',
 
-    'vec3 test = vec3(0.0);',
+      'float sunArea = pi * sunRadius * sunRadius;',
 
-    'if(apertureToSunHaversineDistance >= (apertureRadius + sunRadius)){',
+      'float apertureRadius = acos(1.0 - texture2D(moonApertureSizeMap, offsetUV).r);',
 
-      'observableSunFraction = 0.0;',
+      'vec3 apertureOrientation = normalize(2.0 * texture2D(moonApertureOrientationMap, offsetUV).rgb - 1.0);',
+
+      'float apertureToSunHaversineDistance = acos(dot(apertureOrientation, tangentSpaceSunLightDirection));',
+
+
+
+      'float observableSunFraction;',
+
+      'vec3 test = vec3(0.0);',
+
+      'if(apertureToSunHaversineDistance >= (apertureRadius + sunRadius)){',
+
+        'observableSunFraction = 0.0;',
+
+      '}',
+
+      'else if(apertureToSunHaversineDistance <= (apertureRadius - sunRadius)){',
+
+        'observableSunFraction = 1.0;',
+
+      '}',
+
+      'else{',
+
+        'float absOfRpMinusRl = abs(apertureRadius - sunRadius);',
+
+        'observableSunFraction = smoothstep(0.0, 1.0, 1.0 - ((apertureToSunHaversineDistance - absOfRpMinusRl) / (apertureRadius + sunRadius - absOfRpMinusRl)));',
+
+      '}',
+
+      'float omega = (sunRadius - apertureRadius + apertureToSunHaversineDistance) / (2.0 * apertureToSunHaversineDistance);',
+
+      'vec3 bentTangentSpaceSunlightDirection = normalize(mix(tangentSpaceSunLightDirection, apertureOrientation, omega));',
+
+
+
+      '//I opt to use the Oren-Nayar model over Hapke-Lommel-Seeliger',
+
+      '//As Oren-Nayar lacks a lunar phase component and is more extensible for',
+
+      '//Additional parameters, I used the following code as a guide',
+
+      '//https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4',
+
+      'float NDotL = max(dot(bentTangentSpaceSunlightDirection, texelNormal), 0.0);',
+
+      'float NDotV = max(dot(tangentSpaceViewDirection, texelNormal), 0.0);',
+
+      'float gamma = dot(tangentSpaceViewDirection - texelNormal * NDotV, bentTangentSpaceSunlightDirection - texelNormal * NDotL);',
+
+      'gamma = gamma / (sqrt(clamp(1.0 - NDotV * NDotV, 0.0, 1.0)) * sqrt(clamp(1.0 - NDotL * NDotL, 0.0, 1.0)));',
+
+      'float roughnessSquared = moonRoughnessTexel * moonRoughnessTexel;',
+
+      'float A = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));',
+
+      'float B = 0.45 * (roughnessSquared / (roughnessSquared + 0.09));',
+
+      'vec2 cos_alpha_beta = NDotV < NDotL ? vec2(NDotV, NDotL) : vec2(NDotL, NDotV);',
+
+      'vec2 sin_alpha_beta = sqrt(clamp(1.0 - cos_alpha_beta * cos_alpha_beta, 0.0, 1.0));',
+
+      'float C = sin_alpha_beta.x * sin_alpha_beta.y / (1e-6 + cos_alpha_beta.y);',
+
+
+
+      'moonTexel = 2.0 * observableSunFraction * NDotL * (A + B * max(0.0, gamma) * C) * lunarDiffuseColor * transmittanceFade * earthsShadow;',
 
     '}',
-
-    'else if(apertureToSunHaversineDistance <= (apertureRadius - sunRadius)){',
-
-      'observableSunFraction = 1.0;',
-
-    '}',
-
-    'else{',
-
-      'float absOfRpMinusRl = abs(apertureRadius - sunRadius);',
-
-      'observableSunFraction = smoothstep(0.0, 1.0, 1.0 - ((apertureToSunHaversineDistance - absOfRpMinusRl) / (apertureRadius + sunRadius - absOfRpMinusRl)));',
-
-    '}',
-
-    'float omega = (sunRadius - apertureRadius + apertureToSunHaversineDistance) / (2.0 * apertureToSunHaversineDistance);',
-
-    'vec3 bentTangentSpaceSunlightDirection = normalize(mix(tangentSpaceSunLightDirection, apertureOrientation, omega));',
-
-
-
-    '//I opt to use the Oren-Nayar model over Hapke-Lommel-Seeliger',
-
-    '//As Oren-Nayar lacks a lunar phase component and is more extensible for',
-
-    '//Additional parameters, I used the following code as a guide',
-
-    '//https://patapom.com/blog/BRDF/MSBRDFEnergyCompensation/#fn:4',
-
-    'float NDotL = max(dot(bentTangentSpaceSunlightDirection, texelNormal), 0.0);',
-
-    'float NDotV = max(dot(tangentSpaceViewDirection, texelNormal), 0.0);',
-
-    'float gamma = dot(tangentSpaceViewDirection - texelNormal * NDotV, bentTangentSpaceSunlightDirection - texelNormal * NDotL);',
-
-    'gamma = gamma / (sqrt(clamp(1.0 - NDotV * NDotV, 0.0, 1.0)) * sqrt(clamp(1.0 - NDotL * NDotL, 0.0, 1.0)));',
-
-    'float roughnessSquared = moonRoughnessTexel * moonRoughnessTexel;',
-
-    'float A = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));',
-
-    'float B = 0.45 * (roughnessSquared / (roughnessSquared + 0.09));',
-
-    'vec2 cos_alpha_beta = NDotV < NDotL ? vec2(NDotV, NDotL) : vec2(NDotL, NDotV);',
-
-    'vec2 sin_alpha_beta = sqrt(clamp(1.0 - cos_alpha_beta * cos_alpha_beta, 0.0, 1.0));',
-
-    'float C = sin_alpha_beta.x * sin_alpha_beta.y / (1e-6 + cos_alpha_beta.y);',
-
-
-
-    'vec3 moonTexel = 2.0 * observableSunFraction * NDotL * (A + B * max(0.0, gamma) * C) * lunarDiffuseColor * transmittanceFade * earthsShadow;',
     ];
 
     let updatedLines = [];
@@ -4637,6 +5851,8 @@ StarrySky.Materials.Moon.baseMoonPartial = {
 
 
     'varying vec3 vWorldPosition;',
+
+    'varying vec3 vLocalPosition;',
 
     'varying vec2 vUv;',
 
@@ -4672,11 +5888,23 @@ StarrySky.Materials.Moon.baseMoonPartial = {
 
     'void main() {',
 
-      'vec4 worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
+      'mat4 worldMatrixIn = worldMatrix;',
 
-      'vec3 normalizedWorldPosition = normalize(worldPosition.xyz);',
+      'vec4 worldMatrixTranslation = worldMatrixIn[3];',
 
-      'vWorldPosition = vec3(-normalizedWorldPosition.z, normalizedWorldPosition.y, -normalizedWorldPosition.x);',
+      'worldMatrixIn[3] = worldMatrixTranslation - vec4(cameraPosition, 0.0);',
+
+      'vec4 worldPosition = worldMatrixIn * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
+
+      'vWorldPosition = vec3(-worldPosition.z, worldPosition.y, -worldPosition.x);',
+
+      'vLocalPosition = normalize(vWorldPosition.xyz);',
+
+      'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
+
+      'worldPosition = worldMatrix * vec4(position * radiusOfMoonPlane * 2.0, 1.0);',
+
+      'vWorldPosition = vec3(-worldPosition.z, -worldPosition.y, -worldPosition.x);',
 
 
 
@@ -4708,9 +5936,9 @@ StarrySky.Materials.Moon.baseMoonPartial = {
 
       '//Convert coordinate position to RA and DEC',
 
-      'float altitude = piOver2 - acos(vWorldPosition.y);',
+      'float altitude = piOver2 - acos(vLocalPosition.y);',
 
-      'float azimuth = pi - atan(vWorldPosition.z, vWorldPosition.x);',
+      'float azimuth = pi - atan(vLocalPosition.z, vLocalPosition.x);',
 
       'float declination = asin(sin(latitude) * sin(altitude) - cos(latitude) * cos(altitude) * cos(azimuth));',
 
@@ -4830,6 +6058,8 @@ StarrySky.Materials.Autoexposure.meteringSurvey = {
 
     'varying vec3 vWorldPosition;',
 
+    'varying vec3 vLocalPosition;',
+
     'varying vec2 vUv;',
 
 
@@ -4848,6 +6078,943 @@ StarrySky.Materials.Autoexposure.meteringSurvey = {
   ].join('\n'),
 }
 
+StarrySky.Materials.Clouds.cloudNoiseMaterial = {
+  uniforms: {
+    zDepth: {value: 0.0},
+  },
+  fragmentShader: [
+
+    'precision highp sampler3D;',
+
+
+
+    '//From https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83',
+
+
+
+
+
+    '/* discontinuous pseudorandom uniformly distributed in [0.0, +0.0]^3 */',
+
+    'float random(float seed) {',
+
+    '		vec2 seedVec2 = vec2(seed, seed);',
+
+        'return fract(sin(dot(seedVec2.xy, vec2(12.9898,78.23309)))* 43758.5453123) + 0.5;',
+
+    '}',
+
+
+
+    '//3D Tileable Worley Noise',
+
+    'float tileableWorleyNoise(vec3 uv3, float numPoints){',
+
+      'float minDistance = 1000.0;',
+
+    '	float seed = random(2243.2 * numPoints);',
+
+      'for(float x = -1.0; x <= 1.0; ++x){',
+
+        'for(float y = -1.0; y <= 1.0; ++y){',
+
+          'for(float z = -1.0; z <= 1.0; ++z){',
+
+    '				for(float i = 0.0; i < numPoints; ++i){',
+
+    '					//The seed numbers below are meant to give constant values but different random locations',
+
+    '					//for each seed.',
+
+    '					vec3 randomPosition = vec3(random(i / seed),  random(i * 968.542 / seed), random(i * 234.12 / seed));',
+
+    '	        vec3 vec2Point = uv3 - randomPosition + vec3(x, y, z);',
+
+    '	        minDistance = min(dot(vec2Point, vec2Point), minDistance);',
+
+    '				}',
+
+          '}',
+
+        '}',
+
+      '}',
+
+
+
+      'return clamp(1.0 - minDistance, 0.0, 1.0);',
+
+    '}',
+
+
+
+    '//Presume the width of our texture is 128x128x128',
+
+    '//Presume an output texture width of 2048x1024',
+
+    '//The latter being 16 128x128 textures wide and 8 128x128 textures high',
+
+    'vec3 pixel2DLocTo3DLoc(vec2 fragCoordinate){',
+
+    '	int xIndex = int(floor(fragCoordinate.x / 128.0));',
+
+    '	int yIndex = int(floor(fragCoordinate.y / 128.0));',
+
+    '	float z = float(xIndex + yIndex * 16) / 128.0;',
+
+    '	float x = (fragCoordinate.x - float(xIndex * 128)) / 128.0;',
+
+    '	float y = (fragCoordinate.y - float(yIndex * 128)) / 128.0;',
+
+    '	return vec3(x, y, z);',
+
+    '}',
+
+
+
+    'void main(){',
+
+      'vec2 p = gl_FragCoord.xy;',
+
+    '	vec3 p3 = pixel2DLocTo3DLoc(p);',
+
+
+
+      '//Worley noise octaves',
+
+      'float worleyNoise1 = tileableWorleyNoise(p3, 3.0);',
+
+      'float worleyNoise2 = tileableWorleyNoise(p3, 27.0);',
+
+      'float worleyNoise3 = tileableWorleyNoise(p3, 81.0);',
+
+    '	// float worleyNoise1 = tileableWorleyNoise(p3, 2.0);',
+
+      '// float worleyNoise2 = tileableWorleyNoise(p3, 18.0);',
+
+      '// float worleyNoise3 = tileableWorleyNoise(p3, 162.0);',
+
+    '	float cloudNoise = worleyNoise1 * .625 + worleyNoise2 * .125 + worleyNoise3 * 0.25;',
+
+
+
+      'gl_FragColor = vec4(worleyNoise1, worleyNoise2, worleyNoise3, cloudNoise);',
+
+    '}',
+  ].join('\n')
+};
+
+StarrySky.Materials.Fog.fogParsMaterial = {
+  fragmentShader: function(rayleigh, exposure, groundFexDistanceMultiplier, useAdvancedAtmospehericPerspective, atmosphericParameters){
+    let originalGLSL = [
+
+    '#ifdef USE_FOG',
+
+      'uniform vec3 fogColor; //Phi-Theta of Sun and Phi of Mooon',
+
+      'varying float vFogDepth;',
+
+      '#ifdef FOG_EXP2',
+
+        'uniform float fogDensity;',
+
+      '#else',
+
+        'uniform float fogNear;',
+
+        'uniform float fogFar;',
+
+        '#if($useAdvancedAtmospehericPerspective)',
+
+          'varying vec3 vFogWorldPosition;',
+
+          'varying vec3 vSunDirection;',
+
+          'varying float vSunfade;',
+
+          'varying vec3 vMoonDirection;',
+
+          'varying float vMoonfade;',
+
+          'varying vec3 vBetaRSun;',
+
+          'varying vec3 vBetaRMoon;',
+
+          'varying vec3 vBetaM;',
+
+          'varying float vSunE;',
+
+          'varying float vMoonE;',
+
+          'varying vec3 vFexPixel;',
+
+          'varying vec3 vMoonLightColor;',
+
+
+
+          'const float mieDirectionalG = $mieDirectionalG;',
+
+          'const float rayleigh = $rayleigh;',
+
+          'const float fogLightExposure = $exposure;',
+
+          'const float groundFexDistanceMultiplier = $groundFexDistanceMultiplier;',
+
+
+
+          'const vec3 up = vec3(0.0, 1.0, 0.0);',
+
+
+
+          '// constants for atmospheric scattering',
+
+          'const float pi = 3.1415926535897932;',
+
+          'const float n = 1.0003; // refractive index of air',
+
+          'const float N = 2.545E25; // number of molecules per unit volume for air at 288.15K and 1013mb (sea level -45 celsius)',
+
+          '// optical length at zenith for molecules',
+
+          'const float rayleighZenithLength = $rayleighScaleHeight;',
+
+          'const float mieZenithLength = $mieScaleHeight;',
+
+
+
+          '// this pre-calcuation replaces older TotalRayleigh(vec3 lambda) function:',
+
+        '	// (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn))',
+
+        '	const vec3 totalRayleigh = $rayleighBeta;',
+
+
+
+          '// 3.0 / ( 16.0 * pi )',
+
+          'const float THREE_OVER_SIXTEEN_PI = 0.05968310365946075;',
+
+
+
+          '// 1.0 / ( 4.0 * pi )',
+
+          'const float ONE_OVER_FOUR_PI = 0.07957747154594767;',
+
+
+
+          'vec4 fogsRGBToLinear(vec4 value ) {',
+
+          '	return vec4( mix( pow( value.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), value.rgb * 0.0773993808, vec3( lessThanEqual( value.rgb, vec3( 0.04045 ) ) ) ), value.a );',
+
+          '}',
+
+
+
+          'vec4 fogLinearTosRGB(vec4 value ) {',
+
+          '	return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );',
+
+          '}',
+
+
+
+          'vec3 MyAESFilmicToneMapping(vec3 color) {',
+
+            'return clamp((color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14), 0.0, 1.0);',
+
+          '}',
+
+
+
+          'float rayleighPhase( float cosTheta ) {',
+
+            'return THREE_OVER_SIXTEEN_PI * ( 1.0 + cosTheta * cosTheta );',
+
+          '}',
+
+
+
+          'float hgPhase( float cosTheta, float g ) {',
+
+            'float inverse = 1.0 / pow( 1.0 - 2.0 * g * cosTheta + g * g, 1.5 );',
+
+            'return ONE_OVER_FOUR_PI * ( ( 1.0 - g * g ) * inverse );',
+
+          '}',
+
+
+
+          'vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, vec3 vLightE, vec3 vBetaR, float distToPoint, out vec3 Fex){',
+
+            '// optical length',
+
+            '// cutoff angle at 90 to avoid singularity in next formula.',
+
+            'float zenithAngle = acos(dot( up, lightDirection ));',
+
+            'float inverse = 1.0 / ( cos( zenithAngle ) + 0.15 * pow( 93.885 - ( ( zenithAngle * 180.0 ) / pi ), -1.253 ) );',
+
+            'float sR = rayleighZenithLength * inverse;',
+
+            'float sM = mieZenithLength * inverse;',
+
+
+
+            '// combined extinction factor',
+
+            'Fex = exp( -( vBetaR * sR + vBetaM * sM ) );',
+
+
+
+            '// in scattering',
+
+            'float cosTheta = dot( viewDirection, lightDirection );',
+
+            'float rPhase = rayleighPhase( cosTheta * 0.5 + 0.5 );',
+
+            'vec3 betaRTheta = vBetaR * rPhase;',
+
+            'float mPhase = hgPhase( cosTheta, mieDirectionalG );',
+
+            'vec3 betaMTheta = vBetaM * mPhase;',
+
+            '//Hacky... but works... not going to complain.',
+
+            "//Why no, I didn't do some physically accurate stuff here, it just looks okay so",
+
+            "//so I don't complain.",
+
+            '//vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex ), vec3( 1.5 ) );',
+
+            'vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - vFexPixel ), vec3( 1.5 ) );',
+
+            '//Lin *= mix( vec3( 1.0 ), pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 1.0 / 2.0 ) ), clamp( pow( 1.0 - dot( up, lightDirection ), 5.0 ), 0.0, 1.0 ) );',
+
+            'Lin *= pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 0.5 ) );',
+
+
+
+            'return Lin;',
+
+          '}',
+
+
+
+          'vec3 atmosphericFogMethod() {',
+
+            'vec3 vecToPoint = vFogWorldPosition - cameraPosition;',
+
+            'float distToPoint = length(vecToPoint) * groundFexDistanceMultiplier;',
+
+            'vec3 viewDirection = normalize(vecToPoint);',
+
+
+
+            '// in scattering',
+
+      '			float cosTheta = dot( viewDirection, vSunDirection );',
+
+
+
+            'vec3 FexSun;',
+
+            'vec3 LSun = addLightSource(viewDirection, vSunDirection, vec3(vSunE), vBetaRSun, distToPoint, FexSun);',
+
+            'vec3 FexMoon;',
+
+            'vec3 LMoon = vMoonLightColor * addLightSource(viewDirection, vMoonDirection, vec3(vMoonE), vBetaRMoon, distToPoint, FexMoon);',
+
+
+
+            '// nightsky',
+
+      '			float theta = acos( viewDirection.y ); // elevation --> y-axis, [-pi/2, pi/2]',
+
+      '			float phi = atan( viewDirection.z, viewDirection.x ); // azimuth --> x-axis [-pi/2, pi/2]',
+
+      '			vec2 uv = vec2( phi, theta ) / vec2( 2.0 * pi, pi ) + vec2( 0.5, 0.0 );',
+
+
+
+            '// 66 arc seconds -> degrees, and the cosine of that',
+
+        '		float sunAngularDiameterCos = 0.999956676946448443553574619906976478926848692873900859324;',
+
+
+
+            '// composition + solar disc',
+
+      '			vec3 sunColorTex = LSun * 0.04 + vec3( 0.0, 0.0003, 0.00075 );',
+
+            'vec3 moonColorTex = LMoon * 0.04 + vec3( 0.0, 0.0003, 0.00075 );',
+
+            'vec3 sunColor = pow( sunColorTex, vec3( 1.0 / ( 1.2 + ( 1.2 * vSunfade ) ) ) );',
+
+            'vec3 moonColor = pow( moonColorTex, vec3( 1.0 / ( 1.2 + ( 1.2 * vMoonfade ) ) ) );',
+
+      '			vec3 retColor = fogLightExposure * max(sunColor, moonColor);',
+
+
+
+            'return vec3( retColor );',
+
+          '}',
+
+        '#endif',
+
+      '#endif',
+
+    '#endif',
+    ];
+
+    let updatedLines = [];
+    let rayBet = JSON.parse(JSON.stringify(atmosphericParameters.rayleighBeta));
+    rayBet.red *= 0.001;
+    rayBet.green *= 0.001;
+    rayBet.blue *= 0.001;
+    const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
+    const mieScaleHeight = atmosphericParameters.mieScaleHeight * 1000.0;
+    const rayleighScaleHeight = atmosphericParameters.rayleighScaleHeight * 1000.0;
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i].replace(/\$mieDirectionalG/g, atmosphericParameters.mieDirectionalG.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta);
+      updatedGLSL = updatedGLSL.replace(/\$rayleighScaleHeight/g, rayleighScaleHeight.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleigh/g, rayleigh.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$exposure/g, exposure.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundFexDistanceMultiplier.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$mieScaleHeight/g, mieScaleHeight.toFixed(5));
+
+      if(useAdvancedAtmospehericPerspective){
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '0');
+      }
+
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  },
+  vertexShader: function(rayleigh, turbidty, groundDistanceMultp, solarRadius, lunarRadius, useAdvancedAtmospehericPerspective, atmosphericParameters){
+    let originalGLSL = [
+
+    '#ifdef USE_FOG',
+
+    'varying float vFogDepth;',
+
+      '#ifndef FOG_EXP2',
+
+        '#if($useAdvancedAtmospehericPerspective)',
+
+          'varying vec3 vFogWorldPosition;',
+
+          'varying vec3 vSunDirection;',
+
+          'varying float vSunfade;',
+
+          'varying vec3 vMoonDirection;',
+
+          'varying float vMoonfade;',
+
+          'varying vec3 vBetaRSun;',
+
+          'varying vec3 vBetaRMoon;',
+
+          'varying vec3 vBetaRFragment;',
+
+          'varying vec3 vBetaM;',
+
+          'varying float vSunE;',
+
+          'varying float vMoonE;',
+
+          'varying vec3 vFexPixel;',
+
+          'varying vec3 vMoonLightColor;',
+
+
+
+          'uniform vec3 fogColor; //Altitude, Azimuth of Sun and Altitude of Mooon',
+
+          'uniform float fogNear; //Azimuth of moon',
+
+          'uniform float fogFar; //Intensity of moon',
+
+          'uniform vec3 worldPosition;',
+
+
+
+        '	const float rayleigh = $rayleigh;',
+
+        '	const float turbidity = $turbidty;',
+
+        '	const float mieCoefficient = $mieCoefficient;',
+
+          'const float groundFexDistanceMultiplier = $groundFexDistanceMultiplier;',
+
+          'const float sunRadius = $solarRadius;',
+
+          'const float moonRadius = $lunarRadius;',
+
+        '	const vec3 up = vec3(0.0, 1.0, 0.0);',
+
+        '	const float e = 2.7182818284590452;',
+
+        '	const float pi = 3.1415926535897932;',
+
+          'const float piOver2 = 1.57079632679;',
+
+          'const float sqrtOf2 = 1.41421356237;',
+
+          'const float rayleighZenithLength = $rayleighScaleHeight;',
+
+          'const float mieZenithLength = $mieScaleHeight;',
+
+
+
+        '	// wavelength of used primaries, according to preetham',
+
+        '	const vec3 lambda = vec3( 680E-9, 550E-9, 450E-9 );',
+
+
+
+        '	// this pre-calcuation replaces older TotalRayleigh(vec3 lambda) function:',
+
+        '	// (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn))',
+
+        '	const vec3 totalRayleigh = $rayleighBeta;',
+
+
+
+        '	// mie stuff',
+
+        '	// K coefficient for the primaries',
+
+        '	const float v = 4.0;',
+
+        '	const vec3 K = vec3( 0.686, 0.678, 0.666 );',
+
+
+
+        '	// MieConst = pi * pow( ( 2.0 * pi ) / lambda, vec3( v - 2.0 ) ) * K',
+
+        '	const vec3 MieConst = vec3( 1.8399918514433978E14, 2.7798023919660528E14, 4.0790479543861094E14 );',
+
+
+
+        '	// earth shadow hack',
+
+        '	// cutoffAngle = pi / 1.95;',
+
+        '	const float cutoffAngle = 1.6110731556870734;',
+
+        '	const float steepness = 1.5;',
+
+        '	float sourceIntensity( float zenithAngleCos, float EE ) {',
+
+            'zenithAngleCos = clamp( zenithAngleCos, -1.0, 1.0 );',
+
+      '			return EE * max( 0.0, 1.0 - pow( e, -( ( cutoffAngle - acos( zenithAngleCos ) ) / steepness ) ) );',
+
+        '	}',
+
+
+
+        '	vec3 totalMie( float T ) {',
+
+        '		float c = ( 0.2 * T ) * 10E-18;',
+
+        '		return 0.434 * c * MieConst;',
+
+        '	}',
+
+
+
+          'vec3 convertRhoThetaToXYZ(vec2 altitudeAzimuth){',
+
+            'vec3 outPosition;',
+
+            'outPosition.x = sin(altitudeAzimuth.x) * cos(altitudeAzimuth.y);',
+
+            'outPosition.z = sin(altitudeAzimuth.x) * sin(altitudeAzimuth.y);',
+
+            'outPosition.y = cos(altitudeAzimuth.x);',
+
+            'return normalize(outPosition);',
+
+          '}',
+
+
+
+          'float solarEclipseLightingModifier(vec3 sunPosition, vec3 moonPosition){',
+
+            'float distanceBetweenSunAndMoon = distance(sunPosition, moonPosition);',
+
+            'float lightingModifier = 1.0;',
+
+            'if(distanceBetweenSunAndMoon <= (2.0 * sqrtOf2 * max(sunRadius, moonRadius))){',
+
+              'float sunRadiusSquared = sunRadius * sunRadius;',
+
+              'float moonRadiusSquared = moonRadius * moonRadius;',
+
+              'float x = (sunRadiusSquared - moonRadiusSquared + distanceBetweenSunAndMoon * distanceBetweenSunAndMoon)/(2.0 * distanceBetweenSunAndMoon);',
+
+              'float z = x * x;',
+
+              'float y = sqrt(sunRadiusSquared - z);',
+
+
+
+              'float ecclipsedArea = 0.0;',
+
+              'if (distanceBetweenSunAndMoon < abs(moonRadius - sunRadius)) {',
+
+                'ecclipsedArea = pi * min(sunRadiusSquared, moonRadiusSquared);',
+
+              '}',
+
+              'else{',
+
+                'ecclipsedArea = sunRadiusSquared * asin(y / sunRadius) + moonRadiusSquared * asin(y / moonRadius) - y * (x + sqrt(z + moonRadiusSquared - sunRadiusSquared));',
+
+              '}',
+
+              'float surfaceAreaOfSun = pi * sunRadiusSquared;',
+
+              'lightingModifier = clamp((surfaceAreaOfSun - ecclipsedArea) / surfaceAreaOfSun, 0.0, 1.0);',
+
+            '}',
+
+            'return lightingModifier;',
+
+          '}',
+
+
+
+          'vec3 lunarEclipseLightingModifier(vec3 sunPosition, vec3 moonPosition){',
+
+            'float distanceBetweenMoonAndAntiSun = distance(-sunPosition, moonPosition);',
+
+            'vec3 lightingColor = vec3(1.0, 0.5, 0.1);',
+
+            'if(distanceBetweenMoonAndAntiSun <= (2.0 * sqrtOf2 * max(sunRadius, moonRadius))){',
+
+              'float moonRadiusSquared = moonRadius * moonRadius;',
+
+              'float distanceToEarthsShadowSquared = distanceBetweenMoonAndAntiSun * distanceBetweenMoonAndAntiSun;',
+
+
+
+              '//Determine the color of the moonlight used for atmospheric scattering',
+
+              'float colorIntensity = clamp(distanceToEarthsShadowSquared / moonRadiusSquared, 0.0, 1.0);',
+
+              'float lightIntensity = clamp(distanceToEarthsShadowSquared / moonRadiusSquared, 0.0, 0.8);',
+
+              'lightingColor = clamp(lightingColor + (vec3(1.0) - lightingColor) * colorIntensity, vec3(0.0), vec3(1.0));',
+
+              'lightingColor *= lightIntensity + 0.2;',
+
+            '}',
+
+            'return lightingColor;',
+
+          '}',
+
+        '#endif',
+
+      '#endif',
+
+    '#endif',
+    ];
+
+    let updatedLines = [];
+    let rayBet = JSON.parse(JSON.stringify(atmosphericParameters.rayleighBeta));
+    rayBet.red *= 0.001;
+    rayBet.green *= 0.001;
+    rayBet.blue *= 0.001;
+    const rayleighBeta = `vec3(${rayBet.red.toFixed(16)}, ${rayBet.green.toFixed(16)}, ${rayBet.blue.toFixed(16)})`;
+    const mieCoefficient = atmosphericParameters.mieBeta.red;
+    const mieScaleHeight = atmosphericParameters.mieScaleHeight * 1000.0;
+    const rayleighScaleHeight = atmosphericParameters.rayleighScaleHeight * 1000.0;
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i].replace(/\$turbidty/g, turbidty.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighScaleHeight/g, rayleighScaleHeight.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$rayleighBeta/g, rayleighBeta);
+      updatedGLSL = updatedGLSL.replace(/\$rayleigh/g, rayleigh.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$mieCoefficient/g, mieCoefficient.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$groundFexDistanceMultiplier/g, groundDistanceMultp.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$solarRadius/g, solarRadius.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$lunarRadius/g, lunarRadius.toFixed(5));
+      updatedGLSL = updatedGLSL.replace(/\$mieScaleHeight/g, mieScaleHeight.toFixed(5));
+
+      if(useAdvancedAtmospehericPerspective){
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '0');
+      }
+
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  }
+};
+
+StarrySky.Materials.Fog.fogMaterial = {
+  fragmentShader: function(useAdvancedAtmospehericPerspective){
+    let originalGLSL = [
+
+    "//Oh... Well isn't this fun. Turns out that old code isn't dead after all...",
+
+    '//All the way back from version 0.3!',
+
+    '#ifdef USE_FOG',
+
+      '#ifdef FOG_EXP2',
+
+        'float fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );',
+
+        'gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor);',
+
+      '#else',
+
+        '#if($useAdvancedAtmospehericPerspective)',
+
+          'if(fogFar <= 0.0){',
+
+            'vec3 fogOutData = max(atmosphericFogMethod(), 0.0);',
+
+            'vec3 groundColor = fogsRGBToLinear(vec4(gl_FragColor.rgb, 1.0)).rgb;',
+
+            'gl_FragColor.rgb =  fogLinearTosRGB(vec4(MyAESFilmicToneMapping(fogOutData + groundColor * vFexPixel), 1.0)).rgb;',
+
+          '}',
+
+          'else if(fogNear < 0.0){',
+
+            '//$$OCEAN_SHADER_SHADER_FRAGMENT_RESERVATION$$',
+
+          '}',
+
+          'else{',
+
+            'float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );',
+
+            'gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );',
+
+          '}',
+
+        '#else',
+
+          'float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );',
+
+          'gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );',
+
+        '#endif',
+
+      '#endif',
+
+    '#endif',
+    ];
+
+    let updatedLines = [];
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i];
+      if(useAdvancedAtmospehericPerspective){
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '0');
+      }
+
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  },
+  vertexShader: function(useAdvancedAtmospehericPerspective){
+    let originalGLSL = [
+
+    '#ifdef USE_FOG',
+
+      'vFogDepth = - mvPosition.z;',
+
+      '#ifndef FOG_EXP2',
+
+        '#if($useAdvancedAtmospehericPerspective)',
+
+          '//Use the sign bit on fog near to decide whether to keep the original behavior',
+
+          '//or use the advanced fog lighting method - that way we destroy nothing...',
+
+          '//Although if advanced fog is disabled, none of this should happen at all.',
+
+          'if(fogFar <= 0.0){',
+
+          '	vFogWorldPosition = worldPosition.xyz;',
+
+
+
+            '//',
+
+            '//Sun values',
+
+            '//',
+
+            'vec2 sunAltitudeAzimuth = fogColor.xy;',
+
+            'vec3 sunPosition = convertRhoThetaToXYZ(sunAltitudeAzimuth);',
+
+            'vec2 moonAltitudeAzimuth = vec2(fogColor.z, fogNear); //Swap the sign bit on fogNear',
+
+            'vec3 moonPosition = convertRhoThetaToXYZ(moonAltitudeAzimuth);',
+
+          '	vSunDirection = normalize(sunPosition);',
+
+          '	vSunE = sourceIntensity( dot( vSunDirection, up ), 1300.0 ); //Sun EE is constant at 1300.0',
+
+            'vSunE = solarEclipseLightingModifier(sunPosition, moonPosition) * vSunE;',
+
+          '	vSunfade = 1.0 - clamp( 1.0 - exp( ( sunPosition.y ) ), 0.0, 1.0 );',
+
+
+
+          '	float rayleighCoefficientSun = rayleigh - ( 1.0 - vSunfade );',
+
+
+
+            '// extinction (absorbtion + out scattering)',
+
+          '	// rayleigh coefficients',
+
+          '	vBetaRSun = totalRayleigh * rayleighCoefficientSun;',
+
+
+
+            '// mie coefficients',
+
+          '	vBetaM = totalMie( turbidity ) * mieCoefficient;',
+
+
+
+            '//',
+
+            '//Moon',
+
+            '//',
+
+            "float moonEE = -fogFar; //the uniform's true value",
+
+            'vMoonDirection = normalize(moonPosition);',
+
+          '	vMoonE = sourceIntensity( dot( vMoonDirection, up ), moonEE);',
+
+            'vMoonLightColor = lunarEclipseLightingModifier(sunPosition, moonPosition);',
+
+          '	vMoonfade = 1.0 - clamp( 1.0 - exp( ( moonPosition.y ) ), 0.0, 1.0 );',
+
+
+
+          '	float rayleighCoefficientMoon = rayleigh - ( 1.0 * ( 1.0 - vMoonfade ) );',
+
+
+
+          '	// extinction (absorbtion + out scattering)',
+
+          '	// rayleigh coefficients',
+
+          '	vBetaRMoon = totalRayleigh * rayleighCoefficientMoon;',
+
+
+
+            '//Pixel',
+
+            'float fogPixelFade = 1.0 - clamp(1.0 - exp(normalize(vFogWorldPosition).y), 0.0, 1.0);',
+
+            'float rayleighCoefficientPixel = rayleigh - ( 1.0 * ( 1.0 - fogPixelFade ) );',
+
+            'vec3 betaRPixel = totalRayleigh * rayleighCoefficientPixel;',
+
+            '// optical length',
+
+            '// cutoff angle at 90 to avoid singularity in next formula.',
+
+            'float fogDistToPoint = length(vFogWorldPosition - cameraPosition) * groundFexDistanceMultiplier;',
+
+
+
+            '// combined extinction factor',
+
+            'float sR = fogDistToPoint;',
+
+            'float sM = fogDistToPoint;',
+
+
+
+            '// combined extinction factor',
+
+            'vFexPixel = sqrt(clamp(exp( -( betaRPixel * sR + vBetaM * sM ) ), 0.0, 1.0));',
+
+          '}',
+
+          'else if(fogNear < 0.0){',
+
+            '//$$OCEAN_SHADER_SHADER_VERTEX_RESERVATION$$',
+
+          '}',
+
+          'else{',
+
+            'vFogDepth = - mvPosition.z;',
+
+          '}',
+
+        '#else',
+
+          'vFogDepth = - mvPosition.z;',
+
+        '#endif',
+
+      '#endif',
+
+    '#endif',
+    ];
+
+    let updatedLines = [];
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i];
+      if(useAdvancedAtmospehericPerspective){
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '1');
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$useAdvancedAtmospehericPerspective/g, '0');
+      }
+
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  }
+};
+
+//A collection of utilities for creating our custom HTML tags
+StarrySky.HTMLTagUtils = {};
+
+StarrySky.HTMLTagUtils.clampAndWarn = function(inValue, minValue, maxValue, tagName){
+  const result = Math.min(Math.max(inValue, minValue), maxValue);
+  if(inValue > maxValue){
+    console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
+  }
+  else if(inValue < minValue){
+    console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
+  }
+  return result;
+};
+
 //Child classes
 window.customElements.define('sky-moon-diffuse-map', class extends HTMLElement{});
 window.customElements.define('sky-moon-normal-map', class extends HTMLElement{});
@@ -4861,6 +7028,7 @@ window.customElements.define('sky-bright-star-maps', class extends HTMLElement{}
 window.customElements.define('sky-star-color-map', class extends HTMLElement{});
 window.customElements.define('sky-blue-noise-maps', class extends HTMLElement{});
 window.customElements.define('sky-solar-eclipse-map', class extends HTMLElement{});
+window.customElements.define('sky-aurora-maps', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.webp',
@@ -4902,7 +7070,10 @@ StarrySky.DefaultData.fileNames = {
     'blue-noise-3.bmp',
     'blue-noise-4.bmp'
   ],
-  solarEclipseMap: 'solar-eclipse-map.webp'
+  solarEclipseMap: 'solar-eclipse-map.webp',
+  auroraMaps: [
+    'aurora-map.webp'
+  ]
 };
 
 StarrySky.DefaultData.assetPaths = {
@@ -4917,7 +7088,8 @@ StarrySky.DefaultData.assetPaths = {
   medStarDataMaps: StarrySky.DefaultData.fileNames.medStarDataMaps.map(x => './assets/star_data/' + x),
   brightStarDataMaps: StarrySky.DefaultData.fileNames.brightStarDataMaps.map(x => './assets/star_data/' + x),
   starColorMap: './assets/star_data/' + StarrySky.DefaultData.fileNames.starColorMap,
-  blueNoiseMaps: StarrySky.DefaultData.fileNames.blueNoiseMaps.map(x => './assets/blue_noise/' + x)
+  blueNoiseMaps: StarrySky.DefaultData.fileNames.blueNoiseMaps.map(x => './assets/blue_noise/' + x),
+  auroraMaps: StarrySky.DefaultData.fileNames.auroraMaps.map(x => './assets/aurora_maps/' + x),
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
@@ -4948,7 +7120,7 @@ class SkyAssetsDir extends HTMLElement {
 
       //If this isn't root, we should recursively travel up the tree until we have constructed
       //our path.
-      var i = 0;
+      let i = 0;
       while(parentTag.nodeName.toLowerCase() === 'sky-assets-dir'){
         let parentDir;
         if('dir' in parentTag.attributes){
@@ -4991,30 +7163,36 @@ class SkyAssetsDir extends HTMLElement {
       const brightStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-bright-star-map');
       const starColorMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-color-map');
       const blueNoiseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-blue-noise-maps');
+      const auroraMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'aurora-maps');
 
       const objectProperties = ['moonDiffuseMap', 'moonNormalMap',
         'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap', 'starHashCubemap',
-        'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap']
+        'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap',
+        'auroraMaps']
       const tagsList = [moonDiffuseMapTags, moonNormalMapTags,
         moonRoughnessMapTags, moonApertureSizeMapTags, moonApertureOrientationMapTags, starCubemapTags,
-        medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags];
+        medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags,
+        auroraMapTags];
       const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
         'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap'];
         const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
-        'blueNoiseMaps'];
+        'blueNoiseMaps', 'auroraMapTags'];
 
         //Process single texture keys
         for(let i = 0; i < singleTextureKeys.length; ++i){
-          StarrySky.assetPaths[singleTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[singleTextureKeys[i]];
+          const textureKey = singleTextureKeys[i];
+          StarrySky.assetPaths[textureKey] = path + '/' + StarrySky.DefaultData.fileNames[textureKey];
         }
 
         //Process multi texture keys
         for(let i = 0; i < multiTextureKeys.length; ++i){
-          let multiTextureFileNames = multiTextureKeys[i];
+          const multiTextureFileNames = multiTextureKeys[i];
+          const multiTextureAssetPath = StarrySky.assetPaths[multiTextureFileNames[i]];
+          const fileNameArray = StarrySky.DefaultData.fileNames[singleTextureKeys[i]];
           for(let j = 0; j < multiTextureFileNames.length; ++j){
-            StarrySky.assetPaths[multiTextureFileNames[i]][j] = path + '/' + StarrySky.DefaultData.fileNames[singleTextureKeys[i]][j];
+            multiTextureAssetPath[j] = `${path}/${fileNameArray[j]}`;
           }
         }
       }
@@ -5022,28 +7200,38 @@ class SkyAssetsDir extends HTMLElement {
         const moonTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
         'moonApertureSizeMap', 'moonApertureOrientationMap'];
         for(let i = 0; i < moonTextureKeys.length; ++i){
-          StarrySky.assetPaths[moonTextureKeys[i]] = path + '/' + StarrySky.DefaultData.fileNames[moonTextureKeys[i]];
+          const moonTextureKey = moonTextureKeys[i];
+          StarrySky.assetPaths[moonTextureKey] = `${path}/${StarrySky.DefaultData.fileNames[moonTextureKey]}`;
         }
       }
       else if(self.hasAttribute('star-path') && self.getAttribute('star-path').toLowerCase() !== 'false'){
         const starTextureKeys = ['starHashCubemap', 'dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps'];
         for(let i = 0; i < starTextureKeys.length; ++i){
-          let starMapFileNames =  StarrySky.DefaultData.fileNames[starTextureKeys[i]];
+          const starMapFileNames =  StarrySky.DefaultData.fileNames[starTextureKeys[i]];
+          const starTextureKey = starTextureKeys[i];
+          const starAssetPathArray = StarrySky.assetPaths[starTextureKey];
           for(let j = 0; j < starMapFileNames.length; ++j){
-            StarrySky.assetPaths[starTextureKeys[i]][j] = path + '/' + starMapFileNames[j];
+            starAssetPathArray[j] = `${path}/${starMapFileNames[j]}`;
           }
         }
 
-        StarrySky.assetPaths['starColorMap'] = path + '/' + StarrySky.DefaultData.fileNames['starColorMap'];
+        StarrySky.assetPaths['starColorMap'] = `${path}/${StarrySky.DefaultData.fileNames['starColorMap']}`;
       }
       else if(self.hasAttribute('blue-noise-path') && self.getAttribute('blue-noise-path').toLowerCase() !== 'false'){
+        const blueNoiseAssetPath = StarrySky.assetPaths['blueNoiseMaps'];
+        const blueNoiseFileNameStrings = StarrySky.DefaultData.fileNames['blueNoiseMaps'];
         for(let i = 0; i < 5; ++i){
-          let blueNoiseFileNames =  StarrySky.DefaultData.fileNames['blue-noise-' + i];
-          StarrySky.assetPaths['blueNoiseMaps'][i] = path + '/' + StarrySky.DefaultData.fileNames['blueNoiseMaps'][i];
+          blueNoiseAssetPath[i] = `${path}/${blueNoiseFileNameStrings[i]}`;
         }
       }
       else if(self.hasAttribute('solar-eclipse-path') && self.getAttribute('solar-eclipse-path').toLowerCase() !== 'false'){
-        StarrySky.assetPaths['solarEclipseMap'] = path + '/' + StarrySky.DefaultData.fileNames['solarEclipseMap'];
+        StarrySky.assetPaths['solarEclipseMap'] = `${path}/${StarrySky.DefaultData.fileNames['solarEclipseMap']}`;
+      }
+      else if(self.hasAttribute('aurora-map-path') && self.getAttribute('aurora-map-path').toLowerCase() !== 'false'){
+        const auroraMapPaths = StarrySky.assetPaths['auroraMaps'];
+        for(let i = 0; i < 1; ++i){
+          auroraMapPaths[i] = `${path}/${StarrySky.DefaultData.fileNames['auroraMaps'][i]}`;
+        }
       }
 
       self.skyDataLoaded = true;
@@ -5056,32 +7244,352 @@ class SkyAssetsDir extends HTMLElement {
 window.customElements.define('sky-assets-dir', SkyAssetsDir);
 
 //Child tags
+window.customElements.define('sky-ground-color', class extends HTMLElement{});
+window.customElements.define('sky-ground-color-red', class extends HTMLElement{});
+window.customElements.define('sky-ground-color-green', class extends HTMLElement{});
+window.customElements.define('sky-ground-color-blue', class extends HTMLElement{});
+window.customElements.define('sky-sun-intensity', class extends HTMLElement{});
+window.customElements.define('sky-moon-intensity', class extends HTMLElement{});
+window.customElements.define('sky-ambient-intensity', class extends HTMLElement{});
+window.customElements.define('sky-minimum-ambient-lighting', class extends HTMLElement{});
+window.customElements.define('sky-maximum-ambient-lighting', class extends HTMLElement{});
+window.customElements.define('sky-atmospheric-perspective-density', class extends HTMLElement{});
+window.customElements.define('sky-atmospheric-perspective-type', class extends HTMLElement{});
+window.customElements.define('sky-atmospheric-perspective-distance-multiplier', class extends HTMLElement{});
+window.customElements.define('sky-shadow-camera-size', class extends HTMLElement{});
+window.customElements.define('sky-shadow-camera-resolution', class extends HTMLElement{});
+window.customElements.define('sky-moon-bloom', class extends HTMLElement{});
+window.customElements.define('sky-sun-bloom', class extends HTMLElement{});
+window.customElements.define('sky-bloom-enabled', class extends HTMLElement{});
+window.customElements.define('sky-bloom-exposure', class extends HTMLElement{});
+window.customElements.define('sky-bloom-threshold', class extends HTMLElement{});
+window.customElements.define('sky-bloom-strength', class extends HTMLElement{});
+
+StarrySky.DefaultData.lighting = {
+  groundColor: {
+    red: 66,
+    green: 44,
+    blue: 2
+  },
+  sunBloom: {
+    bloomEnabled: true,
+    exposure: 1.0,
+    threshold: 0.98,
+    strength: 1.0,
+    radius: 1.0
+  },
+  moonBloom: {
+    bloomEnabled: true,
+    exposure: 1.0,
+    threshold: 0.55,
+    strength: 0.9,
+    radius: 1.4
+  },
+  sunIntensity: 1.0,
+  moonIntensity: 1.0,
+  ambientIntensity: 1.0,
+  minimumAmbientLighting: 0.01,
+  maximumAmbientLighting: Infinity,
+  atmosphericPerspectiveDensity: 0.007,
+  atmosphericPerspectiveDistanceMultiplier: 5.0,
+  atmosphericPerspectiveType: 'normal',
+  shadowCameraSize: 32.0,
+  shadowCameraResolution: 2048
+};
+
+//Parent tag
+class SkyLighting extends HTMLElement {
+  constructor(){
+    super();
+
+    //Check if there are any child elements. Otherwise set them to the default.
+    this.skyDataLoaded = false;
+    this.data = StarrySky.DefaultData.lighting;
+  }
+
+  connectedCallback(){
+    //Hide the element
+    this.style.display = "none";
+
+    const self = this;
+    document.addEventListener('DOMContentLoaded', function(evt){
+      const dataRef = self.data;
+
+      //Get child tags and acquire their values.
+      const groundColorTags = self.getElementsByTagName('sky-ground-color');
+      const sunIntensityTags = self.getElementsByTagName('sky-sun-intensity');
+      const moonIntensityTags = self.getElementsByTagName('sky-moon-intensity');
+      const ambientIntensityTags = self.getElementsByTagName('sky-ambient-intensity');
+      const minimumAmbientLightingTags = self.getElementsByTagName('sky-minimum-ambient-lighting');
+      const maximumAmbientLightingTags = self.getElementsByTagName('sky-maximum-ambient-lighting');
+      const atmosphericPerspectiveTypeTags = self.getElementsByTagName('sky-atmospheric-perspective-type');
+      const atmosphericPerspectiveDensityTags = self.getElementsByTagName('sky-atmospheric-perspective-density');
+      const atmosphericPerspectiveDistanceMultiplierTags = self.getElementsByTagName('sky-atmospheric-perspective-distance-multiplier');
+      const shadowCameraSizeTags = self.getElementsByTagName('sky-shadow-camera-size');
+      const shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
+      const sunBloomtags = self.getElementsByTagName('sky-sun-bloom');
+      const moonBloomtags = self.getElementsByTagName('sky-moon-bloom');
+
+      [groundColorTags, sunIntensityTags, moonIntensityTags, ambientIntensityTags,
+      minimumAmbientLightingTags, maximumAmbientLightingTags, atmosphericPerspectiveTypeTags,
+      atmosphericPerspectiveDensityTags, atmosphericPerspectiveDistanceMultiplierTags,
+      shadowCameraSizeTags, shadowCameraResolutionTags, sunBloomtags, moonBloomtags].forEach(function(tags){
+        if(tags.length > 1){
+          console.error(`The <sky-lighting-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+        }
+      });
+
+      //And make sure they only have one of their respective child elements
+      //then set their values if they exist...
+      [sunBloomtags, moonBloomtags].forEach(function(tags){
+        const tag = tags.length > 0 ? tags[0] : false;
+        if(tag){
+          const bloomEnabledTags = tag.getElementsByTagName('sky-bloom-enabled');
+          const exposureTags = tag.getElementsByTagName('sky-bloom-exposure');
+          const thresholdTags = tag.getElementsByTagName('sky-bloom-threshold');
+          const strengthTags = tag.getElementsByTagName('sky-bloom-strength');
+          const radiusTags = tag.getElementsByTagName('sky-bloom-radius');
+          let bloomEnabled = true;
+          if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.trim().toLowerCase() !== 'true'){
+            bloomEnabled = false;
+          }
+          if(bloomEnabled){
+            [bloomEnabledTags, exposureTags, thresholdTags, strengthTags, radiusTags].forEach(function(childTags){
+              if(childTags.length > 1){
+                console.error(`The <${tag.tagName}> tag must contain 1 and only 1 tag of type <${childTags[0].tagName}>. ${childTags.length} found.`);
+              }
+            });
+          }
+          else{
+            [exposureTags, thresholdTags, strengthTags, radiusTags].forEach(function(childTags){
+              if(childTags.length !== 0){
+                console.warning(`The <${tag.tagName}> cannot contain any tags of type <${childTags[0].tagName}>. It won't break, it just won't do anything.`);
+              }
+            });
+          }
+        }
+      });
+
+      //With special subcases for our ground color tags
+      [groundColorTags].forEach(function(tags){
+        if(tags.length === 1){
+          //Check that it only contains one of each of the following child tags
+          const redTags = tags[0].getElementsByTagName('sky-ground-color-red');
+          const greenTags = tags[0].getElementsByTagName('sky-ground-color-green');
+          const blueTags = tags[0].getElementsByTagName('sky-ground-color-blue');
+          [redTags, greenTags, blueTags].forEach(function(colorTags){
+            if(tags.length !== 1){
+              console.error(`The <${tags[0].tagName}> tag must contain 1 and only 1 tag of type <${colorTags[0].tagName}>. ${colorTags.length} found.`);
+            }
+          });
+        }
+      });
+
+      //Parse the values in our tags
+      dataRef.atmosphericPerspectiveType = 'none';
+      const hasAtmosphericPerspecitiveDensityTags = atmosphericPerspectiveDensityTags.length > 0;
+      const hasAtmosphericPerspecitiveDistanceMultiplierTags = atmosphericPerspectiveDistanceMultiplierTags.length > 0;
+      let hasAtmosphericPerspectiveTypeNamed = false;
+      if(atmosphericPerspectiveDensityTags.length > 0 &&
+      atmosphericPerspectiveDistanceMultiplierTags.length > 0){
+        console.warn("Having both the <sky-atmospheric-perspective-density> and " +
+        "<sky-atmospheric-perspective-distance-multiplier> tags are unnecessary. " +
+        "Please choose one based on the atmospheric perspective model of your choice. " +
+        "<sky-atmospheric-perspective-density> for normal and <sky-atmospheric-perspective-distance-multiplier> " +
+        "for advanced, respectively.");
+      }
+      if(atmosphericPerspectiveTypeTags.length > 0){
+        const atmType = atmosphericPerspectiveTypeTags[0].innerHTML.trim();
+        const lcAtmType = atmType.trim().toLowerCase();
+        if(['none', 'normal', 'advanced'].includes(lcAtmType)){
+          hasAtmosphericPerspectiveTypeNamed = true;
+          dataRef.atmosphericPerspectiveType = lcAtmType;
+        }
+        else{
+          console.error(`The value ${atmType} is not a valid value of the <sky-atmospheric-perspective-type> tag. Please use the values none, normal or advanced.`);
+        }
+      }
+      if(hasAtmosphericPerspectiveTypeNamed){
+        if(dataRef.atmosphericPerspectiveType == 'normal'){
+          dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML.trim()) : dataRef.atmosphericPerspectiveDensity;
+        }
+        else if(dataRef.atmosphericPerspectiveType == 'advanced'){
+          dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML.trim()) : dataRef.atmosphericPerspectiveDistanceMultiplier;
+        }
+      }
+      else{
+        if(hasAtmosphericPerspecitiveDensityTags){
+          console.warn('Atmospheric perspective type not explicitly named in a <sky-atmospheric-perspective> tag '+
+          'defaulting to normal because of the presense of an <sky-atmospheric-perspective-density> tag.');
+          dataRef.atmosphericPerspectiveType = 'normal';
+          dataRef.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML.trim()) : dataRef.atmosphericPerspectiveDensity;
+        }
+        else if(hasAtmosphericPerspecitiveDistanceMultiplierTags){
+          dataRef.atmosphericPerspectiveType = 'advanced';
+          dataRef.atmosphericPerspectiveDistanceMultiplier = atmosphericPerspectiveDistanceMultiplierTags.length > 0 ? parseFloat(atmosphericPerspectiveDistanceMultiplierTags[0].innerHTML.trim()) : dataRef.atmosphericPerspectiveDistanceMultiplier;
+          console.warn('Atmospheric perspective type not explicitly named in a <sky-atmospheric-perspective> tag '+
+          'defaulting to advanced because of the presense of an <sky-atmospheric-perspective-distance-multiplier> tag.');
+        }
+      }
+
+      dataRef.sunIntensity = sunIntensityTags.length > 0 ? parseFloat(sunIntensityTags[0].innerHTML.trim()) : dataRef.sunIntensity;
+      dataRef.moonIntensity = moonIntensityTags.length > 0 ? parseFloat(moonIntensityTags[0].innerHTML.trim()) : dataRef.moonIntensity;
+      dataRef.ambientIntensity = ambientIntensityTags.length > 0 ? parseFloat(ambientIntensityTags[0].innerHTML.trim()) : dataRef.ambientIntensity;
+      const minimumAmbientLighting = minimumAmbientLightingTags.length > 0 ? parseFloat(minimumAmbientLightingTags[0].innerHTML.trim()) : dataRef.minimumAmbientLighting;
+      const maximumAmbientLighting = maximumAmbientLightingTags.length > 0 ? parseFloat(maximumAmbientLightingTags[0].innerHTML.trim()) : dataRef.maximumAmbientLighting;
+      if(minimumAmbientLighting <= maximumAmbientLighting){
+        dataRef.minimumAmbientLighting = minimumAmbientLighting;
+        dataRef.maximumAmbientLighting = maximumAmbientLighting;
+      }
+      else{
+        console.error("Cannot set the minimum ambient lighting greater than the maximum ambient lighting. Setting to defaults.");
+      }
+      dataRef.shadowCameraSize = shadowCameraSizeTags.length > 0 ? parseFloat(shadowCameraSizeTags[0].innerHTML.trim()) : dataRef.shadowCameraSize;
+      dataRef.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML.trim()) : dataRef.shadowCameraResolution;
+
+      //Clamp the values in our tags
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.sunIntensity = clampAndWarn(dataRef.sunIntensity, 0.0, Infinity, '<sky-sun-intensity>');
+      dataRef.moonIntensity = clampAndWarn(dataRef.moonIntensity, 0.0, Infinity, '<sky-moon-intensity>');
+      dataRef.ambientIntensity = clampAndWarn(dataRef.ambientIntensity, 0.0, Infinity, '<sky-ambient-intensity>');
+      dataRef.minimumAmbientLighting = clampAndWarn(dataRef.minimumAmbientLighting, 0.0, Infinity, '<sky-minimum-ambient-lighting>');
+      dataRef.maximumAmbientLighting = clampAndWarn(dataRef.maximumAmbientLighting, 0.0, Infinity, '<sky-maximum-ambient-lighting>');
+      dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDensity, 0.0, Infinity, '<sky-atmospheric-perspective-density>');
+      dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDistanceMultiplier, 0.0, Infinity, '<sky-atmospheric-perspective-distance-multiplier>');
+      dataRef.shadowCameraSize = clampAndWarn(dataRef.shadowCameraSize, 0.0, Infinity, '<sky-shadow-camera-size>');
+      dataRef.shadowCameraResolution = clampAndWarn(dataRef.shadowCameraResolution, 32, 15360, '<sky-shadow-camera-resolution>');
+
+      //Parse our sky sun bloom data
+      if(sunBloomtags.length === 1){
+        const tagGroup = sunBloomtags[0];
+        const bloomDataRef = dataRef.sunBloom;
+        const bloomEnabledTags = tagGroup.getElementsByTagName('sky-bloom-enabled');
+        let bloomEnabled = true;
+        if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.trim().toLowerCase() !== 'true'){
+          bloomEnabled = false;
+        }
+        if(bloomEnabled){
+          if(tagGroup.getElementsByTagName('sky-bloom-exposure').length > 0){
+            bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML.trim()), 0.0, 2.0, 'sky-bloom-exposure');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-threshold').length > 0){
+            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-threshold');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-strength').length > 0){
+            bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML.trim()), 0.0, 3.0, 'sky-bloom-strength');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-radius').length > 0){
+            bloomDataRef.radius = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-radius')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-radius');
+          }
+          bloomDataRef.bloomEnabled = true;
+        }
+        else{
+          bloomDataRef.bloomEnabled = false;
+        }
+      }
+
+      //Parse our sky moon bloom data
+      if(moonBloomtags.length === 1){
+        const tagGroup = moonBloomtags[0];
+        const bloomDataRef = dataRef.moonBloom;
+        const bloomEnabledTags = tagGroup.getElementsByTagName('sky-bloom-enabled');
+        let bloomEnabled = true;
+        if(bloomEnabledTags.length > 0 && bloomEnabledTags[0].innerHTML.trim().toLowerCase() !== 'true'){
+          bloomEnabled = false;
+        }
+        if(bloomEnabled){
+          if(tagGroup.getElementsByTagName('sky-bloom-exposure').length > 0){
+            bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML.trim()), 0.0, 2.0, 'sky-bloom-exposure');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-threshold').length > 0){
+            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-threshold');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-strength').length > 0){
+            bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML.trim()), 0.0, 3.0, 'sky-bloom-strength');
+          }
+          if(tagGroup.getElementsByTagName('sky-bloom-radius').length > 0){
+            bloomDataRef.radius = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-radius')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-radius');
+          }
+          bloomDataRef.bloomEnabled = true;
+        }
+        else{
+          bloomDataRef.bloomEnabled = false;
+        }
+      }
+
+      //Parse our ground color
+      if(groundColorTags.length === 1){
+        const firstGroundColorTagGroup = groundColorTags[0];
+        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red').length > 0){
+          dataRef.groundColor.red = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red')[0].innerHTML.trim()), 0, 255, 'sky-ground-color-red');
+        }
+        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green').length > 0){
+          dataRef.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML.trim()), 0, 255, 'sky-ground-color-green');
+        }
+        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue').length > 0){
+          dataRef.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML.trim()), 0, 255, 'sky-ground-color-blue');
+        }
+      }
+
+      self.skyDataLoaded = true;
+      document.dispatchEvent(new Event('Sky-Data-Loaded'));
+    });
+  };
+}
+window.customElements.define('sky-lighting', SkyLighting);
+
+//Child tags
+window.customElements.define('sky-parameters-color-red', class extends HTMLElement{});
+window.customElements.define('sky-parameters-color-green', class extends HTMLElement{});
+window.customElements.define('sky-parameters-color-blue', class extends HTMLElement{});
+window.customElements.define('sky-mie-beta', class extends HTMLElement{});
+window.customElements.define('sky-rayleigh-beta', class extends HTMLElement{});
+window.customElements.define('sky-ozone-beta', class extends HTMLElement{});
+window.customElements.define('sky-number-of-atmospheric-lut-ray-steps', class extends HTMLElement{});
+window.customElements.define('sky-number-of-atmospheric-lut-gathering-steps', class extends HTMLElement{});
+window.customElements.define('sky-number-of-scattering-orders', class extends HTMLElement{});
+window.customElements.define('sky-camera-height', class extends HTMLElement{});
+window.customElements.define('sky-atmosphere-height', class extends HTMLElement{});
+window.customElements.define('sky-radius-of-earth', class extends HTMLElement{});
+window.customElements.define('sky-rayleigh-scale-height', class extends HTMLElement{});
+window.customElements.define('sky-mie-scale-height', class extends HTMLElement{});
+window.customElements.define('sky-ozone-percent-of-rayleigh', class extends HTMLElement{});
 window.customElements.define('sky-mie-directional-g', class extends HTMLElement{});
 window.customElements.define('sky-sun-angular-diameter', class extends HTMLElement{});
 window.customElements.define('sky-moon-angular-diameter', class extends HTMLElement{});
 
+//These are defined in sky lighting and serve about the same purpose
+// window.customElements.define('sun-intensity', class extends HTMLElement{});
+// window.customElements.define('moon-intensity', class extends HTMLElement{});
+
 StarrySky.DefaultData.skyAtmosphericParameters = {
   solarIntensity: 1367.0,
   lunarMaxIntensity: 29,
-  solarColor: {
-    red: 6.5E-7,
-    green: 5.1E-7,
-    blue: 4.75E-7
-  },
-  lunarColor: {
-    red: 6.5E-7,
-    green: 5.1E-7,
-    blue: 4.75E-7
-  },
   mieBeta: {
-    red: 2E-6,
-    green: 2E-6,
-    blue: 2E-6
+    red: 4.44E-3,
+    green: 4.44E-3,
+    blue: 4.44E-3
   },
+  rayleighBeta: {
+    red: 5.8e-3,
+    green: 1.35e-2,
+    blue: 3.31e-2
+  },
+  ozoneBeta: {
+    red: 413.470734338,
+    green: 413.470734338,
+    blue: 2.1112886E-13
+  },
+  mieScaleHeight: 1.25,
+  rayleighScaleHeight: 8.4,
+  atmosphereHeight: 80.0,
+  cameraHeight: 0.0,
+  radiusOfEarth: 6366.7,
+  ozonePercentOfRayleigh: 6e-7,
   mieDirectionalG: 0.8,
   numberOfRaySteps: 30,
   numberOfGatheringSteps: 30,
-  ozoneEnabled: true,
+  numberOfScatteringOrders: 7,
   sunAngularDiameter: 3.38,
   moonAngularDiameter: 3.15,
 };
@@ -5100,39 +7608,128 @@ class SkyAtmosphericParameters extends HTMLElement {
     //Hide the element
     this.style.display = "none";
 
-    let self = this;
+    const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
-      //Get child tags and acquire their values.
-      let mieDirectionalGTags = self.getElementsByTagName('sky-mie-directional-g');
-      let sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
-      let moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
+      //Data Ref
+      const dataRef = self.data;
 
-      [mieDirectionalGTags, sunAngularDiameterTags, moonAngularDiameterTags].forEach(function(tags){
+      //Get child tags and acquire their values.
+      const mieDirectionalGTags = self.getElementsByTagName('sky-mie-directional-g');
+      const sunAngularDiameterTags = self.getElementsByTagName('sky-sun-angular-diameter');
+      const moonAngularDiameterTags = self.getElementsByTagName('sky-moon-angular-diameter');
+      const skyMieBetaTags = self.getElementsByTagName('sky-mie-beta');
+      const skyRayleighBetaTags = self.getElementsByTagName('sky-rayleigh-beta');
+      const mieScaleHeightTags = self.getElementsByTagName('sky-mie-scale-height');
+      const rayleighScaleHeightTags = self.getElementsByTagName('sky-rayleigh-scale-height');
+      const skyOzoneBetaTags = self.getElementsByTagName('sky-ozone-beta');
+      const numberOfRayStepTags = self.getElementsByTagName('sky-number-of-atmospheric-lut-ray-steps');
+      const numberOfLUTGatheringStepsTags = self.getElementsByTagName('sky-number-of-atmospheric-lut-gathering-steps');
+      const numberOfScatteringOrderTags = self.getElementsByTagName('sky-number-of-scattering-orders');
+      const cameraHeightTags = self.getElementsByTagName('sky-camera-height');
+      const ozonePercentOfRayleighTags = self.getElementsByTagName('sky-ozone-percent-of-rayleigh');
+      const radiusOfEarthTags = self.getElementsByTagName('sky-radius-of-earth');
+      const sunIntensityTags = self.getElementsByTagName('sky-sun-intensity');
+      const moonIntensityTags = self.getElementsByTagName('sky-moon-intensity');
+
+      [mieDirectionalGTags, sunAngularDiameterTags, moonAngularDiameterTags,
+      mieScaleHeightTags, rayleighScaleHeightTags, numberOfRayStepTags, numberOfScatteringOrderTags,
+      numberOfLUTGatheringStepsTags, cameraHeightTags, ozonePercentOfRayleighTags,
+      radiusOfEarthTags, sunIntensityTags, moonIntensityTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
       });
 
+      //With special subcases for our color tags
+      [skyMieBetaTags, skyRayleighBetaTags, skyOzoneBetaTags].forEach(function(tags){
+        if(tags.length === 1){
+          //Check that it only contains one of each of the following child tags
+          const redTags = tags[0].getElementsByTagName('sky-parameters-color-red');
+          const greenTags = tags[0].getElementsByTagName('sky-parameters-color-green');
+          const blueTags = tags[0].getElementsByTagName('sky-parameters-color-blue');
+          [redTags, greenTags, blueTags].forEach(function(colorTags){
+            if(tags.length !== 1){
+              console.error(`The <${tags[0].tagName}> tag must contain 1 and only 1 tag of type <${colorTags[0].tagName}>. ${colorTags.length} found.`);
+            }
+          });
+        }
+      });
+
       //Set the params to appropriate values or default
-      self.data.mieDirectionalG = mieDirectionalGTags.length > 0 ? parseFloat(mieDirectionalGTags[0].innerHTML) : self.data.mieDirectionalG;
-      self.data.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFloat(sunAngularDiameterTags[0].innerHTML) : self.data.sunAngularDiameter;
-      self.data.moonAngularDiameter = moonAngularDiameterTags.length > 0 ? parseFloat(moonAngularDiameterTags[0].innerHTML) : self.data.moonAngularDiameter;
+      dataRef.mieDirectionalG = mieDirectionalGTags.length > 0 ? parseFloat(mieDirectionalGTags[0].innerHTML) : dataRef.mieDirectionalG;
+      dataRef.sunAngularDiameter = sunAngularDiameterTags.length > 0 ? parseFloat(sunAngularDiameterTags[0].innerHTML) : dataRef.sunAngularDiameter;
+      dataRef.moonAngularDiameter = moonAngularDiameterTags.length > 0 ? parseFloat(moonAngularDiameterTags[0].innerHTML) : dataRef.moonAngularDiameter;
+      dataRef.numberOfRaySteps = numberOfRayStepTags.length > 0 ? parseInt(numberOfRayStepTags[0].innerHTML) : dataRef.numberOfRaySteps;
+      dataRef.numberOfGatheringSteps = numberOfLUTGatheringStepsTags.length > 0 ? parseInt(numberOfLUTGatheringStepsTags[0].innerHTML) : dataRef.numberOfGatheringSteps;
+      dataRef.numberOfScatteringOrders = numberOfScatteringOrderTags.length > 0 ? parseInt(numberOfScatteringOrderTags[0].innerHTML) : dataRef.numberOfScatteringOrders;
+      dataRef.mieScaleHeight = mieScaleHeightTags.length > 0 ? parseFloat(parseFloat(mieScaleHeightTags[0].innerHTML)) : dataRef.mieScaleHeight;
+      dataRef.rayleighScaleHeight = rayleighScaleHeightTags.length > 0 ? parseFloat(parseFloat(rayleighScaleHeightTags[0].innerHTML)) : dataRef.rayleighScaleHeight;
+      dataRef.cameraHeight = cameraHeightTags.length > 0 ? parseFloat(cameraHeightTags[0].innerHTML) : dataRef.cameraHeight;
+      dataRef.ozonePercentOfRayleigh = ozonePercentOfRayleighTags.length > 0 ? parseFloat(ozonePercentOfRayleighTags[0].innerHTML) : dataRef.ozonePercentOfRayleigh;
+      dataRef.radiusOfEarth = radiusOfEarthTags.length > 0 ? parseFloat(radiusOfEarthTags[0].innerHTML) : dataRef.radiusOfEarth;
+      dataRef.solarIntensity = sunIntensityTags.length > 0 ? parseFloat(sunIntensityTags[0].innerHTML) : dataRef.solarIntensity;
+      dataRef.lunarMaxIntensity = moonIntensityTags.length > 0 ? parseFloat(moonIntensityTags[0].innerHTML) : dataRef.lunarMaxIntensity;
 
-      //Clamp our results to the appropriate ranges
-      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        let result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
-        }
-        else if(inValue < minValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
-        }
-        return result;
-      };
+      //Clamp and warn our values
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.mieDirectionalG = clampAndWarn(dataRef.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
+      dataRef.sunAngularDiameter = clampAndWarn(dataRef.sunAngularDiameter, 0.0, 90.0, '<sky-sun-angular-diameter>');
+      dataRef.moonAngularDiameter = clampAndWarn(dataRef.moonAngularDiameter, 0.0, 90.0, '<sky-moon-angular-diameter>');
+      dataRef.numberOfRaySteps = clampAndWarn(dataRef.numberOfRaySteps, 4, 128, '<sky-number-of-atmospheric-lut-ray-steps>');
+      dataRef.numberOfGatheringSteps = clampAndWarn(dataRef.numberOfGatheringSteps, 4, 128, '<sky-number-of-atmospheric-lut-gathering-steps>');
+      dataRef.numberOfScatteringOrders = clampAndWarn(dataRef.numberOfScatteringOrders, 1, 64, '<sky-number-of-scattering-orders>');
+      dataRef.mieScaleHeight = clampAndWarn(dataRef.mieScaleHeight, 0.0, Infinity, '<sky-mie-scale-height>');
+      dataRef.rayleighScaleHeight = clampAndWarn(dataRef.rayleighScaleHeight, 0.0, Infinity, '<sky-rayleigh-scale-height>');
+      dataRef.cameraHeight = clampAndWarn(dataRef.cameraHeight, 0.0, Infinity, '<sky-camera-height>');
+      dataRef.ozonePercentOfRayleigh = clampAndWarn(dataRef.ozonePercentOfRayleigh, 0.0, 1.0, '<sky-ozone-percent-of-rayleigh>');
+      dataRef.radiusOfEarth = clampAndWarn(dataRef.radiusOfEarth, 0.1, Infinity, '<sky-radius-of-earth>');
+      dataRef.solarIntensity = clampAndWarn(dataRef.solarIntensity, 0.0, Infinity, '<sky-sun-intensity>');
+      dataRef.lunarMaxIntensity = clampAndWarn(dataRef.lunarMaxIntensity, 0.0, Infinity, '<sky-moon-intensity>');
 
-      self.data.mieDirectionalG = clampAndWarn(self.data.mieDirectionalG, -1.0, 1.0, '<sky-mie-directional-g>');
-      self.data.sunAngularDiameter = clampAndWarn(self.data.sunAngularDiameter, 0.1, 90.0, '<sky-sun-angular-diameter>');
-      self.data.moonAngularDiameter = clampAndWarn(self.data.moonAngularDiameter, 0.1, 90.0, '<sky-moon-angular-diameter>');
+      //Parse our mie beta color
+      if(skyMieBetaTags.length === 1){
+        const tagGroup = skyMieBetaTags[0];
+        const colorRef = dataRef.mieBeta;
+        if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
+          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-red');
+        }
+        if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){
+          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-green');
+        }
+        if(tagGroup.getElementsByTagName('sky-parameters-color-blue').length > 0){
+          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-blue');
+        }
+      }
+
+      //Parse our rayleigh beta color
+      if(skyRayleighBetaTags.length === 1){
+        const tagGroup = skyRayleighBetaTags[0];
+        const colorRef = dataRef.rayleighBeta;
+        if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
+          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-red');
+        }
+        if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){
+          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-green');
+        }
+        if(tagGroup.getElementsByTagName('sky-parameters-color-blue').length > 0){
+          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-blue');
+        }
+      }
+
+      //Parse our rayleigh beta color
+      if(skyOzoneBetaTags.length === 1){
+        const tagGroup = skyOzoneBetaTags[0];
+        const colorRef = dataRef.ozoneBeta;
+        if(tagGroup.getElementsByTagName('sky-parameters-color-red').length > 0){
+          colorRef.red = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-red')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-red');
+        }
+        if(tagGroup.getElementsByTagName('sky-parameters-color-green').length > 0){
+          colorRef.green = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-green')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-green');
+        }
+        if(tagGroup.getElementsByTagName('sky-parameters-color-blue').length > 0){
+          colorRef.blue = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-parameters-color-blue')[0].innerHTML), 0.0, Infinity, 'sky-parameters-color-blue');
+        }
+      }
 
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
@@ -5165,11 +7762,14 @@ class SkyLocation extends HTMLElement {
     //Hide the element
     this.style.display = "none";
 
-    let self = this;
+    const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
+      //Data ref
+      const dataRef = self.data;
+
       //Get child tags and acquire their values.
-      let latitudeTags = self.getElementsByTagName('sky-latitude');
-      let longitudeTags = self.getElementsByTagName('sky-longitude');
+      const latitudeTags = self.getElementsByTagName('sky-latitude');
+      const longitudeTags = self.getElementsByTagName('sky-longitude');
 
       [latitudeTags, longitudeTags].forEach(function(tags){
         if(tags.length > 1){
@@ -5178,8 +7778,8 @@ class SkyLocation extends HTMLElement {
       });
 
       //Logical XOR ( a || b ) && !( a && b )
-      let conditionA = latitudeTags.length === 1;
-      let conditionB = longitudeTags.length === 1;
+      const conditionA = latitudeTags.length === 1;
+      const conditionB = longitudeTags.length === 1;
       if((conditionA || conditionB) && !(conditionA && conditionB)){
         if(conditionA){
           console.error('The <sky-location> tag must contain both a <sky-latitude> and <sky-longitude> tag. Only a <sky-latitude> tag was found.');
@@ -5190,24 +7790,13 @@ class SkyLocation extends HTMLElement {
       }
 
       //Set the params to appropriate values or default
-      self.data.latitude = latitudeTags.length > 0 ? parseFloat(latitudeTags[0].innerHTML) : self.data.latitude;
-      self.data.longitude = longitudeTags.length > 0 ? parseFloat(longitudeTags[0].innerHTML) : self.data.longitude;
-
-      //Clamp the results
-      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        let result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
-        }
-        else if(inValue < minValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
-        }
-        return result;
-      };
+      dataRef.latitude = latitudeTags.length > 0 ? parseFloat(latitudeTags[0].innerHTML) : dataRef.latitude;
+      dataRef.longitude = longitudeTags.length > 0 ? parseFloat(longitudeTags[0].innerHTML) : dataRef.longitude;
 
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
-      self.data.latitude = self.data.latitude ? clampAndWarn(self.data.latitude, -90.0, 90.0, '<sky-latitude>') : null;
-      self.data.longitude = self.data.longitude ? clampAndWarn(self.data.longitude, -180.0, 180.0, '<sky-longitude>') : null;
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.latitude = dataRef.latitude ? clampAndWarn(dataRef.latitude, -90.0, 90.0, '<sky-latitude>') : null;
+      dataRef.longitude = dataRef.longitude ? clampAndWarn(dataRef.longitude, -180.0, 180.0, '<sky-longitude>') : null;
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });
@@ -5270,20 +7859,10 @@ class SkyTime extends HTMLElement {
       self.data.utcOffset = utcOffsetTags.length > 0 ? -parseFloat(utcOffsetTags[0].innerHTML) : self.data.utcOffset;
       self.data.speed = speedTags.length > 0 ? parseFloat(speedTags[0].innerHTML) : self.data.speed;
 
-      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        let result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
-        }
-        else if(inValue < minValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
-        }
-        return result;
-      };
-
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
       self.data.utcOffset = self.data.utcOffset ? clampAndWarn(self.data.utcOffset, -14.0, 12.0, '<sky-utc-offset>') : null;
-      self.data.speed = self.data.speed ? clampAndWarn(self.data.speed, 0.0, 1000.0, '<sky-speed>') :null;
+      self.data.speed = self.data.speed ? clampAndWarn(self.data.speed, 0.0, 10000.0, '<sky-speed>') :null;
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });
@@ -5292,61 +7871,95 @@ class SkyTime extends HTMLElement {
 window.customElements.define('sky-time', SkyTime);
 
 //Child tags
-window.customElements.define('sky-ground-color', class extends HTMLElement{});
-window.customElements.define('sky-ground-color-red', class extends HTMLElement{});
-window.customElements.define('sky-ground-color-green', class extends HTMLElement{});
-window.customElements.define('sky-ground-color-blue', class extends HTMLElement{});
-window.customElements.define('sky-atmospheric-perspective-density', class extends HTMLElement{});
-window.customElements.define('sky-shadow-camera-size', class extends HTMLElement{});
-window.customElements.define('sky-shadow-camera-resolution', class extends HTMLElement{});
+window.customElements.define('sky-nitrogen-color', class extends HTMLElement{});
+window.customElements.define('sky-nitrogen-cutoff', class extends HTMLElement{});
+window.customElements.define('sky-nitrogen-intensity', class extends HTMLElement{});
+window.customElements.define('sky-molecular-oxygen-color', class extends HTMLElement{});
+window.customElements.define('sky-molecular-oxygen-cutoff', class extends HTMLElement{});
+window.customElements.define('sky-molecular-oxygen-intensity', class extends HTMLElement{});
+window.customElements.define('sky-atomic-oxygen-color', class extends HTMLElement{});
+window.customElements.define('sky-atomic-oxygen-cutoff', class extends HTMLElement{});
+window.customElements.define('sky-atomic-oxygen-intensity', class extends HTMLElement{});
+window.customElements.define('sky-aurora-raymarch-steps', class extends HTMLElement{});
+window.customElements.define('sky-aurora-cutoff-distance', class extends HTMLElement{});
+window.customElements.define('sky-aurora-color-red', class extends HTMLElement{});
+window.customElements.define('sky-aurora-color-green', class extends HTMLElement{});
+window.customElements.define('sky-aurora-color-blue', class extends HTMLElement{});
 
-StarrySky.DefaultData.lighting = {
-  groundColor: {
-    red: 66,
-    green: 44,
-    blue: 2
+StarrySky.DefaultData.skyAurora = {
+  nitrogenColor: {
+    red: 189,
+    green: 98,
+    blue: 255
   },
-  atmosphericPerspectiveEnabled: true,
-  atmosphericPerspectiveDensity: 0.007,
-  shadowCameraSize: 32.0,
-  shadowCameraResolution: 2048
+  molecularOxygenColor: {
+    red: 81,
+    green: 255,
+    blue: 143
+  },
+  atomicOxygenColor: {
+    red: 255,
+    green: 0,
+    blue: 37
+  },
+  nitrogenCutOff: 0.12,
+  nitrogenIntensity: 4.0,
+  molecularOxygenCutOff: 0.02,
+  molecularOxygenIntensity: 2.0,
+  atomicOxygenCutOff: 0.12,
+  atomicOxygenIntensity: 0.3,
+  raymarchSteps: 64,
+  cutoffDistance: 1500,
+  auroraEnabled: false
 };
 
-//Parent tag
-class SkyLighting extends HTMLElement {
+class SkyAurora extends HTMLElement {
   constructor(){
     super();
 
     //Check if there are any child elements. Otherwise set them to the default.
     this.skyDataLoaded = false;
-    this.data = StarrySky.DefaultData.lighting;
+    this.data = StarrySky.DefaultData.skyAurora;
   }
 
   connectedCallback(){
     //Hide the element
     this.style.display = "none";
 
-    let self = this;
+    const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
-      //Get child tags and acquire their values.
-      let groundColorTags = self.getElementsByTagName('sky-ground-color');
-      let atmosphericPerspectiveDensityTags = self.getElementsByTagName('sky-atmospheric-perspective-density');
-      let shadowCameraSizeTags = self.getElementsByTagName('sky-shadow-camera-size');
-      let shadowCameraResolutionTags = self.getElementsByTagName('sky-shadow-camera-resolution');
+      //Data Ref
+      const dataRef = self.data;
 
-      [groundColorTags, atmosphericPerspectiveDensityTags, shadowCameraSizeTags, shadowCameraResolutionTags].forEach(function(tags){
+      //The mere presence of this tag enables aurora
+      dataRef.auroraEnabled = true;
+      const nitrogenColorTags = self.getElementsByTagName('sky-nitrogen-color');
+      const nitrogenCutoffTags = self.getElementsByTagName('sky-nitrogen-cutoff');
+      const nitrogenIntensityTags = self.getElementsByTagName('sky-nitrogen-intensity');
+      const molecularOxygenColorTags = self.getElementsByTagName('sky-molecular-oxygen-color');
+      const molecularOxygenCutoffTags = self.getElementsByTagName('sky-molecular-oxygen-cutoff');
+      const molecularOxygenIntensityTags = self.getElementsByTagName('sky-molecular-oxygen-intensity');
+      const atomicOxygenColorTags = self.getElementsByTagName('sky-atomic-oxygen-color');
+      const atomicOxygenCutoffTags = self.getElementsByTagName('sky-atomic-oxygen-cutoff');
+      const atomicOxygenIntensityTags = self.getElementsByTagName('sky-atomic-oxygen-intensity');
+      const raymarchStepsTags = self.getElementsByTagName('sky-aurora-raymarch-steps');
+      const raymarchCutoffDistanceTags = self.getElementsByTagName('sky-aurora-cutoff-distance');
+
+      [nitrogenColorTags, nitrogenCutoffTags, nitrogenIntensityTags, molecularOxygenColorTags, molecularOxygenCutoffTags, molecularOxygenIntensityTags,
+      atomicOxygenColorTags, atomicOxygenCutoffTags, atomicOxygenIntensityTags, raymarchStepsTags,
+      raymarchCutoffDistanceTags].forEach(function(tags){
         if(tags.length > 1){
-          console.error(`The <sky-lighting-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+          console.error(`The <sky-aurora> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
       });
 
-      //With special subcases for our ground color tags
-      [groundColorTags].forEach(function(tags){
+      //With special subcases for our aurora color tags
+      [nitrogenColorTags, molecularOxygenColorTags, atomicOxygenColorTags].forEach(function(tags){
         if(tags.length === 1){
           //Check that it only contains one of each of the following child tags
-          let redTags = tags[0].getElementsByTagName('sky-ground-color-red');
-          let greenTags = tags[0].getElementsByTagName('sky-ground-color-green');
-          let blueTags = tags[0].getElementsByTagName('sky-ground-color-blue');
+          const redTags = tags[0].getElementsByTagName('sky-aurora-color-red');
+          const greenTags = tags[0].getElementsByTagName('sky-aurora-color-green');
+          const blueTags = tags[0].getElementsByTagName('sky-aurora-color-blue');
           [redTags, greenTags, blueTags].forEach(function(colorTags){
             if(tags.length !== 1){
               console.error(`The <${tags[0].tagName}> tag must contain 1 and only 1 tag of type <${colorTags[0].tagName}>. ${colorTags.length} found.`);
@@ -5356,48 +7969,178 @@ class SkyLighting extends HTMLElement {
       });
 
       //Parse the values in our tags
-      self.data.atmosphericPerspectiveDensity = atmosphericPerspectiveDensityTags.length > 0 ? parseFloat(atmosphericPerspectiveDensityTags[0].innerHTML) : self.data.atmosphericPerspectiveDensity;
-      self.data.atmosphericPerspectiveEnabled = self.data.atmosphericPerspectiveDensity > 0.0;
-      self.data.shadowCameraSize = shadowCameraSizeTags.length > 0 ? parseFloat(shadowCameraSizeTags[0].innerHTML) : self.data.shadowCameraSize;
-      self.data.shadowCameraResolution = shadowCameraResolutionTags.length > 0 ? parseFloat(shadowCameraResolutionTags[0].innerHTML) : self.data.shadowCameraResolution;
-
-      //Clamp our results to the appropriate ranges
-      let clampAndWarn = function(inValue, minValue, maxValue, tagName){
-        let result = Math.min(Math.max(inValue, minValue), maxValue);
-        if(inValue > maxValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a max value of ${maxValue} and a minimum value of ${minValue}.`);
-        }
-        else if(inValue < minValue){
-          console.warn(`The tag, ${tagName}, with a value of ${inValue} is outside of it's range and was clamped. It has a minmum value of ${minValue} and a minimum value of ${minValue}.`);
-        }
-        return result;
-      };
+      dataRef.nitrogenCutOff = nitrogenCutoffTags.length > 0 ? parseFloat(nitrogenCutoffTags[0].innerHTML) : dataRef.nitrogenCutOff;
+      dataRef.nitrogenIntensity = nitrogenIntensityTags.length > 0 ? parseFloat(nitrogenIntensityTags[0].innerHTML) : dataRef.nitrogenIntensity;
+      dataRef.molecularOxygenCutOff = molecularOxygenCutoffTags.length > 0 ? parseFloat(molecularOxygenCutoffTags[0].innerHTML) : dataRef.molecularOxygenCutOff;
+      dataRef.molecularOxygenIntensity = molecularOxygenIntensityTags.length > 0 ? parseFloat(molecularOxygenIntensityTags[0].innerHTML) : dataRef.molecularOxygenIntensity;
+      dataRef.atomicOxygenCutOff = atomicOxygenCutoffTags.length > 0 ? parseFloat(atomicOxygenCutoffTags[0].innerHTML) : dataRef.atomicOxygenCutOff;
+      dataRef.atomicOxygenIntensity = atomicOxygenIntensityTags.length > 0 ? parseFloat(atomicOxygenIntensityTags[0].innerHTML) : dataRef.atomicOxygenIntensity;
+      dataRef.raymarchSteps = raymarchStepsTags.length > 0 ? parseInt(raymarchStepsTags[0].innerHTML) : dataRef.raymarchSteps;
+      dataRef.cutoffDistance = raymarchCutoffDistanceTags.length > 0 ? parseInt(raymarchCutoffDistanceTags[0].innerHTML) : dataRef.cutoffDistance;
 
       //Clamp the values in our tags
-      self.data.atmosphericPerspectiveDensity = clampAndWarn(self.data.atmosphericPerspectiveDensity, 0.0, Infinity, '<sky-atmospheric-perspective-density>');
-      self.data.shadowCameraSize = clampAndWarn(self.data.shadowCameraSize, 0.0, Infinity, '<sky-shadow-camera-size>');
-      self.data.shadowCameraResolution = clampAndWarn(self.data.shadowCameraResolution, 32, 15360, '<sky-shadow-camera-resolution>');
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.nitrogenCutOff = clampAndWarn(dataRef.nitrogenCutOff, 0.0, 1.0, '<sky-nitrogen-cutoff>');
+      dataRef.molecularOxygenCutOff = clampAndWarn(dataRef.molecularOxygenCutOff, 0.0, 1.0, '<sky-molecular-oxygen-cutoff>');
+      dataRef.atomicOxygenCutOff = clampAndWarn(dataRef.atomicOxygenCutOff, 0.0, 1.0, '<sky-atomic-oxygen-cutoff>');
 
-      //Parse our ground color
-      if(groundColorTags.length === 1){
-        const firstGroundColorTagGroup = groundColorTags[0];
-        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red').length > 0){
-          self.data.groundColor.red = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-red')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+      dataRef.nitrogenIntensity = clampAndWarn(dataRef.nitrogenIntensity, 0.0, Infinity, '<sky-nitrogen-intensity>');
+      dataRef.molecularOxygenIntensity = clampAndWarn(dataRef.molecularOxygenIntensity, 0.0, Infinity, '<sky-molecular-oxygen-intensity>');
+      dataRef.atomicOxygenIntensity = clampAndWarn(dataRef.atomicOxygenIntensity, 0.0, Infinity, '<sky-atomic-oxygen-intensity>');
+
+      dataRef.raymarchSteps = clampAndWarn(dataRef.raymarchSteps, 4, Infinity, '<sky-aurora-raymarch-steps>');
+      dataRef.cutoffDistance = clampAndWarn(dataRef.cutoffDistance, 1, 10000, '<sky-aurora-cutoff-distance>');
+
+      //Parse our nitrogen color
+      if(nitrogenColorTags.length === 1){
+        const firstNitrogenColorTagGroup = nitrogenColorTags[0];
+        const nitrogenColor = dataRef.nitrogenColor;
+        if(firstNitrogenColorTagGroup.getElementsByTagName('sky-aurora-color-red').length > 0){
+          nitrogenColor.red = clampAndWarn(parseInt(firstNitrogenColorTagGroup.getElementsByTagName('sky-aurora-color-red')[0].innerHTML), 0, 255, 'sky-aurora-color-red');
         }
-        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green').length > 0){
-          self.data.groundColor.green = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-green')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+        if(firstNitrogenColorTagGroup.getElementsByTagName('sky-aurora-color-green').length > 0){
+          nitrogenColor.green = clampAndWarn(parseInt(firstNitrogenColorTagGroup.getElementsByTagName('sky-aurora-color-green')[0].innerHTML), 0, 255, 'sky-aurora-color-green');
         }
-        if(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue').length > 0){
-          self.data.groundColor.blue = clampAndWarn(parseInt(firstGroundColorTagGroup.getElementsByTagName('sky-ground-color-blue')[0].innerHTML), 0, 255, 'sky-ground-color-red');
+        if(firstNitrogenColorTagGroup.getElementsByTagName('sky-aurora-color-blue').length > 0){
+          nitrogenColor.blue = clampAndWarn(parseInt(firstNitrogenColorTagGroup.getElementsByTagName('sky-aurora-color-blue')[0].innerHTML), 0, 255, 'sky-aurora-color-blue');
+        }
+      }
+
+      //Parse our molecular oxygen color
+      if(molecularOxygenColorTags.length === 1){
+        const firstMolecularOxygenColorTagGroup = molecularOxygenColorTags[0];
+        const molecularOxygenColor = dataRef.molecularOxygenColor;
+        if(firstMolecularOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-red').length > 0){
+          molecularOxygenColor.red = clampAndWarn(parseInt(firstMolecularOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-red')[0].innerHTML), 0, 255, 'sky-aurora-color-red');
+        }
+        if(firstMolecularOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-green').length > 0){
+          molecularOxygenColor.green = clampAndWarn(parseInt(firstMolecularOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-green')[0].innerHTML), 0, 255, 'sky-aurora-color-green');
+        }
+        if(firstMolecularOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-blue').length > 0){
+          molecularOxygenColor.blue = clampAndWarn(parseInt(firstMolecularOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-blue')[0].innerHTML), 0, 255, 'sky-aurora-color-blue');
+        }
+      }
+
+      //Parse our atomic oxygen color
+      if(atomicOxygenColorTags.length === 1){
+        const firstAtomicOxygenColorTagGroup = atomicOxygenColorTags[0];
+        const atomicOxygenColor = dataRef.atomicOxygenColor;
+        if(firstAtomicOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-red').length > 0){
+          atomicOxygenColor.red = clampAndWarn(parseInt(firstAtomicOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-red')[0].innerHTML), 0, 255, 'sky-aurora-color-red');
+        }
+        if(firstAtomicOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-green').length > 0){
+          atomicOxygenColor.green = clampAndWarn(parseInt(firstAtomicOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-green')[0].innerHTML), 0, 255, 'sky-aurora-color-green');
+        }
+        if(firstAtomicOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-blue').length > 0){
+          atomicOxygenColor.blue = clampAndWarn(parseInt(firstAtomicOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-blue')[0].innerHTML), 0, 255, 'sky-aurora-color-blue');
         }
       }
 
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });
-  };
+  }
+};
+window.customElements.define('sky-aurora', SkyAurora);
+
+//child tags
+window.customElements.define('sky-cloud-coverage', class extends HTMLElement{});
+window.customElements.define('sky-cloud-start-height', class extends HTMLElement{});
+window.customElements.define('sky-cloud-end-height', class extends HTMLElement{});
+window.customElements.define('sky-cloud-fade-out-start-percent', class extends HTMLElement{});
+window.customElements.define('sky-cloud-fade-in-end-percent', class extends HTMLElement{});
+window.customElements.define('sky-cloud-velocity-x', class extends HTMLElement{});
+window.customElements.define('sky-cloud-velocity-y', class extends HTMLElement{});
+window.customElements.define('sky-cloud-start-seed', class extends HTMLElement{});
+window.customElements.define('sky-cloud-raymarch-steps', class extends HTMLElement{});
+window.customElements.define('sky-cloud-cutoff-distance', class extends HTMLElement{});
+
+StarrySky.DefaultData.skyCloud = {
+  coverage: 70.0,
+  startHeight: 1000.0,
+  endHeight: 2500.0,
+  fadeOutStartPercent: 90.0,
+  fadeInEndPercent: 10.0,
+  velocity: new THREE.Vector2(40.0, 40.0),
+  startSeed: Date.now() % (86400 * 365),
+  numberOfRayMarchSteps: 64.0,
+  cutoffDistance: 40000.0,
+  cloudsEnabled: false
+};
+
+//Parent method
+class SkyClouds extends HTMLElement {
+  constructor(){
+    super();
+
+    this.skyDataLoaded = false;
+    this.data = StarrySky.DefaultData.skyCloud;
+  }
+
+  connectedCallback(){
+    //Hide the element
+    this.style.display = "none";
+
+    const self = this;
+    document.addEventListener('DOMContentLoaded', function(evt){
+      //Data Ref
+      const dataRef = self.data;
+
+      //The mere presence of this tag enables clouds
+      dataRef.cloudsEnabled = true;
+      const cloudCoverageTags = self.getElementsByTagName('sky-cloud-coverage');
+      const startHeightTags = self.getElementsByTagName('sky-cloud-start-height');
+      const endHeightTags = self.getElementsByTagName('sky-cloud-end-height');
+      const fadeOutStartPercentTags = self.getElementsByTagName('sky-cloud-fade-out-start-percent');
+      const fadeInEndPercentTags = self.getElementsByTagName('sky-cloud-fade-in-end-percent');
+      const cloudVelocityXTags = self.getElementsByTagName('sky-cloud-velocity-x');
+      const cloudVelocityYTags = self.getElementsByTagName('sky-cloud-velocity-y');
+      const startSeedTags = self.getElementsByTagName('sky-cloud-start-seed');
+      const raymarchStepsTags = self.getElementsByTagName('sky-cloud-raymarch-steps');
+      const cutoffDistanceTags = self.getElementsByTagName('sky-cloud-cutoff-distance');
+
+      [cloudCoverageTags, startHeightTags, endHeightTags, endHeightTags, fadeOutStartPercentTags,
+      fadeInEndPercentTags, cloudVelocityXTags, cloudVelocityYTags, startSeedTags,
+      raymarchStepsTags, cutoffDistanceTags].forEach(function(tags){
+        if(tags.length > 1){
+          console.error(`The <sky-cloud-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
+        }
+      });
+
+      dataRef.coverage = cloudCoverageTags.length > 0 ? parseFloat(cloudCoverageTags[0].innerHTML) : dataRef.coverage;
+      dataRef.startHeight = startHeightTags.length > 0 ? parseFloat(startHeightTags[0].innerHTML) : dataRef.startHeight;
+      dataRef.endHeight = endHeightTags.length > 0 ? parseFloat(endHeightTags[0].innerHTML) : dataRef.endHeight;
+      dataRef.fadeOutStartPercent = fadeOutStartPercentTags.length > 0 ? parseFloat(fadeOutStartPercentTags[0].innerHTML) : dataRef.fadeOutStartPercent;
+      dataRef.fadeInEndPercent = fadeInEndPercentTags.length > 0 ? parseFloat(fadeInEndPercentTags[0].innerHTML) : dataRef.fadeInEndPercent;
+      dataRef.startSeed = startSeedTags.length > 0 ? parseInt(startSeedTags[0].innerHTML) : dataRef.startSeed;
+      dataRef.numberOfRayMarchSteps = raymarchStepsTags.length > 0 ? parseInt(raymarchStepsTags[0].innerHTML) : dataRef.numberOfRayMarchSteps;
+      dataRef.cutoffDistance = cutoffDistanceTags.length > 0 ? parseFloat(cutoffDistanceTags[0].innerHTML) : dataRef.cutoffDistance;
+
+      //Handle the special case of our xy values
+      let velocityDataX = cloudVelocityXTags.length > 0 ? parseFloat(cloudVelocityXTags[0].innerHTML) : dataRef.velocity.x;
+      let velocityDataY = cloudVelocityYTags.length > 0 ? parseFloat(cloudVelocityYTags[0].innerHTML) : dataRef.velocity.y;
+
+      //Clamp the values in our tags
+      const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
+      dataRef.coverage = clampAndWarn(dataRef.coverage, 0.0, 100.0, '<sky-cloud-coverage>');
+      dataRef.coverage = (100.0 - (dataRef.coverage + 20.0) * 0.5833333333333) / 100.0; //Clouds don't start until 20% and end at 70%
+      dataRef.startHeight = clampAndWarn(dataRef.startHeight, 0.0, 100000.0, '<sky-cloud-start-height>');
+      dataRef.endHeight = clampAndWarn(dataRef.endHeight, 0.1, 9999999.9, '<sky-cloud-end-height>');
+      dataRef.fadeOutStartPercent = clampAndWarn(dataRef.fadeOutStartPercent, 0.01, 100.0, '<sky-cloud-fade-out-start-percent>') / 100.0;
+      dataRef.fadeInEndPercent = clampAndWarn(dataRef.fadeInEndPercent, 0.0, 99.99, '<sky-cloud-fade-in-end-percent>') / 100.0;
+      dataRef.startSeed = clampAndWarn(dataRef.startSeed, 0, Number.MAX_SAFE_INTEGER, '<sky-cloud-start-seed>');
+      dataRef.cutoffDistance = clampAndWarn(dataRef.cutoffDistance, 0.1, 9999999.9, '<sky-cloud-cutoff-distance>');
+      velocityDataX = clampAndWarn(velocityDataX, -9999.0, 9999.0, '<sky-cloud-velocity-x>');
+      velocityDataY = clampAndWarn(velocityDataY, -9999.0, 9999.0, '<sky-cloud-velocity-y>');
+      dataRef.velocity.x = velocityDataX;
+      dataRef.velocity.y = velocityDataY;
+
+      self.skyDataLoaded = true;
+      document.dispatchEvent(new Event('Sky-Data-Loaded'));
+    });
+  }
 }
-window.customElements.define('sky-lighting', SkyLighting);
+window.customElements.define('sky-clouds', SkyClouds);
 
 StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.renderer = renderer;
@@ -5423,7 +8166,6 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.scatteringTextureHeight = 32;
   this.scatteringTexturePackingWidth = 1;
   this.scatteringTexturePackingHeight = 32;
-  const mieGCoefficient = data.skyAtmosphericParameters.mieDirectionalG;
 
   //Grab our atmospheric functions partial, we also store it in the library
   //as we use it in the final atmospheric material.
@@ -5432,14 +8174,14 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     this.scatteringTextureHeight,
     this.scatteringTexturePackingWidth,
     this.scatteringTexturePackingHeight,
-    this.data.skyAtmosphericParameters.mieDirectionalG
+    this.data.skyAtmosphericParameters
   );
   let atmosphereFunctions = this.atmosphereFunctionsString;
 
   //Set up our transmittance texture
   let transmittanceTexture = transmittanceRenderer.createTexture();
   let transmittanceVar = transmittanceRenderer.addVariable('transmittanceTexture',
-    materials.transmittanceMaterial.fragmentShader(data.skyAtmosphericParameters.numberOfRaySteps, atmosphereFunctions),
+    materials.transmittanceMaterial.fragmentShader(this.data.skyAtmosphericParameters.numberOfRaySteps, atmosphereFunctions),
     transmittanceTexture
   );
   transmittanceRenderer.setVariableDependencies(transmittanceVar, []);
@@ -5474,13 +8216,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let singleScatteringMieTexture = singleScatteringRenderer.createTexture();
   let singleScatteringMieVar = singleScatteringRenderer.addVariable('kthInscatteringMie',
     materials.singleScatteringMaterial.fragmentShader(
-      data.skyAtmosphericParameters.numberOfRaySteps,
       this.scatteringTextureWidth,
       this.scatteringTextureHeight,
       this.scatteringTexturePackingWidth,
       this.scatteringTexturePackingHeight,
       false, //Is Rayleigh
-      atmosphereFunctions
+      atmosphereFunctions,
+      this.data.skyAtmosphericParameters
     ),
     singleScatteringMieTexture
   );
@@ -5499,13 +8241,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let singleScatteringRayleighTexture = singleScatteringRenderer.createTexture();
   let singleScatteringRayleighVar = singleScatteringRenderer.addVariable('kthInscatteringRayleigh',
     materials.singleScatteringMaterial.fragmentShader(
-      data.skyAtmosphericParameters.numberOfRaySteps,
       this.scatteringTextureWidth,
       this.scatteringTextureHeight,
       this.scatteringTexturePackingWidth,
       this.scatteringTexturePackingHeight,
       true, //Is Rayleigh
-      atmosphereFunctions
+      atmosphereFunctions,
+      this.data.skyAtmosphericParameters
     ),
     singleScatteringRayleighTexture
   );
@@ -5614,14 +8356,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let multipleScatteringMieTexture = multipleScatteringRenderer.createTexture();
   let multipleScatteringMieVar = multipleScatteringRenderer.addVariable('kthInscatteringMie',
     materials.kthInscatteringMaterial.fragmentShader(
-      data.skyAtmosphericParameters.numberOfRaySteps,
       this.scatteringTextureWidth,
       this.scatteringTextureHeight,
       this.scatteringTexturePackingWidth,
       this.scatteringTexturePackingHeight,
-      mieGCoefficient,
       false, //Is Rayleigh
-      atmosphereFunctions
+      atmosphereFunctions,
+      data.skyAtmosphericParameters
     ),
     multipleScatteringMieTexture
   );
@@ -5641,14 +8382,13 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   let multipleScatteringRayleighTexture = multipleScatteringRenderer.createTexture();
   let multipleScatteringRayleighVar = multipleScatteringRenderer.addVariable('kthInscatteringRayleigh',
     materials.kthInscatteringMaterial.fragmentShader(
-      data.skyAtmosphericParameters.numberOfRaySteps,
       this.scatteringTextureWidth,
       this.scatteringTextureHeight,
       this.scatteringTexturePackingWidth,
       this.scatteringTexturePackingHeight,
-      mieGCoefficient,
       true, //Is Rayleigh
-      atmosphereFunctions
+      atmosphereFunctions,
+      data.skyAtmosphericParameters
     ),
     multipleScatteringRayleighTexture
   );
@@ -5717,7 +8457,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
 
   // Let's just focus on the second order scattering until that looks correct, possibly giving
   // another look over the first order scattering to make sure we have that correct as well.
-  for(let i = 0; i < 7; ++i){
+  for(let i = 0; i < data.skyAtmosphericParameters.numberOfScatteringOrders; ++i){
     multipleScatteringMieVar.material.uniforms.inscatteredLightLUT.value = multipleScatteringMie3DLUT;
     multipleScatteringRayleighVar.material.uniforms.inscatteredLightLUT.value = multipleScatteringRayleigh3DLUT;
 
@@ -5727,7 +8467,7 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
     multipleRayleighScatteringRenderTarget = multipleScatteringRenderer.getCurrentRenderTarget(multipleScatteringRayleighVar);
 
     //And create our 3-D textures again...
-    if(i !== 6){
+    if(i !== (data.skyAtmosphericParameters.numberOfScatteringOrders - 1)){
       multipleScatteringMieFloat32Array = new Float32Array(SCATTERING_TEXTURE_WIDTH * SCATTERING_TEXTURE_HEIGHT * 4);
       renderer.readRenderTargetPixels(multipleMieScatteringRenderTarget, 0, 0, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, multipleScatteringMieFloat32Array);
       multipleScatteringMie3DLUT = new THREE.DataTexture3D(multipleScatteringMieFloat32Array, SCATTERING_TEXTURE_WIDTH, this.scatteringTextureHeight, this.scatteringTexturePackingHeight);
@@ -5916,32 +8656,210 @@ StarrySky.LUTlibraries.StellarLUTLibrary = function(data, renderer, scene){
   };
 };
 
+StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
+  //Enable the OES_texture_float_linear extension
+  if(!renderer.capabilities.isWebGL2 && !renderer.extensions.get("OES_texture_float_linear")){
+    console.error("No linear interpolation of OES textures allowed.");
+    return false;
+  }
+
+  //Enable 32 bit float textures
+  if(!renderer.capabilities.isWebGL2 && !renderer.extensions.get("WEBGL_color_buffer_float")){
+    console.error("No float WEBGL color buffers allowed.");
+    return false;
+  }
+  const materials = StarrySky.Materials.Clouds;
+
+  const CLOUD_RENDER_TEXTURE_SIZE = 128;
+  const OUTPUT_RENDER_TEXTURE_WIDTH = 2048;
+  const OUTPUT_RENDER_TEXTURE_HEIGHT = 1024;
+  const cloudTextureRenderer = new THREE.StarrySkyComputationRenderer(OUTPUT_RENDER_TEXTURE_WIDTH, OUTPUT_RENDER_TEXTURE_HEIGHT, renderer);
+
+  const BYTES_PER_32_BIT_FLOAT = 4;
+  const cloud3DNoiseRenderTargetBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * 4);
+  const cloud3DNoiseRenderTargetBufferFloat32Array = new Float32Array(cloud3DNoiseRenderTargetBuffer);
+  const cloud3DNoiseRenderTargetBufferSlice = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * OUTPUT_RENDER_TEXTURE_WIDTH * OUTPUT_RENDER_TEXTURE_HEIGHT * 4);
+  const cloud3DNoiseRenderTargetBufferFloat32ArraySlice = new Float32Array(cloud3DNoiseRenderTargetBufferSlice);
+
+  const cloudNoiseSliceTexture = cloudTextureRenderer.createTexture();
+  const cloudNoiseSliceVar = cloudTextureRenderer.addVariable('cloudNoise',
+    materials.cloudNoiseMaterial.fragmentShader,
+    cloudNoiseSliceTexture
+  );
+  cloudTextureRenderer.setVariableDependencies(cloudNoiseSliceVar, []);
+  cloudNoiseSliceVar.material.uniforms = JSON.parse(JSON.stringify(materials.cloudNoiseMaterial.uniforms));
+  cloudNoiseSliceVar.type = THREE.FloatType;
+  cloudNoiseSliceVar.format = THREE.RGBAFormat;
+  cloudNoiseSliceVar.minFilter = THREE.NearestFilter;
+  cloudNoiseSliceVar.magFilter = THREE.NearestFilter;
+  cloudNoiseSliceVar.wrapS = THREE.ClampToEdgeWrapping;
+  cloudNoiseSliceVar.wrapT = THREE.ClampToEdgeWrapping;
+  cloudNoiseSliceVar.encoding = THREE.LinearEncoding;
+
+  let error1 = cloudTextureRenderer.init();
+  if(error1 !== null){
+    console.error(`Cloud Texture Renderer: ${error1}`);
+  }
+
+  //Read data one slice at a time into the 3D texture array buffer
+  const inverseCloudRenderTextureSize = 1.0 / CLOUD_RENDER_TEXTURE_SIZE;
+  const NUM_DATA_POINTS_IN_SLICE = CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * 4;
+  cloudTextureRenderer.compute();
+  const renderTarget = cloudTextureRenderer.getCurrentRenderTarget(cloudNoiseSliceVar);
+  renderer.readRenderTargetPixels(renderTarget, 0, 0, OUTPUT_RENDER_TEXTURE_WIDTH, OUTPUT_RENDER_TEXTURE_HEIGHT, cloud3DNoiseRenderTargetBufferFloat32ArraySlice);
+  for(let i = 0; i < OUTPUT_RENDER_TEXTURE_HEIGHT; ++i){
+    for(let j = 0; j < OUTPUT_RENDER_TEXTURE_WIDTH; ++j){
+      for(let k = 0; k < 4; ++k){
+        //Convert this 2D pixel coordinate into a position from our render target read
+        const xIndex = Math.floor(j / 128.0);
+      	const yIndex = Math.floor(i / 128.0);
+      	const z = (xIndex + yIndex * 16);
+      	const x = (j - xIndex * 128);
+      	const y = (i - yIndex * 128);
+
+        //Convert this 2D pixel coordinate into its' appropriate read position in the 3D texture render buffer
+        const inputLocation = (i * OUTPUT_RENDER_TEXTURE_WIDTH + j) * 4 + k;
+        const outputLocation = (x + y * 128 + z * 128 * 128) * 4 + k;
+
+        cloud3DNoiseRenderTargetBufferFloat32Array[outputLocation] = cloud3DNoiseRenderTargetBufferFloat32ArraySlice[inputLocation];
+      }
+    }
+  }
+
+  //Delete the shader
+  for(let renderTarget of cloudNoiseSliceVar.renderTargets){
+    renderTarget.dispose();
+  }
+  cloudNoiseSliceVar.material.dispose();
+
+  //Turn this array into a 3D texture
+  this.repeating3DCloudNoiseTextures = new THREE.DataTexture3D(cloud3DNoiseRenderTargetBufferFloat32Array, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE);
+  this.repeating3DCloudNoiseTextures.type = THREE.FloatType;
+  this.repeating3DCloudNoiseTextures.format = THREE.RGBAFormat;
+  this.repeating3DCloudNoiseTextures.minFilter = THREE.LinearFilter;
+  this.repeating3DCloudNoiseTextures.magFilter = THREE.LinearFilter;
+  this.repeating3DCloudNoiseTextures.wrapS = THREE.RepeatWrapping;
+  this.repeating3DCloudNoiseTextures.wrapT = THREE.RepeatWrapping;
+  this.repeating3DCloudNoiseTextures.wrapR = THREE.RepeatWrapping;
+  this.repeating3DCloudNoiseTextures.encoding = THREE.LinearEncoding;
+  this.repeating3DCloudNoiseTextures.needsUpdate = true;
+}
+
+StarrySky.Renderers.FogRenderer = function(skyDirector){
+  this.skyDirector = skyDirector;
+  const assetManager = skyDirector.assetManager;
+  const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
+  const lightingData = assetManager.data.skyLighting;
+  const skyState = skyDirector.skyState;
+  const isAdvancedAtmosphericPerspective = lightingData.atmosphericPerspectiveType === 'advanced';
+  this.fog = null;
+  if(isAdvancedAtmosphericPerspective){
+    const turbidity = 2.53;
+    const rayleigh = 3.0;
+    const groundDistanceMultp = lightingData.atmosphericPerspectiveDistanceMultiplier;
+    const exposure = 0.17;
+    const DEG_2_RAD = 0.017453292519943295769236907684886;
+    const sunRadius = Math.sin(atmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
+    const moonRadius = Math.sin(atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
+    THREE.ShaderChunk.fog_pars_fragment = StarrySky.Materials.Fog.fogParsMaterial.fragmentShader(rayleigh, exposure, groundDistanceMultp, true, atmosphericParameters);
+    THREE.ShaderChunk.fog_pars_vertex = StarrySky.Materials.Fog.fogParsMaterial.vertexShader(rayleigh, turbidity, groundDistanceMultp, sunRadius, moonRadius, true, atmosphericParameters);
+    THREE.ShaderChunk.fog_fragment = StarrySky.Materials.Fog.fogMaterial.fragmentShader(true);
+    THREE.ShaderChunk.fog_vertex = StarrySky.Materials.Fog.fogMaterial.vertexShader(true);
+
+    this.fog = new THREE.Fog(new THREE.Vector3(), 0.0, 1.0);
+    skyDirector.scene.fog = this.fog;
+  }
+  const self = this;
+  this.tick = function(t){
+    if(isAdvancedAtmosphericPerspective){
+      //Convert our sun and moon position to rho and phi
+      const sunAltitude = Math.acos(skyState.sun.position.y);
+      const sunAzimuth = Math.atan2(skyState.sun.position.x, skyState.sun.position.z) - Math.PI;
+      const moonAltitude = Math.acos(skyState.moon.position.y);
+      const moonAzimuth = Math.atan2(skyState.moon.position.x, skyState.moon.position.z) - Math.PI;
+      const moonIntensity = Math.pow(skyState.moon.horizonFade , 3.0) * skyState.moon.intensity;
+
+      //Inject the intensity for the moon
+      this.fog.color.fromArray([sunAltitude, sunAzimuth, moonAltitude]);
+      this.fog.near = moonAzimuth;
+      this.fog.far = -(atmosphericParameters.lunarMaxIntensity / 29.0) * (1300.0 * moonIntensity) / 20.0;
+    }
+  }
+}
+
 StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.skyDirector = skyDirector;
   this.geometry = new THREE.IcosahedronBufferGeometry(5000.0, 4);
 
   //Create our material late
+  const assetManager = skyDirector.assetManager;
+  const auroraParameters = assetManager.data.skyAurora;
+  const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
+  const skyState = skyDirector.skyState;
   this.atmosphereMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms())),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
+      false, //sun pass
+      false, //moon pass
+      false, //metering pass
+      assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
+      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
+    ))),
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
     transparent: false,
     vertexShader: StarrySky.Materials.Atmosphere.atmosphereShader.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphericParameters.mieDirectionalG,
       skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
-      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString
+      skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
+      false, //sun pass
+      false, //moon pass
+      false, //metering pass
+      assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
+      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
     )
   });
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
+  if(assetManager.data.skyCloud.cloudsEnabled){
+    this.atmosphereMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
+  }
+  if(assetManager.data.skyAurora.auroraEnabled){
+    this.atmosphereMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
+      auroraParameters.nitrogenColor.red / 255.0,
+      auroraParameters.nitrogenColor.green / 255.0,
+      auroraParameters.nitrogenColor.blue / 255.0,
+    );
+    this.atmosphereMaterial.uniforms.nitrogenCutOff.value = auroraParameters.nitrogenCutOff;
+    this.atmosphereMaterial.uniforms.nitrogenIntensity.value = auroraParameters.nitrogenIntensity;
 
-  if(this.skyDirector.assetManager.hasLoadedImages){
-    this.atmosphereMaterial.uniforms.starColorMap.value = this.skyDirector.assetManager.images.starImages.starColorMap;
+    this.atmosphereMaterial.uniforms.molecularOxygenColor.value = new THREE.Vector3(
+      auroraParameters.molecularOxygenColor.red / 255.0,
+      auroraParameters.molecularOxygenColor.green / 255.0,
+      auroraParameters.molecularOxygenColor.blue / 255.0,
+    );
+    this.atmosphereMaterial.uniforms.molecularOxygenCutOff.value = auroraParameters.molecularOxygenCutOff;
+    this.atmosphereMaterial.uniforms.molecularOxygenIntensity.value = auroraParameters.molecularOxygenIntensity;
+
+    this.atmosphereMaterial.uniforms.atomicOxygenColor.value = new THREE.Vector3(
+      auroraParameters.atomicOxygenColor.red / 255.0,
+      auroraParameters.atomicOxygenColor.green / 255.0,
+      auroraParameters.atomicOxygenColor.blue / 255.0,
+    );
+    this.atmosphereMaterial.uniforms.atomicOxygenCutOff.value = auroraParameters.atomicOxygenCutOff;
+    this.atmosphereMaterial.uniforms.atomicOxygenIntensity.value = auroraParameters.atomicOxygenIntensity;
+
+    //Number of raymarching steps
+    this.atmosphereMaterial.uniforms.numberOfAuroraRaymarchingSteps.value = auroraParameters.raymarchSteps;
+    this.atmosphereMaterial.uniforms.auroraCutoffDistance.value = auroraParameters.cutoffDistance;
+  }
+
+  if(assetManager.hasLoadedImages){
+    this.atmosphereMaterial.uniforms.starColorMap.value = assetManager.images.starImages.starColorMap;
   }
 
   //Attach the material to our geometry
@@ -5950,59 +8868,94 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.skyMesh.receiveShadow = false;
   this.skyMesh.fog = false;
 
-  let self = this;
+  const self = this;
+  let assetsNotReadyYet = true;
   this.tick = function(t){
-    let cameraPosition = self.skyDirector.camera.position;
-    self.skyMesh.position.set(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-    self.skyMesh.updateMatrix();
-    self.skyMesh.updateMatrixWorld();
+    if(assetsNotReadyYet){
+      this.firstTick(t);
+      return true;
+    }
+
+    const cameraPosition = skyDirector.camera.position;
+    const uniforms = self.atmosphereMaterial.uniforms;
+    const skyState = skyDirector.skyState;
+    const skyMesh = self.skyMesh;
+    skyMesh.position.copy(skyDirector.globalCameraPosition);
 
     //Update the uniforms so that we can see where we are on this sky.
-    self.atmosphereMaterial.uniforms.sunHorizonFade.value = self.skyDirector.skyState.sun.horizonFade;
-    self.atmosphereMaterial.uniforms.moonHorizonFade.value = self.skyDirector.skyState.moon.horizonFade;
-    self.atmosphereMaterial.uniforms.uTime.value = t;
-    self.atmosphereMaterial.uniforms.localSiderealTime.value = self.skyDirector.skyState.LSRT;
-    self.atmosphereMaterial.uniforms.starsExposure.value = self.skyDirector.exposureVariables.starsExposure;
-    self.atmosphereMaterial.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
-    self.atmosphereMaterial.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
+    uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
+    uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
+    uniforms.uTime.value = t;
+    uniforms.localSiderealTime.value = skyState.LSRT;
+    uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
+    uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
+    uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 
-    const blueNoiseTextureRef = self.skyDirector.assetManager.images.blueNoiseImages[self.skyDirector.randomBlueNoiseTexture];
-    self.atmosphereMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+    const lightingManager = skyDirector.lightingManager;
+    if(assetManager.data.skyCloud.cloudsEnabled){
+      uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
+      if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
+        uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
+      }
+    }
   }
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
+    const uniforms = self.atmosphereMaterial.uniforms;
+
     //Connect up our reference values
-    self.atmosphereMaterial.uniforms.sunPosition.value = self.skyDirector.skyState.sun.position;
-    self.atmosphereMaterial.uniforms.moonPosition.value = self.skyDirector.skyState.moon.position;
-    self.atmosphereMaterial.uniforms.latitude.value = self.skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+    uniforms.sunPosition.value = skyState.sun.position;
+    uniforms.moonPosition.value = skyState.moon.position;
 
-    self.atmosphereMaterial.uniforms.mercuryPosition.value = self.skyDirector.skyState.mercury.position;
-    self.atmosphereMaterial.uniforms.venusPosition.value = self.skyDirector.skyState.venus.position;
-    self.atmosphereMaterial.uniforms.marsPosition.value = self.skyDirector.skyState.mars.position;
-    self.atmosphereMaterial.uniforms.jupiterPosition.value = self.skyDirector.skyState.jupiter.position;
-    self.atmosphereMaterial.uniforms.saturnPosition.value = self.skyDirector.skyState.saturn.position;
+    uniforms.mercuryPosition.value = skyState.mercury.position;
+    uniforms.venusPosition.value = skyState.venus.position;
+    uniforms.marsPosition.value = skyState.mars.position;
+    uniforms.jupiterPosition.value = skyState.jupiter.position;
+    uniforms.saturnPosition.value = skyState.saturn.position;
 
-    self.atmosphereMaterial.uniforms.mercuryBrightness.value = self.skyDirector.skyState.mercury.intensity;
-    self.atmosphereMaterial.uniforms.venusBrightness.value = self.skyDirector.skyState.venus.intensity;
-    self.atmosphereMaterial.uniforms.marsBrightness.value = self.skyDirector.skyState.mars.intensity;
-    self.atmosphereMaterial.uniforms.jupiterBrightness.value = self.skyDirector.skyState.jupiter.intensity;
-    self.atmosphereMaterial.uniforms.saturnBrightness.value = self.skyDirector.skyState.saturn.intensity;
-    self.atmosphereMaterial.uniforms.moonLightColor.value = self.skyDirector.skyState.moon.lightingModifier;
+    uniforms.mercuryBrightness.value = skyState.mercury.intensity;
+    uniforms.venusBrightness.value = skyState.venus.intensity;
+    uniforms.marsBrightness.value = skyState.mars.intensity;
+    uniforms.jupiterBrightness.value = skyState.jupiter.intensity;
+    uniforms.saturnBrightness.value = skyState.saturn.intensity;
+    uniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
     //Connect up our images if they don't exist yet
-    if(self.skyDirector.assetManager){
-      self.atmosphereMaterial.uniforms.starHashCubemap.value = self.skyDirector.assetManager.images.starImages.starHashCubemap;
-      self.atmosphereMaterial.uniforms.dimStarData.value = self.skyDirector.stellarLUTLibrary.dimStarDataMap;
-      self.atmosphereMaterial.uniforms.medStarData.value = self.skyDirector.stellarLUTLibrary.medStarDataMap;
-      self.atmosphereMaterial.uniforms.brightStarData.value = self.skyDirector.stellarLUTLibrary.brightStarDataMap;
+    if(assetManager){
+      uniforms.starHashCubemap.value = assetManager.images.starImages.starHashCubemap;
+      uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
+      uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
+      uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
+      uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+      uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
+      if(assetManager.data.skyAurora.auroraEnabled){
+        uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
+      }
+
+      if(assetManager.data.skyCloud.cloudsEnabled){
+        const cloudParams = assetManager.data.skyCloud;
+        uniforms.cloudCoverage.value = cloudParams.coverage;
+        uniforms.cloudVelocity.value = cloudParams.velocity;
+        uniforms.cloudStartHeight.value = cloudParams.startHeight;
+        uniforms.cloudEndHeight.value = cloudParams.endHeight;
+        uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
+        uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
+        uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercentTags;
+        uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
+      }
+      assetsNotReadyYet = false;
+
+      //Proceed with the first tick
+      self.tick(t);
+
+      //Add this object to the scene
+      skyDirector.scene.add(self.skyMesh);
+
+      //Delete this method when done
+			delete this.firstTick;
     }
-
-    //Proceed with the first tick
-    self.tick(t);
-
-    //Add this object to the scene
-    self.skyDirector.scene.add(self.skyMesh);
   }
 }
 
@@ -6010,15 +8963,31 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	const renderer = skyDirector.renderer;
 	const assetManager = skyDirector.assetManager;
 	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
+	const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
 	const skyState = skyDirector.skyState;
 	const RENDER_TARGET_SIZE = 256;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
-  const moonAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
+  const moonAngularRadiusInRadians = atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
   const baseRadiusOfTheMoon = Math.sin(moonAngularRadiusInRadians)
-	this.sunAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+	this.sunAngularRadiusInRadians = atmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
   const radiusOfSunPlane = RADIUS_OF_SKY * Math.sin(this.sunAngularRadiusInRadians) * 2.0;
   const diameterOfSunPlane = 4.0 * radiusOfSunPlane;
+
+	//Setup external methods
+	const self = this;
+	StarrySky.Methods.getSunRadius = function(){
+		return self.sunAngularRadiusInRadians;
+	};
+
+	StarrySky.Methods.getSunPosition = function(){
+		return skyState.sun.position;
+	};
+
+	StarrySky.Methods.getIsDominantLightSun = function(){
+		const sunRadius = Math.sin(self.sunAngularRadiusInRadians * skyState.sun.scale);
+    return skyState.sun.position.y >= -sunRadius;
+	};
 
 	//All of this eventually gets drawn out to a single quad
   this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
@@ -6038,23 +9007,36 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	composer.renderToScreen = false;
 
 	const baseSunMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(true))),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
+      true, //sun pass
+      false, //moon pass
+      false, //metering pass
+      false,  //aurora enabled
+      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
+    ))),
     vertexShader: StarrySky.Materials.Sun.baseSunPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphericParameters.mieDirectionalG,
       atmosphereLUTLibrary.scatteringTextureWidth,
       atmosphereLUTLibrary.scatteringTextureHeight,
       atmosphereLUTLibrary.scatteringTexturePackingWidth,
       atmosphereLUTLibrary.scatteringTexturePackingHeight,
       atmosphereLUTLibrary.atmosphereFunctionsString,
       StarrySky.Materials.Sun.baseSunPartial.fragmentShader(this.sunAngularRadiusInRadians),
-      false
+      false, //Moon Code
+      false, //Metering Code
+      false, //aurora enabled
+			assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
     ),
   });
   baseSunMaterial.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
   baseSunMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   baseSunMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   baseSunMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
+	baseSunMaterial.uniforms.cameraPosition.value = new THREE.Vector3(0.0);
+	if(assetManager.data.skyCloud.cloudsEnabled){
+    baseSunMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
+  }
   baseSunMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
 	const renderBufferMesh = new THREE.Mesh(
     new THREE.PlaneBufferGeometry(2, 2),
@@ -6064,11 +9046,15 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
 	const renderPass = new THREE.RenderPass(scene, camera);
 	composer.addPass(renderPass);
-	const bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85 );
-	bloomPass.threshold = 0.97;
-	bloomPass.strength = 1.0;
-	bloomPass.radius = 1.0;
-	composer.addPass(bloomPass);
+	const sunBloomDataRef = assetManager.data.skyLighting.sunBloom;
+  if(sunBloomDataRef.bloomEnabled){
+    this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85);
+		this.bloomPass.exposure = sunBloomDataRef.exposure;
+    this.bloomPass.threshold = sunBloomDataRef.threshold;
+    this.bloomPass.strength = sunBloomDataRef.strength;
+    this.bloomPass.radius = sunBloomDataRef.radius;
+    composer.addPass(this.bloomPass);
+  }
 
 	//Attach the material to our geometry
 	const outputMaterial = new THREE.ShaderMaterial({
@@ -6086,8 +9072,13 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	outputMaterial.transparent = true;
 	baseSunMaterial.uniforms.worldMatrix.value = this.sunMesh.matrixWorld;
 
-	const self = this;
+	let assetsNotReadyYet = true;
   this.tick = function(t){
+		if(assetsNotReadyYet){
+			this.firstTick(t);
+			return true;
+		}
+
 		//Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
 		const initialRenderTarget = renderer.getRenderTarget();
 		const currentXrEnabled = renderer.xr.enabled;
@@ -6096,25 +9087,35 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 		renderer.shadowMap.autoUpdate = false;
 
     //Update the position of our mesh
-    const cameraPosition = skyDirector.camera.position;
+    const cameraPosition = skyDirector.globalCameraPosition;
     const quadOffset = skyDirector.skyState.sun.quadOffset;
+		baseSunMaterial.uniforms.cameraPosition.value.copy(cameraPosition);
     self.sunMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.sunMesh.lookAt(cameraPosition.x, cameraPosition.y, cameraPosition.z); //Use the basic look-at function to always have this plane face the camera.
     self.sunMesh.updateMatrix();
     self.sunMesh.updateMatrixWorld();
 
     //Update our shader material
+		const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+		baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
     baseSunMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
     baseSunMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
     baseSunMaterial.uniforms.uTime.value = t;
-    baseSunMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
-    baseSunMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    baseSunMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    baseSunMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     baseSunMaterial.uniforms.localSiderealTime.value = skyState.LSRT;
     baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;
 
+		const lightingManager = skyDirector.lightingManager;
+		if(assetManager.data.skyCloud.cloudsEnabled){
+      baseSunMaterial.uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
+      if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
+        baseSunMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
+      }
+    }
+
     //Run our float shaders shaders
 		composer.render();
-    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 		outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 	  outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
 	  outputMaterial.uniforms.uTime.value = t;
@@ -6130,20 +9131,43 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //Connect up our reference values
     baseSunMaterial.uniforms.sunPosition.value = skyState.sun.position;
     baseSunMaterial.uniforms.moonPosition.value = skyState.moon.position;
-    baseSunMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
     baseSunMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
     //Connect up our images if they don't exist yet
-    if(assetManager.hasLoadedImages){
-      //Image of the solar corona for our solar ecclipse
-      baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
-    }
+		if(assetManager){
+			//Update sky parameters
+			const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+	    baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+			baseSunMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
+			baseSunMaterial.uniforms.cameraHeight.value = atmosphericParameters.cameraHeight;
 
-    //Proceed with the first tick
-    self.tick(t);
+	    if(assetManager.hasLoadedImages){
+	      //Image of the solar corona for our solar ecclipse
+	      baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
+	    }
 
-    //Add this object to the scene
-    skyDirector.scene.add(self.sunMesh);
+			if(assetManager.data.skyCloud.cloudsEnabled){
+				const cloudParams = assetManager.data.skyCloud;
+				baseSunMaterial.uniforms.cloudCoverage.value = cloudParams.coverage;
+        baseSunMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
+        baseSunMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;
+        baseSunMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
+        baseSunMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
+				baseSunMaterial.uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
+        baseSunMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercentTags;
+        baseSunMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
+			}
+			assetsNotReadyYet = false;
+
+			//Proceed with the first tick
+      self.tick(t);
+
+			//Add this object to the scene
+	    skyDirector.scene.add(self.sunMesh);
+
+			//Delete this method when done
+			delete this.firstTick;
+		}
   }
 }
 
@@ -6179,26 +9203,80 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
   composer.renderToScreen = false;
 
+  const self = this;
+	StarrySky.Methods.getMoonRadius = function(){
+		return self.moonAngularRadiusInRadians;
+	};
+
+	StarrySky.Methods.getMoonPosition = function(){
+		return skyState.moon.position;
+	};
+
+  const auroraParameters = assetManager.data.skyAurora;
+  const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const moonMaterial = new THREE.ShaderMaterial({
-    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, true))),
+    uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
+      false,
+      true,
+      false,
+      assetManager.data.skyAurora.auroraEnabled,
+      assetManager.data.skyCloud.cloudsEnabled
+    ))),
     vertexShader: StarrySky.Materials.Moon.baseMoonPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphericParameters.mieDirectionalG,
       atmosphereLUTLibrary.scatteringTextureWidth,
       atmosphereLUTLibrary.scatteringTextureHeight,
       atmosphereLUTLibrary.scatteringTexturePackingWidth,
       atmosphereLUTLibrary.scatteringTexturePackingHeight,
       atmosphereLUTLibrary.atmosphereFunctionsString,
-      false,
+      false, //Sun Code
       StarrySky.Materials.Moon.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians),
+      false, //Metering Code
+      assetManager.data.skyAurora.auroraEnabled, //aurora enabled
+      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
     )
   });
+  if(assetManager.data.skyCloud.cloudsEnabled){
+    moonMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
+  }
+  if(assetManager.data.skyAurora.auroraEnabled){
+    moonMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
+      auroraParameters.nitrogenColor.red / 255.0,
+      auroraParameters.nitrogenColor.green / 255.0,
+      auroraParameters.nitrogenColor.blue / 255.0,
+    );
+    moonMaterial.uniforms.nitrogenCutOff.value = auroraParameters.nitrogenCutOff;
+    moonMaterial.uniforms.nitrogenIntensity.value = auroraParameters.nitrogenIntensity;
+
+    moonMaterial.uniforms.molecularOxygenColor.value = new THREE.Vector3(
+      auroraParameters.molecularOxygenColor.red / 255.0,
+      auroraParameters.molecularOxygenColor.green / 255.0,
+      auroraParameters.molecularOxygenColor.blue / 255.0,
+    );
+    moonMaterial.uniforms.molecularOxygenCutOff.value = auroraParameters.molecularOxygenCutOff;
+    moonMaterial.uniforms.molecularOxygenIntensity.value = auroraParameters.molecularOxygenIntensity;
+
+    moonMaterial.uniforms.atomicOxygenColor.value = new THREE.Vector3(
+      auroraParameters.atomicOxygenColor.red / 255.0,
+      auroraParameters.atomicOxygenColor.green / 255.0,
+      auroraParameters.atomicOxygenColor.blue / 255.0,
+    );
+    moonMaterial.uniforms.atomicOxygenCutOff.value = auroraParameters.atomicOxygenCutOff;
+    moonMaterial.uniforms.atomicOxygenIntensity.value = auroraParameters.atomicOxygenIntensity;
+
+    //Number of raymarching steps
+    moonMaterial.uniforms.numberOfAuroraRaymarchingSteps.value = auroraParameters.raymarchSteps;
+    moonMaterial.uniforms.auroraCutoffDistance.value = auroraParameters.cutoffDistance;
+  }
+
   //Attach the material to our geometry
   moonMaterial.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
   moonMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   moonMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   moonMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
   moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
+  moonMaterial.uniforms.cameraPosition.value = new THREE.Vector3();
   moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
   const renderTargetGeometry = new THREE.PlaneBufferGeometry(2, 2);
   THREE.BufferGeometryUtils.computeTangents(renderTargetGeometry);
@@ -6221,11 +9299,15 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
   const renderPass = new THREE.RenderPass(scene, camera);
   composer.addPass(renderPass);
-  this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85);
-  this.bloomPass.threshold = 0.55;
-  this.bloomPass.strength = 0.9;
-  this.bloomPass.radius = 1.4;
-  composer.addPass(this.bloomPass);
+  const moonBloomDataRef = assetManager.data.skyLighting.moonBloom;
+  if(moonBloomDataRef.bloomEnabled){
+    this.bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE), 1.5, 0.4, 0.85);
+    this.bloomPass.exposure = moonBloomDataRef.exposure;
+    this.bloomPass.threshold = moonBloomDataRef.threshold;
+    this.bloomPass.strength = moonBloomDataRef.strength;
+    this.bloomPass.radius = moonBloomDataRef.radius;
+    composer.addPass(this.bloomPass);
+  }
 
   //Attach the material to our geometry
 	const outputMaterial = new THREE.ShaderMaterial({
@@ -6243,8 +9325,13 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 	outputMaterial.transparent = true;
 	moonMaterial.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
 
-  const self = this;
+  let assetsNotReadyYet = true;
   this.tick = function(t){
+    if(assetsNotReadyYet){
+      this.firstTick(t);
+      return true;
+    }
+
     //Using guidance from https://github.com/mrdoob/three.js/issues/18746#issuecomment-591441598
     const initialRenderTarget = renderer.getRenderTarget();
     const currentXrEnabled = renderer.xr.enabled;
@@ -6261,33 +9348,45 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     }
 
     //Update the position of our mesh
-    const cameraPosition = skyDirector.camera.position;
+    const cameraPosition = skyDirector.globalCameraPosition;
     const quadOffset = skyState.moon.quadOffset;
+    moonMaterial.uniforms.cameraPosition.value.copy(cameraPosition);
     self.moonMesh.position.set(quadOffset.x, quadOffset.y, quadOffset.z).add(cameraPosition);
     self.parallacticAxis.copy(quadOffset).normalize();
     self.moonMesh.lookAt(cameraPosition); //Use the basic look-at function to always have this plane face the camera.
     self.moonMesh.rotateOnWorldAxis(self.parallacticAxis, -skyState.moon.parallacticAngle); //And rotate the mesh by the parallactic angle.
     self.moonMesh.updateMatrix();
-    self.moonMesh.updateMatrixWorld();
+    self.moonMesh.updateMatrixWorld(1);
 
     //Update our shader material
     moonMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
     moonMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
     moonMaterial.uniforms.uTime.value = t;
     moonMaterial.uniforms.localSiderealTime.value = skyDirector.skyState.LSRT;
-    moonMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity;
-    moonMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity;
+    moonMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    moonMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     moonMaterial.uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     moonMaterial.uniforms.moonExposure.value = skyDirector.exposureVariables.moonExposure;
     moonMaterial.uniforms.distanceToEarthsShadowSquared.value = skyState.moon.distanceToEarthsShadowSquared;
     moonMaterial.uniforms.oneOverNormalizedLunarDiameter.value = skyState.moon.oneOverNormalizedLunarDiameter;
+    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+    moonMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
+
+    const lightingManager = skyDirector.lightingManager;
+    if(assetManager.data.skyCloud.cloudsEnabled){
+      moonMaterial.uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
+      if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
+        moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
+      }
+    }
 
     //Update our bloom threshold so we don't bloom the moon during the day
-    this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
+    if(moonBloomDataRef.bloomEnabled){
+      this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
+    }
 
     //Run our float shaders shaders
     composer.render();
-    const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
     outputMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
     outputMaterial.uniforms.outputImage.value = composer.readBuffer.texture;
     outputMaterial.uniforms.uTime.value = t;
@@ -6332,13 +9431,37 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       moonMaterial.uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
       moonMaterial.uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
       moonMaterial.uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
+
+      //Update sky parameters
+      moonMaterial.uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
+
+      if(assetManager.data.skyAurora.auroraEnabled){
+        moonMaterial.uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
+      }
+
+      if(assetManager.data.skyCloud.cloudsEnabled){
+        const cloudParams = assetManager.data.skyCloud;
+
+        moonMaterial.uniforms.cloudCoverage.value = cloudParams.coverage;
+        moonMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
+        moonMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;
+        moonMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
+        moonMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
+        moonMaterial.uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
+        moonMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercentTags;
+        moonMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
+      }
+      assetsNotReadyYet = false;
+
+      //Proceed with the first tick
+      self.tick(t);
+
+      //Add this object to the scene
+      skyDirector.scene.add(self.moonMesh);
+
+      //Delete this method when done
+			delete this.firstTick;
     }
-
-    //Proceed with the first tick
-    self.tick(t);
-
-    //Add this object to the scene
-    skyDirector.scene.add(self.moonMesh);
   }
 }
 
@@ -6351,30 +9474,69 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.skyDirector = skyDirector;
   this.meteringSurveyTextureSize = 64;
 
+  const assetManager = skyDirector.assetManager;
+  const auroraParameters = assetManager.data.skyAurora;
+  const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   this.meteringSurveyRenderer = new THREE.StarrySkyComputationRenderer(this.meteringSurveyTextureSize, this.meteringSurveyTextureSize, this.renderer);
   this.meteringSurveyTexture = this.meteringSurveyRenderer.createTexture();
   this.meteringSurveyVar = this.meteringSurveyRenderer.addVariable(`meteringSurveyVar`,
     StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
-      skyDirector.assetManager.data.skyAtmosphericParameters.mieDirectionalG,
+      atmosphericParameters.mieDirectionalG,
       skyDirector.atmosphereLUTLibrary.scatteringTextureWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTextureHeight,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingWidth,
       skyDirector.atmosphereLUTLibrary.scatteringTexturePackingHeight,
       skyDirector.atmosphereLUTLibrary.atmosphereFunctionsString,
-      false,
-      false,
-      true
+      false, //sun code
+      false, //moon code
+      true, //metering code
+      assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
+      false
     ),
     this.meteringSurveyTexture
   );
   this.meteringSurveyRenderer.setVariableDependencies(this.meteringSurveyVar, []);
   this.meteringSurveyVar.material.vertexShader = StarrySky.Materials.Autoexposure.meteringSurvey.vertexShader;
-  this.meteringSurveyVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(false, false, true)));
+  this.meteringSurveyVar.material.uniforms = JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
+    false,
+    false,
+    true,
+    assetManager.data.skyAurora.auroraEnabled,
+    false)));
   this.meteringSurveyVar.material.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.meteringSurveyVar.material.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.meteringSurveyVar.material.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
   this.meteringSurveyVar.material.uniforms.latitude.value = skyDirector.assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
   this.meteringSurveyVar.material.uniforms.moonLightColor.value = skyDirector.skyState.moon.lightingModifier;
+  this.meteringSurveyVar.material.uniforms.cameraHeight.value = skyDirector.assetManager.data.skyAtmosphericParameters.cameraHeight;
+  if(assetManager.data.skyAurora.auroraEnabled){
+    this.meteringSurveyVar.material.uniforms.nitrogenColor.value = new THREE.Vector3(
+      auroraParameters.nitrogenColor.red / 255.0,
+      auroraParameters.nitrogenColor.green / 255.0,
+      auroraParameters.nitrogenColor.blue / 255.0,
+    );
+    this.meteringSurveyVar.material.uniforms.nitrogenCutOff.value = auroraParameters.nitrogenCutOff;
+    this.meteringSurveyVar.material.uniforms.nitrogenIntensity.value = auroraParameters.nitrogenIntensity;
+
+    this.meteringSurveyVar.material.uniforms.molecularOxygenColor.value = new THREE.Vector3(
+      auroraParameters.molecularOxygenColor.red / 255.0,
+      auroraParameters.molecularOxygenColor.green / 255.0,
+      auroraParameters.molecularOxygenColor.blue / 255.0,
+    );
+    this.meteringSurveyVar.material.uniforms.molecularOxygenCutOff.value = auroraParameters.molecularOxygenCutOff;
+    this.meteringSurveyVar.material.uniforms.molecularOxygenIntensity.value = auroraParameters.molecularOxygenIntensity;
+
+    this.meteringSurveyVar.material.uniforms.atomicOxygenColor.value = new THREE.Vector3(
+      auroraParameters.atomicOxygenColor.red / 255.0,
+      auroraParameters.atomicOxygenColor.green / 255.0,
+      auroraParameters.atomicOxygenColor.blue / 255.0,
+    );
+    this.meteringSurveyVar.material.uniforms.atomicOxygenCutOff.value = auroraParameters.atomicOxygenCutOff;
+    this.meteringSurveyVar.material.uniforms.atomicOxygenIntensity.value = auroraParameters.atomicOxygenIntensity;
+
+    //Number of raymarching steps
+    this.meteringSurveyVar.material.uniforms.numberOfAuroraRaymarchingSteps.value = auroraParameters.raymarchSteps;
+  }
 
   this.meteringSurveyVar.format = THREE.RGBAFormat;
   this.meteringSurveyVar.minFilter = THREE.NearestFilter;
@@ -6391,37 +9553,25 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
   this.meteringSurveyRenderer.compute();
   let test = this.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar).texture;
 
-  //Let's test this out by adding it to a plane in the scene
-  //let plane = new THREE.PlaneBufferGeometry(2.0, 2.0, 1);
-
-  // //Create our material late
-  //This is useful for debugging metering and other textures
-  // let material = new THREE.MeshBasicMaterial({
-  //   side: THREE.DoubleSide,
-  //   blending: THREE.NormalBlending,
-  //   transparent: true,
-  //   map: test,
-  // });
-  //
-  // //Attach the material to our geometry
-  // let testMesh = new THREE.Mesh(plane, material);
-  // testMesh.position.set(0.0, 2.0, -2.0);
-
-  //Inject this mesh into our scene
-  //this.skyDirector.scene.add(testMesh);
-
   let self = this;
   this.render = function(sunPosition, moonPosition, sunFade, moonFade){
     //Update the uniforms so that we can see where we are on this sky.
-    self.meteringSurveyVar.material.uniforms.sunPosition.value = sunPosition;
-    self.meteringSurveyVar.material.uniforms.moonPosition.value = moonPosition;
-    self.meteringSurveyVar.material.uniforms.sunHorizonFade.value = sunFade;
-    self.meteringSurveyVar.material.uniforms.moonHorizonFade.value = Math.max(1.0 - sunFade, 0.0);
-    self.meteringSurveyVar.material.uniforms.scatteringSunIntensity.value = self.skyDirector.skyState.sun.intensity;
-    self.meteringSurveyVar.material.uniforms.sunLuminosity.value = self.skyDirector.skyState.sun.luminosity;
-    self.meteringSurveyVar.material.uniforms.scatteringMoonIntensity.value = self.skyDirector.skyState.moon.intensity;
-    self.meteringSurveyVar.material.uniforms.moonLuminosity.value = self.skyDirector.skyState.moon.luminosity;
-
+    const uniforms = self.meteringSurveyVar.material.uniforms;
+    const skyState = skyDirector.skyState;
+    uniforms.sunPosition.value = sunPosition;
+    uniforms.moonPosition.value = moonPosition;
+    uniforms.sunHorizonFade.value = sunFade;
+    uniforms.moonHorizonFade.value = Math.max(1.0 - sunFade, 0.0);
+    uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    uniforms.sunLuminosity.value = skyState.sun.luminosity;
+    uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
+    uniforms.moonLuminosity.value = skyState.moon.luminosity;
+    uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
+    if(assetManager.data.skyAurora.auroraEnabled){
+      uniforms.auroraSampler.value =  skyDirector?.assetManager.images.auroraImages[0];
+    }
+    const blueNoiseTextureRef = skyDirector.assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
+    uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
     self.meteringSurveyRenderer.compute();
     const skyRenderTarget = self.meteringSurveyRenderer.getCurrentRenderTarget(this.meteringSurveyVar);
     return skyRenderTarget;
@@ -6431,11 +9581,12 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
 //The lighting for our scene contains 3 hemispherical lights and 1 directional light
 //with shadows enabled. The shadow enabled directional light is shared between the sun
 //and the moon in order to reduce the rendering load.
-StarrySky.LightingManager = function(parentComponent){
+StarrySky.LightingManager = function(skyDirector){
   const RADIUS_OF_SKY = 5000.0;
-  this.skyDirector = parentComponent;
-  const lightingData = this.skyDirector.assetManager.data.skyLighting;
-  const lunarEclipseLightingModifier = this.skyDirector.skyState.moon.lightingModifier;
+  const lightingData = skyDirector.assetManager.data.skyLighting;
+  const skyState = skyDirector.skyState;
+  const sunRenderer = skyDirector.renderers.sunRenderer;
+  const lunarEclipseLightingModifier = skyState.moon.lightingModifier;
   this.sourceLight = new THREE.DirectionalLight(0xffffff, 4.0);
   const shadow = this.sourceLight.shadow;
   this.sourceLight.castShadow = true;
@@ -6448,47 +9599,51 @@ StarrySky.LightingManager = function(parentComponent){
   shadow.camera.right = directLightingCameraSize;
   shadow.camera.bottom = -directLightingCameraSize;
   shadow.camera.top = directLightingCameraSize;
-  this.sourceLight.target = this.skyDirector.camera;
+  this.sourceLight.target = skyDirector.camera;
   const  totalDistance = lightingData.shadowDrawDistance + lightingData.shadowDrawBehindDistance;
   this.targetScalar = 0.5 * totalDistance - lightingData.shadowDrawBehindDistance;
   this.shadowTarget = new THREE.Vector3();
   this.shadowTargetOffset = new THREE.Vector3();
   this.fogColorVector = new THREE.Color();
-  this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
+  this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
   this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
-  this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 0.0);
+  this.zAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
   this.xAxisHemisphericalLight.position.set(1,0,0);
   this.yAxisHemisphericalLight.position.set(0,1,0);
   this.zAxisHemisphericalLight.position.set(0,0,1);
-
-  parentComponent.scene.fog = this.fog;
-  const maxFogDensity = lightingData.atmosphericPerspectiveDensity;
-  if(lightingData.atmosphericPerspectiveEnabled){
+  const isNormalLighting = lightingData.atmosphericPerspectiveType === 'normal';
+  let maxFogDensity;
+  if(isNormalLighting){
+    maxFogDensity = lightingData.atmosphericPerspectiveDensity;
     this.fog = new THREE.FogExp2(0xFFFFFF, maxFogDensity);
-    parentComponent.scene.fog = this.fog;
+    skyDirector.scene.fog = this.fog;
   }
 
-  const scene = parentComponent.scene;
+  const scene = skyDirector.scene;
   scene.add(this.sourceLight);
   scene.add(this.xAxisHemisphericalLight);
   scene.add(this.yAxisHemisphericalLight);
   scene.add(this.zAxisHemisphericalLight);
-  this.cameraRef = parentComponent.camera;
+  this.cameraRef = skyDirector.camera;
   const self = this;
+  StarrySky.Methods.getDominantLightColor = function(){
+		return self.sourceLight.color;
+	};
+	StarrySky.Methods.getDominantLightIntensity = function(){
+		return self.sourceLight.intensity;
+	}
+	StarrySky.Methods.getAmbientLights = function(){
+		return {
+      x: self.xAxisHemisphericalLight,
+      y: self.yAxisHemisphericalLight,
+      z: self.zAxisHemisphericalLight
+    };
+	}
   this.tick = function(lightingState){
-    //
-    //TODO: We should move our fog color to a shader hack approach,
-    //as described in https://snayss.medium.com/three-js-fog-hacks-fc0b42f63386
-    //along with adding a volumetric fog system.
-    //
-    //The colors for this fog could then driven by a shader as described in
-    //http://publications.lib.chalmers.se/records/fulltext/203057/203057.pdf
-    //
-
     //I also need to hook in the code from our tags for fog density under
     //sky-atmospheric-parameters and hook that value into this upon starting.
     //And drive the shadow type based on the shadow provided in sky-lighting.
-    if(lightingData.atmosphericPerspectiveEnabled){
+    if(isNormalLighting){
       self.fogColorVector.fromArray(lightingState, 21);
       const maxColor = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
 
@@ -6498,6 +9653,9 @@ StarrySky.LightingManager = function(parentComponent){
       self.fog.density = Math.pow(maxColor, 0.3) * maxFogDensity;
       self.fog.color.copy(self.fogColorVector);
     }
+
+    const sunRadius = Math.sin(sunRenderer.sunAngularRadiusInRadians * skyState.sun.scale);
+    const dominantLightIsSun = skyState.sun.position.y >= -sunRadius;
 
     //We update our directional light so that it's always targetting the camera.
     //We originally were going to target a point in front of the camera
@@ -6513,8 +9671,7 @@ StarrySky.LightingManager = function(parentComponent){
     self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
     self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
     self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
-    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) / 0.1;
-    self.sourceLight.intensity = lightingState[24] * 0.5;
+    self.sourceLight.intensity = lightingState[24] * 0.5 * (dominantLightIsSun ? lightingData.sunIntensity : lightingData.moonIntensity);
 
     //The hemispherical light colors replace ambient lighting and are calculated
     //in a web worker along with our sky metering. They are the light colors in the
@@ -6525,7 +9682,8 @@ StarrySky.LightingManager = function(parentComponent){
     self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
     self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
     self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    const indirectLightIntensity = 0.01 + intensityModifier * 0.15;
+    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) * 10.0;
+    const indirectLightIntensity = Math.min(Math.max(lightingData.ambientIntensity * intensityModifier * 0.15, lightingData.minimumAmbientLighting), lightingData.maximumAmbientLighting);
     self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.zAxisHemisphericalLight.intensity = indirectLightIntensity;
@@ -6539,6 +9697,7 @@ StarrySky.AssetManager = function(skyDirector){
     moonImages: {},
     starImages: {},
     blueNoiseImages: {},
+    auroraImages: {},
     solarEclipseImage: null
   };
   const starrySkyComponent = skyDirector.parentComponent;
@@ -6547,20 +9706,24 @@ StarrySky.AssetManager = function(skyDirector){
   //Capture all the information from our child elements for our usage here.
   //------------------------
   //Get all of our tags
-  var tagLists = [];
+  let tagLists = [];
   const skyLocationTags = starrySkyComponent.el.getElementsByTagName('sky-location');
   tagLists.push(skyLocationTags);
   const skyTimeTags = starrySkyComponent.el.getElementsByTagName('sky-time');
   tagLists.push(skyTimeTags);
   const skyAtmosphericParametersTags = starrySkyComponent.el.getElementsByTagName('sky-atmospheric-parameters');
   tagLists.push(skyAtmosphericParametersTags);
+  const skyLightingTags = starrySkyComponent.el.getElementsByTagName('sky-lighting');
+  tagLists.push(skyLightingTags);
+  const skyAuroraTags = starrySkyComponent.el.getElementsByTagName('sky-aurora');
+  tagLists.push(skyAuroraTags);
+  const skyCloudTags = starrySkyComponent.el.getElementsByTagName('sky-clouds');
+  tagLists.push(skyCloudTags);
   tagLists.forEach(function(tags){
     if(tags.length > 1){
       console.error(`The <a-starry-sky> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
     }
   });
-  const skyLightingTags = starrySkyComponent.el.getElementsByTagName('sky-lighting');
-  tagLists.push(skyLightingTags);
   //These are excluded from our search above :D
   const skyAssetsTags = starrySkyComponent.el.getElementsByTagName('sky-assets-dir');
 
@@ -6596,11 +9759,11 @@ StarrySky.AssetManager = function(skyDirector){
 
     //Load all of our moon textures
     const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    const moonEncodings = [THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding, THREE.LinearEncoding];
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
     const oneSolarEclipseImage = 1;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage;
+    const numberOfAuroraTextures = 1;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + numberOfAuroraTextures;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -6625,7 +9788,7 @@ StarrySky.AssetManager = function(skyDirector){
         texture.anisotropy = 4;
         texture.samples = 8;
         texture.generateMipmaps = true;
-        texture.encoding = moonEncodings[i];
+        texture.encoding = THREE.LinearEncoding;
         self.images.moonImages[moonTextures[i]] = texture;
 
         //If the renderer already exists, go in and update the uniform
@@ -6685,7 +9848,6 @@ StarrySky.AssetManager = function(skyDirector){
       loader.load(StarrySky.assetPaths.starHashCubemap, function(cubemap){resolve(cubemap);});
     });
     texturePromise2.then(function(cubemap){
-
       //Make sure that our cubemap is using the appropriate settings
       cubemap.format = THREE.RGBAFormat;
       cubemap.magFilter = THREE.NearestFilter;
@@ -6852,7 +10014,7 @@ StarrySky.AssetManager = function(skyDirector){
         numberOfBrightStarChannelsLoaded += 1;
         if(numberOfBrightStarChannelsLoaded === 4){
           //Create our Star Library LUTs if it does not exists
-          let skyDirector = self.skyDirector;
+          const skyDirector = self.skyDirector;
           if(skyDirector.stellarLUTLibrary === undefined){
             skyDirector.stellarLUTLibrary = new StarrySky.LUTlibraries.StellarLUTLibrary(skyDirector.assetManager.data, skyDirector.renderer, skyDirector.scene);
           }
@@ -6914,6 +10076,39 @@ StarrySky.AssetManager = function(skyDirector){
       });
     })(0);
 
+    //Load aurora textures
+    //Recursive based functional for loop, with asynchronous execution because
+    //Each iteration is not dependent upon the last, but it's just a set of similiar code
+    //that can be run in parallel.
+    (async function createNewAuroraTexturePromise(i){
+      let next = i + 1;
+      if(next < numberOfAuroraTextures){
+        createNewAuroraTexturePromise(next);
+      }
+
+      let texturePromise = new Promise(function(resolve, reject){
+        textureLoader.load(StarrySky.assetPaths['auroraMaps'][i], function(texture){resolve(texture);});
+      });
+      texturePromise.then(function(texture){
+        //Fill in the details of our texture
+        texture.wrapS = THREE.RepeatWrapping;
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.format = THREE.RGBAFormat;
+        texture.magFilter = THREE.LinearFilter;
+        texture.minFilter = THREE.LinearFilter;
+        texture.encoding = THREE.LinearEncoding;
+        texture.type = THREE.FloatType;
+        self.images.auroraImages[i] = texture;
+
+        self.numberOfTexturesLoaded += 1;
+        if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+          self.hasLoadedImages = true;
+        }
+      }, function(err){
+        console.error(err);
+      });
+    })(0);
+
     let solarEclipseTexturePromise = new Promise(function(resolve, reject){
       textureLoader.load(StarrySky.assetPaths.solarEclipseMap, function(texture){resolve(texture);});
     });
@@ -6958,6 +10153,8 @@ StarrySky.AssetManager = function(skyDirector){
       self.data.skyTimeData = self.hasSkyTimeTag ? self.skyTimeTag.data : defaultValues.time;
       self.data.skyAtmosphericParameters = self.hasSkyAtmosphericParametersTag ? self.skyAtmosphericParametersTag.data : defaultValues.skyAtmosphericParameters;
       self.data.skyLighting = self.hasSkyLightingTag ? self.skyLightingTag.data : defaultValues.lighting;
+      self.data.skyAurora = self.hasAuroraTag ? self.skyAuroraTag.data : defaultValues.skyAurora;
+      self.data.skyCloud = self.hasCloudTag ? self.skyCloudTag.data : defaultValues.skyCloud;
       self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
       self.loadImageAssets(self.skyDirector.renderer);
 
@@ -7019,6 +10216,18 @@ StarrySky.AssetManager = function(skyDirector){
     this.skyLightingTag = skyLightingTags[0];
     this.hasSkyLightingTag = true;
     activeTags.push(this.skyLightingTag);
+  }
+  if(skyAuroraTags.length === 1){
+    this.skyDataSetsLength += 1;
+    this.skyAuroraTag = skyAuroraTags[0];
+    this.hasAuroraTag = true;
+    activeTags.push(this.skyAuroraTag);
+  }
+  if(skyCloudTags.length === 1){
+    this.skyDataSetsLength += 1;
+    this.skyCloudTag = skyCloudTags[0];
+    this.hasCloudTag = true;
+    activeTags.push(this.skyCloudTag);
   }
   for(let i = 0; i < activeTags.length; ++i){
     checkIfAllHTMLDataLoaded(activeTags[i]);
@@ -7134,7 +10343,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.distanceForSolarEclipse;
 
   //Set up our web assembly hooks
-  let self = this;
+  const self = this;
 
   //Called from the asset manager when all of our assets have finished loading
   //Also colled when our local web assembly has finished loading as both are pre-requisites
@@ -7162,6 +10371,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
+      if(self.assetManager.data.skyCloud.cloudsEnabled){
+        self.cloudLUTLibrary = new StarrySky.LUTlibraries.CloudLUTLibrary(self.assetManager.data, self.renderer, self.scene);
+      }
     }
   }
 
@@ -7172,7 +10384,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       const DEG_2_RAD = Math.PI / 180.0;
       self.camera = self.parentComponent.el.sceneEl.camera;
       self.previousCameraHeight = self.camera.position.y;
-      self.pixelsPerRadian = screen.width / (this.camera.fov * DEG_2_RAD);
+      self.pixelsPerRadian = screen.width / (self.camera.fov * DEG_2_RAD);
 
       //Determine the best texture size for our renderers
       const sunAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD;
@@ -7198,6 +10410,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
+      self.renderers.fogRenderer = new StarrySky.Renderers.FogRenderer(self);
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
       self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
@@ -7210,7 +10423,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
   this.updateFinalSkyState = function(lsrt_0, lsrt_f){
     //Update the Module Heap and final LSRT
-    let intitialLSRT = self.finalLSRT;
+    const intitialLSRT = self.finalLSRT;
+
     //let strtingPtr2 = self.astroPositions_f_ptr;
     let insertIndex = self.astroPositions_0_ptr / BYTES_PER_32_BIT_FLOAT;
     let copyFromIndex = self.astroPositions_f_ptr / BYTES_PER_32_BIT_FLOAT;
@@ -7228,7 +10442,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
     //returned from our worker.
     Module._updateFinalAstronomicalValues(self.astroPositions_f_ptr, self.astronomicalLinearValues_f_ptr);
     self.finalAstronomicalT = self.interpolationT + TWENTY_MINUTES;
-    Module._updateAstronomicalTimeData(self.interpolationT, self.finalAstronomicalT, lsrt_0, self.finalLSRT);
+    Module._updateAstronomicalTimeData(self.interpolationT, self.finalAstronomicalT, intitialLSRT, self.finalLSRT);
 
     //Return the final state back to the worker thread so it can determine the state five minutes from now
     self.webAssemblyWorker.postMessage({
@@ -7239,6 +10453,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
   this.i = 0;
 
+  this.globalCameraPosition = new THREE.Vector3();
   this.tick = function(time, timeDelta){
     if(parentComponent.initialized){
       const timeDeltaInSeconds = timeDelta * 0.001;
@@ -7248,6 +10463,14 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
       //Update our sky state
       self.skyState.LSRT = Module._tick_astronomicalInterpolations(self.interpolationT);
+
+      //Get our camera position
+      if(self.camera !== self.parentComponent.el.sceneEl.camera){
+        //Attach the scene camera if it does not exist yet
+        self.camera = self.parentComponent.el.sceneEl.camera;
+      }
+      const sceneCamera = self.camera;
+      sceneCamera.getWorldPosition(self.globalCameraPosition);
 
       //Update our astronomical positions
       self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));
@@ -7339,14 +10562,15 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
         //Set our previous lookup target
         const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
-        this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
+        self.previousCameraLookAtVector.x = cameraLookAtTarget.x;
+        self.previousCameraLookAtVector.y = cameraLookAtTarget.y;
+        self.previousCameraLookAtVector.z = cameraLookAtTarget.z;
         this.previousCameraHeight = self.camera.position.y;
       }
     }
   }
 
   //Prepare our WASM Modules
-  console.log(webWorkerURI);
   this.webAssemblyWorker = new Worker(webWorkerURI);
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
@@ -7490,7 +10714,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.initializeAutoExposure = async function(){
       const meteringTextureSize = self.renderers.meteringSurveyRenderer.meteringSurveyTextureSize;
       const numberOfPixelsInMeteringBuffer = meteringTextureSize * meteringTextureSize;
-      const numberOfColorChannelsInMeteringPixel = 4;
       const groundColorRef = self.assetManager.data.skyLighting.groundColor;
       const groundColorArray = new Float32Array(3);
       groundColorArray[0] = groundColorRef.red / 255.0;
@@ -7511,7 +10734,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
       self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
       let skyRenderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
-      transferableSkyIntialLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
+      transferableSkyIntialLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * 4);
       transferableIntialSkyLightingFloat32Array = new Float32Array(transferableSkyIntialLightingBuffer);
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, transferableIntialSkyLightingFloat32Array);
 
@@ -7536,14 +10759,16 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.exposureVariables.sunHorizonFade = self.rotatedAstroDependentValues[0];
       self.exposureVariables.moonHorizonFade = self.rotatedAstroDependentValues[1];
       skyRenderTarget = self.renderers.meteringSurveyRenderer.render(self.exposureVariables.sunPosition, self.exposureVariables.moonPosition, self.exposureVariables.sunHorizonFade, self.exposureVariables.moonHorizonFade);
-      self.transferableSkyFinalLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * numberOfColorChannelsInMeteringPixel);
+      self.transferableSkyFinalLightingBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * numberOfPixelsInMeteringBuffer * 4);
       self.transferableSkyFinalLightingFloat32Array = new Float32Array(transferableSkyIntialLightingBuffer);
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transferableSkyFinalLightingFloat32Array);
 
       //Get the look at target for our camera to see where we are looking
       const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
-      this.previousCameraHeight = self.camera.position.y;
-      this.previousCameraLookAtVector.set(cameraLookAtTarget.xyz);
+      self.previousCameraHeight = self.camera.position.y;
+      self.previousCameraLookAtVector.x = cameraLookAtTarget.x;
+      self.previousCameraLookAtVector.y = cameraLookAtTarget.y;
+      self.previousCameraLookAtVector.z = cameraLookAtTarget.z;
 
       //Determine if our sun is the dominant light source when we end this interpolation
       self.dominantLightIsSunf = true;
@@ -7556,9 +10781,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Pass this information to our web worker to get our exposure value
       self.webAssemblyWorker.postMessage({
         eventType: self.EVENT_INITIALIZE_AUTOEXPOSURE,
-        heightOfCamera: this.previousCameraHeight,
-        hmdViewX: this.previousCameraLookAtVector.x,
-        hmdViewZ: this.previousCameraLookAtVector.z,
+        heightOfCamera: self.previousCameraHeight,
+        hmdViewX: self.previousCameraLookAtVector.x,
+        hmdViewZ: self.previousCameraLookAtVector.z,
         sunYPosition0: sunYPos0,
         sunYPositionf: sunYPosf,
         sunRadius0: sunRadius0,
@@ -7576,7 +10801,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
         meteringSurveyFloatArray0: transferableIntialSkyLightingFloat32Array,
         meteringSurveyFloatArrayf: self.transferableSkyFinalLightingFloat32Array,
         transmittanceTextureLUT: self.atmosphereLUTLibrary.transferableTransmittanceFloat32Array,
-        groundColor: groundColorArray,
+        groundColor: groundColorArray
       }, [
         transferableSkyIntialLightingBuffer,
         self.transferableSkyFinalLightingBuffer,
@@ -7641,9 +10866,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.tick(time, timeDelta);
 
       //Update all of our renderers
-      self.renderers.atmosphereRenderer.firstTick();
-      self.renderers.sunRenderer.firstTick();
-      self.renderers.moonRenderer.firstTick();
+      self.renderers.atmosphereRenderer.firstTick(time);
+      self.renderers.sunRenderer.firstTick(time);
+      self.renderers.moonRenderer.firstTick(time);
 
       self.setupNextTick();
     }
@@ -7659,6 +10884,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.renderers.atmosphereRenderer.tick(time);
       self.renderers.sunRenderer.tick(time);
       self.renderers.moonRenderer.tick(time);
+      self.renderers.fogRenderer.tick();
     }
   }
 
@@ -7707,6 +10933,7 @@ AFRAME.registerComponent('starryskywrapper', {
   initialized: false,
   init: function(){
     this.skyDirector = new StarrySky.SkyDirector(this, this.el.getAttribute('web-worker-src'));
+    StarrySky.skyDirectorRef = this.skyDirector;
   },
   tick: function(time, timeDelta){
     /*Do Nothing*/

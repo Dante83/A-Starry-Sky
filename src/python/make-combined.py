@@ -5,9 +5,9 @@ import tempfile
 def main():
     #Useful constants, what we probably want to modify in order to write out the right file names
     output_dir = '../../dist/'
-    relative_dir = output_dir + "a-starry-sky.master.js"
+    relative_dir = output_dir + "a-starry-sky-master.js"
     file_dir = os.path.abspath(relative_dir)
-    minified_file_dir = os.path.abspath(output_dir + "a-starry-sky.master.min.js")
+    minified_file_dir = os.path.abspath(output_dir + "a-starry-sky-master.min.js")
 
     #Directy and ordered list of files to load
     js_dir = '../js/'
@@ -32,13 +32,21 @@ def main():
     'materials/moon/base-moon-partial.js',\
     'materials/stars/star-data-map.js',\
     'materials/autoexposure/metering-survey.js',\
+    'materials/clouds/cloud-noise.js',\
+    'materials/fog/fog-pars.js',\
+    'materials/fog/fog.js',\
+    'html_tags/HTMLTagUtils.js',\
     'html_tags/SkyAssetsDir.js',\
     'html_tags/SkyLighting.js',\
     'html_tags/SkyAtmosphericParameters.js',\
     'html_tags/SkyLocation.js',\
     'html_tags/SkyTime.js',\
+    'html_tags/SkyAurora.js',\
+    'html_tags/SkyClouds.js',\
     'lut_libraries/AtmosphericLUTLibrary.js',\
     'lut_libraries/StellarLUTLibrary.js',\
+    'lut_libraries/CloudLUTLibrary.js',\
+    'renderers/FogRenderer.js',\
     'renderers/AtmosphereRenderer.js',\
     'renderers/SunRenderer.js',\
     'renderers/MoonRenderer.js',\

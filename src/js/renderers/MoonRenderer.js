@@ -30,6 +30,15 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
   composer.renderToScreen = false;
 
+  const self = this;
+	StarrySky.Methods.getMoonRadius = function(){
+		return self.moonAngularRadiusInRadians;
+	};
+
+	StarrySky.Methods.getMoonPosition = function(){
+		return skyState.moon.position;
+	};
+
   const auroraParameters = assetManager.data.skyAurora;
   const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const moonMaterial = new THREE.ShaderMaterial({
@@ -143,7 +152,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 	outputMaterial.transparent = true;
 	moonMaterial.uniforms.worldMatrix.value = this.moonMesh.matrixWorld;
 
-  const self = this;
   let assetsNotReadyYet = true;
   this.tick = function(t){
     if(assetsNotReadyYet){

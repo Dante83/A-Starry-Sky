@@ -587,7 +587,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '/* https://www.shadertoy.com/view/XsX3zB',
        '*',
        '* The MIT License',
-       '* Copyright © 2013 Nikita Miropolskiy',
+       '* Copyright (c) 2013 Nikita Miropolskiy',
        '*',
        '* ( license has been changed from CCA-NC-SA 3.0 to MIT',
        '*',

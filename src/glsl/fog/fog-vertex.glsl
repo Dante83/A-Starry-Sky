@@ -59,6 +59,9 @@
         // combined extinction factor
         vFexPixel = sqrt(clamp(exp( -( betaRPixel * sR + vBetaM * sM ) ), 0.0, 1.0));
       }
+      else if(fogNear < 0.0){
+        //$$OCEAN_SHADER_SHADER_VERTEX_RESERVATION$$
+      }
       else{
         vFogDepth = - mvPosition.z;
       }

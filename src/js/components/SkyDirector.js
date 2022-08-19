@@ -131,7 +131,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
-      self.cloudLUTLibrary = new StarrySky.LUTlibraries.CloudLUTLibrary(self.assetManager.data, self.renderer, self.scene);
+      if(self.assetManager.data.skyCloud.cloudsEnabled){
+        self.cloudLUTLibrary = new StarrySky.LUTlibraries.CloudLUTLibrary(self.assetManager.data, self.renderer, self.scene);
+      }
     }
   }
 
@@ -142,7 +144,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       const DEG_2_RAD = Math.PI / 180.0;
       self.camera = self.parentComponent.el.sceneEl.camera;
       self.previousCameraHeight = self.camera.position.y;
-      self.pixelsPerRadian = screen.width / (this.camera.fov * DEG_2_RAD);
+      self.pixelsPerRadian = screen.width / (self.camera.fov * DEG_2_RAD);
 
       //Determine the best texture size for our renderers
       const sunAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD;

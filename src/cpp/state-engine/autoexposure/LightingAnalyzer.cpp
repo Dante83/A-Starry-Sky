@@ -17,7 +17,7 @@ void LightingAnalyzer::updateHemisphericalLightingData(float* skyColorIntensitie
 
   //In the oposite direction, get the lighting value for the ground.
   //I presume that N is <0,1,0> for all points on the ground, so that
-  //we can have a constant N•L for all points. This will allow us to
+  //we can have a constant dot(N,L) for all points. This will allow us to
   //just average the lighting of the ground color with the sky color
   //when we are finished for the horizon values (x,z) as half the horizon
   //will always be this color. The ground color negativeY will always be

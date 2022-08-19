@@ -11,6 +11,7 @@
 * Added the ability to change the bloom parameters for the sun and moon.
 * Added the ability to change more atmospheric parameters, including starting camera height, sun intensity, moon intensity, mie beta, rayleigh beta, ozone beta, atmospheric height, radius of the planet, rayleigh scale height, mie scale height, ozone percent of rayleigh, number of lut raytrace steps and lut rotational ray trace steps.
 * Fixed bug where sky, moon and sun would not track the camera position as it moved.
+* Implemented support for a few basic getters and even a setter for very rudimentary programmatic API for the sky in the event that someone might want access to some of the values associated with the sky while being sure they are getting the objects associated with the sky itself. These include `getSunPosition()`, `getMoonPosition()`, `getSunRadius()`, `getMoonRadius()`, `getDominantLightColor()`, `getDominantLightIntensity()`, `getIsDominantLightSun()`, `getAmbientLights()`, `getActiveCamera()` and `setActiveCamera(camera)`. These functions can be accessed from the global namespace, `StarrySky.Methods`.
 
 **Version 1.0.1**
 * Fixed issues associated with build 137 of THREE which is found in A-Frame Version 1.3.0.

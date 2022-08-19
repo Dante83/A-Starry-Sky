@@ -46,6 +46,19 @@ StarrySky.LightingManager = function(skyDirector){
   scene.add(this.zAxisHemisphericalLight);
   this.cameraRef = skyDirector.camera;
   const self = this;
+  StarrySky.Methods.getDominantLightColor = function(){
+		return self.sourceLight.color;
+	};
+	StarrySky.Methods.getDominantLightIntensity = function(){
+		return self.sourceLight.intensity;
+	}
+	StarrySky.Methods.getAmbientLights = function(){
+		return {
+      x: self.xAxisHemisphericalLight,
+      y: self.yAxisHemisphericalLight,
+      z: self.zAxisHemisphericalLight
+    };
+	}
   this.tick = function(lightingState){
     //I also need to hook in the code from our tags for fog density under
     //sky-atmospheric-parameters and hook that value into this upon starting.

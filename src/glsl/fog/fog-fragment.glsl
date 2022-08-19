@@ -11,6 +11,9 @@
         vec3 groundColor = fogsRGBToLinear(vec4(gl_FragColor.rgb, 1.0)).rgb;
         gl_FragColor.rgb =  fogLinearTosRGB(vec4(MyAESFilmicToneMapping(fogOutData + groundColor * vFexPixel), 1.0)).rgb;
       }
+      else if(fogNear < 0.0){
+        //$$OCEAN_SHADER_SHADER_FRAGMENT_RESERVATION$$
+      }
       else{
         float fogFactor = smoothstep( fogNear, fogFar, vFogDepth );
         gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
