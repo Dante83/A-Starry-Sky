@@ -1,6 +1,6 @@
 # A-Starry-Sky
 
-A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It aims to provide a simple, drop-in component that you can use to create beautiful day-night cycles in your creations. Click [here](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_example) to see this project in action (**Warning: requires a powerful GPU - do not open on a mobile phone**).
+A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It aims to provide a simple, drop-in component that you can use to create beautiful day-night cycles in your creations. Click [here](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_example) to see this project in action (**Warning: requires a powerful GPU - do not open on a mobile phone**).
 
 [Solar Eclipse Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_solar_eclipse_example)
 
