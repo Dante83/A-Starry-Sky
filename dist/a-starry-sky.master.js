@@ -3015,7 +3015,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
 
           'if(h > 0.0){',
 
-            'sunAngle = initialSunAngle - atan(p.x, p.y);',
+            'sunAngle = initialSunAngle - atan((p.x - pA.x), p.y + RADIUS_OF_EARTH);',
 
 
 
@@ -3397,7 +3397,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
 
           'if(h > 0.0){',
 
-            'sunAngle = initialSunAngle - atan(p.x, p.y);',
+            'sunAngle = initialSunAngle - atan((p.x - pA.x), p.y + RADIUS_OF_EARTH);',
 
 
 
@@ -5649,7 +5649,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
 
       '//Apply transmittance to our sun disk direct lighting',
 
-      'vec3 normalizedWorldPosition = normalize(vWorldPosition);',
+      'vec3 normalizedWorldPosition = normalize(vLocalPosition);',
 
       'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
 

@@ -5,9 +5,9 @@ import tempfile
 def main():
     #Useful constants, what we probably want to modify in order to write out the right file names
     output_dir = '../../dist/'
-    relative_dir = output_dir + "a-starry-sky-master.js"
+    relative_dir = output_dir + "a-starry-sky.v1.1.0.js"
     file_dir = os.path.abspath(relative_dir)
-    minified_file_dir = os.path.abspath(output_dir + "a-starry-sky-master.min.js")
+    minified_file_dir = os.path.abspath(output_dir + "a-starry-sky.v1.1.0.min.js")
 
     #Directy and ordered list of files to load
     js_dir = '../js/'

@@ -114,7 +114,7 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
           '//Only inscatter if this point is outside of the earth',
           '//otherwise it contributes nothing to the final result',
           'if(h > 0.0){',
-            'sunAngle = initialSunAngle - atan(p.x, p.y);',
+            'sunAngle = initialSunAngle - atan((p.x - pA.x), p.y + RADIUS_OF_EARTH);',
 
             '//Iterate our progress through the transmittance along P',
             'mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);',

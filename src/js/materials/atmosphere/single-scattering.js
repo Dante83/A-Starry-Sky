@@ -72,7 +72,7 @@ StarrySky.Materials.Atmosphere.singleScatteringMaterial = {
           '//Only inscatter if this point is outside of the earth',
           '//otherwise it contributes nothing to the final result',
           'if(h > 0.0){',
-            'sunAngle = initialSunAngle - atan(p.x, p.y);',
+            'sunAngle = initialSunAngle - atan((p.x - pA.x), p.y + RADIUS_OF_EARTH);',
 
             '//Iterate our progress through the transmittance along P',
             '//We do this for both mie and rayleigh as we are reffering to the transmittance here',

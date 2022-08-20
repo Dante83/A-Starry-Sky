@@ -2,11 +2,25 @@
 
 A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It aims to provide a simple, drop-in component that you can use to create beautiful day-night cycles in your creations. Click [here](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_example) to see this project in action (**Warning: requires a powerful GPU - do not open on a mobile phone**).
 
-[Solar Eclipse Example](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_solar_eclipse_example)
+[Solar Eclipse Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_solar_eclipse_example)
 
-[Lunar Eclipse Example](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_lunar_eclipse_example)
+[Lunar Eclipse Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_lunar_eclipse_example)
 
-[Christmas Star Example](https://code-panda.com/pages/projects/v_1_0_0/a_starry_sky_christmas_star_example)
+[Christmas Star Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_christmas_star_example)
+
+[Mars Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_mars_example)
+
+[Different Mie/Rayleigh Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_wild_sky_example)
+
+**Warning: The examples below are particularly rough on GPUS, especially examples involving clouds. Definitely do not open on a mobile phone**
+
+[Aurora Borealis](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_aurora_example)
+
+[Light Cloud Coverage](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_light_example)
+
+[Medium Cloud Coverage](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_med_example)
+
+[Heavy Cloud Coverage](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_heavy_example)
 
 ## Prerequisites
 
@@ -189,6 +203,7 @@ One of the most likely elements you might want to change is the size of the sun 
 
 You might also wish to change your starting height above the planet. This can easily be set with the `<sky-camera-height>` tag, although the sky will also dynamically adapt to your height as you move the camera higher or lower. This sets the initial height of the scene, in kilometers, with the maximum height being *80km*, and the minimum being *0km*.
 
+[High Altitude Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_higher_altitude_example)
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
@@ -223,6 +238,7 @@ You might also wish to change the composition of your atmosphere. This element g
 
 That's not too exciting though, let's say we wanted something a bit more crazy. Let's follow the work of [Physically Based Rendering of the Martian Atmosphere](https://argos.vu/wp-content/uploads/2021/06/18591764.pdf) and go to Mars! Here they swap the usage of Rayleigh and Mei, so we should probably swap out their characteristic heights as well. Most of the scattering on Mars comes from Mie scattering of large particles, with a very thin atmosphere. Consequently, we can pretty much disable mie (rayleigh) and swap their characteristic heights as well. We should also change the planets radius as well and might wish to swap out the atmospheric height for better values in the ray tracer.
 
+[Mars Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_mars_example)
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
@@ -764,6 +780,7 @@ Once we've gotten to the folder, we have several ways to specify where our image
         <sky-assets-dir dir="moon_images" moon-path></sky-assets-dir>
         <sky-assets-dir dir="star_images" star-path></sky-assets-dir>
         <sky-assets-dir dir="blue_noise_maps" blue-noise-path></sky-assets-dir>
+        <sky-assets-dir dir="aurora_texture" aurora-map-path></sky-assets-dir>
         <sky-assets-dir dir="solar_eclipse_picture">
           <sky-solar-eclipse-map></sky-solar-eclipse-map>
         </sky-assets-dir>
@@ -806,6 +823,7 @@ As you might notice, we could have also provided links to each of the individual
           <sky-moon-aperture-size-map></sky-moon-aperture-size-map>
           <sky-moon-aperture-orientation-map></sky-moon-aperture-orientation-map>
           <sky-solar-eclipse-map></sky-solar-eclipse-map>
+          <sky-aurora-maps></sky-aurora-maps>
 
           <!--Even though this a single tag, all the files associated
           with this tag are expected to live in this folder-->
