@@ -1,6 +1,11 @@
 StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.skyDirector = skyDirector;
-  this.geometry = new THREE.IcosahedronBufferGeometry(5000.0, 4);
+  if(THREE.hasOwnProperty("IcosahedronBufferGeometry")){
+    this.geometry = new THREE.IcosahedronBufferGeometry(5000.0, 4);
+  }
+  else{
+    this.geometry = new THREE.IcosahedronGeometry(5000.0, 4);
+  }
 
   //Create our material late
   const assetManager = skyDirector.assetManager;

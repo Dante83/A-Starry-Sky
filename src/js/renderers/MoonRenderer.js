@@ -14,7 +14,13 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const blinkOutDistance = Math.SQRT2 * diameterOfMoonPlane;
 
   //All of this eventually gets drawn out to a single quad
-  this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
+  const usesPlaneBufferGeometryKeyword = THREE.hasOwnProperty("PlaneBufferGeometry");
+  if(usesPlaneBufferGeometryKeyword){
+    this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
+  }
+  else{
+    this.geometry = new THREE.PlaneGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
+  }
 
   //Prepare our scene and render target object
   const scene = new THREE.Scene();
@@ -105,7 +111,13 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
   moonMaterial.uniforms.cameraPosition.value = new THREE.Vector3();
   moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
-  const renderTargetGeometry = new THREE.PlaneBufferGeometry(2, 2);
+  let renderTargetGeometry;
+  if(usesPlaneBufferGeometryKeyword){
+    renderTargetGeometry = new THREE.PlaneBufferGeometry(2,2);
+  }
+  else{
+    renderTargetGeometry = new THREE.PlaneGeometry(2,2);
+  }
   THREE.BufferGeometryUtils.computeTangents(renderTargetGeometry);
   const renderBufferMesh = new THREE.Mesh(
     renderTargetGeometry,

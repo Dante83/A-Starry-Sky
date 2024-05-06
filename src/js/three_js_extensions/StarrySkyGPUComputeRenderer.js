@@ -119,7 +119,13 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 
 	var passThruShader = createShaderMaterial( getPassThroughFragmentShader(), passThruUniforms );
 
-  let planeGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+	let planeGeometry;
+  if(THREE.hasOwnProperty("PlaneBufferGeometry")){
+    planeGeometry = new THREE.PlaneBufferGeometry(2, 2);
+  }
+  else{
+    planeGeometry = new THREE.PlaneGeometry(2, 2);
+  }
   if(computeTangets){
     THREE.BufferGeometryUtils.computeTangents(planeGeometry);
   }

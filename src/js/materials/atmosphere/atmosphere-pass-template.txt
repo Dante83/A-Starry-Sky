@@ -1,6 +1,24 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false,
   auroraEnabled = false, cloudsEnabled = false){
+    let mieScatteringSumVal;
+    let rayleighInscatteringSumVal;
+    let cloudLUTsVal;
+    if(THREE.hasOwnProperty("DataTexture3D")){
+      mieScatteringSumVal = new THREE.DataTexture3D();
+      rayleighInscatteringSumVal = new THREE.DataTexture3D();
+      if(cloudsEnabled && !isMeteringShader){
+        cloudLUTsVal = new THREE.DataTexture3D();
+      }
+    }
+    else{
+      mieScatteringSumVal = new THREE.Data3DTexture();
+      rayleighInscatteringSumVal = new THREE.Data3DTexture();
+      if(cloudsEnabled && !isMeteringShader){
+        cloudLUTsVal = new THREE.Data3DTexture();
+      }
+    }
+
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -8,8 +26,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       sunPosition: {value: new THREE.Vector3()},
       moonPosition: {value: new THREE.Vector3()},
       moonLightColor: {value: new THREE.Vector3()},
-      mieInscatteringSum: {value: new THREE.DataTexture3D()},
-      rayleighInscatteringSum: {value: new THREE.DataTexture3D()},
+      mieInscatteringSum: {value: mieScatteringSumVal},
+      rayleighInscatteringSum: {value: rayleighInscatteringSumVal},
       transmittance: {value: null},
       sunHorizonFade: {value: 1.0},
       moonHorizonFade: {value: 1.0},
@@ -20,7 +38,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
 
     if(cloudsEnabled && !isMeteringShader){
-      uniforms.cloudLUTs = {value: new THREE.DataTexture3D()};
+      uniforms.cloudLUTs = {value: cloudLUTsVal};
       uniforms.ambientLightPY = {value: new THREE.Vector3(0, 181, 226)};
       uniforms.cloudCoverage = {value: 0.5};
       uniforms.cloudVelocity = {value: new THREE.Vector2(0.0, 0.0)};

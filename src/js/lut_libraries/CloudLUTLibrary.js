@@ -75,7 +75,12 @@ StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
   cloudNoiseSliceVar.material.dispose();
 
   //Turn this array into a 3D texture
-  this.repeating3DCloudNoiseTextures = new THREE.DataTexture3D(cloud3DNoiseRenderTargetBufferFloat32Array, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE);
+  if(THREE.hasOwnProperty("DataTexture3D")){
+    this.repeating3DCloudNoiseTextures = new THREE.DataTexture3D(cloud3DNoiseRenderTargetBufferFloat32Array, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE);
+  }
+  else{
+    this.repeating3DCloudNoiseTextures = new THREE.Data3DTexture(cloud3DNoiseRenderTargetBufferFloat32Array, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE);
+  }
   this.repeating3DCloudNoiseTextures.type = THREE.FloatType;
   this.repeating3DCloudNoiseTextures.format = THREE.RGBAFormat;
   this.repeating3DCloudNoiseTextures.minFilter = THREE.LinearFilter;

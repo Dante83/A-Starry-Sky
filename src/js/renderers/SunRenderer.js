@@ -29,7 +29,13 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	};
 
 	//All of this eventually gets drawn out to a single quad
-  this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
+	const usesPlaneBufferGeometryKeyword = THREE.hasOwnProperty("PlaneBufferGeometry");
+	if(usesPlaneBufferGeometryKeyword){
+		this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
+	}
+	else{
+		this.geometry = new THREE.PlaneGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
+	}
 
 	//Prepare our scene and render target object
   const scene = new THREE.Scene();
@@ -77,8 +83,15 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
   }
   baseSunMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+  let renderBufferGeom;
+  if(usesPlaneBufferGeometryKeyword){
+		renderBufferGeom = new THREE.PlaneBufferGeometry(2,2);
+	}
+	else{
+		renderBufferGeom = new THREE.PlaneGeometry(2,2);
+	}
 	const renderBufferMesh = new THREE.Mesh(
-    new THREE.PlaneBufferGeometry(2, 2),
+    renderBufferGeom,
     baseSunMaterial
   );
   scene.add(renderBufferMesh);
