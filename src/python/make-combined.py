@@ -5,14 +5,13 @@ import tempfile
 def main():
     #Useful constants, what we probably want to modify in order to write out the right file names
     output_dir = '../../dist/'
-    relative_dir = output_dir + "a-starry-sky.v1.1.0.js"
+    relative_dir = output_dir + "a-starry-sky.v1.2.0.js"
     file_dir = os.path.abspath(relative_dir)
-    minified_file_dir = os.path.abspath(output_dir + "a-starry-sky.v1.1.0.min.js")
+    minified_file_dir = os.path.abspath(output_dir + "a-starry-sky.v1.2.0.min.js")
 
     #Directy and ordered list of files to load
     js_dir = '../js/'
     js_fil_names = ['three_js_extensions/BufferGeometryUtils.js',\
-    'three_js_extensions/Copyshader.js',\
     'three_js_extensions/Pass.js',\
     'three_js_extensions/RenderPass.js',\
     'three_js_extensions/ShaderPass.js',\
@@ -93,7 +92,7 @@ def main():
         tmp.seek(0)
 
         #Use that temporary file in our sub process
-        proc = subprocess.Popen(['terser', tmp.name], stdout=subprocess.PIPE, shell=True)
+        proc = subprocess.Popen(['terser', tmp.name], stdout=subprocess.PIPE)
         (uglified_js, err) = proc.communicate()
         if err == None:
             with open(minified_file_dir, 'wb') as w:
