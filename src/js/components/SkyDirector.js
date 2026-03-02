@@ -104,13 +104,16 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
   //Set up our web assembly hooks
   const self = this;
+  console.log('[StarrySky] SkyDirector constructor, readyState:', document.readyState);
 
   //Called from the asset manager when all of our assets have finished loading
   //Also colled when our local web assembly has finished loading as both are pre-requisites
   //for running the responses produced by our web worker
   this.initializeSkyDirectorWebWorker = function(){
+    console.log('[StarrySky] initializeSkyDirectorWebWorker called, assetManagerInitialized:', self.assetManagerInitialized, 'skyInterpolatorWASMIsReady:', self.skyInterpolatorWASMIsReady);
     //Attach our asset manager if it has been passed over
     if(self.assetManagerInitialized && self.skyInterpolatorWASMIsReady){
+      console.log('[StarrySky] Both gates passed, creating LUT libraries and posting to web worker');
       self.sunRadius = Math.sin(this.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
       self.moonRadius = Math.sin(this.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
       self.distanceForSolarEclipse = 2.0 * Math.SQRT2 * Math.max(self.sunRadius, self.moonRadius);
@@ -127,7 +130,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       }, [transferableInitialStateBuffer, self.transferableFinalStateBuffer]);
 
       //Iitialize one of our key constants
-      BASE_RADIUS_OF_SUN = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+      const BASE_RADIUS_OF_SUN = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
 
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
@@ -138,8 +141,10 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   this.initializeRenderers = function(){
+    console.log('[StarrySky] initializeRenderers called, assetManagerInitialized:', self.assetManagerInitialized, 'skyDirectorWASMIsReady:', self.skyDirectorWASMIsReady);
     //All systems must be up and running before we are ready to begin
     if(self.assetManagerInitialized && self.skyDirectorWASMIsReady){
+      console.log('[StarrySky] Both gates passed, creating renderers');
       //Attach our camera, which should be loaded by now.
       const DEG_2_RAD = Math.PI / 180.0;
       self.camera = self.parentComponent.el.sceneEl.camera;
@@ -150,14 +155,14 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       const sunAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD;
       const sunRendererTextureSize = Math.floor(self.pixelsPerRadian * sunAngularDiameterInRadians * 2.0);
       //Floor and ceiling to nearest power of 2, Page 61 of Hacker's Delight
-      const ceilSRTS = Math.min(parseInt(1 << (32 - Math.clz32(sunRendererTextureSize - 1), 10)), 1024);
+      const ceilSRTS = Math.min(1 << (32 - Math.clz32(sunRendererTextureSize - 1)), 1024);
       const floorSRTS = ceilSRTS >> 1; //Divide by 2! Without the risk of floating point errors
       const SRTSToNearestPowerOfTwo = Math.abs(sunRendererTextureSize - floorSRTS) <= Math.abs(sunRendererTextureSize - ceilSRTS) ? floorSRTS : ceilSRTS;
 
       const moonAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD;
       const moonRendererTextureSize = Math.floor(self.pixelsPerRadian * moonAngularDiameterInRadians * 2.0);
       //Floor and ceiling to nearest power of 2, Page 61 of Hacker's Delight
-      const ceilMRTS = Math.min(parseInt(1 << (32 - Math.clz32(moonRendererTextureSize - 1), 10)), 1024);
+      const ceilMRTS = Math.min(1 << (32 - Math.clz32(moonRendererTextureSize - 1)), 1024);
       const floorMRTS = ceilMRTS >> 1; //Divide by 2! Without the risk of floating point errors
       const MRTSToNearestPowerOfTwo = Math.abs(moonRendererTextureSize - floorMRTS) <= Math.abs(moonRendererTextureSize - ceilMRTS) ? floorMRTS : ceilMRTS;
 
@@ -221,6 +226,15 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.time = time * 0.001;
       self.interpolationT += timeDeltaInSeconds * self.speed;
 
+      //Refresh WASM heap views if memory grew (e.g. due to Module._malloc growing the heap)
+      if(self.rotatedAstroPositions && Module.HEAPF32.buffer !== self.rotatedAstroPositions.buffer){
+        self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATION_OUTPUT_VALUES);
+        self.astronomicalLinearValues = new Float32Array(Module.HEAPF32.buffer, self.astronomicalLinearValues_ptr, NUMBER_OF_LINEAR_INTERPOLATIONS);
+        self.rotatedAstroDependentValues = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroDepedentValues_ptr, NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES);
+        if(self.lightingColorValues) self.lightingColorValues = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_ptr, NUMBER_OF_LIGHTING_OUT_VALUES);
+        if(self.lightingColorValuesf) self.lightingColorValuesf = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_f_ptr, NUMBER_OF_LIGHTING_COLOR_CHANNELS);
+      }
+
       //Update our sky state
       self.skyState.LSRT = Module._tick_astronomicalInterpolations(self.interpolationT);
 
@@ -233,18 +247,18 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       sceneCamera.getWorldPosition(self.globalCameraPosition);
 
       //Update our astronomical positions
-      self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));
+      self.skyState.sun.position.fromArray(self.rotatedAstroPositions, 0);
       let sp = self.skyState.sun.position;
       self.skyState.sun.quadOffset.set(-sp.z, sp.y, -sp.x).normalize().multiplyScalar(RADIUS_OF_SKY);
-      self.skyState.moon.position.fromArray(self.rotatedAstroPositions.slice(3, 6));
+      self.skyState.moon.position.fromArray(self.rotatedAstroPositions, 3);
       let mp = self.skyState.moon.position;
       self.skyState.moon.quadOffset.set(-mp.z, mp.y, -mp.x).normalize().multiplyScalar(RADIUS_OF_SKY);
       self.skyState.moon.parallacticAngle = self.rotatedAstroDependentValues[2] - PI_OVER_TWO;
-      self.skyState.mercury.position.fromArray(self.rotatedAstroPositions.slice(6, 9));
-      self.skyState.venus.position.fromArray(self.rotatedAstroPositions.slice(9, 12));
-      self.skyState.mars.position.fromArray(self.rotatedAstroPositions.slice(12, 15));
-      self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions.slice(15, 18));
-      self.skyState.saturn.position.fromArray(self.rotatedAstroPositions.slice(18, 21));
+      self.skyState.mercury.position.fromArray(self.rotatedAstroPositions, 6);
+      self.skyState.venus.position.fromArray(self.rotatedAstroPositions, 9);
+      self.skyState.mars.position.fromArray(self.rotatedAstroPositions, 12);
+      self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions, 15);
+      self.skyState.saturn.position.fromArray(self.rotatedAstroPositions, 18);
 
       //Update our linear values
       self.skyState.sun.luminosity = 100000.0 * self.astronomicalLinearValues[0] / 1300.0;
@@ -275,8 +289,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Update values associated with lunar eclipses
       self.skyState.moon.distanceToEarthsShadowSquared = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX];
       self.skyState.moon.oneOverNormalizedLunarDiameter = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX + 1];
-      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 2, START_OF_LUNAR_ECLIPSE_INDEX + 5));
-      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 5, START_OF_LUNAR_ECLIPSE_INDEX + 8));
+      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues, START_OF_LUNAR_ECLIPSE_INDEX + 2);
+      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues, START_OF_LUNAR_ECLIPSE_INDEX + 5);
 
       //Tick our light positions before we might just use them to set up the next interpolation
       self.lightingManager.tick(self.lightingColorValues);
@@ -321,7 +335,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
         self.updateAutoExposure(timeDeltaInSeconds);
 
         //Set our previous lookup target
-        const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
+        const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix.elements[8], self.camera.matrix.elements[9], self.camera.matrix.elements[10]);
         self.previousCameraLookAtVector.x = cameraLookAtTarget.x;
         self.previousCameraLookAtVector.y = cameraLookAtTarget.y;
         self.previousCameraLookAtVector.z = cameraLookAtTarget.z;
@@ -332,8 +346,10 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
   //Prepare our WASM Modules
   this.webAssemblyWorker = new Worker(webWorkerURI);
+  console.log('[StarrySky] Web worker created with URI:', webWorkerURI);
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
+    console.log('[StarrySky] Web worker message received, eventType:', postObject.eventType);
     if(postObject.eventType === self.EVENT_RETURN_LATEST_SKY_STATE){
       //Attach our 32 bit float array buffers back to this thread again
       self.transferableFinalStateBuffer = postObject.transferableFinalStateBuffer;
@@ -454,6 +470,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.updateAutoExposure(deltaT);
 
       //Start the sky here - as we should have everything back and ready by now
+      console.log('[StarrySky] Auto-exposure initialization complete, calling start()');
       self.start();
     }
     else if(postObject.eventType === self.EVENT_RETURN_AUTOEXPOSURE){
@@ -524,7 +541,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transferableSkyFinalLightingFloat32Array);
 
       //Get the look at target for our camera to see where we are looking
-      const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
+      const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix.elements[8], self.camera.matrix.elements[9], self.camera.matrix.elements[10]);
       self.previousCameraHeight = self.camera.position.y;
       self.previousCameraLookAtVector.x = cameraLookAtTarget.x;
       self.previousCameraLookAtVector.y = cameraLookAtTarget.y;
@@ -620,6 +637,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.renderers = {};
 
   this.start = function(){
+    console.log('[StarrySky] start() called - sky system is going live!');
     //Update our tick and tock functions
     parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine
@@ -648,12 +666,15 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
     }
   }
 
-  if(document.readyState === "complete" || document.readyState === "loaded"){
+  if(document.readyState === "complete" || document.readyState === "interactive"){
+    console.log('[StarrySky] readyState is', document.readyState, '- creating AssetManager immediately');
     //Grab all of our assets
     self.assetManager = new StarrySky.AssetManager(self);
   }
   else{
+    console.log('[StarrySky] readyState is', document.readyState, '- deferring AssetManager to DOMContentLoaded');
     window.addEventListener('DOMContentLoaded', function(){
+      console.log('[StarrySky] DOMContentLoaded fired - creating AssetManager now');
       //Grab all of our assets
       self.assetManager = new StarrySky.AssetManager(self);
     });
@@ -672,8 +693,19 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   function onRuntimeInitialized() {
+      console.log('[StarrySky] WASM onRuntimeInitialized fired');
       self.skyInterpolatorWASMIsReady = true;
       self.initializeSkyDirectorWebWorker();
   }
-  Module['onRuntimeInitialized'] = onRuntimeInitialized;
+
+  //Check if the WASM module has already initialized before we set the callback.
+  //This happens when the <script> tag in <head> loads and initializes the module
+  //before A-Frame creates this component.
+  if(Module['calledRun']){
+    console.log('[StarrySky] WASM Module already initialized, calling onRuntimeInitialized directly');
+    onRuntimeInitialized();
+  }
+  else{
+    Module['onRuntimeInitialized'] = onRuntimeInitialized;
+  }
 }

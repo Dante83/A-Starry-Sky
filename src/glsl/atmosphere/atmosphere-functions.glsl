@@ -22,6 +22,7 @@ const vec3 EARTH_MIE_BETA_EXTINCTION = $mieBeta;
 const float ELOK_Z_CONST = 0.97267627755;
 const float ONE_OVER_EIGHT_PI = 0.039788735772;
 const float ONE_OVER_FOUR_PI = 0.079577471545;
+const float THREE_OVER_SIXTEEN_PI = 0.05968310365946075;
 const float METERS_TO_KM = 0.001;
 
 const float MIE_G = $mieG;
@@ -56,15 +57,20 @@ vec4 sRGBToLinear( in vec4 value ) {
 	return vec4( mix( pow( value.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), value.rgb * 0.0773993808, vec3( lessThanEqual( value.rgb, vec3( 0.04045 ) ) ) ), value.a );
 }
 
+vec4 LinearTosRGB( in vec4 value ) {
+	return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );
+}
+
 //
 //Scattering functions
 //
 float rayleighPhaseFunction(float cosTheta){
-  return 1.12 + 0.4 * cosTheta;
+  return THREE_OVER_SIXTEEN_PI * (1.0 + cosTheta * cosTheta);
 }
 
 float miePhaseFunction(float cosTheta){
-  return MIE_PHASE_FUNCTION_COEFFICIENT * ((1.0 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2.0 * MIE_G * cosTheta, 1.5));
+  float t = 1.0 + MIE_G_SQUARED - 2.0 * MIE_G * cosTheta;
+  return MIE_PHASE_FUNCTION_COEFFICIENT * ((1.0 + cosTheta * cosTheta) / (t * sqrt(t)));
 }
 
 //
@@ -75,7 +81,7 @@ vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection) {
     float a = dot(rayDirection, rayDirection);
     float b = 2.0 * dot(rayDirection, rayOrigin);
     float c = dot(rayOrigin, rayOrigin) - radius * radius;
-    float discriminate = sqrt(b * b - 4.0 * a * c);
+    float discriminate = sqrt(max(0.0, b * b - 4.0 * a * c));
     float t0 = (-b - discriminate) /  (2.0 * a);
     float t1 = (-b + discriminate) /  (2.0 * a);
     vec2 ray0 = rayOrigin + t0 * rayDirection;
@@ -91,7 +97,7 @@ vec3 intersectRaySphere3D(vec3 rayOrigin, vec3 rayDirection, float radius) {
     float a = dot(rayDirection, rayDirection);
     float b = 2.0 * dot(rayDirection, rayOrigin);
     float c = dot(rayOrigin, rayOrigin) - radius * radius;
-    float discriminate = sqrt(b * b - 4.0 * a * c);
+    float discriminate = sqrt(max(0.0, b * b - 4.0 * a * c));
     float t0 = (-b - discriminate) /  (2.0 * a);
     float t1 = (-b + discriminate) /  (2.0 * a);
     vec3 ray0 = rayOrigin + t0 * rayDirection;

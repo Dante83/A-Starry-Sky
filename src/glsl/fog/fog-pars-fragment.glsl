@@ -62,15 +62,15 @@
       }
 
       float hgPhase( float cosTheta, float g ) {
-        float inverse = 1.0 / pow( 1.0 - 2.0 * g * cosTheta + g * g, 1.5 );
-        return ONE_OVER_FOUR_PI * ( ( 1.0 - g * g ) * inverse );
+        float t = 1.0 - 2.0 * g * cosTheta + g * g;
+        return ONE_OVER_FOUR_PI * ( ( 1.0 - g * g ) / (t * sqrt(t)) );
       }
 
       vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, vec3 vLightE, vec3 vBetaR, float distToPoint, out vec3 Fex){
         // optical length
         // cutoff angle at 90 to avoid singularity in next formula.
         float zenithAngle = acos(dot( up, lightDirection ));
-        float inverse = 1.0 / ( cos( zenithAngle ) + 0.15 * pow( 93.885 - ( ( zenithAngle * 180.0 ) / pi ), -1.253 ) );
+        float inverse = 1.0 / ( cos( zenithAngle ) + 0.15 * pow( max(0.001, 93.885 - ( ( zenithAngle * 180.0 ) / pi )), -1.253 ) );
         float sR = rayleighZenithLength * inverse;
         float sM = mieZenithLength * inverse;
 

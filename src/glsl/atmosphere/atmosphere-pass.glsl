@@ -343,10 +343,8 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
   //in combination with the aurora 'height' (which is a rough estimate for quantity)
   //to determine which aurora is visible. At this point, we are just faking it till
   //we can get more accurate values for simulating this.
-  vec3 auroraColor(float auroraNoiseValue, float heightOfRay, float avgElectronVelocityScalar){
-    vec3 excitedNitrogenSpectrumEmission = sRGBToLinear(vec4(nitrogenColor, 1.0)).rgb; //Visible in intense displays below 60-120km. (magenta)
-    vec3 molecularO2SpectralEmission = sRGBToLinear(vec4(molecularOxygenColor, 1.0)).rgb; //Below 100km-250km.
-    vec3 atomicOxygenSpectralEmission = sRGBToLinear(vec4(atomicOxygenColor, 1.0)).rgb; //Beginning at 150km-600km (red)
+  vec3 auroraColor(float auroraNoiseValue, float heightOfRay, float avgElectronVelocityScalar,
+                   vec3 excitedNitrogenSpectrumEmission, vec3 molecularO2SpectralEmission, vec3 atomicOxygenSpectralEmission){
 
     float h = heightOfRay - RADIUS_OF_EARTH;
     vec3 outputLightIntensity = vec3(0.0);
@@ -389,19 +387,24 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     vec3 linearAuroraGlow = vec3(0.0);
     float auroraBrightness = pow(150.0, min(starAndSkyExposureReduction, 2.7) * 0.20);
     if(rayInterceptStartTime > 0.0){
+      vec3 nitrogenLinear = sRGBToLinear(vec4(nitrogenColor, 1.0)).rgb;
+      vec3 molecularO2Linear = sRGBToLinear(vec4(molecularOxygenColor, 1.0)).rgb;
+      vec3 atomicOxygenLinear = sRGBToLinear(vec4(atomicOxygenColor, 1.0)).rgb;
       lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
       vec2 auroraNoiseTextureUV = vec2(lastPosition.x, lastPosition.z);
       auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);
-      auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
+      auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5, nitrogenLinear, molecularO2Linear, atomicOxygenLinear); //Setting the velocity value to a constant while we test this out.
       for(float i = 1.0; i < numberOfAuroraRaymarchingSteps; i++){
         //Determine the position of our raymarcher in the sky
-        float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x + uTime, lastPosition.z + uTime) * 0.0078125).r - 1.0;
-        float d = (rayDeltaT * (0.75 + 0.5 * blueNoise));
+        //Per-pixel, per-step blue noise lookup using screen coords
+        vec2 noiseUV = (gl_FragCoord.xy + vec2(i * 7.0, i * 11.0)) * 0.0078125;
+        float blueNoise = texture(blueNoiseTexture, noiseUV).r * 2.0 - 1.0;
+        float d = rayDeltaT * (0.75 + 0.5 * blueNoise);
         vec3 currentPosition = lastPosition + rayDirection * d;
 
         auroraNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);
         auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);
-        auroraColorValuef = auroraColor(auroraNoiseValue, currentPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
+        auroraColorValuef = auroraColor(auroraNoiseValue, currentPosition.y, 0.5, nitrogenLinear, molecularO2Linear, atomicOxygenLinear); //Setting the velocity value to a constant while we test this out.
 
         //Integrate using the trapezoidal rule
         linearAuroraGlow += 0.5 * (auroraColorValue0 + auroraColorValuef) * d;//We linearly scale by the longer distances to cancel out the effect of fewer samples
@@ -511,21 +514,43 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     vec3 offsetM1 = offsetM * rot1;
     vec3 offsetM2 = offsetM * rot2;
     vec3 offsetM3 = offsetM * rot3;
-    float simplexFractal = 0.5000152*simplex3d(offsetM1) + 0.2500305 * simplex3d(2.0 * offsetM2)
+    float baseFbm = 0.5000152*simplex3d(offsetM1) + 0.2500305 * simplex3d(2.0 * offsetM2)
     + 0.125061*simplex3d(4.0 * offsetM3) + 0.0625221 * simplex3d(8.0 * offsetM)
     + 0.031494*simplex3d(16.0 * offsetM1) + 0.0161132 * simplex3d(32.0 * offsetM2)
     + 0.008789*simplex3d(64.0 * offsetM3) + 0.0058875 * simplex3d(128.0 * offsetM);
-    simplexFractal = clamp(0.5 * simplexFractal + 0.5, 0.0, 1.0);
+    baseFbm = clamp(0.5 * baseFbm + 0.5, 0.0, 1.0);
     float fadeOut = linearGradient(1.0, cloudFadeOutStartPercent, heightPercentage);
     float fadeIn = linearGradient(0.0, cloudFadeInEndPercent, heightPercentage);
-    float cloudNoise = clamp(dot(texture(cloudLUTs, offsetM * 7.0).rgb, vec3(0.625, 0.125, 0.25)) + 0.09, 0.00, 1.0);
-    float simplexFractal1 = min(cloudDensity - simplexFractal * fadeIn * fadeOut, 0.0) / (cloudDensity - 1.0);
-    float simplexFractal2 = min(cloudDensity - mix(0.0, simplexFractal, cloudNoise) * fadeIn * fadeOut, 0.0) / (cloudDensity - 1.0);
-    return mix(simplexFractal1, simplexFractal2, linearGradient(0.0, cloudFadeInEndPercent + 0.05, heightPercentage));
+    // Height blend: 0 at cloud bottom, 1 at cloud top
+    float heightBlend = linearGradient(0.0, cloudFadeInEndPercent + 0.05, heightPercentage);
+    vec4 worleyTex = texture(cloudLUTs, offsetM * 7.0);
+    float worleyCoarse = clamp(dot(worleyTex.rgb, vec3(0.625, 0.125, 0.25)) + 0.09, 0.0, 1.0);
+    // Perlin-Worley carving: applied at cloud top only, preserving FBM bumps at cloud bottom/sides
+    // This gives puffy rounded tops while keeping visible detail when looking up at clouds
+    float cloudBase = clamp(baseFbm - (1.0 - worleyCoarse) * 0.20 * heightBlend, 0.0, 1.0);
+    return min(cloudDensity - cloudBase * fadeIn * fadeOut, 0.0) / (cloudDensity - 1.0);
+  }
+
+  // Cheap 4-octave density for cone shadow sampling (avoids full 8-octave cost per shadow sample)
+  float cloudDensityFast(vec3 m, float cloudDensityParam, float heightPercentage) {
+    vec3 cloudOffset = -vec3(cloudVelocity * cloudTime / 500.0, 0.0);
+    cloudOffset = vec3(cloudOffset.x, 0.0, cloudOffset.y);
+    vec3 offsetM = (m + cloudOffset) * vec3(1.5E-4, 3.0E-4, 1.5E-4);
+    float fbm = 0.5000152*simplex3d(offsetM * rot1) + 0.2500305*simplex3d(2.0 * offsetM * rot2)
+    + 0.125061*simplex3d(4.0 * offsetM * rot3) + 0.0625221*simplex3d(8.0 * offsetM);
+    fbm = clamp(0.5 * fbm + 0.5, 0.0, 1.0);
+    float fadeOut = linearGradient(1.0, cloudFadeOutStartPercent, heightPercentage);
+    float fadeIn = linearGradient(0.0, cloudFadeInEndPercent, heightPercentage);
+    // Worley carving must match simplex3dFractal so shadow samples see the same bulge structure
+    float heightBlend = linearGradient(0.0, cloudFadeInEndPercent + 0.05, heightPercentage);
+    float worleyCoarse = clamp(dot(texture(cloudLUTs, offsetM * 7.0).rgb, vec3(0.625, 0.125, 0.25)) + 0.09, 0.0, 1.0);
+    float cloudBase = clamp(fbm - (1.0 - worleyCoarse) * 0.20 * heightBlend, 0.0, 1.0);
+    return min(cloudDensityParam - cloudBase * fadeIn * fadeOut, 0.0) / (cloudDensityParam - 1.0);
   }
 
   float henyayGreenstein(float g, float cosOfVAndL){
-    return ONE_OVER_FOUR_PI * (1.0 - g * g) /  pow(1.0 + g * g - 2.0 * g * cosOfVAndL, 1.5);
+    float t = 1.0 + g * g - 2.0 * g * cosOfVAndL;
+    return ONE_OVER_FOUR_PI * (1.0 - g * g) / (t * sqrt(t));
   }
 
   //https://www.shadertoy.com/view/4sjBDG
@@ -537,6 +562,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     //This is in meters
     float globalCloudStartHeight = cloudStartHeight + rayStartPosition.y;
     float globalCloudEndHeight = cloudEndHeight + rayStartPosition.y;
+    float cloudThickness = globalCloudEndHeight - globalCloudStartHeight;
     float rayStartPositionInKm = rayStartPosition.y * METERS_TO_KM;
     float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, rayStartPosition.y + cloudStartHeight  + RADIUS_OF_EARTH, cloudCutoffDistance);
     float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, rayStartPosition.y + cloudEndHeight  + RADIUS_OF_EARTH, cloudCutoffDistance);
@@ -546,46 +572,75 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     float cloudDensity0;
     vec3 firstContactPosition = rayStartPosition;
     bool hasFirstContact = false;
+
+    // Pre-compute view-to-light phase angle (fixes bug: was dotting light with itself = always 1.0)
+    float cosViewLight = dot(rayDirection, dominantLightDirection);
+    float phaseViewLight = hillaireHenyayGreenstein(cosViewLight);
+    // Broader isotropic blend for multiple scattering approximation
+    float phaseMSApprox = mix(phaseViewLight, ONE_OVER_FOUR_PI, 0.5);
+
+    // Cone shadow step size: 15% of cloud thickness per sample
+    float coneShadowStep = cloudThickness * 0.15;
+
     if(rayInterceptStartTime > 0.0){
       vec3 lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
-      float heightPercentage = (lastPosition.y - globalCloudStartHeight) / (globalCloudEndHeight - globalCloudStartHeight);
+      float heightPercentage = (lastPosition.y - globalCloudStartHeight) / cloudThickness;
       cloudDensity0 = simplex3dFractal(lastPosition, cloudVelocity, cloudCoverage, heightPercentage);
       float cloudDensity = 0.0;
-      if(cloudDensity > 0.0){
+      if(cloudDensity0 > 0.0){
         firstContactPosition = lastPosition;
         hasFirstContact = true;
       }
 
+      //Jitter starting position using blue noise (before the loop)
+      float cloudBlueNoise = texture(blueNoiseTexture, gl_FragCoord.xy * 0.0078125).r;
+      float startJitter = cloudBlueNoise * rayDeltaT;
+      lastPosition += rayDirection * startJitter;
+
       for(float i = 0.0; i < numberOfCloudMarchSteps; i++){
         //Determine the position of our raymarcher in the sky
         vec3 currentPosition = lastPosition + rayDirection * rayDeltaT;
-        heightPercentage = (currentPosition.y - globalCloudStartHeight) / (globalCloudEndHeight - globalCloudStartHeight);
+        heightPercentage = (currentPosition.y - globalCloudStartHeight) / cloudThickness;
 
-        //Calculate our transmittance to this point
+        //Calculate cloud density at this step
         float cloudDensityf = simplex3dFractal(currentPosition, cloudVelocity, cloudCoverage, heightPercentage);
         cloudDensity += 0.5 * (cloudDensity0 + cloudDensityf) * rayDeltaT;
         rayTransmittance = exp(-0.2 * cloudDensity);
 
         //Determine the luminance
-        float innerTransmittance = clamp(1.0 - (1.0 - rayTransmittance), 0.0, 1.0);
-        //
-        //NOTE: Turning this off because it's too hard on the GPU
-        //We will return to add this in when we get some performance improvements...
-        //Also, the GPU shortage over Mwah ha ha ha ha! This would be the inner loop
-        //scattering light back from the sun, but currently we allow 100% transmittance.
-        //
-        //Update our luminance
-        float lightSourceHeight = RADIUS_OF_EARTH + ((currentPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);
+        float lightSourceHeight = RADIUS_OF_EARTH + currentPosition.y * METERS_TO_KM;
         vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(dominantLightDirection.y, 0.0)), parameterizationOfHeightToY(lightSourceHeight));
         vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
-        float scatteringToRayPoint = hillaireHenyayGreenstein(dot(dominantLightDirection, dominantLightDirection));
-        float scatteringToCamera = hillaireHenyayGreenstein(dot(rayDirection, dominantLightDirection));
-        luminance += 0.0003 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;
+
+        // Two shadow samples toward light: close captures local bulge, far captures cloud mass above
+        vec3 shadowPosNear = currentPosition + dominantLightDirection * coneShadowStep * 0.25;
+        float shadowHgtNear = clamp((shadowPosNear.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+        vec3 shadowPosFar = currentPosition + dominantLightDirection * coneShadowStep;
+        float shadowHgtFar = clamp((shadowPosFar.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+        float shadowDensity = cloudDensityFast(shadowPosNear, cloudCoverage, shadowHgtNear)
+                            + cloudDensityFast(shadowPosFar, cloudCoverage, shadowHgtFar);
+
+        // Shadow transmittance: higher extinction compensates for cloudDensityFast fewer octaves
+        float shadowBeer = exp(-2.0 * shadowDensity);
+
+        // Beer-Powder: dense puff peaks (higher cloudDensityf) get an extra brightness bonus
+        // on top of the base contribution, giving cauliflower definition without dimming overall.
+        // Coefficient 4.0 tuned for cloudDensityf's small range (~0.05-0.3)
+        float powder = 1.0 - exp(-4.0 * cloudDensityf);
+        float lightEnergy = shadowBeer * (1.0 + powder);
+
+        // Single-scatter contribution
+        luminance += 0.001 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * rayTransmittance * rayDeltaT * lightEnergy * phaseViewLight;
+
+        // Multiple scattering approximation: 2 extra orders with reduced extinction
+        // Each order uses half the extinction so light penetrates deeper into the cloud
+        luminance += 0.4 * 0.001 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * exp(-0.1 * cloudDensity) * rayDeltaT * lightEnergy * phaseMSApprox;
+        luminance += 0.16 * 0.001 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * exp(-0.05 * cloudDensity) * rayDeltaT * lightEnergy * ONE_OVER_FOUR_PI;
 
         //Update previous values
         cloudDensity0 = cloudDensityf;
         lastPosition = currentPosition;
-        if(cloudDensity > 0.0 && !hasFirstContact){
+        if(cloudDensityf > 0.0 && !hasFirstContact){
           firstContactPosition = lastPosition;
           hasFirstContact = true;
         }
@@ -596,8 +651,8 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     }
     luminance += 0.09 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);
     if(hasFirstContact){
-      float lightSourceHeight = RADIUS_OF_EARTH + 2.0 * ((rayStartPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);
-      vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(normalize(firstContactPosition.y), 0.0)), parameterizationOfHeightToY(lightSourceHeight));
+      float lightSourceHeight = RADIUS_OF_EARTH + rayStartPosition.y * METERS_TO_KM;
+      vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(rayDirection.y, 0.0)), parameterizationOfHeightToY(lightSourceHeight));
       vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
       vec3 distVect = firstContactPosition - rayStartPosition;
       luminance *= dominantLightSourceAtmosphericTransmittance * exp(-2.5E-5 * sqrt(dot(distVect, distVect)));
@@ -638,7 +693,7 @@ void main(){
 
   #if($isMeteringPass)
     float rho = length(vUv.xy);
-    float height = sqrt(1.0 - rho * rho);
+    float height = sqrt(max(0.0, 1.0 - rho * rho));
     float phi = piOver2 - atan(height, rho);
     float theta = atan(vUv.y, vUv.x);
     vec3 sphericalPosition;
@@ -684,7 +739,7 @@ void main(){
     if(vLocalPosition.y >= 0.0){
       //Get the stellar starting id data from the galactic cube map
       vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);
-      vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);
+      vec4 starHashData = texture(starHashCubemap, normalizedGalacticCoordinates);
 
       //Red
       float scaledBits = starHashData.r * 255.0;
@@ -779,8 +834,7 @@ void main(){
       combinedPass = combinedPass + sunTexel;
     #endif
 
-    //And bring it back to the normal sRGB afterwards afterwards
-    combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;
+    //Leave in linear HDR for bloom - tonemapping happens in the output shader
   #elif($isMoonPass)
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;
     vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);
@@ -835,7 +889,14 @@ void main(){
     combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;
 
     //Now apply the blue noise
-    combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + ivec2(128.0 * noise(uTime),  128.0 * noise(uTime + 511.0))) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);
+    //Use golden ratio for quasi-random temporal offset (R2 sequence)
+    float goldenRatio = 1.61803398875;
+    float framePhase = fract(uTime * 0.001);
+    ivec2 temporalOffset = ivec2(
+      128.0 * fract(framePhase * goldenRatio),
+      128.0 * fract(framePhase * goldenRatio * goldenRatio)
+    );
+    combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + temporalOffset) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);
   #endif
 
   #if($isMeteringPass)

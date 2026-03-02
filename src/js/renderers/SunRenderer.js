@@ -4,6 +4,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
 	const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
 	const skyState = skyDirector.skyState;
+  const scratchColor = new THREE.Color();
 	const RENDER_TARGET_SIZE = 256;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
@@ -29,19 +30,19 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	};
 
 	//All of this eventually gets drawn out to a single quad
-  this.geometry = new THREE.PlaneBufferGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
+  this.geometry = new THREE.PlaneGeometry(diameterOfSunPlane, diameterOfSunPlane, 1);
 
 	//Prepare our scene and render target object
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-	outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
+	const outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
   outputRenderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
   outputRenderTarget.texture.magFilter = THREE.LinearFilter;
 	outputRenderTarget.texture.format = THREE.RGBAFormat;
   outputRenderTarget.texture.type = THREE.FloatType;
   outputRenderTarget.texture.generateMipmaps = true;
   outputRenderTarget.texture.anisotropy = 4;
-  outputRenderTarget.texture.samples = 8;
+  outputRenderTarget.samples = 8;
 	const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
 	composer.renderToScreen = false;
 
@@ -78,7 +79,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   }
   baseSunMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
 	const renderBufferMesh = new THREE.Mesh(
-    new THREE.PlaneBufferGeometry(2, 2),
+    new THREE.PlaneGeometry(2, 2),
     baseSunMaterial
   );
   scene.add(renderBufferMesh);
@@ -102,6 +103,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     fragmentShader: StarrySky.Materials.Postprocessing.moonAndSunOutput.fragmentShader
   });
 	outputMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+	outputMaterial.defines.HDR_INPUT = '';
   this.sunMesh = new THREE.Mesh(this.geometry, outputMaterial);
   outputMaterial.castShadow = false;
   outputMaterial.fog = false;
@@ -149,7 +151,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 		if(assetManager.data.skyCloud.cloudsEnabled){
       baseSunMaterial.uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
       if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
-        baseSunMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
+        baseSunMaterial.uniforms.ambientLightPY.value = scratchColor.copy(lightingManager.yAxisHemisphericalLight.color).multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
       }
     }
 
@@ -167,23 +169,22 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
+    console.log('[StarrySky] SunRenderer.firstTick called, hasLoadedImages:', assetManager.hasLoadedImages);
     //Connect up our reference values
     baseSunMaterial.uniforms.sunPosition.value = skyState.sun.position;
     baseSunMaterial.uniforms.moonPosition.value = skyState.moon.position;
     baseSunMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
-    //Connect up our images if they don't exist yet
-		if(assetManager){
+    //Connect up our images once they have all finished loading
+		if(assetManager.hasLoadedImages){
 			//Update sky parameters
 			const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 	    baseSunMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 			baseSunMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
 			baseSunMaterial.uniforms.cameraHeight.value = atmosphericParameters.cameraHeight;
 
-	    if(assetManager.hasLoadedImages){
-	      //Image of the solar corona for our solar ecclipse
-	      baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
-	    }
+	    //Image of the solar corona for our solar ecclipse
+	    baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
 
 			if(assetManager.data.skyCloud.cloudsEnabled){
 				const cloudParams = assetManager.data.skyCloud;
@@ -193,7 +194,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
         baseSunMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
         baseSunMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
 				baseSunMaterial.uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
-        baseSunMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercentTags;
+        baseSunMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercent;
         baseSunMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
 			}
 			assetsNotReadyYet = false;
@@ -202,6 +203,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       self.tick(t);
 
 			//Add this object to the scene
+	    console.log('[StarrySky] SunRenderer: sunMesh added to scene');
 	    skyDirector.scene.add(self.sunMesh);
 
 			//Delete this method when done

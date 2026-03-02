@@ -44,9 +44,9 @@ void main(){
     vec3 transmittance = transmittancePaToP * texture(transmittanceTexture, uvt).rgb;
 
     #if($isRayleigh)
-      vec3 previousInscattering = previousMieDensity * transmittance;
-    #else
       vec3 previousInscattering = previousRayleighDensity * transmittance;
+    #else
+      vec3 previousInscattering = previousMieDensity * transmittance;
     #endif
 
     //Integrate from Pa to Pb to determine the total transmittance
@@ -99,7 +99,7 @@ void main(){
 
     //Note that we ignore intensity until the final render as a multiplicative factor
     #if($isRayleigh)
-      totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
+      totalInscattering *= RAYLEIGH_BETA;
     #else
       totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION  / 0.9;
     #endif

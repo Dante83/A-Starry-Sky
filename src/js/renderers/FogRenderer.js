@@ -19,9 +19,12 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
     THREE.ShaderChunk.fog_fragment = StarrySky.Materials.Fog.fogMaterial.fragmentShader(true);
     THREE.ShaderChunk.fog_vertex = StarrySky.Materials.Fog.fogMaterial.vertexShader(true);
 
-    this.fog = new THREE.Fog(new THREE.Vector3(), 0.0, 1.0);
+    this.fog = new THREE.Fog(0x000000, 0.0, 1.0);
     skyDirector.scene.fog = this.fog;
   }
+  // THREE.js applies LinearToSRGB when uploading fog.color as a uniform.
+  // Pre-apply the inverse (SRGBToLinear) so the correct raw radian values reach the shader.
+  const toFogUniform = (v) => v < 0.04045 ? v * 0.0773993808 : Math.pow(v * 0.9478672986 + 0.0521327014, 2.4);
   const self = this;
   this.tick = function(t){
     if(isAdvancedAtmosphericPerspective){
@@ -32,8 +35,9 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
       const moonAzimuth = Math.atan2(skyState.moon.position.x, skyState.moon.position.z) - Math.PI;
       const moonIntensity = Math.pow(skyState.moon.horizonFade , 3.0) * skyState.moon.intensity;
 
-      //Inject the intensity for the moon
-      this.fog.color.fromArray([sunAltitude, sunAzimuth, moonAltitude]);
+      //Inject the intensity for the moon. Pre-apply SRGBToLinear so Three.js's
+      //LinearToSRGB conversion in getRGB() cancels out, preserving the raw radian values.
+      this.fog.color.fromArray([toFogUniform(sunAltitude), toFogUniform(sunAzimuth), toFogUniform(moonAltitude)]);
       this.fog.near = moonAzimuth;
       this.fog.far = -(atmosphericParameters.lunarMaxIntensity / 29.0) * (1300.0 * moonIntensity) / 20.0;
     }

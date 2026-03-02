@@ -9,7 +9,7 @@
       if(fogFar <= 0.0){
         vec3 fogOutData = max(atmosphericFogMethod(), 0.0);
         vec3 groundColor = fogsRGBToLinear(vec4(gl_FragColor.rgb, 1.0)).rgb;
-        gl_FragColor.rgb =  fogLinearTosRGB(vec4(MyAESFilmicToneMapping(fogOutData + groundColor * vFexPixel), 1.0)).rgb;
+        gl_FragColor.rgb = fogLinearTosRGB(vec4(MyAESFilmicToneMapping(fogOutData + groundColor * vFexPixel), 1.0)).rgb;
       }
       else if(fogNear < 0.0){
         //$$OCEAN_SHADER_SHADER_FRAGMENT_RESERVATION$$

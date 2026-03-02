@@ -4,6 +4,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 	const assetManager = skyDirector.assetManager;
 	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
 	const skyState = skyDirector.skyState;
+  const scratchColor = new THREE.Color();
   const RENDER_TARGET_SIZE = 512;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
@@ -14,19 +15,19 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const blinkOutDistance = Math.SQRT2 * diameterOfMoonPlane;
 
   //All of this eventually gets drawn out to a single quad
-  this.geometry = new THREE.PlaneBufferGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
+  this.geometry = new THREE.PlaneGeometry(diameterOfMoonPlane, diameterOfMoonPlane, 1);
 
   //Prepare our scene and render target object
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
+  const outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
   outputRenderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
   outputRenderTarget.texture.magFilter = THREE.LinearFilter;
   outputRenderTarget.texture.format = THREE.RGBAFormat;
   outputRenderTarget.texture.type = THREE.FloatType;
   outputRenderTarget.texture.generateMipmaps = true;
   outputRenderTarget.texture.anisotropy = 4;
-  outputRenderTarget.texture.samples = 8;
+  outputRenderTarget.samples = 8;
   const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
   composer.renderToScreen = false;
 
@@ -105,7 +106,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
   moonMaterial.uniforms.cameraPosition.value = new THREE.Vector3();
   moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
-  const renderTargetGeometry = new THREE.PlaneBufferGeometry(2, 2);
+  const renderTargetGeometry = new THREE.PlaneGeometry(2, 2);
   THREE.BufferGeometryUtils.computeTangents(renderTargetGeometry);
   const renderBufferMesh = new THREE.Mesh(
     renderTargetGeometry,
@@ -183,7 +184,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     self.moonMesh.lookAt(cameraPosition); //Use the basic look-at function to always have this plane face the camera.
     self.moonMesh.rotateOnWorldAxis(self.parallacticAxis, -skyState.moon.parallacticAngle); //And rotate the mesh by the parallactic angle.
     self.moonMesh.updateMatrix();
-    self.moonMesh.updateMatrixWorld(1);
+    self.moonMesh.updateMatrixWorld(true);
 
     //Update our shader material
     moonMaterial.uniforms.moonHorizonFade.value = skyState.moon.horizonFade;
@@ -203,7 +204,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     if(assetManager.data.skyCloud.cloudsEnabled){
       moonMaterial.uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
       if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
-        moonMaterial.uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
+        moonMaterial.uniforms.ambientLightPY.value = scratchColor.copy(lightingManager.yAxisHemisphericalLight.color).multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
       }
     }
 
@@ -226,6 +227,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
+    console.log('[StarrySky] MoonRenderer.firstTick called, hasLoadedImages:', assetManager.hasLoadedImages);
     //Connect up our reference values
     moonMaterial.uniforms.sunPosition.value = skyState.sun.position;
     moonMaterial.uniforms.moonPosition.value = skyState.moon.position;
@@ -245,8 +247,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.earthsShadowPosition.value = skyState.moon.earthsShadowPosition;
     moonMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
-    //Connect up our images if they don't exist yet
-    if(assetManager){
+    //Connect up our images once they have all finished loading
+    if(assetManager.hasLoadedImages){
       //Moon Textures
       for(let [property, value] of Object.entries(assetManager.images.moonImages)){
         moonMaterial.uniforms[property].value = value;
@@ -275,7 +277,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
         moonMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
         moonMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
         moonMaterial.uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
-        moonMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercentTags;
+        moonMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercent;
         moonMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
       }
       assetsNotReadyYet = false;
@@ -284,6 +286,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       self.tick(t);
 
       //Add this object to the scene
+      console.log('[StarrySky] MoonRenderer: moonMesh added to scene');
       skyDirector.scene.add(self.moonMesh);
 
       //Delete this method when done

@@ -55,8 +55,8 @@ class SkyLocation extends HTMLElement {
 
       //By some horrible situation. The maximum and minimum offset for UTC timze is 26 hours apart.
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
-      dataRef.latitude = dataRef.latitude ? clampAndWarn(dataRef.latitude, -90.0, 90.0, '<sky-latitude>') : null;
-      dataRef.longitude = dataRef.longitude ? clampAndWarn(dataRef.longitude, -180.0, 180.0, '<sky-longitude>') : null;
+      dataRef.latitude = dataRef.latitude != null ? clampAndWarn(dataRef.latitude, -90.0, 90.0, '<sky-latitude>') : null;
+      dataRef.longitude = dataRef.longitude != null ? clampAndWarn(dataRef.longitude, -180.0, 180.0, '<sky-longitude>') : null;
       self.skyDataLoaded = true;
       document.dispatchEvent(new Event('Sky-Data-Loaded'));
     });

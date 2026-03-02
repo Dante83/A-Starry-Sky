@@ -9,7 +9,6 @@ varying float vFogDepth;
       varying float vMoonfade;
       varying vec3 vBetaRSun;
       varying vec3 vBetaRMoon;
-      varying vec3 vBetaRFragment;
       varying vec3 vBetaM;
       varying float vSunE;
       varying float vMoonE;
@@ -19,8 +18,6 @@ varying float vFogDepth;
       uniform vec3 fogColor; //Altitude, Azimuth of Sun and Altitude of Mooon
       uniform float fogNear; //Azimuth of moon
       uniform float fogFar; //Intensity of moon
-      uniform vec3 worldPosition;
-
     	const float rayleigh = $rayleigh;
     	const float turbidity = $turbidty;
     	const float mieCoefficient = $mieCoefficient;
@@ -66,8 +63,8 @@ varying float vFogDepth;
 
       vec3 convertRhoThetaToXYZ(vec2 altitudeAzimuth){
         vec3 outPosition;
-        outPosition.x = sin(altitudeAzimuth.x) * cos(altitudeAzimuth.y);
-        outPosition.z = sin(altitudeAzimuth.x) * sin(altitudeAzimuth.y);
+        outPosition.x = -sin(altitudeAzimuth.x) * sin(altitudeAzimuth.y);
+        outPosition.z = -sin(altitudeAzimuth.x) * cos(altitudeAzimuth.y);
         outPosition.y = cos(altitudeAzimuth.x);
         return normalize(outPosition);
       }

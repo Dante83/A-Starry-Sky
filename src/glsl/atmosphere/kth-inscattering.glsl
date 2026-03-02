@@ -86,9 +86,9 @@ void main(){
 
     vec3 gatheringFunction = gatherInscatteredLight(length(p), initialSunAngle);
     #if($isRayleigh)
-      vec3 previousInscattering = gatheringFunction * previousMieDensity * transmittancePaToP;
-    #else
       vec3 previousInscattering = gatheringFunction * previousRayleighDensity * transmittancePaToP;
+    #else
+      vec3 previousInscattering = gatheringFunction * previousMieDensity * transmittancePaToP;
     #endif
 
     //Integrate from Pa to Pb to determine the total transmittance
@@ -135,7 +135,7 @@ void main(){
       }
     }
     #if($isRayleigh)
-      totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
+      totalInscattering *= RAYLEIGH_BETA;
     #else
       totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION / 0.9;
     #endif

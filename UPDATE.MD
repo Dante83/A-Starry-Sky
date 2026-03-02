@@ -1,3 +1,12 @@
+**Version 1.2.0**
+* Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).
+* Fixed several atmospheric physics bugs: incorrect Rayleigh phase function, missing Mie density weighting in transmittance, and a Rayleigh/Mie density swap in the scattering LUT bake passes — all resulting in more accurate sky colors, particularly at sunset.
+* Overhauled the sun bloom pipeline to operate in **HDR linear space**, giving the sun disk a much brighter and more physically distinct glow compared to the surrounding sky.
+* Significantly improved cloud rendering with cone-based self-shadowing, a Beer-Powder term for cauliflower definition, a multiple scattering approximation for interior glow, and blue-noise ray jitter to reduce banding.
+* Fixed several aurora and fog bugs, including an incorrect light-direction coordinate swap in the atmospheric perspective shader that was placing the sun and moon 90° off in azimuth.
+* Fixed multiple JavaScript bugs around render target resolution, falsy-zero settings, atmospheric perspective parameters, and asset path handling.
+* Halved the default ray-march step count for both clouds and aurora (64 → 32) for better out-of-the-box performance, with the option to increase via `<sky-cloud-raymarch-steps>` and `<sky-aurora-raymarch-steps>`.
+
 **Version 1.1.0**
 * Added ray-marched clouds using 3D Simplex Noise combined with FBM worley noise, first contact transmittance/ambient lighting and Beer's Law/Henyay-Greenstein lighting. Based roughly around the ideas described in [Rendering volumetric clouds using signed distance fields](https://blog.uhawkvr.com/rendering/rendering-volumetric-clouds-using-signed-distance-fields/).
 * Added support for ray-marched aurora borealis using blue noise ray-jittering to reduce banding effects as described in [Ray Marching Fog With Blue Noise](https://blog.demofox.org/2020/05/10/ray-marching-fog-with-blue-noise/) and using the caustic shader effect from [Believable Caustics Reflectionsv](https://www.alanzucconi.com/2019/09/13/believable-caustics-reflections/).

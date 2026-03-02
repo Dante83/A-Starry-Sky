@@ -6,7 +6,7 @@
       //or use the advanced fog lighting method - that way we destroy nothing...
       //Although if advanced fog is disabled, none of this should happen at all.
       if(fogFar <= 0.0){
-      	vFogWorldPosition = worldPosition.xyz;
+      	vFogWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
 
         //
         //Sun values

@@ -31,10 +31,16 @@ vec3 MyAESFilmicToneMapping(vec3 color) {
   return clamp((color * (2.51 * color + 0.03)) / (color * (2.43 * color + 0.59) + 0.14), 0.0, 1.0);
 }
 
+vec3 LinearTosRGB(vec3 value) {
+  return mix(pow(value, vec3(0.41666)) * 1.055 - vec3(0.055), value * 12.92, vec3(lessThanEqual(value, vec3(0.0031308))));
+}
+
 void main(){
   float distanceFromCenter = distance(vUv, vec2(0.5));
   float falloffDisk = clamp(smoothstep(0.0, 1.0, (sqrtOfOneHalf - min(distanceFromCenter * 2.7 - 0.8, 1.0))), 0.0, 1.0);
   vec3 combinedPass = texture(outputImage, vUv).rgb;
-  combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + ivec2(128.0 * noise(uTime),  128.0 * noise(uTime + 511.0))) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);
+  #ifdef HDR_INPUT
+    combinedPass = LinearTosRGB(MyAESFilmicToneMapping(combinedPass));
+  #endif
   gl_FragColor = vec4(combinedPass, falloffDisk);
 }

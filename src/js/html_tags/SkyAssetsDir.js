@@ -117,8 +117,8 @@ class SkyAssetsDir extends HTMLElement {
           parentDir = parentDir.endsWith('/') ? parentDir : parentDir + '/';
 
           //Remove the trailing and ending /s for appropriate path construction
-          path = path.startsWith('/') ? path.slice(1, path.length - 1) : path;
-          path = path.endsWith('/') ? path.slice(0, path.length - 2) : path;
+          path = path.startsWith('/') ? path.slice(1) : path;
+          path = path.endsWith('/') ? path.slice(0, -1) : path;
           path = parentDir + path;
         }
         else{
