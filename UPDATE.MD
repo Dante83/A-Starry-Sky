@@ -6,6 +6,8 @@
 * Fixed several aurora and fog bugs, including an incorrect light-direction coordinate swap in the atmospheric perspective shader that was placing the sun and moon 90° off in azimuth.
 * Fixed multiple JavaScript bugs around render target resolution, falsy-zero settings, atmospheric perspective parameters, and asset path handling.
 * Halved the default ray-march step count for both clouds and aurora (64 → 32) for better out-of-the-box performance, with the option to increase via `<sky-cloud-raymarch-steps>` and `<sky-aurora-raymarch-steps>`.
+* Updated clouds to use a more realistic atmospheric perspective that also fixes a bug with the earths shadow showing up on the surface of clouds.
+* Fixed a bug that blocked assets from loading the first time on occasion due to a race condition.
 
 **Version 1.1.0**
 * Added ray-marched clouds using 3D Simplex Noise combined with FBM worley noise, first contact transmittance/ambient lighting and Beer's Law/Henyay-Greenstein lighting. Based roughly around the ideas described in [Rendering volumetric clouds using signed distance fields](https://blog.uhawkvr.com/rendering/rendering-volumetric-clouds-using-signed-distance-fields/).

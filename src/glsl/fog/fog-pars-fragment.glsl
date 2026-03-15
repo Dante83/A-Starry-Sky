@@ -17,7 +17,6 @@
       varying vec3 vBetaM;
       varying float vSunE;
       varying float vMoonE;
-      varying vec3 vFexPixel;
       varying vec3 vMoonLightColor;
 
       const float mieDirectionalG = $mieDirectionalG;
@@ -83,11 +82,14 @@
         vec3 betaRTheta = vBetaR * rPhase;
         float mPhase = hgPhase( cosTheta, mieDirectionalG );
         vec3 betaMTheta = vBetaM * mPhase;
+        // Per-fragment view-path extinction: how much in-scattering occurs along camera->surface
+        vec3 Fex_view = clamp(exp( -( vBetaR * distToPoint + vBetaM * distToPoint ) ), 0.0, 1.0);
+
         //Hacky... but works... not going to complain.
         //Why no, I didn't do some physically accurate stuff here, it just looks okay so
         //so I don't complain.
         //vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex ), vec3( 1.5 ) );
-        vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - vFexPixel ), vec3( 1.5 ) );
+        vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex_view ), vec3( 1.5 ) );
         //Lin *= mix( vec3( 1.0 ), pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 1.0 / 2.0 ) ), clamp( pow( 1.0 - dot( up, lightDirection ), 5.0 ), 0.0, 1.0 ) );
         Lin *= pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 0.5 ) );
 

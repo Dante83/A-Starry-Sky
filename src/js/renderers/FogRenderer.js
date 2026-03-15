@@ -28,11 +28,14 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
   const self = this;
   this.tick = function(t){
     if(isAdvancedAtmosphericPerspective){
-      //Convert our sun and moon position to rho and phi
+      //Convert our sun and moon position to rho and phi.
+      //sun.position is in the WASM astronomical coordinate system where the visual world-space
+      //direction is (-sp.z, sp.y, -sp.x) - matching sun.quadOffset. We need atan2(z, x) here
+      //(not atan2(x, z) - PI) so that convertRhoThetaToXYZ reconstructs the correct world direction.
       const sunAltitude = Math.acos(skyState.sun.position.y);
-      const sunAzimuth = Math.atan2(skyState.sun.position.x, skyState.sun.position.z) - Math.PI;
+      const sunAzimuth = Math.atan2(skyState.sun.position.z, skyState.sun.position.x);
       const moonAltitude = Math.acos(skyState.moon.position.y);
-      const moonAzimuth = Math.atan2(skyState.moon.position.x, skyState.moon.position.z) - Math.PI;
+      const moonAzimuth = Math.atan2(skyState.moon.position.z, skyState.moon.position.x);
       const moonIntensity = Math.pow(skyState.moon.horizonFade , 3.0) * skyState.moon.intensity;
 
       //Inject the intensity for the moon. Pre-apply SRGBToLinear so Three.js's

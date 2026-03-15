@@ -3648,12 +3648,45 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '}',
         'luminance += 0.09 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);',
         'if(hasFirstContact){',
-          'float lightSourceHeight = RADIUS_OF_EARTH + rayStartPosition.y * METERS_TO_KM;',
-          'vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(rayDirection.y, 0.0)), parameterizationOfHeightToY(lightSourceHeight));',
-          'vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;',
-          'vec3 distVect = firstContactPosition - rayStartPosition;',
-          'luminance *= dominantLightSourceAtmosphericTransmittance * exp(-2.5E-5 * sqrt(dot(distVect, distVect)));',
-          'luminance += atmosphericFog * (1.0 - exp(-2.5E-5 * sqrt(dot(distVect, distVect))));',
+          '//Proper atmospheric perspective using the Elek/Chalmers LUT subtraction:',
+          '//  S(viewer->cloud) = S(viewer->inf) - T(viewer->cloud) * S(cloud->inf)',
+          "//The inscattering LUTs don't have earth shadow baked in (that's applied",
+          '//post-hoc in linearAtmosphericPass), so this naturally gives shadow-free',
+          '//fog for the short near-ground viewer-to-cloud path.',
+          'float viewCosZenith = max(rayDirection.y, 0.0);',
+          'float xParam = parameterizationOfCosOfViewZenithToX(viewCosZenith);',
+          'float observerR = rayStartPosition.y * METERS_TO_KM;',
+          'float cloudR = firstContactPosition.y * METERS_TO_KM;',
+          'float yObs = parameterizationOfHeightToY(observerR);',
+          'float yCloud = parameterizationOfHeightToY(cloudR);',
+
+          '//Viewer-to-cloud transmittance: T(v->c) = T(v->inf) / T(c->inf)',
+          'vec3 T_obs = texture(transmittance, vec2(xParam, yObs)).rgb;',
+          'vec3 T_cloud = texture(transmittance, vec2(xParam, yCloud)).rgb;',
+          'vec3 T_path = T_obs / max(T_cloud, vec3(0.001));',
+
+          '//Attenuate cloud luminance by viewer-to-cloud extinction',
+          'luminance *= T_path;',
+
+          '//Compute inscattering along viewer-to-cloud path for sun',
+          'float zSun = parameterizationOfCosOfSourceZenithToZ(sunPosition.y);',
+          'vec3 uv3ObsSun = vec3(xParam, yObs, zSun);',
+          'vec3 uv3CloudSun = vec3(xParam, yCloud, zSun);',
+          'vec3 fogMieSun = max(texture(mieInscatteringSum, uv3ObsSun).rgb - T_path * texture(mieInscatteringSum, uv3CloudSun).rgb, vec3(0.0));',
+          'vec3 fogRaySun = max(texture(rayleighInscatteringSum, uv3ObsSun).rgb - T_path * texture(rayleighInscatteringSum, uv3CloudSun).rgb, vec3(0.0));',
+          'float cosViewSun = dot(rayDirection, sunPosition);',
+          'vec3 fogSun = pow(sunHorizonFade, 3.0) * scatteringSunIntensity * (miePhaseFunction(cosViewSun) * fogMieSun + rayleighPhaseFunction(cosViewSun) * fogRaySun);',
+
+          '//Compute inscattering along viewer-to-cloud path for moon',
+          'float zMoon = parameterizationOfCosOfSourceZenithToZ(moonPosition.y);',
+          'vec3 uv3ObsMoon = vec3(xParam, yObs, zMoon);',
+          'vec3 uv3CloudMoon = vec3(xParam, yCloud, zMoon);',
+          'vec3 fogMieMoon = max(texture(mieInscatteringSum, uv3ObsMoon).rgb - T_path * texture(mieInscatteringSum, uv3CloudMoon).rgb, vec3(0.0));',
+          'vec3 fogRayMoon = max(texture(rayleighInscatteringSum, uv3ObsMoon).rgb - T_path * texture(rayleighInscatteringSum, uv3CloudMoon).rgb, vec3(0.0));',
+          'float cosViewMoon = dot(rayDirection, moonPosition);',
+          'vec3 fogMoon = pow(moonHorizonFade, 3.0) * scatteringMoonIntensity * moonLightColor * (miePhaseFunction(cosViewMoon) * fogMieMoon + rayleighPhaseFunction(cosViewMoon) * fogRayMoon);',
+
+          'luminance += fogSun + fogMoon;',
         '}',
 
         'return vec4(luminance * max(sunHorizonFade, moonHorizonFade), 1.0 - rayTransmittance); //Linear multiplier for artistic control',
@@ -3675,8 +3708,11 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '//Percent of sun visible across the length of the ray extending in this direction',
       'float percentShadowMie = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT, ONE_OVER_MIE_SCALE_HEIGHT);',
       'float percentShadowRayleigh = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT, ONE_OVER_RAYLEIGH_SCALE_HEIGHT);',
-      'interpolatedMieScattering = mix(mieShadow, interpolatedMieScattering, percentShadowMie);',
-      'interpolatedRayleighScattering = mix(rayleighShadow, interpolatedRayleighScattering, percentShadowRayleigh);',
+      '//Clamp shadow result to never exceed the original inscattering - the shadow',
+      '//should only ever darken, never brighten (the horizon-sampled mieShadow/rayleighShadow',
+      '//can be brighter than the actual view-direction inscattering at high zenith angles)',
+      'interpolatedMieScattering = min(mix(mieShadow, interpolatedMieScattering, percentShadowMie), interpolatedMieScattering);',
+      'interpolatedRayleighScattering = min(mix(rayleighShadow, interpolatedRayleighScattering, percentShadowRayleigh), interpolatedRayleighScattering);',
 
       'return pow(intensityFader, 3.0) * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);',
     '}',
@@ -3815,7 +3851,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
           'dominantLightSourcePosition = sunPosition;',
         '}',
 
-        'vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + clamp(cameraHeight * 1000.0 + vWorldPosition.y, 0.0, ATMOSPHERE_HEIGHT), vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass + auroraLighting);',
+        '//atmosphericFog param is unused - atmospheric perspective is now computed',
+        '//inside the ray marcher using the Elek/Chalmers LUT subtraction method',
+        'vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + clamp(cameraHeight * 1000.0 + vWorldPosition.y, 0.0, ATMOSPHERE_HEIGHT), vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, vec3(0.0));',
       '#endif',
 
       '//Sun and Moon layers',
@@ -4409,7 +4447,6 @@ StarrySky.Materials.Fog.fogParsMaterial = {
           'varying vec3 vBetaM;',
           'varying float vSunE;',
           'varying float vMoonE;',
-          'varying vec3 vFexPixel;',
           'varying vec3 vMoonLightColor;',
 
           'const float mieDirectionalG = $mieDirectionalG;',
@@ -4475,11 +4512,14 @@ StarrySky.Materials.Fog.fogParsMaterial = {
             'vec3 betaRTheta = vBetaR * rPhase;',
             'float mPhase = hgPhase( cosTheta, mieDirectionalG );',
             'vec3 betaMTheta = vBetaM * mPhase;',
+            '// Per-fragment view-path extinction: how much in-scattering occurs along camera->surface',
+            'vec3 Fex_view = clamp(exp( -( vBetaR * distToPoint + vBetaM * distToPoint ) ), 0.0, 1.0);',
+
             '//Hacky... but works... not going to complain.',
             "//Why no, I didn't do some physically accurate stuff here, it just looks okay so",
             "//so I don't complain.",
             '//vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex ), vec3( 1.5 ) );',
-            'vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - vFexPixel ), vec3( 1.5 ) );',
+            'vec3 Lin = pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex_view ), vec3( 1.5 ) );',
             '//Lin *= mix( vec3( 1.0 ), pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 1.0 / 2.0 ) ), clamp( pow( 1.0 - dot( up, lightDirection ), 5.0 ), 0.0, 1.0 ) );',
             'Lin *= pow( vLightE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * Fex, vec3( 0.5 ) );',
 
@@ -4566,7 +4606,6 @@ StarrySky.Materials.Fog.fogParsMaterial = {
           'varying vec3 vBetaM;',
           'varying float vSunE;',
           'varying float vMoonE;',
-          'varying vec3 vFexPixel;',
           'varying vec3 vMoonLightColor;',
 
           'uniform vec3 fogColor; //Altitude, Azimuth of Sun and Altitude of Mooon',
@@ -4575,7 +4614,6 @@ StarrySky.Materials.Fog.fogParsMaterial = {
         '	const float rayleigh = $rayleigh;',
         '	const float turbidity = $turbidty;',
         '	const float mieCoefficient = $mieCoefficient;',
-          'const float groundFexDistanceMultiplier = $groundFexDistanceMultiplier;',
           'const float sunRadius = $solarRadius;',
           'const float moonRadius = $lunarRadius;',
         '	const vec3 up = vec3(0.0, 1.0, 0.0);',
@@ -4714,7 +4752,9 @@ StarrySky.Materials.Fog.fogMaterial = {
           'if(fogFar <= 0.0){',
             'vec3 fogOutData = max(atmosphericFogMethod(), 0.0);',
             'vec3 groundColor = fogsRGBToLinear(vec4(gl_FragColor.rgb, 1.0)).rgb;',
-            'gl_FragColor.rgb = fogLinearTosRGB(vec4(MyAESFilmicToneMapping(fogOutData + groundColor * vFexPixel), 1.0)).rgb;',
+            'float distToGround = length(vFogWorldPosition - cameraPosition) * groundFexDistanceMultiplier;',
+            'vec3 Fex_ground = clamp(exp( -( vBetaRSun * distToGround + vBetaM * distToGround ) ), 0.0, 1.0);',
+            'gl_FragColor.rgb = fogLinearTosRGB(vec4(MyAESFilmicToneMapping(fogOutData + groundColor * Fex_ground), 1.0)).rgb;',
           '}',
           'else if(fogNear < 0.0){',
             '//$$OCEAN_SHADER_SHADER_FRAGMENT_RESERVATION$$',
@@ -4794,20 +4834,6 @@ StarrySky.Materials.Fog.fogMaterial = {
           '	// rayleigh coefficients',
           '	vBetaRMoon = totalRayleigh * rayleighCoefficientMoon;',
 
-            '//Pixel',
-            'float fogPixelFade = 1.0 - clamp(1.0 - exp(normalize(vFogWorldPosition).y), 0.0, 1.0);',
-            'float rayleighCoefficientPixel = rayleigh - ( 1.0 * ( 1.0 - fogPixelFade ) );',
-            'vec3 betaRPixel = totalRayleigh * rayleighCoefficientPixel;',
-            '// optical length',
-            '// cutoff angle at 90 to avoid singularity in next formula.',
-            'float fogDistToPoint = length(vFogWorldPosition - cameraPosition) * groundFexDistanceMultiplier;',
-
-            '// combined extinction factor',
-            'float sR = fogDistToPoint;',
-            'float sM = fogDistToPoint;',
-
-            '// combined extinction factor',
-            'vFexPixel = sqrt(clamp(exp( -( betaRPixel * sR + vBetaM * sM ) ), 0.0, 1.0));',
           '}',
           'else if(fogNear < 0.0){',
             '//$$OCEAN_SHADER_SHADER_VERTEX_RESERVATION$$',
@@ -6617,11 +6643,14 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
   const self = this;
   this.tick = function(t){
     if(isAdvancedAtmosphericPerspective){
-      //Convert our sun and moon position to rho and phi
+      //Convert our sun and moon position to rho and phi.
+      //sun.position is in the WASM astronomical coordinate system where the visual world-space
+      //direction is (-sp.z, sp.y, -sp.x) - matching sun.quadOffset. We need atan2(z, x) here
+      //(not atan2(x, z) - PI) so that convertRhoThetaToXYZ reconstructs the correct world direction.
       const sunAltitude = Math.acos(skyState.sun.position.y);
-      const sunAzimuth = Math.atan2(skyState.sun.position.x, skyState.sun.position.z) - Math.PI;
+      const sunAzimuth = Math.atan2(skyState.sun.position.z, skyState.sun.position.x);
       const moonAltitude = Math.acos(skyState.moon.position.y);
-      const moonAzimuth = Math.atan2(skyState.moon.position.x, skyState.moon.position.z) - Math.PI;
+      const moonAzimuth = Math.atan2(skyState.moon.position.z, skyState.moon.position.x);
       const moonIntensity = Math.pow(skyState.moon.horizonFade , 3.0) * skyState.moon.intensity;
 
       //Inject the intensity for the moon. Pre-apply SRGBToLinear so Three.js's

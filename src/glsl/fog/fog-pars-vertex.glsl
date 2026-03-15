@@ -12,7 +12,6 @@ varying float vFogDepth;
       varying vec3 vBetaM;
       varying float vSunE;
       varying float vMoonE;
-      varying vec3 vFexPixel;
       varying vec3 vMoonLightColor;
 
       uniform vec3 fogColor; //Altitude, Azimuth of Sun and Altitude of Mooon
@@ -21,7 +20,6 @@ varying float vFogDepth;
     	const float rayleigh = $rayleigh;
     	const float turbidity = $turbidty;
     	const float mieCoefficient = $mieCoefficient;
-      const float groundFexDistanceMultiplier = $groundFexDistanceMultiplier;
       const float sunRadius = $solarRadius;
       const float moonRadius = $lunarRadius;
     	const vec3 up = vec3(0.0, 1.0, 0.0);
