@@ -3888,8 +3888,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
           'combinedPass = mix(combinedPass, cloudLighting.rgb, cloudLighting.a);',
         '#endif',
 
-        '//And bring it back to the normal sRGB afterwards afterwards',
-        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
+        '//Leave in linear HDR for bloom - tonemapping happens in the output shader',
       '#elif($isMeteringPass)',
         '//Cut this down to the circle of the sky ignoring the galatic lighting',
         'float circularMask = 1.0 - step(1.0, rho);',
@@ -5145,7 +5144,7 @@ StarrySky.DefaultData.lighting = {
   moonBloom: {
     bloomEnabled: true,
     exposure: 1.0,
-    threshold: 0.55,
+    threshold: 1.5,
     strength: 0.9,
     radius: 1.4
   },
@@ -7197,6 +7196,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     fragmentShader: StarrySky.Materials.Postprocessing.moonAndSunOutput.fragmentShader
   });
 	outputMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+	outputMaterial.defines.HDR_INPUT = '';
   this.moonMesh = new THREE.Mesh(this.geometry, outputMaterial);
   outputMaterial.castShadow = false;
   outputMaterial.fog = false;
@@ -7263,7 +7263,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
     //Update our bloom threshold so we don't bloom the moon during the day
     if(moonBloomDataRef.bloomEnabled){
-      this.bloomPass.threshold = 1.0 - 0.43 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
+      this.bloomPass.threshold = 1.5 - 0.65 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
     }
 
     //Run our float shaders shaders

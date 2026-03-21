@@ -36,7 +36,7 @@ StarrySky.DefaultData.lighting = {
   moonBloom: {
     bloomEnabled: true,
     exposure: 1.0,
-    threshold: 0.55,
+    threshold: 1.5,
     strength: 0.9,
     radius: 1.4
   },

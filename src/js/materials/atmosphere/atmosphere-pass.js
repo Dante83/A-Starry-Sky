@@ -1055,8 +1055,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
           'combinedPass = mix(combinedPass, cloudLighting.rgb, cloudLighting.a);',
         '#endif',
 
-        '//And bring it back to the normal sRGB afterwards afterwards',
-        'combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;',
+        '//Leave in linear HDR for bloom - tonemapping happens in the output shader',
       '#elif($isMeteringPass)',
         '//Cut this down to the circle of the sky ignoring the galatic lighting',
         'float circularMask = 1.0 - step(1.0, rho);',
