@@ -864,6 +864,55 @@ THREE.BufferGeometryUtils = {
 
 ( function () {
 
+	/**
+ * Full-screen textured quad shader
+ */
+	const CopyShader = {
+		uniforms: {
+			'tDiffuse': {
+				value: null
+			},
+			'opacity': {
+				value: 1.0
+			}
+		},
+		vertexShader:
+  /* glsl */
+  `
+
+		varying vec2 vUv;
+
+		void main() {
+
+			vUv = uv;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+		}`,
+		fragmentShader:
+  /* glsl */
+  `
+
+		uniform float opacity;
+
+		uniform sampler2D tDiffuse;
+
+		varying vec2 vUv;
+
+		void main() {
+
+			gl_FragColor = texture2D( tDiffuse, vUv );
+			gl_FragColor.a *= opacity;
+
+
+		}`
+	};
+
+	THREE.CopyShader = CopyShader;
+
+} )();
+
+( function () {
+
 	class RenderPass extends THREE.Pass {
 
 		constructor( scene, camera, overrideMaterial, clearColor, clearAlpha ) {
@@ -8357,6 +8406,22 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
     }, [self.transferableFinalStateBuffer]);
   }
 
+  //Public API for external consumers (e.g. a-water) to access atmospheric LUT textures
+  //and sky state for atmospheric perspective rendering.
+  this.getAtmosphericLUTs = function(){
+    if(!self.atmosphereLUTLibrary || !self.skyState){
+      return null;
+    }
+    return {
+      transmittance: self.atmosphereLUTLibrary.transmittance,
+      mieInscatteringSum: self.atmosphereLUTLibrary.mieScatteringSum,
+      rayleighInscatteringSum: self.atmosphereLUTLibrary.rayleighScatteringSum,
+      atmosphereFunctionsString: self.atmosphereLUTLibrary.atmosphereFunctionsString,
+      skyState: self.skyState,
+      atmosphericParameters: self.assetManager.data.skyAtmosphericParameters
+    };
+  };
+
   this.i = 0;
 
   this.globalCameraPosition = new THREE.Vector3();
@@ -8795,6 +8860,11 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   this.setupNextTick = function(){
+    //Notify external consumers that atmospheric LUTs are ready
+    document.dispatchEvent(new CustomEvent('starry-sky-atmosphere-ready', {
+      detail: { skyDirector: self }
+    }));
+
     parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine
       self.tick(time, timeDelta);

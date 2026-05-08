@@ -13,6 +13,7 @@ def main():
     js_dir = '../js/'
     js_fil_names = ['three_js_extensions/BufferGeometryUtils.js',\
     'three_js_extensions/Pass.js',\
+    'three_js_extensions/CopyShader.js',\
     'three_js_extensions/RenderPass.js',\
     'three_js_extensions/ShaderPass.js',\
     'three_js_extensions/EffectComposer.js',\

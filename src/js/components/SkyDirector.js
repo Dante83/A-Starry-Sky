@@ -216,6 +216,23 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
     }, [self.transferableFinalStateBuffer]);
   }
 
+  //Public API for external consumers (e.g. a-water) to access atmospheric LUT textures
+  //and sky state for atmospheric perspective rendering.
+  this.getAtmosphericLUTs = function(){
+    if(!self.atmosphereLUTLibrary || !self.skyState){
+      return null;
+    }
+    return {
+      transmittance: self.atmosphereLUTLibrary.transmittance,
+      mieInscatteringSum: self.atmosphereLUTLibrary.mieScatteringSum,
+      rayleighInscatteringSum: self.atmosphereLUTLibrary.rayleighScatteringSum,
+      atmosphereFunctionsString: self.atmosphereLUTLibrary.atmosphereFunctionsString,
+      skyState: self.skyState,
+      atmosphericParameters: self.assetManager.data.skyAtmosphericParameters,
+      blueNoiseTexture: self.assetManager.images.blueNoiseImages[self.randomBlueNoiseTexture]
+    };
+  };
+
   this.i = 0;
 
   this.globalCameraPosition = new THREE.Vector3();
@@ -654,6 +671,11 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   this.setupNextTick = function(){
+    //Notify external consumers that atmospheric LUTs are ready
+    document.dispatchEvent(new CustomEvent('starry-sky-atmosphere-ready', {
+      detail: { skyDirector: self }
+    }));
+
     parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine
       self.tick(time, timeDelta);
