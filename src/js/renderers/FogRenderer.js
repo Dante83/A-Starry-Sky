@@ -10,7 +10,9 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
     const turbidity = 2.53;
     const rayleigh = 3.0;
     const groundDistanceMultp = lightingData.atmosphericPerspectiveDistanceMultiplier;
-    const exposure = 0.17;
+    // Lower than Preetham's 0.17 because the new linear single-scatter formula doesn't
+    // include Preetham's pow(., 1.5) * pow(., 0.5) intensity compression. Tuned by eye.
+    const exposure = 0.012;
     const DEG_2_RAD = 0.017453292519943295769236907684886;
     const sunRadius = Math.sin(atmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
     const moonRadius = Math.sin(atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);

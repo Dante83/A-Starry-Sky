@@ -13,7 +13,7 @@ StarrySky.Materials.Fog.fogMaterial = {
             'vec3 fogOutData = max(atmosphericFogMethod(), 0.0);',
             'vec3 groundColor = fogsRGBToLinear(vec4(gl_FragColor.rgb, 1.0)).rgb;',
             'float distToGround = length(vFogWorldPosition - cameraPosition) * groundFexDistanceMultiplier;',
-            'vec3 Fex_ground = clamp(exp( -( vBetaRSun * distToGround + vBetaM * distToGround ) ), 0.0, 1.0);',
+            'vec3 Fex_ground = clamp(exp( -betaExt * distToGround ), 0.0, 1.0);',
             'gl_FragColor.rgb = fogLinearTosRGB(vec4(MyAESFilmicToneMapping(fogOutData + groundColor * Fex_ground), 1.0)).rgb;',
           '}',
           'else if(fogNear < 0.0){',
@@ -65,35 +65,17 @@ StarrySky.Materials.Fog.fogMaterial = {
             'vec3 sunPosition = convertRhoThetaToXYZ(sunAltitudeAzimuth);',
             'vec2 moonAltitudeAzimuth = vec2(fogColor.z, fogNear); //Swap the sign bit on fogNear',
             'vec3 moonPosition = convertRhoThetaToXYZ(moonAltitudeAzimuth);',
-          '	vSunDirection = normalize(sunPosition);',
-          '	vSunE = sourceIntensity( dot( vSunDirection, up ), 1300.0 ); //Sun EE is constant at 1300.0',
-            'vSunE = solarEclipseLightingModifier(sunPosition, moonPosition) * vSunE;',
-          '	vSunfade = 1.0 - clamp( 1.0 - exp( ( sunPosition.y ) ), 0.0, 1.0 );',
-
-          '	float rayleighCoefficientSun = rayleigh - ( 1.0 - vSunfade );',
-
-            '// extinction (absorbtion + out scattering)',
-          '	// rayleigh coefficients',
-          '	vBetaRSun = totalRayleigh * rayleighCoefficientSun;',
-
-            '// mie coefficients',
-          '	vBetaM = totalMie( turbidity ) * mieCoefficient;',
+            'vSunDirection = normalize(sunPosition);',
+            'vSunE = sourceIntensityWithExtinction( vSunDirection, 1300.0 ); //Sun EE constant; Kasten-Young air mass × beta extinction reddens at low altitudes',
+            'vSunE *= solarEclipseLightingModifier(sunPosition, moonPosition);',
 
             '//',
             '//Moon',
             '//',
             "float moonEE = -fogFar; //the uniform's true value",
             'vMoonDirection = normalize(moonPosition);',
-          '	vMoonE = sourceIntensity( dot( vMoonDirection, up ), moonEE);',
+            'vMoonE = sourceIntensityWithExtinction( vMoonDirection, moonEE );',
             'vMoonLightColor = lunarEclipseLightingModifier(sunPosition, moonPosition);',
-          '	vMoonfade = 1.0 - clamp( 1.0 - exp( ( moonPosition.y ) ), 0.0, 1.0 );',
-
-          '	float rayleighCoefficientMoon = rayleigh - ( 1.0 * ( 1.0 - vMoonfade ) );',
-
-          '	// extinction (absorbtion + out scattering)',
-          '	// rayleigh coefficients',
-          '	vBetaRMoon = totalRayleigh * rayleighCoefficientMoon;',
-
           '}',
           'else if(fogNear < 0.0){',
             '//$$OCEAN_SHADER_SHADER_VERTEX_RESERVATION$$',

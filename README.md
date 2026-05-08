@@ -301,7 +301,7 @@ You can also tune the LUT ray step counts, though the defaults are already near-
 `<sky-maximum-ambient-lighting>` | The maximum amount of ambient light in the system. | INF
 `<sky-atmospheric-perspective-type>` | Can be set to *normal*, *advanced*, or *none*. Required for scene fog. *normal* uses the original exponential fog model; *advanced* uses a Preetham-based model for improved horizon color variation at the cost of greater GPU pressure. | normal
 `<sky-atmospheric-perspective-density>` | For *normal* fog only. Controls the density parameter for exponential scene fog. The color is set automatically from the scene lighting. Ignored if the scene fog type is *advanced* | 0.007
-`<sky-atmospheric-perspective-distance-multiplier>` | For *advanced* fog only. Multiplies the distance to the fog for the advanced fog model. | 5.0
+`<sky-atmospheric-perspective-distance-multiplier>` | For *advanced* fog only. Multiplies the distance to the fog for the advanced fog model. | 1.0
 `<sky-ground-color>` | Parent tag. Contains `<sky-ground-color-{color-channel}>` tags to describe the base color of the ground for reflective lighting from the surface. | N/A
 `<sky-ground-color-red>` | Used to describe **red** color channel changes to `<sky-ground-color>` tags. | 66
 `<sky-ground-color-green>` | Used to describe **green** color channel changes to `<sky-ground-color>` tags. | 44

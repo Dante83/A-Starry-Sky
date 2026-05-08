@@ -4,60 +4,59 @@ varying float vFogDepth;
     #if($useAdvancedAtmospehericPerspective)
       varying vec3 vFogWorldPosition;
       varying vec3 vSunDirection;
-      varying float vSunfade;
       varying vec3 vMoonDirection;
-      varying float vMoonfade;
-      varying vec3 vBetaRSun;
-      varying vec3 vBetaRMoon;
-      varying vec3 vBetaM;
-      varying float vSunE;
-      varying float vMoonE;
+      varying vec3 vSunE;          // Sun radiance reaching observer, color-shifted by atmosphere
+      varying vec3 vMoonE;         // Moon radiance reaching observer, color-shifted by atmosphere
       varying vec3 vMoonLightColor;
 
       uniform vec3 fogColor; //Altitude, Azimuth of Sun and Altitude of Mooon
       uniform float fogNear; //Azimuth of moon
-      uniform float fogFar; //Intensity of moon
-    	const float rayleigh = $rayleigh;
-    	const float turbidity = $turbidty;
-    	const float mieCoefficient = $mieCoefficient;
+      uniform float fogFar;  //Intensity of moon (negated; sign-bit flag for advanced mode)
       const float sunRadius = $solarRadius;
       const float moonRadius = $lunarRadius;
-    	const vec3 up = vec3(0.0, 1.0, 0.0);
-    	const float e = 2.7182818284590452;
-    	const float pi = 3.1415926535897932;
+      const vec3 up = vec3(0.0, 1.0, 0.0);
+      const float e = 2.7182818284590452;
+      const float pi = 3.1415926535897932;
       const float piOver2 = 1.57079632679;
       const float sqrtOf2 = 1.41421356237;
+
+      // Same beta values as the sky LUT bake (per-meter, matching world-space distances).
+      const vec3 betaR = $rayleighBeta;
+      const vec3 betaM = $mieBeta;
+
+      // Vertical optical depth at zenith (in meters; scale heights are pre-multiplied by 1000).
       const float rayleighZenithLength = $rayleighScaleHeight;
       const float mieZenithLength = $mieScaleHeight;
 
-    	// wavelength of used primaries, according to preetham
-    	const vec3 lambda = vec3( 680E-9, 550E-9, 450E-9 );
-
-    	// this pre-calcuation replaces older TotalRayleigh(vec3 lambda) function:
-    	// (8.0 * pow(pi, 3.0) * pow(pow(n, 2.0) - 1.0, 2.0) * (6.0 + 3.0 * pn)) / (3.0 * N * pow(lambda, vec3(4.0)) * (6.0 - 7.0 * pn))
-    	const vec3 totalRayleigh = $rayleighBeta;
-
-    	// mie stuff
-    	// K coefficient for the primaries
-    	const float v = 4.0;
-    	const vec3 K = vec3( 0.686, 0.678, 0.666 );
-
-    	// MieConst = pi * pow( ( 2.0 * pi ) / lambda, vec3( v - 2.0 ) ) * K
-    	const vec3 MieConst = vec3( 1.8399918514433978E14, 2.7798023919660528E14, 4.0790479543861094E14 );
-
-    	// earth shadow hack
-    	// cutoffAngle = pi / 1.95;
-    	const float cutoffAngle = 1.6110731556870734;
-    	const float steepness = 1.5;
-    	float sourceIntensity( float zenithAngleCos, float EE ) {
+      // Analytic horizon falloff for source intensity (sun/moon dim as they approach
+      // the horizon and below). Cleaner than passing sunHorizonFade through fog.color
+      // would require encoding more bits than we have available in the existing fog
+      // uniform smuggle.
+      const float cutoffAngle = 1.6110731556870734;  // pi / 1.95 — slightly past horizon
+      const float steepness = 1.5;
+      float sourceIntensity( float zenithAngleCos, float EE ) {
         zenithAngleCos = clamp( zenithAngleCos, -1.0, 1.0 );
-  			return EE * max( 0.0, 1.0 - pow( e, -( ( cutoffAngle - acos( zenithAngleCos ) ) / steepness ) ) );
-    	}
+        return EE * max( 0.0, 1.0 - pow( e, -( ( cutoffAngle - acos( zenithAngleCos ) ) / steepness ) ) );
+      }
 
-    	vec3 totalMie( float T ) {
-    		float c = ( 0.2 * T ) * 10E-18;
-    		return 0.434 * c * MieConst;
-    	}
+      // Kasten-Young 1989 air-mass approximation. Returns the multiplicative factor
+      // (relative to vertical column) by which the atmospheric path length increases
+      // for a given zenith angle. Matches what the Elek LUT integrates analytically.
+      float airMass( float zenithAngleCos ) {
+        float zenithAngleDeg = acos(clamp(zenithAngleCos, -1.0, 1.0)) * 180.0 / pi;
+        return 1.0 / ( zenithAngleCos + 0.15 * pow( max(0.001, 93.885 - zenithAngleDeg), -1.253 ) );
+      }
+
+      // Sun/moon radiance reaching the observer through the vertical atmospheric column,
+      // wavelength-attenuated. This is what makes the sun redden as it approaches the horizon.
+      vec3 sourceIntensityWithExtinction( vec3 lightDirection, float EE ){
+        float cosZ = dot( up, lightDirection );
+        float E = sourceIntensity( cosZ, EE );
+        if( E <= 0.0 ) return vec3(0.0);
+        float am = airMass( cosZ );
+        vec3 Fex = exp( -( betaR * rayleighZenithLength + betaM * mieZenithLength ) * am );
+        return E * Fex;
+      }
 
       vec3 convertRhoThetaToXYZ(vec2 altitudeAzimuth){
         vec3 outPosition;
