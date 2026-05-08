@@ -17,7 +17,9 @@ const float ATMOSPHERE_HEIGHT = $atmosphereHeight;
 const float ATMOSPHERE_HEIGHT_SQUARED = $atmosphereHeightSquared;
 const float ONE_OVER_MIE_SCALE_HEIGHT = $oneOverMieScaleHeight;
 const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = $oneOverRayleighScaleHeight;
-//Mie Beta / 0.9, https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf
+//Mie extinction coefficient (β_ext). Single-scattering albedo (0.9 for atmospheric Mie)
+//is applied at the LUT bake step, so this is the raw extinction. Reference:
+//https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf
 const vec3 EARTH_MIE_BETA_EXTINCTION = $mieBeta;
 const float ELOK_Z_CONST = 0.97267627755;
 const float ONE_OVER_EIGHT_PI = 0.039788735772;

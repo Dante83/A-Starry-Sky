@@ -9,7 +9,11 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     const mieG = atmosphericParameters.mieDirectionalG;
     const textureDepth = packingWidth * packingHeight;
     const mieGSquared = mieG * mieG;
-    const miePhaseCoefficient = (1.5 * (1.0 - mieGSquared) / (2.0 + mieGSquared));
+    // Properly normalized Cornette-Shanks: 3/(8π) × (1-g²)/(2+g²). The 1/(4π) factor
+    // (i.e. the difference between this and the bare 1.5×(1-g²)/(2+g²)) used to be
+    // partially offset by a ONE_OVER_EIGHT_PI×(1/0.9) factor in the LUT bake; both
+    // sides are now consistent. See single-scattering.glsl / kth-inscattering.glsl.
+    const miePhaseCoefficient = (3.0 / (8.0 * Math.PI)) * (1.0 - mieGSquared) / (2.0 + mieGSquared);
     const ozBet = atmosphericParameters.ozoneBeta;
     const mieBet = atmosphericParameters.mieBeta;
     const rayBet = atmosphericParameters.rayleighBeta;

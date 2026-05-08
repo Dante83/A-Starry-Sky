@@ -144,7 +144,10 @@ StarrySky.Materials.Atmosphere.kthInscatteringMaterial = {
         '#if($isRayleigh)',
           'totalInscattering *= RAYLEIGH_BETA;',
         '#else',
-          'totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION / 0.9;',
+          '//β_sca = β_ext × single-scattering albedo (0.9 for atmospheric Mie). Matches',
+          '//the cleanup in single-scattering.glsl — phase function is fully normalized so',
+          '//no 1/(8π) factor needed here.',
+          'totalInscattering *= EARTH_MIE_BETA_EXTINCTION * 0.9;',
         '#endif',
       '}',
 
