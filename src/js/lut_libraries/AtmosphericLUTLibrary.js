@@ -64,6 +64,12 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.transferrableTransmittanceBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * TRANSMITTANCE_TEXTURE_SIZE * TRANSMITTANCE_TEXTURE_SIZE * 4);
   this.transferableTransmittanceFloat32Array = new Float32Array(this.transferrableTransmittanceBuffer);
   this.renderer.readRenderTargetPixels(transmittanceRenderTarget, 0, 0, TRANSMITTANCE_TEXTURE_SIZE, TRANSMITTANCE_TEXTURE_SIZE, this.transferableTransmittanceFloat32Array);
+  //Persistent main-thread copy. transferableTransmittance* gets transferred to the worker
+  //during autoexposure init (postMessage transferList), which detaches the underlying buffer.
+  //LightingManager's ambient LUT path needs to look up transmittance after that point.
+  //Use .slice() which is guaranteed to allocate a new buffer and copy values; the
+  //`new Float32Array(typedArray)` form was leaving the copy empty in r173.
+  this.transmittanceFloat32ArrayCopy = this.transferableTransmittanceFloat32Array.slice();
 
   //
   //Set up our single scattering texture

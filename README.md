@@ -296,7 +296,7 @@ You can also tune the LUT ray step counts, though the defaults are already near-
 `<sky-lighting>` | Parent tag. Contains all child tags related to the lighting of the scene. | N/A
 `<sky-sun-intensity>` | Intensity multiplier for sunlight, can be used to brighten or dim the intensity of solar directional lighting. | 1.0
 `<sky-moon-intensity>` | Intensity multiplier for moonlight, can be used to brighten or dim the intensity of lunar directional lighting. | 1.0
-`<sky-ambient-intensity>` | Intensity multiplier for ambient lighting, can be used to brighten or dim the intensity of the ambient lighting system. | 1.0
+`<sky-ambient-intensity>` | Intensity multiplier for ambient lighting, can be used to brighten or dim the intensity of the ambient lighting system. | 2.0
 `<sky-minimum-ambient-lighting>` | The minimum amount of ambient light in the system. | 0.01
 `<sky-maximum-ambient-lighting>` | The maximum amount of ambient light in the system. | INF
 `<sky-atmospheric-perspective-type>` | Can be set to *normal*, *advanced*, or *none*. Required for scene fog. *normal* uses the original exponential fog model; *advanced* uses a Preetham-based model for improved horizon color variation at the cost of greater GPU pressure. | normal

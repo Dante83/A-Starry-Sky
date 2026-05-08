@@ -315,8 +315,13 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Update our random blue noise texture
       self.randomBlueNoiseTexture = Math.floor(Math.random() * 4.9999);
 
-      //Check if we need to update our auto-exposure final state again
-      if(self.exposureT >= HALF_A_SECOND && self.transferableSkyFinalLightingBuffer.byteLength !== 0){
+      //Check if we need to update our auto-exposure final state again.
+      //Skipped when the ambient LUT is driving the lighting — the metering survey
+      //+ worker round-trip is what we're replacing, and its output (lightingState[])
+      //goes unread in that path. Toggling lightingManager.useAmbientLUT to false at
+      //runtime is supported only as a fallback at page load; running this block
+      //while the LUT path is active would just burn cycles.
+      if(!self.lightingManager.useAmbientLUT && self.exposureT >= HALF_A_SECOND && self.transferableSkyFinalLightingBuffer.byteLength !== 0){
         self.exposureT = 0.0;
         //Our colors are normalized and the brightnesses pulled out of them
         //so we need to inject those values back in before updating all of our colors again

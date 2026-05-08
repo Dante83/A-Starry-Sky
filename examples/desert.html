@@ -117,6 +117,9 @@
 
       <!-- Scene Setup-->
       <a-entity gltf-model="#low-poly-desert" position="0 0" shadow="cast: false"></a-entity>
+
+      <!-- Test Cube for Lighting -->
+      <a-box color="white" position="0 2 -5" scale="0.5 0.5 0.5" shadow="cast: true; receive: true" animation="property: rotation; to: 0 360 0; dur: 10000; loop: true" animation__float="property: position; to: 0 2.5 -5; dur: 3000; dir: alternate; easing: easeInOutSine; loop: true"></a-box>
     </a-scene>
   </body>
 </html>

@@ -46,7 +46,7 @@ StarrySky.DefaultData.lighting = {
   minimumAmbientLighting: 0.01,
   maximumAmbientLighting: Infinity,
   atmosphericPerspectiveDensity: 0.007,
-  atmosphericPerspectiveDistanceMultiplier: 1.0,
+  atmosphericPerspectiveDistanceMultiplier: 2.0,
   atmosphericPerspectiveType: 'normal',
   shadowCameraSize: 32.0,
   shadowCameraResolution: 2048
