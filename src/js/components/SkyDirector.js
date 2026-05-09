@@ -278,8 +278,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.skyState.saturn.position.fromArray(self.rotatedAstroPositions, 18);
 
       //Update our linear values
-      self.skyState.sun.luminosity = 100000.0 * self.astronomicalLinearValues[0] / 1300.0;
-      self.skyState.sun.intensity = 10.0 *  self.astronomicalLinearValues[0] / 1300.0;
+      const SUN_IRRADIANCE_W_PER_M2 = 1367.0;
+      self.skyState.sun.luminosity = 100000.0 * self.astronomicalLinearValues[0] / SUN_IRRADIANCE_W_PER_M2;
+      self.skyState.sun.intensity = 10.0 * self.astronomicalLinearValues[0] / SUN_IRRADIANCE_W_PER_M2;
       self.skyState.sun.horizonFade = self.rotatedAstroDependentValues[0];
       self.skyState.sun.scale = self.astronomicalLinearValues[1];
       self.skyState.moon.luminosity = 200.0 * self.astronomicalLinearValues[2];

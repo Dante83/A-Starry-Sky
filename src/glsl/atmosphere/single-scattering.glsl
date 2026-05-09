@@ -35,8 +35,12 @@ void main(){
     //Prime our trapezoidal rule
     float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);
     float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+    //Tent-shaped ozone profile (Chappuis-band absorber). See transmittance.glsl
+    //for the 0.56 normalization rationale (preserves vertical-column behavior).
+    float previousOzoneDensity = max(0.0, 1.0 - abs(h - 25.0) / 15.0) * 0.56;
     float totalDensityMie = 0.0;
     float totalDensityRayleigh = 0.0;
+    float totalDensityOzone = 0.0;
 
     vec3 transmittancePaToP = vec3(1.0);
     //Was better when this was just the initial angle of the sun
@@ -53,6 +57,7 @@ void main(){
     //Using the trapezoidal rule.
     float mieDensity;
     float rayleighDensity;
+    float ozoneDensity;
     float integralOfOzoneDensityFunction;
     float r_p;
     float sunAngle;
@@ -72,9 +77,11 @@ void main(){
         //We do this for both mie and rayleigh as we are reffering to the transmittance here
         mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);
         rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+        ozoneDensity = max(0.0, 1.0 - abs(h - 25.0) / 15.0) * 0.56;
         totalDensityMie += (previousMieDensity + mieDensity) * chunkLength * 0.5;
         totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength * 0.5;
-        integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;
+        totalDensityOzone += (previousOzoneDensity + ozoneDensity) * chunkLength * 0.5;
+        integralOfOzoneDensityFunction = totalDensityOzone * OZONE_PERCENT_OF_RAYLEIGH;
         transmittancePaToP = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));
 
         //Now that we have the transmittance from Pa to P, get the transmittance from P to Pc
@@ -94,6 +101,7 @@ void main(){
         previousInscattering = inscattering;
         previousMieDensity = mieDensity;
         previousRayleighDensity = rayleighDensity;
+        previousOzoneDensity = ozoneDensity;
       }
     }
 

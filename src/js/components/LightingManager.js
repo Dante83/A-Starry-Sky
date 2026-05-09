@@ -20,10 +20,6 @@ StarrySky.LightingManager = function(skyDirector){
   shadow.camera.bottom = -directLightingCameraSize;
   shadow.camera.top = directLightingCameraSize;
   this.sourceLight.target = skyDirector.camera;
-  const totalDistance = lightingData.shadowDrawDistance + lightingData.shadowDrawBehindDistance;
-  this.targetScalar = 0.5 * totalDistance - lightingData.shadowDrawBehindDistance;
-  this.shadowTarget = new THREE.Vector3();
-  this.shadowTargetOffset = new THREE.Vector3();
   this.fogColorVector = new THREE.Color();
   this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
   this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
@@ -488,8 +484,9 @@ StarrySky.LightingManager = function(skyDirector){
         const fogR = Math.pow(Math.max(sunSample[27] * sunWeight + moonSample[27] * moonWeight, 0), ONE_OVER_TWO_TWO);
         const fogG = Math.pow(Math.max(sunSample[28] * sunWeight + moonSample[28] * moonWeight, 0), ONE_OVER_TWO_TWO);
         const fogB = Math.pow(Math.max(sunSample[29] * sunWeight + moonSample[29] * moonWeight, 0), ONE_OVER_TWO_TWO);
-        const fMax = Math.max(fogR, fogG, fogB);
-        self.fog.density = Math.pow(fMax, 0.3) * maxFogDensity;
+        // Fog density is set by atmosphere geometry (path × scattering coefficient),
+        // not by sky brightness. Sky color drives fog *color* via the LUT-baked hemis.
+        self.fog.density = maxFogDensity;
         self.fog.color.setRGB(fogR, fogG, fogB);
       }
 
@@ -560,8 +557,8 @@ StarrySky.LightingManager = function(skyDirector){
     // -------- Worker-driven fallback path (original) --------
     if(isNormalLighting){
       self.fogColorVector.fromArray(lightingState, 21);
-      const maxColor = Math.max(self.fogColorVector.r, self.fogColorVector.g, self.fogColorVector.b);
-      self.fog.density = Math.pow(maxColor, 0.3) * maxFogDensity;
+      // Fog density is set by atmosphere geometry, not sky brightness — see LUT path.
+      self.fog.density = maxFogDensity;
       self.fog.color.copy(self.fogColorVector);
     }
 

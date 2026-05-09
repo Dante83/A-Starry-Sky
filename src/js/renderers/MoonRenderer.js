@@ -198,6 +198,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.moonExposure.value = skyDirector.exposureVariables.moonExposure;
     moonMaterial.uniforms.distanceToEarthsShadowSquared.value = skyState.moon.distanceToEarthsShadowSquared;
     moonMaterial.uniforms.oneOverNormalizedLunarDiameter.value = skyState.moon.oneOverNormalizedLunarDiameter;
+    moonMaterial.uniforms.earthshineIntensity.value = skyState.moon.earthshineIntensity;
     const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
     moonMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 

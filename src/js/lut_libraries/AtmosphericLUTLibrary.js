@@ -4,8 +4,6 @@ StarrySky.LUTlibraries.AtmosphericLUTLibrary = function(data, renderer, scene){
   this.sunLUT;
   this.moonLUT;
   this.lunarEcclipseLUTs = [];
-  document.body.appendChild(renderer.domElement);
-
   //Create our first renderer, for transmittance
   const TRANSMITTANCE_TEXTURE_SIZE = 512;
   const SCATTERING_TEXTURE_WIDTH = 256;
