@@ -155,8 +155,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       }
     }
 
-    //Sun bloom: lower threshold near horizon (sun dimmer due to extinction →
-    //easier to exceed → bigger bloom at sunset). Range: half threshold at the
+    //Sun bloom: lower threshold near horizon (sun dimmer due to extinction ->
+    //easier to exceed -> bigger bloom at sunset). Range: half threshold at the
     //horizon, full threshold at zenith.
     if(sunBloomDataRef.bloomEnabled){
       this.bloomPass.threshold = sunBloomDataRef.threshold * (0.5 + 0.5 * skyState.sun.horizonFade);

@@ -18,7 +18,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
       '//From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl',
       'float sundisk = smoothstep(0.0, 0.1, (0.5 - (pixelDistanceFromSun)));',
 
-      '//Solar limb darkening, per RGB band — limb reddens because blue darkens',
+      '//Solar limb darkening, per RGB band - limb reddens because blue darkens',
       '//more than red. ac1/ac2/ac3 are vec3 (B/V/R) declared in the sun-pass',
       '//header. At mu=1 (disc center) all channels equal 1; at mu=0 (limb) we',
       '//keep ~0.59 R / 0.47 G / 0.30 B.',

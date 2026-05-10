@@ -37,7 +37,7 @@ StarrySky.Materials.Atmosphere.transmittanceMaterial = {
         '//Tent-shaped ozone profile peaked at 25 km, falling to zero at 10 / 40 km',
         '//(Chappuis-band absorber). 0.56 normalization preserves the vertical-column',
         '//integral of the previous "ozone tracks Rayleigh" approximation, so the',
-        '//user-facing OZONE_PERCENT_OF_RAYLEIGH knob still scales appropriately —',
+        '//user-facing OZONE_PERCENT_OF_RAYLEIGH knob still scales appropriately -',
         '//but horizontal twilight rays now correctly pick up the 30 km bulge.',
         'float previousOzoneDensity = max(0.0, 1.0 - abs(h - 25.0) / 15.0) * 0.56;',
         'float totalDensityMie = 0.0;',

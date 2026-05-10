@@ -70,7 +70,7 @@ StarrySky.LightingManager = function(skyDirector){
   const transmittanceLUT = skyDirector.atmosphereLUTLibrary.transmittanceFloat32ArrayCopy;
   const transmittanceTextureSize = skyDirector.atmosphereLUTLibrary.transmittanceTextureSize;
 
-  // Per-pixel direction & weight setup — port of C++ initializeMeteringAndLightingDependencies.
+  // Per-pixel direction & weight setup - port of C++ initializeMeteringAndLightingDependencies.
   const pixelDirections = new Float32Array(numPixels * 3);
   const pixelWeights = new Float32Array(numPixels);
   const sumOfDirWeights = [0, 0, 0, 0, 0, 0];
@@ -106,14 +106,14 @@ StarrySky.LightingManager = function(skyDirector){
   const oneOverSumOfDirWeights = sumOfDirWeights.map(w => 1.0 / Math.max(w, 1e-9));
   const oneOverSumOfPixelWeights = 1.0 / Math.max(sumOfPixelWeights, 1);
 
-  // Project a 64×64 RGBA sky buffer into 9 spherical-harmonic coefficients × RGB
-  // (#24-lite — replaces the 6-hemi-direct projection with an SH9 representation
+  // Project a 64*64 RGBA sky buffer into 9 spherical-harmonic coefficients * RGB
+  // (#24-lite - replaces the 6-hemi-direct projection with an SH9 representation
   // that interpolates more smoothly between LUT samples; at runtime we still drive
   // 3 hemi lights, but the colors come from a cosine-convolved SH evaluation at the
   // cardinal axes). Plus average sky color (3 floats, for normal-mode fog) and
   // log-luminance magnitude (1 float). 31 floats per LUT entry.
   function project(skyPixels, lutOut, lutOffset){
-    // 9 SH coefs × RGB = 27 floats. Order: Y00, Y1m1, Y10, Y11, Y2m2, Y2m1, Y20, Y21, Y22.
+    // 9 SH coefs * RGB = 27 floats. Order: Y00, Y1m1, Y10, Y11, Y2m2, Y2m1, Y20, Y21, Y22.
     const sh = new Array(27).fill(0);
     let avgR = 0, avgG = 0, avgB = 0;
     let logAvg = 0;
@@ -133,7 +133,7 @@ StarrySky.LightingManager = function(skyDirector){
 
       // Real spherical harmonics basis values at this direction. Coefficients from
       // standard L=0..2 normalized SH (Sloan 2008 "Stupid SH Tricks", positive sign
-      // convention — we use the same signs at projection and reconstruction so any
+      // convention - we use the same signs at projection and reconstruction so any
       // sign flips cancel out).
       const y00  = 0.282095;
       const y1m1 = 0.488603 * dy;
@@ -201,9 +201,9 @@ StarrySky.LightingManager = function(skyDirector){
 
   // ----- Bake the LUTs --------------------------------------------------------
   const N_LUT = 32;
-  // 27 SH × RGB + 3 fogColor RGB + 1 magnitude = 31 floats per LUT entry.
+  // 27 SH * RGB + 3 fogColor RGB + 1 magnitude = 31 floats per LUT entry.
   const STRIDE = 31;
-  // cos(zenith) range: above horizon (1.0) down to ~12° below (-0.21).
+  // cos(zenith) range: above horizon (1.0) down to ~12deg below (-0.21).
   const LUT_COSZ_MIN = -0.21;
   const LUT_COSZ_MAX =  1.0;
   const sunAmbientLUT  = new Float32Array(N_LUT * STRIDE);
@@ -242,7 +242,7 @@ StarrySky.LightingManager = function(skyDirector){
   const farBelow = new THREE.Vector3(0, -1, 0);
 
   function horizonFade(cosZ){
-    // Smooth fade — full above ~+5°, zero below ~-3°. Roughly matches the
+    // Smooth fade - full above ~+5deg, zero below ~-3deg. Roughly matches the
     // analytic shape used by the WASM live state.
     return Math.max(0, Math.min(1, 0.5 + 6.0 * cosZ));
   }
@@ -255,7 +255,7 @@ StarrySky.LightingManager = function(skyDirector){
       const fade = horizonFade(cosZ);
       // The metering shader computes alpha as `lunarPass*(moonLum/scatMoon) + solarPass*(sunLum/scatSun)`.
       // Setting either denominator to 0 produces NaN even though the numerator is also 0,
-      // so we use a tiny non-zero value for the "off" source — its contribution stays
+      // so we use a tiny non-zero value for the "off" source - its contribution stays
       // negligible but the divide is well-defined.
       const TINY = 1e-9;
       if(isSunLut){
@@ -313,7 +313,7 @@ StarrySky.LightingManager = function(skyDirector){
     Math.pow(groundColorRaw.blue  / 255.0, 2.2),
   ];
 
-  // Sample one LUT into 22 floats with linear interp. Out array must have ≥22 slots.
+  // Sample one LUT into 22 floats with linear interp. Out array must have >=22 slots.
   function sampleLUT(lut, cosZ, out){
     let t = (cosZ - LUT_COSZ_MIN) / (LUT_COSZ_MAX - LUT_COSZ_MIN);
     if(t <= 0){ for(let k = 0; k < STRIDE; ++k) out[k] = lut[k]; return; }
@@ -329,11 +329,11 @@ StarrySky.LightingManager = function(skyDirector){
     }
   }
 
-  // Bilinear transmittance LUT lookup — used to color the dominant directional light.
+  // Bilinear transmittance LUT lookup - used to color the dominant directional light.
   // Note: row 0 of the LUT is all zeros because transmittance.glsl's intersectsSphere
   // treats rays from exactly the earth's surface as tangent-intersecting. The atmosphere
   // shader's runtime path always adds the camera's world Y (in km) so it never lands on
-  // row 0 — we need to do the same here, plus a row floor as belt-and-braces.
+  // row 0 - we need to do the same here, plus a row floor as belt-and-braces.
   function sampleTransmittance(cosZ, cameraHeight, outRGB){
     const earthR = skyDirector.assetManager.data.skyAtmosphericParameters.radiusOfEarth;
     const atmH = skyDirector.assetManager.data.skyAtmosphericParameters.atmosphereHeight;
@@ -390,11 +390,11 @@ StarrySky.LightingManager = function(skyDirector){
       const sunWeight  = skyState.sun.intensity  * skyState.sun.horizonFade  / PEAK_SCAT_SUN;
       const moonWeight = skyState.moon.intensity * skyState.moon.horizonFade / PEAK_SCAT_MOON;
 
-      // Direct (dominant) light color from transmittance × intensity.
-      // skyState.sun.intensity is already 10×(linear/1300), peaks ~10 at noon — fine as-is.
-      // skyState.moon.intensity is 500×(linear), calibrated for the sky scattering shader;
+      // Direct (dominant) light color from transmittance * intensity.
+      // skyState.sun.intensity is already 10*(linear/1300), peaks ~10 at noon - fine as-is.
+      // skyState.moon.intensity is 500*(linear), calibrated for the sky scattering shader;
       // for direct-lighting we want the raw value (~1 at full moon) to match the worker
-      // pipeline's calc — otherwise transmittance × 500 saturates all RGB channels to 1
+      // pipeline's calc - otherwise transmittance * 500 saturates all RGB channels to 1
       // and the lunarEclipseLightingModifier (default ~(1, 0.5, 0.1) outside an eclipse)
       // turns white moonlight into pure orange.
       const dominantY = dominantLightIsSun ? sunY : moonY;
@@ -412,7 +412,7 @@ StarrySky.LightingManager = function(skyDirector){
       const gGround = groundY * directG * groundColorLinear[1];
       const bGround = groundY * directB * groundColorLinear[2];
 
-      // Compose 6 hemi colors by combining sun and moon SH coefficients (27 × RGB)
+      // Compose 6 hemi colors by combining sun and moon SH coefficients (27 * RGB)
       // and evaluating cosine-convolved SH at the 6 cardinal axes (in bake frame:
       // sun was on +X, hemi positions are rotated to follow runtime sun azimuth
       // further down). Values are linear; gamma + max-normalize happens after the
@@ -473,7 +473,7 @@ StarrySky.LightingManager = function(skyDirector){
       self.yAxisHemisphericalLight.groundColor.setRGB(hemi[12], hemi[13], hemi[14]);
       self.zAxisHemisphericalLight.groundColor.setRGB(hemi[15], hemi[16], hemi[17]);
 
-      // Sky magnitude → starsExposure. Magnitude lives at offset 30 in the new
+      // Sky magnitude -> starsExposure. Magnitude lives at offset 30 in the new
       // SH9 LUT layout (was 21 in the old 6-hemi layout).
       const skyMagnitude = sunSample[30] * sunWeight + moonSample[30] * moonWeight;
       skyDirector.exposureVariables.starsExposure = Math.min(6.8 - skyMagnitude, 3.7);
@@ -484,7 +484,7 @@ StarrySky.LightingManager = function(skyDirector){
         const fogR = Math.pow(Math.max(sunSample[27] * sunWeight + moonSample[27] * moonWeight, 0), ONE_OVER_TWO_TWO);
         const fogG = Math.pow(Math.max(sunSample[28] * sunWeight + moonSample[28] * moonWeight, 0), ONE_OVER_TWO_TWO);
         const fogB = Math.pow(Math.max(sunSample[29] * sunWeight + moonSample[29] * moonWeight, 0), ONE_OVER_TWO_TWO);
-        // Fog density is set by atmosphere geometry (path × scattering coefficient),
+        // Fog density is set by atmosphere geometry (path * scattering coefficient),
         // not by sky brightness. Sky color drives fog *color* via the LUT-baked hemis.
         self.fog.density = maxFogDensity;
         self.fog.color.setRGB(fogR, fogG, fogB);
@@ -496,7 +496,7 @@ StarrySky.LightingManager = function(skyDirector){
       self.sourceLight.position.y =  RADIUS_OF_SKY * dominantPos.y;
       self.sourceLight.position.z = -RADIUS_OF_SKY * dominantPos.x;
       // Sun gets physical color (warm sunsets, white noon, etc). Moon gets a fixed
-      // cool cinematic tint — the same atmospheric extinction that paints sunsets red
+      // cool cinematic tint - the same atmospheric extinction that paints sunsets red
       // would paint a low moon orange, but we perceive moonlight as cool blue-white
       // (Purkinje shift in scotopic vision), and most renderers commit to that. During
       // an actual lunar eclipse, override with the eclipse modifier (proper umbra red).
@@ -520,7 +520,7 @@ StarrySky.LightingManager = function(skyDirector){
           colorG = lunarEclipseLightingModifier.y;
           colorB = lunarEclipseLightingModifier.z;
         } else {
-          // Fixed cool cinematic moonlight — slightly blue, slightly green-shifted.
+          // Fixed cool cinematic moonlight - slightly blue, slightly green-shifted.
           colorR = 0.70;
           colorG = 0.85;
           colorB = 1.00;
@@ -531,14 +531,14 @@ StarrySky.LightingManager = function(skyDirector){
       self.sourceLight.color.b = colorB;
       // The WASM `_tick_lightingInterpolations` writes max(direct color) into the
       // interpolated lightingState[24] (despite the worker pre-interpolation putting
-      // `max(1-direct)` there — WASM remaps the semantic). The original LightingManager
+      // `max(1-direct)` there - WASM remaps the semantic). The original LightingManager
       // multiplies sourceLight.intensity by lightingState[24], so for the LUT path we
       // do the same with max(direct) directly.
       const directMax = Math.max(directR, directG, directB);
       self.sourceLight.intensity = directMax * 0.5 * (dominantLightIsSun ? lightingData.sunIntensity : lightingData.moonIntensity);
 
       // Ambient gating: smooth-but-permissive curve. The original `clamp(x*2, 0, 0.1) * 10`
-      // saturated at 5% — flat from twilight to noon. Pure linear `clamp(x, 0, 1)` is
+      // saturated at 5% - flat from twilight to noon. Pure linear `clamp(x, 0, 1)` is
       // physically truer but visually too dim at sunrise. `clamp(x * 2, 0, 1)` is the
       // happy medium: saturates at lightingMag = 0.5 (sun moderately above horizon)
       // so sunrise/sunset get most of full ambient, while twilight and night still fade
@@ -557,7 +557,7 @@ StarrySky.LightingManager = function(skyDirector){
     // -------- Worker-driven fallback path (original) --------
     if(isNormalLighting){
       self.fogColorVector.fromArray(lightingState, 21);
-      // Fog density is set by atmosphere geometry, not sky brightness — see LUT path.
+      // Fog density is set by atmosphere geometry, not sky brightness - see LUT path.
       self.fog.density = maxFogDensity;
       self.fog.color.copy(self.fogColorVector);
     }
