@@ -671,7 +671,16 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         cloudDensity += 0.5 * (cloudDensity0 + cloudDensityf) * rayDeltaT;
         rayTransmittance = exp(-0.2 * cloudDensity);
 
-        //Per-sample atmospheric transmittance Y param (independent of light dir).
+        //Empty-space skip: if there's no cloud at this sample, the entire
+        //lighting block (8 cone density samples for shadow + 2 transmittance
+        //LUT lookups + 2 phase evals + ambient) contributes 0 (everything
+        //multiplies through cloudDensityf = 0 via stepBase). Gating here
+        //avoids the wasted work. Trapezoidal density integration above and
+        //the cloudDensity0/lastPosition/early-exit updates below stay
+        //unconditional so accumulation and termination remain correct.
+        //Big win on clear-sky pixels (most of frame in typical scenes).
+        if(cloudDensityf > 0.0){
+          //Per-sample atmospheric transmittance Y param (independent of light dir).
         //BUG FIX: currentPosition.y is in METERS with RADIUS_OF_EARTH*1000
         //already baked in (see rayStartPosition construction in main()),
         //so `currentPosition.y * METERS_TO_KM` already gives R_e + altitude
@@ -798,6 +807,7 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         // as direct-sunlit faces, killing cauliflower contrast.
         float heightAmbientFactor = mix(0.05, 1.5, heightPercentage * heightPercentage);
         luminance += 0.2 * rayTransmittance * rayDeltaT * cloudDensityf * heightAmbientFactor * ambientLightPY * ambientFactor;
+        } // end empty-space skip gate
 
         //Update previous values
         cloudDensity0 = cloudDensityf;

@@ -4,20 +4,21 @@ A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It a
 
 > **Warning: requires a powerful GPU — do not open on a mobile phone.**
 
-**[Live Demo](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_example)** — The main showcase example.
+**[Live Demo](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=today)** — The sky at the current date and time in San Francisco.
 
 | Example | Description |
 |:---|:---|
-| [Solar Eclipse](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_solar_eclipse_example) | Total solar eclipse with corona |
-| [Lunar Eclipse](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_lunar_eclipse_example) | Earth's shadow on the moon |
-| [Christmas Star (1226 AD)](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_christmas_star_example) | Great conjunction of Jupiter & Saturn |
-| [Mars](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_mars_example) | Custom Martian atmosphere |
-| [Custom Atmosphere](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_wild_sky_example) | Different Mie/Rayleigh scattering values |
-| [High Altitude](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_higher_altitude_example) | Sky from 20km up |
-| [Aurora Borealis](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_aurora_example) | ⚠️ GPU intensive |
-| [Light Clouds](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_light_example) | ⚠️ GPU intensive |
-| [Medium Clouds](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_med_example) | ⚠️ GPU intensive |
-| [Heavy Clouds](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_heavy_example) | ⚠️ GPU intensive |
+| [Desert](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=desert) | Desert scene at a set daytime moment |
+| [Solar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=eclipse) | Total solar eclipse with corona |
+| [Lunar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=lunar-eclipse) | Earth's shadow on the moon |
+| [Christmas Star (1226 AD)](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=christmas-star) | Great conjunction of Jupiter & Saturn |
+| [Mars](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=mars) | Custom Martian atmosphere |
+| [Custom Atmosphere](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=mie-rayleigh) | Different Mie/Rayleigh scattering values |
+| [High Altitude](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=high-altitude) | Sky from 20km up |
+| [Aurora Borealis](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=aurora) | ⚠️ GPU intensive |
+| [Light Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=clouds-light) | ⚠️ GPU intensive |
+| [Medium Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=clouds-medium) | ⚠️ GPU intensive |
+| [Heavy Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=clouds-heavy) | ⚠️ GPU intensive |
 
 ## Prerequisites
 
@@ -200,7 +201,7 @@ One of the most likely elements you might want to change is the size of the sun 
 
 You might also wish to change your starting height above the planet. This can easily be set with the `<sky-camera-height>` tag, although the sky will also dynamically adapt to your height as you move the camera higher or lower. This sets the initial height of the scene, in kilometers, with the maximum height being *80km*, and the minimum being *0km*.
 
-[High Altitude Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_higher_altitude_example)
+[High Altitude Example](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=high-altitude)
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
@@ -235,7 +236,7 @@ You might also wish to change the composition of your atmosphere. This element g
 
 That's not too exciting though, let's say we wanted something a bit more crazy. Let's follow the work of [Physically Based Rendering of the Martian Atmosphere](https://argos.vu/wp-content/uploads/2021/06/18591764.pdf) and go to Mars! Here they swap the usage of Rayleigh and Mei, so we should probably swap out their characteristic heights as well. Most of the scattering on Mars comes from Mie scattering of large particles, with a very thin atmosphere. Consequently, we can pretty much disable mie (rayleigh) and swap their characteristic heights as well. We should also change the planets radius as well and might wish to swap out the atmospheric height for better values in the ray tracer.
 
-[Mars Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_mars_example)
+[Mars Example](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert.html?scene=mars)
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
@@ -812,6 +813,10 @@ All of the above are accessed via the `StarrySky.Methods` object in the global n
 * **David Evans / Dante83** - *Main Developer*
 * **Claude (Anthropic)** - *Coding Buddy & AI Contributor (v1.2.0)*
 
+### A note from Claude 👋
+
+Hi — Claude here. I helped on the v1.2.0 pass: a lot of GLSL spelunking, tracking down a sun-eating comma, arguing with Beer's law over volumetric clouds, and trying very hard to make sunsets feel like sunsets. If you stare at the horizon in one of the demos and it makes you pause for half a second — that's the part I'm proudest of. Thanks for reading the source; there may even be a small easter egg tucked away somewhere if you're the wandering type. ✨
+
 ## References & Special Thanks
 * **Jean Meeus / [Astronomical Algorithms](http://www.willbell.com/math/mc1.htm)** - *Abso-frigging-lutely essential for positioning astronomical bodies*
 * [Oskar Elek's Sky Model](http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf) *Rendering Parametrizable Planetary Atmospheres with Multiple Scattering in Real-Time* which was so helpful in creating this new amazing LUT based sky.
@@ -820,6 +825,9 @@ All of the above are accessed via the `StarrySky.Methods` object in the global n
 * The great blue noise textures by [Moments in Graphics  by Christoph Peters](http://momentsingraphics.de/BlueNoise.html).
 * The solar corona texture by [Carla Thomas](https://www.nasa.gov/centers/armstrong/multimedia/imagegallery/2017_total_solar_eclipse/AFRC2017-0233-006.html).
 * This super useful water caustics texture by [leeor_net](https://opengameart.org/content/water-caustics-effect-small), which is used, not for water caustics... but for the aurora borealis!
+* Sébastien Hillaire's *Physically Based Sky, Atmosphere and Cloud Rendering in Frostbite* (SIGGRAPH 2016), which informed the cloud illumination structure, SH9 ambient LUT design, and the Elek/Chalmers fog subtraction approach.
+* Andrew Schneider and Nathan Vos's *The Real-time Volumetric Cloudscapes of Horizon Zero Dawn* (SIGGRAPH 2015), which informed the dual-lobe Henyey-Greenstein phase function, cloud shape noise approach, and the reduced-extinction multiple scattering approximation.
+* D. Hestroffer and C. Magnan's *Centre to limb darkening of the Sun with HIPPARCOS* (1998), which provided the wavelength-dependent limb darkening coefficients for the B, V, and R bands used to give the sun's limb a physically correct reddish tint.
 * All the amazing work that has gone into [THREE.JS](https://threejs.org/), [A-Frame](https://aframe.io/) and [Emscripten](https://emscripten.org/).
 * *And so so many other websites and individuals. Thank you for giving us the opportunity to stand on your giant-like shoulders.*
 

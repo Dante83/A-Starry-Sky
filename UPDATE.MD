@@ -1,12 +1,21 @@
 **Version 1.2.0**
 * Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).
-* Fixed several atmospheric physics bugs: incorrect Rayleigh phase function, missing Mie density weighting in transmittance, and a Rayleigh/Mie density swap in the scattering LUT bake passes — all resulting in more accurate sky colors, particularly at sunset.
-* Overhauled the sun bloom pipeline to operate in **HDR linear space**, giving the sun disk a much brighter and more physically distinct glow compared to the surrounding sky.
-* Significantly improved cloud rendering with cone-based self-shadowing, a Beer-Powder term for cauliflower definition, a multiple scattering approximation for interior glow, and blue-noise ray jitter to reduce banding.
+* Fixed several atmospheric physics bugs: corrected Rayleigh phase function, missing Mie density weighting in transmittance, and a Rayleigh/Mie density swap in the scattering LUT bake passes — resulting in more accurate sky colors, particularly at sunset.
+* Added a physically accurate ozone density profile peaking at 25 km altitude for deeper, more saturated twilight reds during civil and nautical twilight.
+* Overhauled the sun bloom pipeline to operate in **HDR linear space**, giving the sun disk a much brighter and more physically distinct glow compared to the surrounding sky. Sun bloom threshold now scales with solar altitude for more natural horizon bloom.
+* Significantly improved cloud rendering: replaced the old empirical approach with a physically correct Beer's-law volumetric integrand using the local cloud density at each ray step; added a dual-lobe Henyey-Greenstein phase function for realistic silver linings around backlit cloud edges; implemented Beer's-law-consistent cone shadowing with reduced-extinction multiple scattering for interior glow; and introduced a cloud-local horizon calculation so elevated clouds remain lit after the sun passes the world horizon.
 * Fixed several aurora and fog bugs, including an incorrect light-direction coordinate swap in the atmospheric perspective shader that was placing the sun and moon 90° off in azimuth.
+* Upgraded the *advanced* atmospheric fog to an Elek-consistent analytic model matching the sky LUT scattering coefficients, so fogged geometry and the sky agree at sunset and during twilight. Atmospheric fog density is now geometry-based (constant) rather than sky-brightness-modulated, eliminating unphysical fog pulsing with time of day.
+* Added earthshine to the lunar shader, giving the dark side of crescent moons the characteristic blue-tinted glow — "the old moon in the new moon's arms."
+* Fixed solar limb darkening to apply wavelength-dependent (chromatic) coefficients per Hestroffer & Magnan 1998, giving the sun's limb a visible reddish tint that complements atmospheric reddening at sunset. The limb darkening value was previously computed but never multiplied into the output color.
+* Corrected the earth's shadow density formula to use proper geometric altitude rather than an approximate Y-coordinate proxy, producing smoother and physically correct belt-of-Venus transitions during twilight.
+* Replaced the per-frame ambient light metering survey with a precomputed sky-irradiance LUT, improving ambient lighting accuracy and eliminating the visible half-second ambient update cycle.
+* Corrected stellar brightness to use the physically correct Pogson 100^(1/5) magnitude ratio (was 150^(1/5)), improving the relative brightness of bright versus dim stars.
+* Improved the sun bloom halo: outer bloom mips now have a warm tint (progressing from white to orange) for a more natural solar corona appearance, and the Gaussian kernel sigma was corrected from `kernelRadius` to `kernelRadius / 2` for a properly spread bloom kernel.
+* Fixed aurora blue-noise ray jitter, which was broken — the noise UV was computed in world-space (causing the jitter pattern to drift with camera movement) and the sample was subtracted by 1.0 (making offsets always negative, consistently shortening step sizes instead of randomizing them). Now uses screen-space UV with correct range, so the banding reduction claimed in v1.1.0 actually works.
 * Fixed multiple JavaScript bugs around render target resolution, falsy-zero settings, atmospheric perspective parameters, and asset path handling.
 * Halved the default ray-march step count for both clouds and aurora (64 → 32) for better out-of-the-box performance, with the option to increase via `<sky-cloud-raymarch-steps>` and `<sky-aurora-raymarch-steps>`.
-* Updated clouds to use a more realistic atmospheric perspective that also fixes a bug with the earths shadow showing up on the surface of clouds.
+* Updated clouds to use a more realistic atmospheric perspective that also fixes a bug with the earth's shadow appearing on the surface of clouds.
 * Fixed a bug that blocked assets from loading the first time on occasion due to a race condition.
 
 **Version 1.1.0**

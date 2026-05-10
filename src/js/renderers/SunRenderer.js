@@ -176,8 +176,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
-    console.log('[StarrySky] SunRenderer.firstTick called, hasLoadedImages:', assetManager.hasLoadedImages);
-    //Connect up our reference values
     baseSunMaterial.uniforms.sunPosition.value = skyState.sun.position;
     baseSunMaterial.uniforms.moonPosition.value = skyState.moon.position;
     baseSunMaterial.uniforms.moonLightColor.value = skyState.moon.lightingModifier;
@@ -209,9 +207,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 			//Proceed with the first tick
       self.tick(t);
 
-			//Add this object to the scene
-	    console.log('[StarrySky] SunRenderer: sunMesh added to scene');
-	    skyDirector.scene.add(self.sunMesh);
+			skyDirector.scene.add(self.sunMesh);
 
 			//Delete this method when done
 			delete this.firstTick;

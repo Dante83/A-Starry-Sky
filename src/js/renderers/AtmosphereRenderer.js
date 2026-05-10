@@ -115,7 +115,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
-    console.log('[StarrySky] AtmosphereRenderer.firstTick called, hasLoadedImages:', assetManager.hasLoadedImages);
     const uniforms = self.atmosphereMaterial.uniforms;
 
     //Connect up our reference values
@@ -163,8 +162,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       //Proceed with the first tick
       self.tick(t);
 
-      //Add this object to the scene
-      console.log('[StarrySky] AtmosphereRenderer: skyMesh added to scene');
       skyDirector.scene.add(self.skyMesh);
 
       //Delete this method when done

@@ -65,11 +65,9 @@ class SkyLighting extends HTMLElement {
   connectedCallback(){
     //Hide the element
     this.style.display = "none";
-    console.log('[StarrySky] SkyLighting connectedCallback, readyState:', document.readyState);
 
     const self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
-      console.log('[StarrySky] SkyLighting DOMContentLoaded callback fired');
       const dataRef = self.data;
 
       //Get child tags and acquire their values.

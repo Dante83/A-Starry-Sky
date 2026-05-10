@@ -34,11 +34,9 @@ class SkyTime extends HTMLElement {
   connectedCallback(){
     //Hide the element
     this.style.display = "none";
-    console.log('[StarrySky] SkyTime connectedCallback, readyState:', document.readyState);
 
     let self = this;
     document.addEventListener('DOMContentLoaded', function(evt){
-      console.log('[StarrySky] SkyTime DOMContentLoaded callback fired');
       //Get child tags and acquire their values.
       let skyDateTags = self.getElementsByTagName('sky-date');
       let speedTags = self.getElementsByTagName('sky-speed');

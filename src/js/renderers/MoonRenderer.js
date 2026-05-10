@@ -229,8 +229,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
   //Upon completion, this method self destructs
   this.firstTick = function(t){
-    console.log('[StarrySky] MoonRenderer.firstTick called, hasLoadedImages:', assetManager.hasLoadedImages);
-    //Connect up our reference values
     moonMaterial.uniforms.sunPosition.value = skyState.sun.position;
     moonMaterial.uniforms.moonPosition.value = skyState.moon.position;
     moonMaterial.uniforms.sunLightDirection.value = skyState.sun.quadOffset;
@@ -287,8 +285,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       //Proceed with the first tick
       self.tick(t);
 
-      //Add this object to the scene
-      console.log('[StarrySky] MoonRenderer: moonMesh added to scene');
       skyDirector.scene.add(self.moonMesh);
 
       //Delete this method when done

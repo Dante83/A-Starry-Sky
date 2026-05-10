@@ -104,16 +104,12 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
   //Set up our web assembly hooks
   const self = this;
-  console.log('[StarrySky] SkyDirector constructor, readyState:', document.readyState);
 
   //Called from the asset manager when all of our assets have finished loading
   //Also colled when our local web assembly has finished loading as both are pre-requisites
   //for running the responses produced by our web worker
   this.initializeSkyDirectorWebWorker = function(){
-    console.log('[StarrySky] initializeSkyDirectorWebWorker called, assetManagerInitialized:', self.assetManagerInitialized, 'skyInterpolatorWASMIsReady:', self.skyInterpolatorWASMIsReady);
-    //Attach our asset manager if it has been passed over
     if(self.assetManagerInitialized && self.skyInterpolatorWASMIsReady){
-      console.log('[StarrySky] Both gates passed, creating LUT libraries and posting to web worker');
       self.sunRadius = Math.sin(this.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
       self.moonRadius = Math.sin(this.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
       self.distanceForSolarEclipse = 2.0 * Math.SQRT2 * Math.max(self.sunRadius, self.moonRadius);
@@ -141,10 +137,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   this.initializeRenderers = function(){
-    console.log('[StarrySky] initializeRenderers called, assetManagerInitialized:', self.assetManagerInitialized, 'skyDirectorWASMIsReady:', self.skyDirectorWASMIsReady);
-    //All systems must be up and running before we are ready to begin
     if(self.assetManagerInitialized && self.skyDirectorWASMIsReady){
-      console.log('[StarrySky] Both gates passed, creating renderers');
       //Attach our camera, which should be loaded by now.
       const DEG_2_RAD = Math.PI / 180.0;
       self.camera = self.parentComponent.el.sceneEl.camera;
@@ -369,10 +362,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
 
   //Prepare our WASM Modules
   this.webAssemblyWorker = new Worker(webWorkerURI);
-  console.log('[StarrySky] Web worker created with URI:', webWorkerURI);
   this.webAssemblyWorker.addEventListener('message', function(e){
     let postObject = e.data;
-    console.log('[StarrySky] Web worker message received, eventType:', postObject.eventType);
     if(postObject.eventType === self.EVENT_RETURN_LATEST_SKY_STATE){
       //Attach our 32 bit float array buffers back to this thread again
       self.transferableFinalStateBuffer = postObject.transferableFinalStateBuffer;
@@ -492,8 +483,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       const deltaT = 1.0 / 60.0; //Presume 60 FPS on this first frame
       self.updateAutoExposure(deltaT);
 
-      //Start the sky here - as we should have everything back and ready by now
-      console.log('[StarrySky] Auto-exposure initialization complete, calling start()');
       self.start();
     }
     else if(postObject.eventType === self.EVENT_RETURN_AUTOEXPOSURE){
@@ -660,8 +649,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.renderers = {};
 
   this.start = function(){
-    console.log('[StarrySky] start() called - sky system is going live!');
-    //Update our tick and tock functions
     parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine
       self.tick(time, timeDelta);
@@ -695,15 +682,10 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   if(document.readyState === "complete" || document.readyState === "interactive"){
-    console.log('[StarrySky] readyState is', document.readyState, '- creating AssetManager immediately');
-    //Grab all of our assets
     self.assetManager = new StarrySky.AssetManager(self);
   }
   else{
-    console.log('[StarrySky] readyState is', document.readyState, '- deferring AssetManager to DOMContentLoaded');
     window.addEventListener('DOMContentLoaded', function(){
-      console.log('[StarrySky] DOMContentLoaded fired - creating AssetManager now');
-      //Grab all of our assets
       self.assetManager = new StarrySky.AssetManager(self);
     });
   }
@@ -721,7 +703,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   function onRuntimeInitialized() {
-      console.log('[StarrySky] WASM onRuntimeInitialized fired');
       self.skyInterpolatorWASMIsReady = true;
       self.initializeSkyDirectorWebWorker();
   }
@@ -730,7 +711,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   //This happens when the <script> tag in <head> loads and initializes the module
   //before A-Frame creates this component.
   if(Module['calledRun']){
-    console.log('[StarrySky] WASM Module already initialized, calling onRuntimeInitialized directly');
     onRuntimeInitialized();
   }
   else{

@@ -1,5 +1,4 @@
 StarrySky.AssetManager = function(skyDirector){
-  console.log('[StarrySky] AssetManager constructor called');
   this.skyDirector = skyDirector;
   this.data = {};
   this.images = {
@@ -73,7 +72,6 @@ StarrySky.AssetManager = function(skyDirector){
     const oneSolarEclipseImage = 1;
     const numberOfAuroraTextures = 1;
     this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + numberOfAuroraTextures;
-    console.log('[StarrySky] loadImageAssets: totalNumberOfTextures =', this.totalNumberOfTextures);
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -108,9 +106,7 @@ StarrySky.AssetManager = function(skyDirector){
         }
 
         self.numberOfTexturesLoaded += 1;
-        console.log('[StarrySky] Texture loaded:', self.numberOfTexturesLoaded, '/', self.totalNumberOfTextures);
         if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
-          console.log('[StarrySky] All textures loaded! hasLoadedImages = true');
           self.hasLoadedImages = true;
         }
       }, function(err){
@@ -380,9 +376,7 @@ StarrySky.AssetManager = function(skyDirector){
         self.images.blueNoiseImages[i] = texture;
 
         self.numberOfTexturesLoaded += 1;
-        console.log('[StarrySky] Texture loaded:', self.numberOfTexturesLoaded, '/', self.totalNumberOfTextures);
         if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
-          console.log('[StarrySky] All textures loaded! hasLoadedImages = true');
           self.hasLoadedImages = true;
         }
       }, function(err){
@@ -415,9 +409,7 @@ StarrySky.AssetManager = function(skyDirector){
         self.images.auroraImages[i] = texture;
 
         self.numberOfTexturesLoaded += 1;
-        console.log('[StarrySky] Texture loaded:', self.numberOfTexturesLoaded, '/', self.totalNumberOfTextures);
         if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
-          console.log('[StarrySky] All textures loaded! hasLoadedImages = true');
           self.hasLoadedImages = true;
         }
       }, function(err){
@@ -459,7 +451,6 @@ StarrySky.AssetManager = function(skyDirector){
 
   //Internal function for loading our sky data once the DOM is ready
   this.loadSkyData = function(){
-    console.log('[StarrySky] loadSkyData called, loadSkyDataHasNotRun:', self.loadSkyDataHasNotRun);
     if(self.loadSkyDataHasNotRun){
       //Don't run this twice
       self.loadSkyDataHasNotRun = false;
@@ -474,8 +465,6 @@ StarrySky.AssetManager = function(skyDirector){
       self.data.skyCloud = self.hasCloudTag ? self.skyCloudTag.data : defaultValues.skyCloud;
       self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
       self.loadImageAssets(self.skyDirector.renderer);
-      console.log('[StarrySky] loadSkyData complete, setting assetManagerInitialized = true');
-
       skyDirector.assetManagerInitialized = true;
       skyDirector.initializeSkyDirectorWebWorker();
     }
@@ -486,7 +475,6 @@ StarrySky.AssetManager = function(skyDirector){
   //equal the number of events.
   let checkIfNeedsToLoadSkyData = function(e = false){
     self.skyDataSetsLoaded += 1;
-    console.log('[StarrySky] checkIfNeedsToLoadSkyData: loaded', self.skyDataSetsLoaded, '/', self.skyDataSetsLength);
     if(self.skyDataSetsLoaded >= self.skyDataSetsLength){
       if(!e || (e.nodeName.toLowerCase() !== "sky-assets-dir" || e.isRoot)){
         self.loadSkyData();
@@ -496,7 +484,6 @@ StarrySky.AssetManager = function(skyDirector){
 
   //Closure to simplify our code below to avoid code duplication.
   function checkIfAllHTMLDataLoaded(tag){
-    console.log('[StarrySky] checkIfAllHTMLDataLoaded for tag:', tag.tagName, 'skyDataLoaded:', tag.skyDataLoaded);
     if(!tag.skyDataLoaded || !checkIfNeedsToLoadSkyData()){
       //Tags still yet exist to be loaded? Add a listener for the next event
       tag.addEventListener('Sky-Data-Loaded', checkIfNeedsToLoadSkyData);
@@ -549,17 +536,11 @@ StarrySky.AssetManager = function(skyDirector){
     this.hasCloudTag = true;
     activeTags.push(this.skyCloudTag);
   }
-  console.log('[StarrySky] AssetManager: Found', activeTags.length, 'active tags, skyDataSetsLength:', this.skyDataSetsLength);
   for(let i = 0; i < activeTags.length; ++i){
     checkIfAllHTMLDataLoaded(activeTags[i]);
   }
 
-  console.log('[StarrySky] AssetManager: After tag checks, skyDataSetsLoaded:', this.skyDataSetsLoaded, '/', this.skyDataSetsLength);
   if(this.skyDataSetsLength === 0 || this.skyDataSetsLoaded === this.skyDataSetsLength){
-    console.log('[StarrySky] AssetManager: All tags loaded (or none), calling loadSkyData()');
     this.loadSkyData();
-  }
-  else{
-    console.log('[StarrySky] AssetManager: Waiting for', this.skyDataSetsLength - this.skyDataSetsLoaded, 'more tag(s) to load');
   }
 };
