@@ -1,0 +1,4 @@
+numpy>=1.23
+Pillow>=10.0
+scipy>=1.10
+tifffile>=2024.1.30

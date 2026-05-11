@@ -386,9 +386,16 @@ StarrySky.LightingManager = function(skyDirector){
 
       // Combine sun and moon contributions (linear superposition, weighted by
       // each source's current intensity scale relative to the LUT's bake-time
-      // peak).
-      const sunWeight  = skyState.sun.intensity  * skyState.sun.horizonFade  / PEAK_SCAT_SUN;
-      const moonWeight = skyState.moon.intensity * skyState.moon.horizonFade / PEAK_SCAT_MOON;
+      // peak). The moon weight is split per channel and modulated by the
+      // Eclipse-Shadow LuT integrated color so the SH ambient dims AND tints
+      // during a lunar eclipse -- otherwise the moon would still illuminate
+      // the scene as a normal full moon even when it's deep in Earth's umbra.
+      const sunWeight   = skyState.sun.intensity  * skyState.sun.horizonFade  / PEAK_SCAT_SUN;
+      const moonWeight0 = skyState.moon.intensity * skyState.moon.horizonFade / PEAK_SCAT_MOON;
+      const moonWeightR = moonWeight0 * lunarEclipseLightingModifier.x;
+      const moonWeightG = moonWeight0 * lunarEclipseLightingModifier.y;
+      const moonWeightB = moonWeight0 * lunarEclipseLightingModifier.z;
+      const eclipseMax  = Math.max(lunarEclipseLightingModifier.x, lunarEclipseLightingModifier.y, lunarEclipseLightingModifier.z);
 
       // Direct (dominant) light color from transmittance * intensity.
       // skyState.sun.intensity is already 10*(linear/1300), peaks ~10 at noon - fine as-is.
@@ -407,19 +414,29 @@ StarrySky.LightingManager = function(skyDirector){
       const directB = Math.min(1.0, Math.max(0, transmittanceScratch[2] * dominantIntensity));
 
       // Ground-bounce contribution to the X/Z/Y- hemis (matches C++ behavior).
+      // When the moon is the dominant light, dim/tint the bounce by the eclipse
+      // modifier so a deeply eclipsed moon doesn't bounce normal moonlight off
+      // the ground.
       const groundY = Math.max(dominantY, 0);
-      const rGround = groundY * directR * groundColorLinear[0];
-      const gGround = groundY * directG * groundColorLinear[1];
-      const bGround = groundY * directB * groundColorLinear[2];
+      const bounceR = dominantLightIsSun ? directR : directR * lunarEclipseLightingModifier.x;
+      const bounceG = dominantLightIsSun ? directG : directG * lunarEclipseLightingModifier.y;
+      const bounceB = dominantLightIsSun ? directB : directB * lunarEclipseLightingModifier.z;
+      const rGround = groundY * bounceR * groundColorLinear[0];
+      const gGround = groundY * bounceG * groundColorLinear[1];
+      const bGround = groundY * bounceB * groundColorLinear[2];
 
       // Compose 6 hemi colors by combining sun and moon SH coefficients (27 * RGB)
       // and evaluating cosine-convolved SH at the 6 cardinal axes (in bake frame:
       // sun was on +X, hemi positions are rotated to follow runtime sun azimuth
       // further down). Values are linear; gamma + max-normalize happens after the
       // ground-bounce mix.
+      // SH layout is [R0, G0, B0, R1, G1, B1, ..., R8, G8, B8] (k%3 selects channel).
+      // Moon contribution is per-channel weighted so the eclipse modifier tints the SH.
       const combinedSH = combinedSHScratch;
       for(let k = 0; k < 27; ++k){
-        combinedSH[k] = sunSample[k] * sunWeight + moonSample[k] * moonWeight;
+        const ch = k % 3;
+        const moonW = ch === 0 ? moonWeightR : ch === 1 ? moonWeightG : moonWeightB;
+        combinedSH[k] = sunSample[k] * sunWeight + moonSample[k] * moonW;
       }
       const hemi = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
       const axisOut = axisOutScratch;
@@ -474,16 +491,19 @@ StarrySky.LightingManager = function(skyDirector){
       self.zAxisHemisphericalLight.groundColor.setRGB(hemi[15], hemi[16], hemi[17]);
 
       // Sky magnitude -> starsExposure. Magnitude lives at offset 30 in the new
-      // SH9 LUT layout (was 21 in the old 6-hemi layout).
-      const skyMagnitude = sunSample[30] * sunWeight + moonSample[30] * moonWeight;
+      // SH9 LUT layout (was 21 in the old 6-hemi layout). Magnitude is a scalar
+      // brightness; use eclipseMax for the moon side so a darker moon raises
+      // starsExposure (stars become more visible when the moon is eclipsed).
+      const skyMagnitude = sunSample[30] * sunWeight + moonSample[30] * moonWeight0 * eclipseMax;
       skyDirector.exposureVariables.starsExposure = Math.min(6.8 - skyMagnitude, 3.7);
 
       // Fog color (used by 'normal' atmospheric perspective only). FogColor lives
-      // at offsets 27/28/29 in the new SH9 LUT layout.
+      // at offsets 27/28/29 in the new SH9 LUT layout. Per-channel eclipse weights
+      // so the fog tints red during a deep lunar eclipse.
       if(isNormalLighting){
-        const fogR = Math.pow(Math.max(sunSample[27] * sunWeight + moonSample[27] * moonWeight, 0), ONE_OVER_TWO_TWO);
-        const fogG = Math.pow(Math.max(sunSample[28] * sunWeight + moonSample[28] * moonWeight, 0), ONE_OVER_TWO_TWO);
-        const fogB = Math.pow(Math.max(sunSample[29] * sunWeight + moonSample[29] * moonWeight, 0), ONE_OVER_TWO_TWO);
+        const fogR = Math.pow(Math.max(sunSample[27] * sunWeight + moonSample[27] * moonWeightR, 0), ONE_OVER_TWO_TWO);
+        const fogG = Math.pow(Math.max(sunSample[28] * sunWeight + moonSample[28] * moonWeightG, 0), ONE_OVER_TWO_TWO);
+        const fogB = Math.pow(Math.max(sunSample[29] * sunWeight + moonSample[29] * moonWeightB, 0), ONE_OVER_TWO_TWO);
         // Fog density is set by atmosphere geometry (path * scattering coefficient),
         // not by sky brightness. Sky color drives fog *color* via the LUT-baked hemis.
         self.fog.density = maxFogDensity;
@@ -498,33 +518,24 @@ StarrySky.LightingManager = function(skyDirector){
       // Sun gets physical color (warm sunsets, white noon, etc). Moon gets a fixed
       // cool cinematic tint - the same atmospheric extinction that paints sunsets red
       // would paint a low moon orange, but we perceive moonlight as cool blue-white
-      // (Purkinje shift in scotopic vision), and most renderers commit to that. During
-      // an actual lunar eclipse, override with the eclipse modifier (proper umbra red).
+      // (Purkinje shift in scotopic vision), and most renderers commit to that.
+      //
+      // During a lunar eclipse the cool baseline gets modulated by
+      // skyState.moon.lightingModifier, which SkyDirector populates each frame from
+      // a sample of the Eclipse-Shadow LuT at the moon's center. Outside any
+      // eclipse the LuT returns (1, 1, 1), so this is a no-op. Inside the umbra
+      // and penumbra it smoothly fades the directional light from cool-blue
+      // through orange to deep red - replacing the legacy hard-threshold branch
+      // that only kicked in within ~0.2 moon-radii of the antisolar point.
       let colorR, colorG, colorB;
       if(dominantLightIsSun){
         colorR = directR;
         colorG = directG;
         colorB = directB;
       } else {
-        // Eclipse check (matches the GLSL fog formula's distance test).
-        const sunAnti_x = -skyState.sun.position.x;
-        const sunAnti_y = -skyState.sun.position.y;
-        const sunAnti_z = -skyState.sun.position.z;
-        const dx = skyState.moon.position.x - sunAnti_x;
-        const dy = skyState.moon.position.y - sunAnti_y;
-        const dz = skyState.moon.position.z - sunAnti_z;
-        const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-        const eclipseThreshold = 2 * Math.SQRT2 * Math.max(skyDirector.sunRadius || 0.03, skyDirector.moonRadius || 0.03);
-        if(dist <= eclipseThreshold){
-          colorR = lunarEclipseLightingModifier.x;
-          colorG = lunarEclipseLightingModifier.y;
-          colorB = lunarEclipseLightingModifier.z;
-        } else {
-          // Fixed cool cinematic moonlight - slightly blue, slightly green-shifted.
-          colorR = 0.70;
-          colorG = 0.85;
-          colorB = 1.00;
-        }
+        colorR = 0.70 * lunarEclipseLightingModifier.x;
+        colorG = 0.85 * lunarEclipseLightingModifier.y;
+        colorB = 1.00 * lunarEclipseLightingModifier.z;
       }
       self.sourceLight.color.r = colorR;
       self.sourceLight.color.g = colorG;
@@ -542,9 +553,11 @@ StarrySky.LightingManager = function(skyDirector){
       // physically truer but visually too dim at sunrise. `clamp(x * 2, 0, 1)` is the
       // happy medium: saturates at lightingMag = 0.5 (sun moderately above horizon)
       // so sunrise/sunset get most of full ambient, while twilight and night still fade
-      // out smoothly.
+      // out smoothly. The moon's contribution is also attenuated by the eclipse modifier
+      // -- a deeply eclipsed moon high in the sky should not floor the ambient intensity
+      // at "normal full moon" levels.
       const sunGate  = Math.max(0, skyState.sun.position.y  * 1.5 + 0.3);
-      const moonGate = Math.max(0, skyState.moon.position.y * 1.5 + 0.3) * 0.3;
+      const moonGate = Math.max(0, skyState.moon.position.y * 1.5 + 0.3) * 0.3 * eclipseMax;
       const lightingMag = Math.max(directMax, sunGate, moonGate);
       const intensityModifier = Math.min(Math.max(lightingMag * 2.0, 0.0), 1.0);
       const indirectLightIntensity = Math.min(Math.max(lightingData.ambientIntensity * intensityModifier * 0.15, lightingData.minimumAmbientLighting), lightingData.maximumAmbientLighting);
@@ -570,13 +583,42 @@ StarrySky.LightingManager = function(skyDirector){
     self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
     self.sourceLight.intensity = lightingState[24] * 0.5 * (dominantLightIsSun ? lightingData.sunIntensity : lightingData.moonIntensity);
 
-    self.xAxisHemisphericalLight.color.fromArray(lightingState, 0);
-    self.yAxisHemisphericalLight.color.fromArray(lightingState, 3);
-    self.zAxisHemisphericalLight.color.fromArray(lightingState, 6);
-    self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
-    self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
-    self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) * 10.0;
+    // When the moon is the dominant light, attenuate ambient color and
+    // intensity by the eclipse modifier. The worker doesn't separate sun and
+    // moon contributions in lightingState[0..17], so at night these channels
+    // are essentially moon-driven and applying the modifier wholesale gets us
+    // the right behavior; in daytime we skip this since the values represent
+    // sun-driven ambient. (The LUT path above does this more precisely with
+    // per-source SH weighting; this fallback is an approximation.)
+    const fallbackEclipseR = dominantLightIsSun ? 1.0 : lunarEclipseLightingModifier.x;
+    const fallbackEclipseG = dominantLightIsSun ? 1.0 : lunarEclipseLightingModifier.y;
+    const fallbackEclipseB = dominantLightIsSun ? 1.0 : lunarEclipseLightingModifier.z;
+    const fallbackEclipseMax = Math.max(fallbackEclipseR, fallbackEclipseG, fallbackEclipseB);
+    self.xAxisHemisphericalLight.color.setRGB(
+      lightingState[0] * fallbackEclipseR,
+      lightingState[1] * fallbackEclipseG,
+      lightingState[2] * fallbackEclipseB);
+    self.yAxisHemisphericalLight.color.setRGB(
+      lightingState[3] * fallbackEclipseR,
+      lightingState[4] * fallbackEclipseG,
+      lightingState[5] * fallbackEclipseB);
+    self.zAxisHemisphericalLight.color.setRGB(
+      lightingState[6] * fallbackEclipseR,
+      lightingState[7] * fallbackEclipseG,
+      lightingState[8] * fallbackEclipseB);
+    self.xAxisHemisphericalLight.groundColor.setRGB(
+      lightingState[9]  * fallbackEclipseR,
+      lightingState[10] * fallbackEclipseG,
+      lightingState[11] * fallbackEclipseB);
+    self.yAxisHemisphericalLight.groundColor.setRGB(
+      lightingState[12] * fallbackEclipseR,
+      lightingState[13] * fallbackEclipseG,
+      lightingState[14] * fallbackEclipseB);
+    self.zAxisHemisphericalLight.groundColor.setRGB(
+      lightingState[15] * fallbackEclipseR,
+      lightingState[16] * fallbackEclipseG,
+      lightingState[17] * fallbackEclipseB);
+    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) * 10.0 * fallbackEclipseMax;
     const indirectLightIntensity = Math.min(Math.max(lightingData.ambientIntensity * intensityModifier * 0.15, lightingData.minimumAmbientLighting), lightingData.maximumAmbientLighting);
     self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.yAxisHemisphericalLight.intensity = indirectLightIntensity;

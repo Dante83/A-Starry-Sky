@@ -143,6 +143,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
     baseSunMaterial.uniforms.uTime.value = t;
     baseSunMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    // Schneegans LuT carries the brightness modulation; no extra attenuation.
     baseSunMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     baseSunMaterial.uniforms.localSiderealTime.value = skyState.LSRT;
     baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;

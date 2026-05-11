@@ -124,6 +124,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     }
 
     moonMaterial.uniforms.starColorMap.value = assetManager.images.starImages.starColorMap;
+    if(assetManager.images.eclipseShadowLUTImage){
+      moonMaterial.uniforms.eclipseShadowLUT.value = assetManager.images.eclipseShadowLUTImage;
+    }
   }
 
   const renderPass = new THREE.RenderPass(scene, camera);
@@ -194,6 +197,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.uTime.value = t;
     moonMaterial.uniforms.localSiderealTime.value = skyDirector.skyState.LSRT;
     moonMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    // Schneegans LuT carries the brightness modulation; no extra attenuation.
     moonMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     moonMaterial.uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     moonMaterial.uniforms.moonExposure.value = skyDirector.exposureVariables.moonExposure;

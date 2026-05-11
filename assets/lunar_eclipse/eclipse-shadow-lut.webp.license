@@ -1,0 +1,13 @@
+SPDX-FileCopyrightText: 2025 German Aerospace Center (DLR) <cosmoscout@dlr.de>
+
+SPDX-License-Identifier: CC0-1.0
+
+Derived from earthShadow.tif in CosmoScout VR
+(https://github.com/cosmoscout/cosmoscout-vr/blob/main/resources/textures/earthShadow.tif),
+which was produced by the tool described in:
+  Schneegans, Gilg, Ahlers, Zachmann, Gerndt.
+  "Physically Based Real-Time Rendering of Eclipses."
+  Computer Graphics Forum 44(2), 2025. https://doi.org/10.1111/cgf.70017
+
+Repackaged from 256x256 float32 linear TIFF to 2048x2048 8-bit sRGB-encoded
+lossless WebP. Source data is unmodified except for the bicubic upsample.

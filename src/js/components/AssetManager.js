@@ -6,7 +6,8 @@ StarrySky.AssetManager = function(skyDirector){
     starImages: {},
     blueNoiseImages: {},
     auroraImages: {},
-    solarEclipseImage: null
+    solarEclipseImage: null,
+    eclipseShadowLUTImage: null
   };
   const starrySkyComponent = skyDirector.parentComponent;
 
@@ -70,8 +71,9 @@ StarrySky.AssetManager = function(skyDirector){
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
     const oneSolarEclipseImage = 1;
+    const oneEclipseShadowLUT = 1;
     const numberOfAuroraTextures = 1;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + numberOfAuroraTextures;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfAuroraTextures;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -446,8 +448,100 @@ StarrySky.AssetManager = function(skyDirector){
       console.error(err);
     });
 
+    //Eclipse-Shadow LuT (Schneegans 2025 parameterization). Sampled by the
+    //moon shader to give the umbra its wavelength-dependent shadow color.
+    //Baked offline in linear-light RGB but stored as sRGB-encoded 8-bit PNG
+    //for precision in the dark umbra range -- Three.js auto-decodes back to
+    //linear via colorSpace = SRGBColorSpace. ClampToEdge so we don't wrap
+    //past the LuT's coordinate domain.
+    let eclipseShadowLUTPromise = new Promise(function(resolve, reject){
+      textureLoader.load(StarrySky.assetPaths.eclipseShadowLUT, function(texture){resolve(texture);});
+    });
+    eclipseShadowLUTPromise.then(function(texture){
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.generateMipmaps = false;
+      texture.magFilter = THREE.LinearFilter;
+      texture.minFilter = THREE.LinearFilter;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      self.images.eclipseShadowLUTImage = texture;
+
+      //CPU-side copy of the LuT pixels so SkyDirector / LightingManager can
+      //sample it without a GPU round-trip. We need this for the directional
+      //light color (which gets multiplied into the scene's lighting on the
+      //CPU) and for the atmosphere shader's moonLightColor uniform (which
+      //tints sky scattering by the eclipse color).
+      const img = texture.image;
+      if(img && img.width > 0){
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        self.eclipseShadowLUTWidth = img.width;
+        self.eclipseShadowLUTHeight = img.height;
+        self.eclipseShadowLUTPixels = ctx.getImageData(0, 0, img.width, img.height).data;
+      }
+
+      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+        const moonUniforms = self.skyDirector.renderers.moonRenderer.moonMaterial.uniforms;
+        if(moonUniforms.eclipseShadowLUT){
+          moonUniforms.eclipseShadowLUT.value = texture;
+        }
+      }
+
+      self.numberOfTexturesLoaded += 1;
+      if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+        self.hasLoadedImages = true;
+      }
+    }, function(err){
+      console.error(err);
+    });
+
     //Load any additional textures
   }
+
+  //CPU-side bilinear sample of the Eclipse-Shadow LuT, returning linear-light
+  //RGB as a 3-element array. Returns null if the LuT isn't loaded yet.
+  //u, v are clamped to [0, 1]. The PNG file has v=1 at the top (umbra row at
+  //the bottom, matching Figure 9 of the Schneegans paper), so we flip the
+  //v axis when indexing pixels.
+  const srgbToLinear = function(c){
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  this.sampleEclipseShadowLUT = function(u, v){
+    const pixels = self.eclipseShadowLUTPixels;
+    if(!pixels){
+      return null;
+    }
+    const w = self.eclipseShadowLUTWidth;
+    const h = self.eclipseShadowLUTHeight;
+    u = Math.max(0.0, Math.min(1.0, u));
+    v = Math.max(0.0, Math.min(1.0, v));
+    const xPixel = u * (w - 1);
+    const yPixel = (1.0 - v) * (h - 1);
+    const x0 = Math.floor(xPixel);
+    const y0 = Math.floor(yPixel);
+    const x1 = Math.min(x0 + 1, w - 1);
+    const y1 = Math.min(y0 + 1, h - 1);
+    const fx = xPixel - x0;
+    const fy = yPixel - y0;
+    const i00 = (y0 * w + x0) * 4;
+    const i10 = (y0 * w + x1) * 4;
+    const i01 = (y1 * w + x0) * 4;
+    const i11 = (y1 * w + x1) * 4;
+    const out = [0, 0, 0];
+    for(let i = 0; i < 3; ++i){
+      const c00 = srgbToLinear(pixels[i00 + i] / 255.0);
+      const c10 = srgbToLinear(pixels[i10 + i] / 255.0);
+      const c01 = srgbToLinear(pixels[i01 + i] / 255.0);
+      const c11 = srgbToLinear(pixels[i11 + i] / 255.0);
+      const top = c00 * (1.0 - fx) + c10 * fx;
+      const bot = c01 * (1.0 - fx) + c11 * fx;
+      out[i] = top * (1.0 - fy) + bot * fy;
+    }
+    return out;
+  };
 
   //Internal function for loading our sky data once the DOM is ready
   this.loadSkyData = function(){

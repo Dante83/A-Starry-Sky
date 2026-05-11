@@ -94,15 +94,25 @@
 
       <!-- Sky Setup -->
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
+        <sky-location>
+          <sky-latitude>-40.9</sky-latitude>
+          <sky-longitude>174.9</sky-longitude>
+        </sky-location>
+        <sky-clouds>
+          <!-- Reduce the amount of clouds that are visible -->
+          <sky-cloud-coverage>60.0</<sky-cloud-coverage>
+
+          <!-- Velocity of the clouds in the x direction -->
+          <sky-cloud-velocity-x>22.0</<sky-cloud-velocity-x>
+
+          <!-- Velocity of the clouds in the y direction -->
+          <sky-cloud-velocity-y>-150.0</<sky-cloud-velocity-y>
+        </sky-clouds>
         <sky-time>
-          <sky-date>1226-12-26 17:00:00</sky-date>
+          <sky-date>2018-01-30 19:00:00</sky-date>
+          <sky-utc-offset>-13</sky-utc-offset>
           <sky-speed>200</sky-speed>
         </sky-time>
-        <sky-clouds>
-          <sky-cloud-coverage>80.0</sky-cloud-coverage>
-          <sky-cloud-raymarch-steps>32</sky-cloud-raymarch-steps>
-          <sky-cloud-start-seed>400</sky-cloud-start-seed>
-        </sky-clouds>
         <sky-lighting>
           <sky-atmospheric-perspective-type>advanced</sky-atmospheric-perspective-type>
         </sky-lighting>

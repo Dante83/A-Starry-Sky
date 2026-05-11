@@ -97,6 +97,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     uniforms.moonHorizonFade.value = Math.max(1.0 - sunFade, 0.0);
     uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
     uniforms.sunLuminosity.value = skyState.sun.luminosity;
+    // Schneegans LuT carries the brightness modulation; no extra attenuation.
     uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.moonLuminosity.value = skyState.moon.luminosity;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;

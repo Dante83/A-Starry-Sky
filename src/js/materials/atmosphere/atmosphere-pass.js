@@ -78,6 +78,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonApertureOrientationMap = {value: null};
       uniforms.cameraPosition = {value: new THREE.Vector3()};
       uniforms.earthshineIntensity = {value: 0.0};
+      uniforms.eclipseShadowLUT = {value: null};
     }
 
     if(!isSunShader){
@@ -275,6 +276,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform sampler2D moonApertureSizeMap;',
       'uniform sampler2D moonApertureOrientationMap;',
       'uniform float earthshineIntensity;',
+      'uniform sampler2D eclipseShadowLUT;',
       'varying vec2 vUv;',
 
       '//Tangent space lighting',
@@ -430,22 +432,45 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '#endif',
 
     '#if($isMoonPass)',
+      '//Sample the precomputed Eclipse-Shadow LuT (Schneegans et al. 2025) to get',
+      '//the RGB shadow color at this moon-disk pixel. LuT parameterization:',
+      '//  u_shadow = phi_sun / (phi_sun + phi_occ)  -- ratio of apparent radii',
+      '//  v_shadow = delta / (phi_sun + phi_occ)    -- normalized angle to shadow axis',
+      "//phi_sun, phi_occ, and delta are measured *from the moon's surface* (the",
+      '//observer position in the shadow). For the Earth-Moon-Sun system these are',
+      '//essentially fixed:',
+      '//  phi_sun_from_moon ~ R_sun / d_earth_sun       ~ 0.00465 rad',
+      '//  phi_occ_from_moon ~ R_earth / d_earth_moon    ~ 0.01657 rad',
+      '//  -> phi_sun + phi_occ                          ~ 0.02123 rad (~1.22 deg)',
+      '//  -> physical moon angular radius (R_moon/d_em) ~ 0.00452 rad (~0.26 deg)',
+      '//',
+      '//The project draws the moon at a *cinematic* angular size',
+      '//(<sky-moon-angular-diameter>, default 3.15 deg vs the physical ~0.5 deg)',
+      '//for visual impact. If we just sampled the LuT at the per-pixel delta from',
+      '//antisolar, the shadow would only cover the central ~1.22 deg of the',
+      '//inflated cinematic disk -- a tiny bite. To make the cinematic moon show',
+      '//a full eclipse the way the *physical* moon would, we map each cinematic-',
+      '//disk pixel back to its physical-moon-equivalent position, then look the',
+      '//LuT up at that physical delta. The result: when the moon center is in the',
+      '//umbra, the entire cinematic disk is dim red; when partially eclipsed, the',
+      '//gradient spans the whole cinematic disk; when not eclipsed at all',
+      '//(deltaCenter > 1.22 deg), every pixel clamps to v=1 -> (1, 1, 1).',
+      'const float U_SHADOW_LUNAR = 0.2193;',
+      'const float ECLIPSE_SHADOW_RADIUS_RAD = 0.02123;',
+      'const float PHYSICAL_MOON_RADIUS_RAD = 0.00452;',
+
       'vec3 getLunarEcclipseShadow(vec3 sphericalPosition){',
-        '//Determine the distance from this pixel to the center of the sun.',
-        'float distanceToPixel = distance(sphericalPosition, earthsShadowPosition);',
-        'float pixelToCenterDistanceInMoonDiameter = 4.0 * distanceToPixel * oneOverNormalizedLunarDiameter;',
-        'float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter * 0.5;',
-        'float pUmbDistSq = umbDistSq * 0.3;',
-        'float umbraBrightness = 0.5 + 0.5 * clamp(umbDistSq, 0.0, 1.0);',
-        'float penumbraBrightness = 0.15 + 0.85 * clamp(pUmbDistSq, 0.0, 1.0);',
-        'float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);',
+        '//physicalPerCinematic = physical_moon_radius / cinematic_moon_radius',
+        '//                     = PHYSICAL_MOON_RADIUS_RAD / (1 / (2 * oneOverNormalizedLunarDiameter))',
+        '//                     = 2 * PHYSICAL_MOON_RADIUS_RAD * oneOverNormalizedLunarDiameter',
+        'float physicalPerCinematic = 2.0 * PHYSICAL_MOON_RADIUS_RAD * oneOverNormalizedLunarDiameter;',
+        'vec3 scaledPos = normalize(moonPosition + (sphericalPosition - moonPosition) * physicalPerCinematic);',
 
-        '//Get color intensity based on distance from penumbra',
-        'vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);',
-        'float colorIntensity = clamp(16.0 * distanceToEarthsShadowSquared * oneOverNormalizedLunarDiameter * oneOverNormalizedLunarDiameter, 0.0, 1.0);',
-        'colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);',
+        'float cosDelta = clamp(dot(scaledPos, earthsShadowPosition), -1.0, 1.0);',
+        'float delta = acos(cosDelta);',
+        'float vShadow = clamp(delta / ECLIPSE_SHADOW_RADIUS_RAD, 0.0, 1.0);',
 
-        'return totalBrightness * colorOfLunarEcclipse;',
+        'return texture2D(eclipseShadowLUT, vec2(U_SHADOW_LUNAR, vShadow)).rgb;',
       '}',
     '#endif',
 

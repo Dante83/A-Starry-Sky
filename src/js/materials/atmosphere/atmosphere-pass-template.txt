@@ -78,6 +78,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonApertureOrientationMap = {value: null};
       uniforms.cameraPosition = {value: new THREE.Vector3()};
       uniforms.earthshineIntensity = {value: 0.0};
+      uniforms.eclipseShadowLUT = {value: null};
     }
 
     if(!isSunShader){

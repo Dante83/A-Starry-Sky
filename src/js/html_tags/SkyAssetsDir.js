@@ -11,6 +11,7 @@ window.customElements.define('sky-bright-star-maps', class extends HTMLElement{}
 window.customElements.define('sky-star-color-map', class extends HTMLElement{});
 window.customElements.define('sky-blue-noise-maps', class extends HTMLElement{});
 window.customElements.define('sky-solar-eclipse-map', class extends HTMLElement{});
+window.customElements.define('sky-eclipse-shadow-lut', class extends HTMLElement{});
 window.customElements.define('sky-aurora-maps', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
@@ -54,6 +55,7 @@ StarrySky.DefaultData.fileNames = {
     'blue-noise-4.bmp'
   ],
   solarEclipseMap: 'solar-eclipse-map.webp',
+  eclipseShadowLUT: 'eclipse-shadow-lut.webp',
   auroraMaps: [
     'aurora-map.webp'
   ]
@@ -66,6 +68,7 @@ StarrySky.DefaultData.assetPaths = {
   moonApertureSizeMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonApertureSizeMap,
   moonApertureOrientationMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonApertureOrientationMap,
   solarEclipseMap: './assets/solar_eclipse/' + StarrySky.DefaultData.fileNames.solarEclipseMap,
+  eclipseShadowLUT: './assets/lunar_eclipse/' + StarrySky.DefaultData.fileNames.eclipseShadowLUT,
   starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubemap.map(x => './assets/star_data/' + x),
   dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarDataMaps.map(x => './assets/star_data/' + x),
   medStarDataMaps: StarrySky.DefaultData.fileNames.medStarDataMaps.map(x => './assets/star_data/' + x),
@@ -151,7 +154,7 @@ class SkyAssetsDir extends HTMLElement {
       const objectProperties = ['moonDiffuseMap', 'moonNormalMap',
         'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap', 'starHashCubemap',
         'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap',
-        'auroraMaps']
+        'eclipseShadowLUT', 'auroraMaps']
       const tagsList = [moonDiffuseMapTags, moonNormalMapTags,
         moonRoughnessMapTags, moonApertureSizeMapTags, moonApertureOrientationMapTags, starCubemapTags,
         medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags,
@@ -159,7 +162,8 @@ class SkyAssetsDir extends HTMLElement {
       const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
-        'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap'];
+        'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap',
+        'eclipseShadowLUT'];
         const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
         'blueNoiseMaps', 'auroraMapTags'];
 

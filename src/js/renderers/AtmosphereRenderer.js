@@ -101,6 +101,11 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     uniforms.localSiderealTime.value = skyState.LSRT;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    // The Schneegans Eclipse-Shadow LuT is physically calibrated: at full
+    // moon the LuT returns ~(1, 1, 1), in deep umbra it returns ~(0.001, 0, 0)
+    // -- already 1000x dimmer matching real lunar-eclipse photometry. So
+    // moonLightColor (= the integrated LuT sample) carries the brightness
+    // modulation on its own; no extra magnitude attenuation needed here.
     uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 

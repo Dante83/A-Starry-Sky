@@ -694,6 +694,7 @@ Outside of this, most of the code associated with this tag controls the ray marc
 `<sky-moon-aperture-orientation-map>` | Defines a moon aperture orientation map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-blue-noise-maps>` | Defines the location the tiling blue noise maps which are used to provide temporal dithering to eliminate banding.
 `<sky-solar-eclipse-map>` | Defines the location of the solar eclipse texture used to provide the corona on the solar eclipse during a total solar eclipse.
+`<sky-eclipse-shadow-lut>` | Defines the location of the Eclipse-Shadow lookup texture used during a lunar eclipse. This is a precomputed table of how Earth's atmosphere colors and dims sunlight reaching the moon for every position in Earth's umbra and penumbra. The shipped texture is derived from the CC0-licensed `earthShadow.tif` published with CosmoScout VR ([Schneegans et al. 2025, *Physically Based Real-Time Rendering of Eclipses*, CGF 44(2)](https://doi.org/10.1111/cgf.70017)). The default lookup lives in `assets/lunar_eclipse/eclipse-shadow-lut.webp`; the baker that regenerates it lives in `src/python/eclipse-lut-baker/`.
 `<sky-star-cubemap-maps>` | Defines the location of all sky cubemap LUT keys that are used to find the stars in the sky.
 `<sky-dim-star-maps>` | Defines the location of all dim star LUTs used to show all the dim stars in the sky.
 `<sky-med-star-maps>` | Defines the location of all medium star LUTs used to show all the dim stars in the sky.
@@ -731,6 +732,9 @@ Once we've gotten to the folder, we have several ways to specify where our image
         <sky-assets-dir dir="aurora_texture" aurora-map-path></sky-assets-dir>
         <sky-assets-dir dir="solar_eclipse_picture">
           <sky-solar-eclipse-map></sky-solar-eclipse-map>
+        </sky-assets-dir>
+        <sky-assets-dir dir="lunar_eclipse">
+          <sky-eclipse-shadow-lut></sky-eclipse-shadow-lut>
         </sky-assets-dir>
       </sky-assets-dir>
     </sky-assets-dir>
@@ -771,6 +775,7 @@ As you might notice, we could have also provided links to each of the individual
           <sky-moon-aperture-size-map></sky-moon-aperture-size-map>
           <sky-moon-aperture-orientation-map></sky-moon-aperture-orientation-map>
           <sky-solar-eclipse-map></sky-solar-eclipse-map>
+          <sky-eclipse-shadow-lut></sky-eclipse-shadow-lut>
           <sky-aurora-maps></sky-aurora-maps>
 
           <!--Even though this a single tag, all the files associated

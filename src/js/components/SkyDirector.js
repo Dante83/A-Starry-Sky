@@ -101,6 +101,12 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.sunRadius;
   this.moonRadius;
   this.distanceForSolarEclipse;
+  // Temporal EMA state for the per-frame jittered Eclipse-Shadow LuT samples.
+  // Seeded on the first sampling pass after the LuT is available.
+  this._eclipseLutEmaR = 1.0;
+  this._eclipseLutEmaG = 1.0;
+  this._eclipseLutEmaB = 1.0;
+  this._eclipseLutEmaInit = false;
 
   //Set up our web assembly hooks
   const self = this;
@@ -302,6 +308,123 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.skyState.moon.oneOverNormalizedLunarDiameter = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX + 1];
       self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues, START_OF_LUNAR_ECLIPSE_INDEX + 2);
       self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues, START_OF_LUNAR_ECLIPSE_INDEX + 5);
+
+      //Override the WASM-supplied lightingModifier with the moon's integrated
+      //LuT reflectance across the moon disk. We sample the Eclipse-Shadow LuT
+      //at the moon's center plus a ring of points at the physical moon radius
+      //and average in linear space. The integrated value represents the total
+      //flux reflected by the moon (which is what drives scene lighting and
+      //the atmospheric halo), and crucially it transitions smoothly through
+      //an eclipse: at penumbra ingress only a sliver of the moon is dim, so
+      //the average barely drops; at the umbra-edge crossing the average
+      //slides gradually rather than jumping at the moon-center threshold.
+      //
+      //Sampling only at moon center gave "lights go dark almost instantly"
+      //the moment moon-center crossed the umbra boundary, even though most
+      //of the moon was still in penumbra and reflecting a lot of light.
+      //
+      //Shadow zone is the PHYSICAL Earth-Moon umbra+penumbra (~1.22 deg
+      //radius from antisolar): phi_sun + phi_earth as seen from the moon.
+      //Do NOT scale this by the project's cinematic moonAngularDiameter
+      //(default 3.15 deg vs the physical ~0.5 deg) -- that would bloat the
+      //shadow zone to ~7.4 deg and tint the moon halo every full-moon night.
+      //AtmosphereRenderer's moonLightColor uniform aliases skyState.moon.lightingModifier,
+      //so this override also tints atmospheric scattering during the eclipse.
+      if(self.assetManager && self.assetManager.sampleEclipseShadowLUT){
+        const mp = self.skyState.moon.position;
+        const sp = self.skyState.sun.position;
+        // antisolar = -sun_position
+        const ax = -sp.x, ay = -sp.y, az = -sp.z;
+        const U_SHADOW_LUNAR = 0.2193;
+        const ECLIPSE_SHADOW_RADIUS_RAD = 0.02123;
+        const PHYSICAL_MOON_RADIUS_RAD = 0.00452;
+
+        // Build a tangent basis around the moon position to lay sample
+        // points on the physical moon disk. Pick an arbitrary perpendicular
+        // (use world up as a seed, fall back to world right if degenerate).
+        let tx = 0, ty = 1, tz = 0;
+        let dotMoonUp = mp.x * tx + mp.y * ty + mp.z * tz;
+        if(Math.abs(dotMoonUp) > 0.999){ tx = 1; ty = 0; tz = 0; dotMoonUp = mp.x; }
+        // tangent1 = normalize(up - mp * dot(mp, up))
+        let t1x = tx - mp.x * dotMoonUp;
+        let t1y = ty - mp.y * dotMoonUp;
+        let t1z = tz - mp.z * dotMoonUp;
+        const t1len = Math.sqrt(t1x*t1x + t1y*t1y + t1z*t1z) || 1.0;
+        t1x /= t1len; t1y /= t1len; t1z /= t1len;
+        // tangent2 = cross(mp, tangent1)
+        const t2x = mp.y * t1z - mp.z * t1y;
+        const t2y = mp.z * t1x - mp.x * t1z;
+        const t2z = mp.x * t1y - mp.y * t1x;
+
+        // Sample positions: moon center (weight 1) + 8 ring points (weight 0.5
+        // each) at the physical moon radius. The ring is randomly rotated and
+        // its radius randomly jittered EACH FRAME, so over the temporal EMA
+        // window below we get ~16 frames worth of distinct sample positions
+        // (~144 effective samples) for the price of 9 LuT lookups per frame.
+        // The temporal EMA smooths frame-to-frame variance from the random
+        // jitter; jitter coverage gives variance reduction the EMA can latch
+        // onto.
+        const SAMPLE_COUNT = 9;
+        const ringRotation = Math.random() * (2.0 * Math.PI);
+        const ringRadiusScale = 0.7 + 0.3 * Math.random();
+        const ringR = PHYSICAL_MOON_RADIUS_RAD * ringRadiusScale;
+        let sumR = 0, sumG = 0, sumB = 0, sumW = 0;
+        let i;
+        // Center sample
+        {
+          const cosD = Math.max(-1.0, Math.min(1.0, mp.x*ax + mp.y*ay + mp.z*az));
+          const d = Math.acos(cosD);
+          const v = Math.min(1.0, d / ECLIPSE_SHADOW_RADIUS_RAD);
+          const lut = self.assetManager.sampleEclipseShadowLUT(U_SHADOW_LUNAR, v);
+          if(lut){
+            sumR += lut[0]; sumG += lut[1]; sumB += lut[2]; sumW += 1.0;
+          }
+        }
+        for(i = 0; i < 8; i++){
+          const angle = ringRotation + i * (Math.PI / 4.0);
+          const ox = Math.cos(angle) * ringR;
+          const oy = Math.sin(angle) * ringR;
+          // sample position in 3D = mp + ox*t1 + oy*t2, then normalize
+          let sx = mp.x + ox * t1x + oy * t2x;
+          let sy = mp.y + ox * t1y + oy * t2y;
+          let sz = mp.z + ox * t1z + oy * t2z;
+          const slen = Math.sqrt(sx*sx + sy*sy + sz*sz) || 1.0;
+          sx /= slen; sy /= slen; sz /= slen;
+          const cosD = Math.max(-1.0, Math.min(1.0, sx*ax + sy*ay + sz*az));
+          const d = Math.acos(cosD);
+          const v = Math.min(1.0, d / ECLIPSE_SHADOW_RADIUS_RAD);
+          const lut = self.assetManager.sampleEclipseShadowLUT(U_SHADOW_LUNAR, v);
+          if(lut){
+            sumR += lut[0] * 0.5; sumG += lut[1] * 0.5; sumB += lut[2] * 0.5;
+            sumW += 0.5;
+          }
+        }
+        if(sumW > 0){
+          const frameR = sumR / sumW;
+          const frameG = sumG / sumW;
+          const frameB = sumB / sumW;
+          // Exponential moving average: each new frame contributes ALPHA
+          // weight, old EMA value contributes (1 - ALPHA). ALPHA = 1/16
+          // gives a ~16-frame effective window (~0.27s real-time at 60fps);
+          // older samples decay smoothly to zero weight. On the first tick
+          // there's no history yet, so we seed directly to skip the warm-up
+          // ramp and avoid a visible "fade-in" on page load.
+          const ALPHA = 1.0 / 16.0;
+          if(self._eclipseLutEmaInit){
+            self._eclipseLutEmaR = self._eclipseLutEmaR * (1.0 - ALPHA) + frameR * ALPHA;
+            self._eclipseLutEmaG = self._eclipseLutEmaG * (1.0 - ALPHA) + frameG * ALPHA;
+            self._eclipseLutEmaB = self._eclipseLutEmaB * (1.0 - ALPHA) + frameB * ALPHA;
+          } else {
+            self._eclipseLutEmaR = frameR;
+            self._eclipseLutEmaG = frameG;
+            self._eclipseLutEmaB = frameB;
+            self._eclipseLutEmaInit = true;
+          }
+          self.skyState.moon.lightingModifier.x = self._eclipseLutEmaR;
+          self.skyState.moon.lightingModifier.y = self._eclipseLutEmaG;
+          self.skyState.moon.lightingModifier.z = self._eclipseLutEmaB;
+        }
+      }
 
       //Tick our light positions before we might just use them to set up the next interpolation
       self.lightingManager.tick(self.lightingColorValues);
