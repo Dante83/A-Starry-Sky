@@ -23,7 +23,7 @@
       const vec3 betaM = $mieBeta;
       const vec3 betaExt = betaR + betaM;
 
-      // Cornette-Shanks Mie phase function — matches atmosphere-functions.glsl miePhaseFunction.
+      // Cornette-Shanks Mie phase function -- matches atmosphere-functions.glsl miePhaseFunction.
       const float MIE_G = $mieDirectionalG;
       const float MIE_G_SQUARED = MIE_G * MIE_G;
       const float MIE_PHASE_COEFF = 1.5 * (1.0 - MIE_G_SQUARED) / (2.0 + MIE_G_SQUARED);
@@ -61,7 +61,7 @@
       // Single-scattering aerial perspective using the same beta values and phase functions
       // as the Elek sky LUT bake, so ground objects' atmospheric perspective matches the sky.
       // vLightE is the source radiance already attenuated by sun-to-observer Kasten-Young
-      // extinction in the vertex shader (so it's wavelength-shifted — red at horizon).
+      // extinction in the vertex shader (so it's wavelength-shifted -- red at horizon).
       // Standard analytic form: integral_0^d beta_sca * P(theta) * E * exp(-beta_ext * x) dx
       //                       = (beta_sca * P(theta) / beta_ext) * (1 - exp(-beta_ext * d)) * E
       vec3 addLightSource(vec3 viewDirection, vec3 lightDirection, vec3 vLightE, float distToPoint, out vec3 Fex){

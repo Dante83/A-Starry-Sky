@@ -32,7 +32,7 @@ varying float vFogDepth;
       // the horizon and below). Cleaner than passing sunHorizonFade through fog.color
       // would require encoding more bits than we have available in the existing fog
       // uniform smuggle.
-      const float cutoffAngle = 1.6110731556870734;  // pi / 1.95 — slightly past horizon
+      const float cutoffAngle = 1.6110731556870734;  // pi / 1.95 -- slightly past horizon
       const float steepness = 1.5;
       float sourceIntensity( float zenithAngleCos, float EE ) {
         zenithAngleCos = clamp( zenithAngleCos, -1.0, 1.0 );

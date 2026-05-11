@@ -145,13 +145,13 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       'return collides;',
     '}',
 
-    '//Earth-shadow geometry - runs the bisection ONCE per (viewDir, lightDir).',
+    '//Earth-shadow geometry -- runs the bisection ONCE per (viewDir, lightDir).',
     '//state: 1.0 = full sun (no shadow), 0.0 = full shadow, 0.5 = needs density weighting',
     '//via earthsShadowDensityRatio. This split halves the cost when both Mie and',
     '//Rayleigh need a shadow ratio because only the final exponential differs.',
     '//sunsetHeight / startingHeightKm carry the GEOMETRIC altitudes of the bisection',
     '//endpoints. The previous implementation used sunsetPosition.y - startingTargetPoint.y,',
-    '//which is only an altitude difference for vertical view rays - for any tilted',
+    '//which is only an altitude difference for vertical view rays -- for any tilted',
     "//view the y-component understates the true radial altitude (the bisection's",
     '//sunsetPosition lies on a sphere of radius R+sunsetHeight regardless of where',
     '//on that sphere it ends up).',
@@ -203,12 +203,12 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     '}',
 
     '//Fraction of inscattering mass on the view ray that is unshadowed.',
-    '//Approximates int_sunsetH^inf rho(h)dh / int_startH^inf rho(h)dh = exp(-(sunsetH-startH)/H)',
+    '//Approximates integral_sunsetH^inf rho(h)dh / integral_startH^inf rho(h)dh ~ exp(-(sunsetH-startH)/H)',
     '//for an exponential atmosphere with scale height H (= 1/scaleHeight). The',
     '//previous form (1 - exp((sunsetY - finalY)*scaleHeight)) returned the wrong',
-    '//shape AND used y-coordinates instead of geometric altitude - its shadow only',
+    '//shape AND used y-coordinates instead of geometric altitude -- its shadow only',
     '//kicked in when sunset reached the very top of the atmosphere, producing a',
-    '//narrow ~1deg band of sharp falloff right before state=0.0 instead of a smooth',
+    '//narrow ~1 deg band of sharp falloff right before state=0.0 instead of a smooth',
     '//ramp across twilight.',
     'float earthsShadowDensityRatio(EarthShadowGeometry g, float scaleHeight){',
       'if(g.state > 0.99){ return 1.0; }',
@@ -216,7 +216,7 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
       'return clamp(exp(-(g.sunsetHeight - g.startingHeightKm) * scaleHeight), 0.0, 1.0);',
     '}',
 
-    '//Backwards-compat wrapper - single-scaleHeight callers (none in production',
+    '//Backwards-compat wrapper -- single-scaleHeight callers (none in production',
     '//code today, but kept for symmetry).',
     'float earthsShadowIntensity(vec3 viewDirection, vec3 lightDirection, float startingHeight, float endingHeight, float scaleHeight){',
       'EarthShadowGeometry g = earthsShadowGeometry(viewDirection, lightDirection, startingHeight, endingHeight);',
@@ -279,9 +279,9 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     const mieG = atmosphericParameters.mieDirectionalG;
     const textureDepth = packingWidth * packingHeight;
     const mieGSquared = mieG * mieG;
-    // Properly normalized Cornette-Shanks: 3/(8*pi) * (1-g^2)/(2+g^2). The 1/(4*pi) factor
-    // (i.e. the difference between this and the bare 1.5*(1-g^2)/(2+g^2)) used to be
-    // partially offset by a ONE_OVER_EIGHT_PI*(1/0.9) factor in the LUT bake; both
+    // Properly normalized Cornette-Shanks: 3/(8pi) x (1-g^2)/(2+g^2). The 1/(4pi) factor
+    // (i.e. the difference between this and the bare 1.5x(1-g^2)/(2+g^2)) used to be
+    // partially offset by a ONE_OVER_EIGHT_PIx(1/0.9) factor in the LUT bake; both
     // sides are now consistent. See single-scattering.glsl / kth-inscattering.glsl.
     const miePhaseCoefficient = (3.0 / (8.0 * Math.PI)) * (1.0 - mieGSquared) / (2.0 + mieGSquared);
     const ozBet = atmosphericParameters.ozoneBeta;

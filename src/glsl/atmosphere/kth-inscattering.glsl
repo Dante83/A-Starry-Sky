@@ -145,9 +145,9 @@ void main(){
     #if($isRayleigh)
       totalInscattering *= RAYLEIGH_BETA;
     #else
-      //β_sca = β_ext × single-scattering albedo (0.9 for atmospheric Mie). Matches
-      //the cleanup in single-scattering.glsl — phase function is fully normalized so
-      //no 1/(8π) factor needed here.
+      //beta_sca = beta_ext x single-scattering albedo (0.9 for atmospheric Mie). Matches
+      //the cleanup in single-scattering.glsl -- phase function is fully normalized so
+      //no 1/(8pi) factor needed here.
       totalInscattering *= EARTH_MIE_BETA_EXTINCTION * 0.9;
     #endif
   }

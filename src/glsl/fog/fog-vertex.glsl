@@ -16,7 +16,7 @@
         vec2 moonAltitudeAzimuth = vec2(fogColor.z, fogNear); //Swap the sign bit on fogNear
         vec3 moonPosition = convertRhoThetaToXYZ(moonAltitudeAzimuth);
         vSunDirection = normalize(sunPosition);
-        vSunE = sourceIntensityWithExtinction( vSunDirection, 1300.0 ); //Sun EE constant; Kasten-Young air mass × beta extinction reddens at low altitudes
+        vSunE = sourceIntensityWithExtinction( vSunDirection, 1300.0 ); //Sun EE constant; Kasten-Young air mass x beta extinction reddens at low altitudes
         vSunE *= solarEclipseLightingModifier(sunPosition, moonPosition);
 
         //

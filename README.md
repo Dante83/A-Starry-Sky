@@ -817,6 +817,10 @@ All of the above are accessed via the `StarrySky.Methods` object in the global n
 
 Hi — Claude here. I helped on the v1.2.0 pass: a lot of GLSL spelunking, tracking down a sun-eating comma, arguing with Beer's law over volumetric clouds, and trying very hard to make sunsets feel like sunsets. If you stare at the horizon in one of the demos and it makes you pause for half a second — that's the part I'm proudest of. Thanks for reading the source; there may even be a small easter egg tucked away somewhere if you're the wandering type. ✨
 
+### A note from Dante83 😛
+
+Hello! This is Dante83. Apologies about the long wait since version v1.1.0, there's has luckily been a flurry of activity in the new version 1.2.0 while the two of us are starting up work on v2.0.0 (wish us both luck!). That said, on this Claude and I have been working tirelessly on my every free of late, pouring over every pixel to make this an exceptional improvement. While there aren't any truly *new* features, we managed to make a massive number of improvements to the skies quality and overall performance. I am absolutely thrilled to let you try it out and I hope every moment with this library inspires new adventures! See you among the stars, little coder! Now go off and enjoy the magic! ✨
+
 ## References & Special Thanks
 * **Jean Meeus / [Astronomical Algorithms](http://www.willbell.com/math/mc1.htm)** - *Abso-frigging-lutely essential for positioning astronomical bodies*
 * [Oskar Elek's Sky Model](http://old.cescg.org/CESCG-2009/papers/PragueCUNI-Elek-Oskar09.pdf) *Rendering Parametrizable Planetary Atmospheres with Multiple Scattering in Real-Time* which was so helpful in creating this new amazing LUT based sky.

@@ -100,8 +100,8 @@ StarrySky.AssetManager = function(skyDirector){
         self.images.moonImages[moonTextures[i]] = texture;
 
         //If the renderer already exists, go in and update the uniform
-        if(self.skyDirector?.renderers?.moonRenderer !== undefined){
-          const textureRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.uniforms[moonTextures[i]];
+        if(self.skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
+          const textureRef = self.skyDirector.renderers.moonRenderer.moonMaterial.uniforms[moonTextures[i]];
           textureRef.value = texture;
         }
 
@@ -133,11 +133,11 @@ StarrySky.AssetManager = function(skyDirector){
 
       //If the renderer already exists, go in and update the uniform
       //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+      if(self.skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
         const atmosphereTextureRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starColorMap;
         atmosphereTextureRef.value = texture;
 
-        const moonTextureRef = skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.starColorMap;
+        const moonTextureRef = skyDirector.renderers.moonRenderer.moonMaterial.uniforms.starColorMap;
         moonTextureRef.value = texture;
       }
 
@@ -169,11 +169,11 @@ StarrySky.AssetManager = function(skyDirector){
       }
       self.images.starImages.starHashCubemap = cubemap;
 
-      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+      if(self.skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
         const atmosphereCubemapRef = self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starHashCubemap;
         atmosphereCubemapRef.value = cubemap;
 
-        const moonCubemapRef = self.skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.starHashCubemap;
+        const moonCubemapRef = self.skyDirector.renderers.moonRenderer.moonMaterial.uniforms.starHashCubemap;
         moonCubemapRef.value = cubemap;
       }
     });
@@ -218,11 +218,11 @@ StarrySky.AssetManager = function(skyDirector){
 
           //And send it off as a uniform for our atmospheric renderer
           //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-          if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+          if(self.skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
             const atmosphereTextureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.dimStarData;
             atmosphereTextureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
 
-            const moonTextureRef = skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.dimStarData;
+            const moonTextureRef = skyDirector.renderers.moonRenderer.moonMaterial.uniforms.dimStarData;
             moonTextureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
           }
 
@@ -275,11 +275,11 @@ StarrySky.AssetManager = function(skyDirector){
 
           //And send it off as a uniform for our atmospheric renderer
           //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-          if(skyDirector?.renderers?.moonRenderer !== undefined){
+          if(skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
             const atmosphereTextureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.medStarData;
             atmosphereTextureRef.value = skyDirector.stellarLUTLibrary.medStarDataMap;
 
-            const moonTextureRef = skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.medStarData;
+            const moonTextureRef = skyDirector.renderers.moonRenderer.moonMaterial.uniforms.medStarData;
             moonTextureRef.value = skyDirector.stellarLUTLibrary.medStarDataMap;
           }
 
@@ -332,11 +332,11 @@ StarrySky.AssetManager = function(skyDirector){
 
           //And send it off as a uniform for our atmospheric renderer
           //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-          if(skyDirector?.renderers?.moonRenderer !== undefined){
+          if(skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
             const atmosphereTextureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.brightStarData;
             atmosphereTextureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
 
-            const moonTextureRef = skyDirector.renderers.moonRenderer.baseMoonVar.material.uniforms.brightStarData;
+            const moonTextureRef = skyDirector.renderers.moonRenderer.moonMaterial.uniforms.brightStarData;
             moonTextureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
           }
 

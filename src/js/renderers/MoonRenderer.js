@@ -106,6 +106,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   moonMaterial.uniforms.sunRadius.value = sunAngularRadiusInRadians;
   moonMaterial.uniforms.cameraPosition.value = new THREE.Vector3();
   moonMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
+  this.moonMaterial = moonMaterial;
   const renderTargetGeometry = new THREE.PlaneGeometry(2, 2);
   THREE.BufferGeometryUtils.computeTangents(renderTargetGeometry);
   const renderBufferMesh = new THREE.Mesh(
