@@ -3036,6 +3036,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonApertureOrientationMap = {value: null};
       uniforms.cameraPosition = {value: new THREE.Vector3()};
       uniforms.earthshineIntensity = {value: 0.0};
+      uniforms.eclipseShadowLUT = {value: null};
     }
 
     if(!isSunShader){
@@ -3233,6 +3234,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform sampler2D moonApertureSizeMap;',
       'uniform sampler2D moonApertureOrientationMap;',
       'uniform float earthshineIntensity;',
+      'uniform sampler2D eclipseShadowLUT;',
       'varying vec2 vUv;',
 
       '//Tangent space lighting',
@@ -3388,22 +3390,45 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     '#endif',
 
     '#if($isMoonPass)',
+      '//Sample the precomputed Eclipse-Shadow LuT (Schneegans et al. 2025) to get',
+      '//the RGB shadow color at this moon-disk pixel. LuT parameterization:',
+      '//  u_shadow = phi_sun / (phi_sun + phi_occ)  -- ratio of apparent radii',
+      '//  v_shadow = delta / (phi_sun + phi_occ)    -- normalized angle to shadow axis',
+      "//phi_sun, phi_occ, and delta are measured *from the moon's surface* (the",
+      '//observer position in the shadow). For the Earth-Moon-Sun system these are',
+      '//essentially fixed:',
+      '//  phi_sun_from_moon ~ R_sun / d_earth_sun       ~ 0.00465 rad',
+      '//  phi_occ_from_moon ~ R_earth / d_earth_moon    ~ 0.01657 rad',
+      '//  -> phi_sun + phi_occ                          ~ 0.02123 rad (~1.22 deg)',
+      '//  -> physical moon angular radius (R_moon/d_em) ~ 0.00452 rad (~0.26 deg)',
+      '//',
+      '//The project draws the moon at a *cinematic* angular size',
+      '//(<sky-moon-angular-diameter>, default 3.15 deg vs the physical ~0.5 deg)',
+      '//for visual impact. If we just sampled the LuT at the per-pixel delta from',
+      '//antisolar, the shadow would only cover the central ~1.22 deg of the',
+      '//inflated cinematic disk -- a tiny bite. To make the cinematic moon show',
+      '//a full eclipse the way the *physical* moon would, we map each cinematic-',
+      '//disk pixel back to its physical-moon-equivalent position, then look the',
+      '//LuT up at that physical delta. The result: when the moon center is in the',
+      '//umbra, the entire cinematic disk is dim red; when partially eclipsed, the',
+      '//gradient spans the whole cinematic disk; when not eclipsed at all',
+      '//(deltaCenter > 1.22 deg), every pixel clamps to v=1 -> (1, 1, 1).',
+      'const float U_SHADOW_LUNAR = 0.2193;',
+      'const float ECLIPSE_SHADOW_RADIUS_RAD = 0.02123;',
+      'const float PHYSICAL_MOON_RADIUS_RAD = 0.00452;',
+
       'vec3 getLunarEcclipseShadow(vec3 sphericalPosition){',
-        '//Determine the distance from this pixel to the center of the sun.',
-        'float distanceToPixel = distance(sphericalPosition, earthsShadowPosition);',
-        'float pixelToCenterDistanceInMoonDiameter = 4.0 * distanceToPixel * oneOverNormalizedLunarDiameter;',
-        'float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter * 0.5;',
-        'float pUmbDistSq = umbDistSq * 0.3;',
-        'float umbraBrightness = 0.5 + 0.5 * clamp(umbDistSq, 0.0, 1.0);',
-        'float penumbraBrightness = 0.15 + 0.85 * clamp(pUmbDistSq, 0.0, 1.0);',
-        'float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);',
+        '//physicalPerCinematic = physical_moon_radius / cinematic_moon_radius',
+        '//                     = PHYSICAL_MOON_RADIUS_RAD / (1 / (2 * oneOverNormalizedLunarDiameter))',
+        '//                     = 2 * PHYSICAL_MOON_RADIUS_RAD * oneOverNormalizedLunarDiameter',
+        'float physicalPerCinematic = 2.0 * PHYSICAL_MOON_RADIUS_RAD * oneOverNormalizedLunarDiameter;',
+        'vec3 scaledPos = normalize(moonPosition + (sphericalPosition - moonPosition) * physicalPerCinematic);',
 
-        '//Get color intensity based on distance from penumbra',
-        'vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);',
-        'float colorIntensity = clamp(16.0 * distanceToEarthsShadowSquared * oneOverNormalizedLunarDiameter * oneOverNormalizedLunarDiameter, 0.0, 1.0);',
-        'colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);',
+        'float cosDelta = clamp(dot(scaledPos, earthsShadowPosition), -1.0, 1.0);',
+        'float delta = acos(cosDelta);',
+        'float vShadow = clamp(delta / ECLIPSE_SHADOW_RADIUS_RAD, 0.0, 1.0);',
 
-        'return totalBrightness * colorOfLunarEcclipse;',
+        'return texture2D(eclipseShadowLUT, vec2(U_SHADOW_LUNAR, vShadow)).rgb;',
       '}',
     '#endif',
 
@@ -5235,6 +5260,7 @@ window.customElements.define('sky-bright-star-maps', class extends HTMLElement{}
 window.customElements.define('sky-star-color-map', class extends HTMLElement{});
 window.customElements.define('sky-blue-noise-maps', class extends HTMLElement{});
 window.customElements.define('sky-solar-eclipse-map', class extends HTMLElement{});
+window.customElements.define('sky-eclipse-shadow-lut', class extends HTMLElement{});
 window.customElements.define('sky-aurora-maps', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
@@ -5278,6 +5304,7 @@ StarrySky.DefaultData.fileNames = {
     'blue-noise-4.bmp'
   ],
   solarEclipseMap: 'solar-eclipse-map.webp',
+  eclipseShadowLUT: 'eclipse-shadow-lut.webp',
   auroraMaps: [
     'aurora-map.webp'
   ]
@@ -5290,6 +5317,7 @@ StarrySky.DefaultData.assetPaths = {
   moonApertureSizeMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonApertureSizeMap,
   moonApertureOrientationMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonApertureOrientationMap,
   solarEclipseMap: './assets/solar_eclipse/' + StarrySky.DefaultData.fileNames.solarEclipseMap,
+  eclipseShadowLUT: './assets/lunar_eclipse/' + StarrySky.DefaultData.fileNames.eclipseShadowLUT,
   starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubemap.map(x => './assets/star_data/' + x),
   dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarDataMaps.map(x => './assets/star_data/' + x),
   medStarDataMaps: StarrySky.DefaultData.fileNames.medStarDataMaps.map(x => './assets/star_data/' + x),
@@ -5356,50 +5384,44 @@ class SkyAssetsDir extends HTMLElement {
         }
       }
 
-      //Get child tags and acquire their values.
-      const childNodes = Array.from(self.children);
-      const moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
-      const moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
-      const moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
-      const moonApertureSizeMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperture-size-map');
-      const solarEclipseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-solar-eclipse-map');
-      const moonApertureOrientationMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperture-orientation-map');
-      const starCubemapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-cubemap-map');
-      const dimStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-dim-star-map');
-      const medStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-med-star-map');
-      const brightStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-bright-star-map');
-      const starColorMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-color-map');
-      const blueNoiseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-blue-noise-maps');
-      const auroraMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'aurora-maps');
+      //Mapping from child tag name to the asset path key it overrides.
+      const childTagToAssetKey = {
+        'sky-moon-diffuse-map': 'moonDiffuseMap',
+        'sky-moon-normal-map': 'moonNormalMap',
+        'sky-moon-roughness-map': 'moonRoughnessMap',
+        'sky-moon-aperture-size-map': 'moonApertureSizeMap',
+        'sky-moon-aperture-orientation-map': 'moonApertureOrientationMap',
+        'sky-star-cubemap-maps': 'starHashCubemap',
+        'sky-dim-star-maps': 'dimStarDataMaps',
+        'sky-med-star-maps': 'medStarDataMaps',
+        'sky-bright-star-maps': 'brightStarDataMaps',
+        'sky-star-color-map': 'starColorMap',
+        'sky-blue-noise-maps': 'blueNoiseMaps',
+        'sky-solar-eclipse-map': 'solarEclipseMap',
+        'sky-eclipse-shadow-lut': 'eclipseShadowLUT',
+        'sky-aurora-maps': 'auroraMaps'
+      };
 
-      const objectProperties = ['moonDiffuseMap', 'moonNormalMap',
-        'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap', 'starHashCubemap',
-        'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap',
-        'auroraMaps']
-      const tagsList = [moonDiffuseMapTags, moonNormalMapTags,
-        moonRoughnessMapTags, moonApertureSizeMapTags, moonApertureOrientationMapTags, starCubemapTags,
-        medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags,
-        auroraMapTags];
-      const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
-        'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap'];
-        const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
-        'blueNoiseMaps', 'auroraMapTags'];
+        'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap',
+        'eclipseShadowLUT'];
+        const multiTextureKeys = ['starHashCubemap', 'dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
+        'blueNoiseMaps', 'auroraMaps'];
 
         //Process single texture keys
         for(let i = 0; i < singleTextureKeys.length; ++i){
           const textureKey = singleTextureKeys[i];
-          StarrySky.assetPaths[textureKey] = path + '/' + StarrySky.DefaultData.fileNames[textureKey];
+          StarrySky.assetPaths[textureKey] = `${path}/${StarrySky.DefaultData.fileNames[textureKey]}`;
         }
 
         //Process multi texture keys
         for(let i = 0; i < multiTextureKeys.length; ++i){
-          const multiTextureFileNames = multiTextureKeys[i];
-          const multiTextureAssetPath = StarrySky.assetPaths[multiTextureFileNames[i]];
-          const fileNameArray = StarrySky.DefaultData.fileNames[singleTextureKeys[i]];
-          for(let j = 0; j < multiTextureFileNames.length; ++j){
-            multiTextureAssetPath[j] = `${path}/${fileNameArray[j]}`;
+          const multiTextureKey = multiTextureKeys[i];
+          const fileNameArray = StarrySky.DefaultData.fileNames[multiTextureKey];
+          const assetPathArray = StarrySky.assetPaths[multiTextureKey];
+          for(let j = 0; j < fileNameArray.length; ++j){
+            assetPathArray[j] = `${path}/${fileNameArray[j]}`;
           }
         }
       }
@@ -5434,10 +5456,32 @@ class SkyAssetsDir extends HTMLElement {
       else if(self.hasAttribute('solar-eclipse-path') && self.getAttribute('solar-eclipse-path').toLowerCase() !== 'false'){
         StarrySky.assetPaths['solarEclipseMap'] = `${path}/${StarrySky.DefaultData.fileNames['solarEclipseMap']}`;
       }
+      else if(self.hasAttribute('lunar-eclipse-path') && self.getAttribute('lunar-eclipse-path').toLowerCase() !== 'false'){
+        StarrySky.assetPaths['eclipseShadowLUT'] = `${path}/${StarrySky.DefaultData.fileNames['eclipseShadowLUT']}`;
+      }
       else if(self.hasAttribute('aurora-map-path') && self.getAttribute('aurora-map-path').toLowerCase() !== 'false'){
         const auroraMapPaths = StarrySky.assetPaths['auroraMaps'];
         for(let i = 0; i < 1; ++i){
           auroraMapPaths[i] = `${path}/${StarrySky.DefaultData.fileNames['auroraMaps'][i]}`;
+        }
+      }
+      else{
+        //No category attribute - look for individual asset child tags and apply
+        //this directory to each one. This is the form documented in the README,
+        //e.g. <sky-assets-dir dir="lunar_eclipse"><sky-eclipse-shadow-lut/></sky-assets-dir>.
+        for(const child of self.children){
+          const assetKey = childTagToAssetKey[child.nodeName.toLowerCase()];
+          if(!assetKey) continue;
+          const fileNames = StarrySky.DefaultData.fileNames[assetKey];
+          if(Array.isArray(fileNames)){
+            const assetPathArray = StarrySky.assetPaths[assetKey];
+            for(let i = 0; i < fileNames.length; ++i){
+              assetPathArray[i] = `${path}/${fileNames[i]}`;
+            }
+          }
+          else{
+            StarrySky.assetPaths[assetKey] = `${path}/${fileNames}`;
+          }
         }
       }
 
@@ -7110,6 +7154,11 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     uniforms.localSiderealTime.value = skyState.LSRT;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    // The Schneegans Eclipse-Shadow LuT is physically calibrated: at full
+    // moon the LuT returns ~(1, 1, 1), in deep umbra it returns ~(0.001, 0, 0)
+    // -- already 1000x dimmer matching real lunar-eclipse photometry. So
+    // moonLightColor (= the integrated LuT sample) carries the brightness
+    // modulation on its own; no extra magnitude attenuation needed here.
     uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 
@@ -7324,6 +7373,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.sunHorizonFade.value = skyState.sun.horizonFade;
     baseSunMaterial.uniforms.uTime.value = t;
     baseSunMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    // Schneegans LuT carries the brightness modulation; no extra attenuation.
     baseSunMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     baseSunMaterial.uniforms.localSiderealTime.value = skyState.LSRT;
     baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;
@@ -7522,6 +7572,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     }
 
     moonMaterial.uniforms.starColorMap.value = assetManager.images.starImages.starColorMap;
+    if(assetManager.images.eclipseShadowLUTImage){
+      moonMaterial.uniforms.eclipseShadowLUT.value = assetManager.images.eclipseShadowLUTImage;
+    }
   }
 
   const renderPass = new THREE.RenderPass(scene, camera);
@@ -7592,6 +7645,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.uTime.value = t;
     moonMaterial.uniforms.localSiderealTime.value = skyDirector.skyState.LSRT;
     moonMaterial.uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    // Schneegans LuT carries the brightness modulation; no extra attenuation.
     moonMaterial.uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     moonMaterial.uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     moonMaterial.uniforms.moonExposure.value = skyDirector.exposureVariables.moonExposure;
@@ -7791,6 +7845,7 @@ StarrySky.Renderers.MeteringSurveyRenderer = function(skyDirector){
     uniforms.moonHorizonFade.value = Math.max(1.0 - sunFade, 0.0);
     uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
     uniforms.sunLuminosity.value = skyState.sun.luminosity;
+    // Schneegans LuT carries the brightness modulation; no extra attenuation.
     uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.moonLuminosity.value = skyState.moon.luminosity;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
@@ -7814,6 +7869,7 @@ StarrySky.LightingManager = function(skyDirector){
   const skyState = skyDirector.skyState;
   const sunRenderer = skyDirector.renderers.sunRenderer;
   const lunarEclipseLightingModifier = skyState.moon.lightingModifier;
+  const solarEclipseLightingModifier = skyState.sun.lightingModifier;
   this.sourceLight = new THREE.DirectionalLight(0xffffff, 4.0);
   const shadow = this.sourceLight.shadow;
   this.sourceLight.castShadow = true;
@@ -8193,9 +8249,21 @@ StarrySky.LightingManager = function(skyDirector){
 
       // Combine sun and moon contributions (linear superposition, weighted by
       // each source's current intensity scale relative to the LUT's bake-time
-      // peak).
-      const sunWeight  = skyState.sun.intensity  * skyState.sun.horizonFade  / PEAK_SCAT_SUN;
-      const moonWeight = skyState.moon.intensity * skyState.moon.horizonFade / PEAK_SCAT_MOON;
+      // peak). Both weights are split per channel and modulated by the
+      // Eclipse-Shadow LuT integrated color so the SH ambient dims AND tints
+      // during a solar OR lunar eclipse -- otherwise an occluded source would
+      // still illuminate the scene as if uneclipsed.
+      const sunWeight0  = skyState.sun.intensity  * skyState.sun.horizonFade  / PEAK_SCAT_SUN;
+      const moonWeight0 = skyState.moon.intensity * skyState.moon.horizonFade / PEAK_SCAT_MOON;
+      const sunWeightR  = sunWeight0  * solarEclipseLightingModifier.x;
+      const sunWeightG  = sunWeight0  * solarEclipseLightingModifier.y;
+      const sunWeightB  = sunWeight0  * solarEclipseLightingModifier.z;
+      const moonWeightR = moonWeight0 * lunarEclipseLightingModifier.x;
+      const moonWeightG = moonWeight0 * lunarEclipseLightingModifier.y;
+      const moonWeightB = moonWeight0 * lunarEclipseLightingModifier.z;
+      const lunarEclipseMax = Math.max(lunarEclipseLightingModifier.x, lunarEclipseLightingModifier.y, lunarEclipseLightingModifier.z);
+      const solarEclipseMax = Math.max(solarEclipseLightingModifier.x, solarEclipseLightingModifier.y, solarEclipseLightingModifier.z);
+      const eclipseMax  = dominantLightIsSun ? solarEclipseMax : lunarEclipseMax;
 
       // Direct (dominant) light color from transmittance * intensity.
       // skyState.sun.intensity is already 10*(linear/1300), peaks ~10 at noon - fine as-is.
@@ -8214,19 +8282,32 @@ StarrySky.LightingManager = function(skyDirector){
       const directB = Math.min(1.0, Math.max(0, transmittanceScratch[2] * dominantIntensity));
 
       // Ground-bounce contribution to the X/Z/Y- hemis (matches C++ behavior).
+      // Tint/dim by the dominant source's eclipse modifier so an eclipsed sun
+      // or moon doesn't bounce normal full-intensity light off the ground.
       const groundY = Math.max(dominantY, 0);
-      const rGround = groundY * directR * groundColorLinear[0];
-      const gGround = groundY * directG * groundColorLinear[1];
-      const bGround = groundY * directB * groundColorLinear[2];
+      const eMod = dominantLightIsSun ? solarEclipseLightingModifier : lunarEclipseLightingModifier;
+      const bounceR = directR * eMod.x;
+      const bounceG = directG * eMod.y;
+      const bounceB = directB * eMod.z;
+      const rGround = groundY * bounceR * groundColorLinear[0];
+      const gGround = groundY * bounceG * groundColorLinear[1];
+      const bGround = groundY * bounceB * groundColorLinear[2];
 
       // Compose 6 hemi colors by combining sun and moon SH coefficients (27 * RGB)
       // and evaluating cosine-convolved SH at the 6 cardinal axes (in bake frame:
       // sun was on +X, hemi positions are rotated to follow runtime sun azimuth
       // further down). Values are linear; gamma + max-normalize happens after the
       // ground-bounce mix.
+      // SH layout is [R0, G0, B0, R1, G1, B1, ..., R8, G8, B8] (k%3 selects channel).
+      // Both sun and moon contributions are per-channel weighted so the eclipse
+      // modifier tints the SH on both sides (lunar eclipse dims the moon side,
+      // solar eclipse dims the sun side).
       const combinedSH = combinedSHScratch;
       for(let k = 0; k < 27; ++k){
-        combinedSH[k] = sunSample[k] * sunWeight + moonSample[k] * moonWeight;
+        const ch = k % 3;
+        const sunW  = ch === 0 ? sunWeightR  : ch === 1 ? sunWeightG  : sunWeightB;
+        const moonW = ch === 0 ? moonWeightR : ch === 1 ? moonWeightG : moonWeightB;
+        combinedSH[k] = sunSample[k] * sunW + moonSample[k] * moonW;
       }
       const hemi = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
       const axisOut = axisOutScratch;
@@ -8281,16 +8362,19 @@ StarrySky.LightingManager = function(skyDirector){
       self.zAxisHemisphericalLight.groundColor.setRGB(hemi[15], hemi[16], hemi[17]);
 
       // Sky magnitude -> starsExposure. Magnitude lives at offset 30 in the new
-      // SH9 LUT layout (was 21 in the old 6-hemi layout).
-      const skyMagnitude = sunSample[30] * sunWeight + moonSample[30] * moonWeight;
+      // SH9 LUT layout (was 21 in the old 6-hemi layout). Magnitude is a scalar
+      // brightness; use eclipseMax for the moon side so a darker moon raises
+      // starsExposure (stars become more visible when the moon is eclipsed).
+      const skyMagnitude = sunSample[30] * sunWeight0 * solarEclipseMax + moonSample[30] * moonWeight0 * lunarEclipseMax;
       skyDirector.exposureVariables.starsExposure = Math.min(6.8 - skyMagnitude, 3.7);
 
       // Fog color (used by 'normal' atmospheric perspective only). FogColor lives
-      // at offsets 27/28/29 in the new SH9 LUT layout.
+      // at offsets 27/28/29 in the new SH9 LUT layout. Per-channel eclipse weights
+      // so the fog tints red during a deep lunar eclipse.
       if(isNormalLighting){
-        const fogR = Math.pow(Math.max(sunSample[27] * sunWeight + moonSample[27] * moonWeight, 0), ONE_OVER_TWO_TWO);
-        const fogG = Math.pow(Math.max(sunSample[28] * sunWeight + moonSample[28] * moonWeight, 0), ONE_OVER_TWO_TWO);
-        const fogB = Math.pow(Math.max(sunSample[29] * sunWeight + moonSample[29] * moonWeight, 0), ONE_OVER_TWO_TWO);
+        const fogR = Math.pow(Math.max(sunSample[27] * sunWeightR + moonSample[27] * moonWeightR, 0), ONE_OVER_TWO_TWO);
+        const fogG = Math.pow(Math.max(sunSample[28] * sunWeightG + moonSample[28] * moonWeightG, 0), ONE_OVER_TWO_TWO);
+        const fogB = Math.pow(Math.max(sunSample[29] * sunWeightB + moonSample[29] * moonWeightB, 0), ONE_OVER_TWO_TWO);
         // Fog density is set by atmosphere geometry (path * scattering coefficient),
         // not by sky brightness. Sky color drives fog *color* via the LUT-baked hemis.
         self.fog.density = maxFogDensity;
@@ -8305,33 +8389,28 @@ StarrySky.LightingManager = function(skyDirector){
       // Sun gets physical color (warm sunsets, white noon, etc). Moon gets a fixed
       // cool cinematic tint - the same atmospheric extinction that paints sunsets red
       // would paint a low moon orange, but we perceive moonlight as cool blue-white
-      // (Purkinje shift in scotopic vision), and most renderers commit to that. During
-      // an actual lunar eclipse, override with the eclipse modifier (proper umbra red).
+      // (Purkinje shift in scotopic vision), and most renderers commit to that.
+      //
+      // During a lunar eclipse the cool baseline gets modulated by
+      // skyState.moon.lightingModifier, which SkyDirector populates each frame from
+      // a sample of the Eclipse-Shadow LuT at the moon's center. Outside any
+      // eclipse the LuT returns (1, 1, 1), so this is a no-op. Inside the umbra
+      // and penumbra it smoothly fades the directional light from cool-blue
+      // through orange to deep red - replacing the legacy hard-threshold branch
+      // that only kicked in within ~0.2 moon-radii of the antisolar point.
       let colorR, colorG, colorB;
       if(dominantLightIsSun){
-        colorR = directR;
-        colorG = directG;
-        colorB = directB;
+        // Apply the solar-eclipse modifier so the directional light dims and
+        // re-tints during a solar eclipse (corona-neutral color near totality,
+        // smooth gradient through partial). Outside an eclipse the modifier is
+        // (1,1,1) and this is a no-op.
+        colorR = directR * solarEclipseLightingModifier.x;
+        colorG = directG * solarEclipseLightingModifier.y;
+        colorB = directB * solarEclipseLightingModifier.z;
       } else {
-        // Eclipse check (matches the GLSL fog formula's distance test).
-        const sunAnti_x = -skyState.sun.position.x;
-        const sunAnti_y = -skyState.sun.position.y;
-        const sunAnti_z = -skyState.sun.position.z;
-        const dx = skyState.moon.position.x - sunAnti_x;
-        const dy = skyState.moon.position.y - sunAnti_y;
-        const dz = skyState.moon.position.z - sunAnti_z;
-        const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-        const eclipseThreshold = 2 * Math.SQRT2 * Math.max(skyDirector.sunRadius || 0.03, skyDirector.moonRadius || 0.03);
-        if(dist <= eclipseThreshold){
-          colorR = lunarEclipseLightingModifier.x;
-          colorG = lunarEclipseLightingModifier.y;
-          colorB = lunarEclipseLightingModifier.z;
-        } else {
-          // Fixed cool cinematic moonlight - slightly blue, slightly green-shifted.
-          colorR = 0.70;
-          colorG = 0.85;
-          colorB = 1.00;
-        }
+        colorR = 0.70 * lunarEclipseLightingModifier.x;
+        colorG = 0.85 * lunarEclipseLightingModifier.y;
+        colorB = 1.00 * lunarEclipseLightingModifier.z;
       }
       self.sourceLight.color.r = colorR;
       self.sourceLight.color.g = colorG;
@@ -8349,9 +8428,11 @@ StarrySky.LightingManager = function(skyDirector){
       // physically truer but visually too dim at sunrise. `clamp(x * 2, 0, 1)` is the
       // happy medium: saturates at lightingMag = 0.5 (sun moderately above horizon)
       // so sunrise/sunset get most of full ambient, while twilight and night still fade
-      // out smoothly.
+      // out smoothly. The moon's contribution is also attenuated by the eclipse modifier
+      // -- a deeply eclipsed moon high in the sky should not floor the ambient intensity
+      // at "normal full moon" levels.
       const sunGate  = Math.max(0, skyState.sun.position.y  * 1.5 + 0.3);
-      const moonGate = Math.max(0, skyState.moon.position.y * 1.5 + 0.3) * 0.3;
+      const moonGate = Math.max(0, skyState.moon.position.y * 1.5 + 0.3) * 0.3 * eclipseMax;
       const lightingMag = Math.max(directMax, sunGate, moonGate);
       const intensityModifier = Math.min(Math.max(lightingMag * 2.0, 0.0), 1.0);
       const indirectLightIntensity = Math.min(Math.max(lightingData.ambientIntensity * intensityModifier * 0.15, lightingData.minimumAmbientLighting), lightingData.maximumAmbientLighting);
@@ -8372,18 +8453,48 @@ StarrySky.LightingManager = function(skyDirector){
     self.sourceLight.position.x = -RADIUS_OF_SKY * lightingState[27];
     self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];
     self.sourceLight.position.z = -RADIUS_OF_SKY * lightingState[25];
-    self.sourceLight.color.r = lunarEclipseLightingModifier.x * lightingState[18];
-    self.sourceLight.color.g = lunarEclipseLightingModifier.y * lightingState[19];
-    self.sourceLight.color.b = lunarEclipseLightingModifier.z * lightingState[20];
+    // Apply whichever eclipse modifier matches the dominant light source:
+    // solar during day (sun-dominant), lunar at night (moon-dominant).
+    const fbMod = dominantLightIsSun ? solarEclipseLightingModifier : lunarEclipseLightingModifier;
+    self.sourceLight.color.r = fbMod.x * lightingState[18];
+    self.sourceLight.color.g = fbMod.y * lightingState[19];
+    self.sourceLight.color.b = fbMod.z * lightingState[20];
     self.sourceLight.intensity = lightingState[24] * 0.5 * (dominantLightIsSun ? lightingData.sunIntensity : lightingData.moonIntensity);
 
-    self.xAxisHemisphericalLight.color.fromArray(lightingState, 0);
-    self.yAxisHemisphericalLight.color.fromArray(lightingState, 3);
-    self.zAxisHemisphericalLight.color.fromArray(lightingState, 6);
-    self.xAxisHemisphericalLight.groundColor.fromArray(lightingState, 9);
-    self.yAxisHemisphericalLight.groundColor.fromArray(lightingState, 12);
-    self.zAxisHemisphericalLight.groundColor.fromArray(lightingState, 15);
-    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) * 10.0;
+    // The worker doesn't separate sun and moon contributions in
+    // lightingState[0..17], so we apply whichever eclipse modifier matches the
+    // dominant source wholesale -- it picks up the right behavior at night
+    // (lunar) and during day (solar). The LUT path above does this more
+    // precisely with per-source SH weighting; this fallback is approximate.
+    const fallbackEclipseR = fbMod.x;
+    const fallbackEclipseG = fbMod.y;
+    const fallbackEclipseB = fbMod.z;
+    const fallbackEclipseMax = Math.max(fallbackEclipseR, fallbackEclipseG, fallbackEclipseB);
+    self.xAxisHemisphericalLight.color.setRGB(
+      lightingState[0] * fallbackEclipseR,
+      lightingState[1] * fallbackEclipseG,
+      lightingState[2] * fallbackEclipseB);
+    self.yAxisHemisphericalLight.color.setRGB(
+      lightingState[3] * fallbackEclipseR,
+      lightingState[4] * fallbackEclipseG,
+      lightingState[5] * fallbackEclipseB);
+    self.zAxisHemisphericalLight.color.setRGB(
+      lightingState[6] * fallbackEclipseR,
+      lightingState[7] * fallbackEclipseG,
+      lightingState[8] * fallbackEclipseB);
+    self.xAxisHemisphericalLight.groundColor.setRGB(
+      lightingState[9]  * fallbackEclipseR,
+      lightingState[10] * fallbackEclipseG,
+      lightingState[11] * fallbackEclipseB);
+    self.yAxisHemisphericalLight.groundColor.setRGB(
+      lightingState[12] * fallbackEclipseR,
+      lightingState[13] * fallbackEclipseG,
+      lightingState[14] * fallbackEclipseB);
+    self.zAxisHemisphericalLight.groundColor.setRGB(
+      lightingState[15] * fallbackEclipseR,
+      lightingState[16] * fallbackEclipseG,
+      lightingState[17] * fallbackEclipseB);
+    const intensityModifier = Math.min(Math.max(lightingState[24] * 2.0, 0.0), 0.1) * 10.0 * fallbackEclipseMax;
     const indirectLightIntensity = Math.min(Math.max(lightingData.ambientIntensity * intensityModifier * 0.15, lightingData.minimumAmbientLighting), lightingData.maximumAmbientLighting);
     self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
@@ -8399,7 +8510,8 @@ StarrySky.AssetManager = function(skyDirector){
     starImages: {},
     blueNoiseImages: {},
     auroraImages: {},
-    solarEclipseImage: null
+    solarEclipseImage: null,
+    eclipseShadowLUTImage: null
   };
   const starrySkyComponent = skyDirector.parentComponent;
 
@@ -8463,8 +8575,9 @@ StarrySky.AssetManager = function(skyDirector){
     const numberOfMoonTextures = moonTextures.length;
     const numberOfBlueNoiseTextures = 5;
     const oneSolarEclipseImage = 1;
+    const oneEclipseShadowLUT = 1;
     const numberOfAuroraTextures = 1;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + numberOfAuroraTextures;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfAuroraTextures;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -8839,8 +8952,100 @@ StarrySky.AssetManager = function(skyDirector){
       console.error(err);
     });
 
+    //Eclipse-Shadow LuT (Schneegans 2025 parameterization). Sampled by the
+    //moon shader to give the umbra its wavelength-dependent shadow color.
+    //Baked offline in linear-light RGB but stored as sRGB-encoded 8-bit PNG
+    //for precision in the dark umbra range -- Three.js auto-decodes back to
+    //linear via colorSpace = SRGBColorSpace. ClampToEdge so we don't wrap
+    //past the LuT's coordinate domain.
+    let eclipseShadowLUTPromise = new Promise(function(resolve, reject){
+      textureLoader.load(StarrySky.assetPaths.eclipseShadowLUT, function(texture){resolve(texture);});
+    });
+    eclipseShadowLUTPromise.then(function(texture){
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.generateMipmaps = false;
+      texture.magFilter = THREE.LinearFilter;
+      texture.minFilter = THREE.LinearFilter;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      self.images.eclipseShadowLUTImage = texture;
+
+      //CPU-side copy of the LuT pixels so SkyDirector / LightingManager can
+      //sample it without a GPU round-trip. We need this for the directional
+      //light color (which gets multiplied into the scene's lighting on the
+      //CPU) and for the atmosphere shader's moonLightColor uniform (which
+      //tints sky scattering by the eclipse color).
+      const img = texture.image;
+      if(img && img.width > 0){
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        self.eclipseShadowLUTWidth = img.width;
+        self.eclipseShadowLUTHeight = img.height;
+        self.eclipseShadowLUTPixels = ctx.getImageData(0, 0, img.width, img.height).data;
+      }
+
+      if(self.skyDirector?.renderers?.moonRenderer !== undefined){
+        const moonUniforms = self.skyDirector.renderers.moonRenderer.moonMaterial.uniforms;
+        if(moonUniforms.eclipseShadowLUT){
+          moonUniforms.eclipseShadowLUT.value = texture;
+        }
+      }
+
+      self.numberOfTexturesLoaded += 1;
+      if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+        self.hasLoadedImages = true;
+      }
+    }, function(err){
+      console.error(err);
+    });
+
     //Load any additional textures
   }
+
+  //CPU-side bilinear sample of the Eclipse-Shadow LuT, returning linear-light
+  //RGB as a 3-element array. Returns null if the LuT isn't loaded yet.
+  //u, v are clamped to [0, 1]. The PNG file has v=1 at the top (umbra row at
+  //the bottom, matching Figure 9 of the Schneegans paper), so we flip the
+  //v axis when indexing pixels.
+  const srgbToLinear = function(c){
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  };
+  this.sampleEclipseShadowLUT = function(u, v){
+    const pixels = self.eclipseShadowLUTPixels;
+    if(!pixels){
+      return null;
+    }
+    const w = self.eclipseShadowLUTWidth;
+    const h = self.eclipseShadowLUTHeight;
+    u = Math.max(0.0, Math.min(1.0, u));
+    v = Math.max(0.0, Math.min(1.0, v));
+    const xPixel = u * (w - 1);
+    const yPixel = (1.0 - v) * (h - 1);
+    const x0 = Math.floor(xPixel);
+    const y0 = Math.floor(yPixel);
+    const x1 = Math.min(x0 + 1, w - 1);
+    const y1 = Math.min(y0 + 1, h - 1);
+    const fx = xPixel - x0;
+    const fy = yPixel - y0;
+    const i00 = (y0 * w + x0) * 4;
+    const i10 = (y0 * w + x1) * 4;
+    const i01 = (y1 * w + x0) * 4;
+    const i11 = (y1 * w + x1) * 4;
+    const out = [0, 0, 0];
+    for(let i = 0; i < 3; ++i){
+      const c00 = srgbToLinear(pixels[i00 + i] / 255.0);
+      const c10 = srgbToLinear(pixels[i10 + i] / 255.0);
+      const c01 = srgbToLinear(pixels[i01 + i] / 255.0);
+      const c11 = srgbToLinear(pixels[i11 + i] / 255.0);
+      const top = c00 * (1.0 - fx) + c10 * fx;
+      const bot = c01 * (1.0 - fx) + c11 * fx;
+      out[i] = top * (1.0 - fy) + bot * fy;
+    }
+    return out;
+  };
 
   //Internal function for loading our sky data once the DOM is ready
   this.loadSkyData = function(){
@@ -9041,6 +9246,12 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.sunRadius;
   this.moonRadius;
   this.distanceForSolarEclipse;
+  // Temporal EMA state for the per-frame jittered Eclipse-Shadow LuT samples.
+  // Seeded on the first sampling pass after the LuT is available.
+  this._eclipseLutEmaR = 1.0;
+  this._eclipseLutEmaG = 1.0;
+  this._eclipseLutEmaB = 1.0;
+  this._eclipseLutEmaInit = false;
 
   //Set up our web assembly hooks
   const self = this;
@@ -9243,6 +9454,143 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues, START_OF_LUNAR_ECLIPSE_INDEX + 2);
       self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues, START_OF_LUNAR_ECLIPSE_INDEX + 5);
 
+      //Override the WASM-supplied lightingModifier with the moon's integrated
+      //LuT reflectance across the moon disk. We sample the Eclipse-Shadow LuT
+      //at the moon's center plus a ring of points at the physical moon radius
+      //and average in linear space. The integrated value represents the total
+      //flux reflected by the moon (which is what drives scene lighting and
+      //the atmospheric halo), and crucially it transitions smoothly through
+      //an eclipse: at penumbra ingress only a sliver of the moon is dim, so
+      //the average barely drops; at the umbra-edge crossing the average
+      //slides gradually rather than jumping at the moon-center threshold.
+      //
+      //Sampling only at moon center gave "lights go dark almost instantly"
+      //the moment moon-center crossed the umbra boundary, even though most
+      //of the moon was still in penumbra and reflecting a lot of light.
+      //
+      //Shadow zone is the PHYSICAL Earth-Moon umbra+penumbra (~1.22 deg
+      //radius from antisolar): phi_sun + phi_earth as seen from the moon.
+      //Do NOT scale this by the project's cinematic moonAngularDiameter
+      //(default 3.15 deg vs the physical ~0.5 deg) -- that would bloat the
+      //shadow zone to ~7.4 deg and tint the moon halo every full-moon night.
+      //AtmosphereRenderer's moonLightColor uniform aliases skyState.moon.lightingModifier,
+      //so this override also tints atmospheric scattering during the eclipse.
+      if(self.assetManager && self.assetManager.sampleEclipseShadowLUT){
+        const mp = self.skyState.moon.position;
+        const sp = self.skyState.sun.position;
+        // antisolar = -sun_position
+        const ax = -sp.x, ay = -sp.y, az = -sp.z;
+        const U_SHADOW_LUNAR = 0.2193;
+        const ECLIPSE_SHADOW_RADIUS_RAD = 0.02123;
+        const PHYSICAL_MOON_RADIUS_RAD = 0.00452;
+
+        // Build a tangent basis around the moon position to lay sample
+        // points on the physical moon disk. Pick an arbitrary perpendicular
+        // (use world up as a seed, fall back to world right if degenerate).
+        let tx = 0, ty = 1, tz = 0;
+        let dotMoonUp = mp.x * tx + mp.y * ty + mp.z * tz;
+        if(Math.abs(dotMoonUp) > 0.999){ tx = 1; ty = 0; tz = 0; dotMoonUp = mp.x; }
+        // tangent1 = normalize(up - mp * dot(mp, up))
+        let t1x = tx - mp.x * dotMoonUp;
+        let t1y = ty - mp.y * dotMoonUp;
+        let t1z = tz - mp.z * dotMoonUp;
+        const t1len = Math.sqrt(t1x*t1x + t1y*t1y + t1z*t1z) || 1.0;
+        t1x /= t1len; t1y /= t1len; t1z /= t1len;
+        // tangent2 = cross(mp, tangent1)
+        const t2x = mp.y * t1z - mp.z * t1y;
+        const t2y = mp.z * t1x - mp.x * t1z;
+        const t2z = mp.x * t1y - mp.y * t1x;
+
+        // Sample positions: moon center (weight 1) + 8 ring points (weight 0.5
+        // each) at the physical moon radius. The ring is randomly rotated and
+        // its radius randomly jittered EACH FRAME, so over the temporal EMA
+        // window below we get ~16 frames worth of distinct sample positions
+        // (~144 effective samples) for the price of 9 LuT lookups per frame.
+        // The temporal EMA smooths frame-to-frame variance from the random
+        // jitter; jitter coverage gives variance reduction the EMA can latch
+        // onto.
+        const SAMPLE_COUNT = 9;
+        const ringRotation = Math.random() * (2.0 * Math.PI);
+        const ringRadiusScale = 0.7 + 0.3 * Math.random();
+        const ringR = PHYSICAL_MOON_RADIUS_RAD * ringRadiusScale;
+        let sumR = 0, sumG = 0, sumB = 0, sumW = 0;
+        let i;
+        // Center sample
+        {
+          const cosD = Math.max(-1.0, Math.min(1.0, mp.x*ax + mp.y*ay + mp.z*az));
+          const d = Math.acos(cosD);
+          const v = Math.min(1.0, d / ECLIPSE_SHADOW_RADIUS_RAD);
+          const lut = self.assetManager.sampleEclipseShadowLUT(U_SHADOW_LUNAR, v);
+          if(lut){
+            sumR += lut[0]; sumG += lut[1]; sumB += lut[2]; sumW += 1.0;
+          }
+        }
+        for(i = 0; i < 8; i++){
+          const angle = ringRotation + i * (Math.PI / 4.0);
+          const ox = Math.cos(angle) * ringR;
+          const oy = Math.sin(angle) * ringR;
+          // sample position in 3D = mp + ox*t1 + oy*t2, then normalize
+          let sx = mp.x + ox * t1x + oy * t2x;
+          let sy = mp.y + ox * t1y + oy * t2y;
+          let sz = mp.z + ox * t1z + oy * t2z;
+          const slen = Math.sqrt(sx*sx + sy*sy + sz*sz) || 1.0;
+          sx /= slen; sy /= slen; sz /= slen;
+          const cosD = Math.max(-1.0, Math.min(1.0, sx*ax + sy*ay + sz*az));
+          const d = Math.acos(cosD);
+          const v = Math.min(1.0, d / ECLIPSE_SHADOW_RADIUS_RAD);
+          const lut = self.assetManager.sampleEclipseShadowLUT(U_SHADOW_LUNAR, v);
+          if(lut){
+            sumR += lut[0] * 0.5; sumG += lut[1] * 0.5; sumB += lut[2] * 0.5;
+            sumW += 0.5;
+          }
+        }
+        if(sumW > 0){
+          const frameR = sumR / sumW;
+          const frameG = sumG / sumW;
+          const frameB = sumB / sumW;
+          // Exponential moving average: each new frame contributes ALPHA
+          // weight, old EMA value contributes (1 - ALPHA). ALPHA = 1/16
+          // gives a ~16-frame effective window (~0.27s real-time at 60fps);
+          // older samples decay smoothly to zero weight. On the first tick
+          // there's no history yet, so we seed directly to skip the warm-up
+          // ramp and avoid a visible "fade-in" on page load.
+          const ALPHA = 1.0 / 16.0;
+          if(self._eclipseLutEmaInit){
+            self._eclipseLutEmaR = self._eclipseLutEmaR * (1.0 - ALPHA) + frameR * ALPHA;
+            self._eclipseLutEmaG = self._eclipseLutEmaG * (1.0 - ALPHA) + frameG * ALPHA;
+            self._eclipseLutEmaB = self._eclipseLutEmaB * (1.0 - ALPHA) + frameB * ALPHA;
+          } else {
+            self._eclipseLutEmaR = frameR;
+            self._eclipseLutEmaG = frameG;
+            self._eclipseLutEmaB = frameB;
+            self._eclipseLutEmaInit = true;
+          }
+          self.skyState.moon.lightingModifier.x = self._eclipseLutEmaR;
+          self.skyState.moon.lightingModifier.y = self._eclipseLutEmaG;
+          self.skyState.moon.lightingModifier.z = self._eclipseLutEmaB;
+        }
+
+        //Solar eclipse: sample the SAME LuT at u = phi_sun / (phi_sun + phi_moon)
+        //(physical, ~0.507 for Earth-Moon-Sun -- sun and moon appear nearly
+        //the same size from an Earth observer). delta is the angle between
+        //the sun and moon as seen from the observer (NOT negated, unlike the
+        //lunar case which uses anti-solar). For an Earth-surface observer the
+        //moon disk is small enough that a single LuT sample at the moon's
+        //center suffices -- no temporal jitter needed.
+        const SOLAR_U_SHADOW = 0.507;
+        const SOLAR_SHADOW_RADIUS_RAD = 0.00917; // phi_sun + phi_moon physical
+        const sx2 = sp.x, sy2 = sp.y, sz2 = sp.z;
+        const cosDeltaS = Math.max(-1.0, Math.min(1.0, mp.x*sx2 + mp.y*sy2 + mp.z*sz2));
+        const deltaS = Math.acos(cosDeltaS);
+        const vS = Math.min(1.0, deltaS / SOLAR_SHADOW_RADIUS_RAD);
+        const lutS = self.assetManager.sampleEclipseShadowLUT(SOLAR_U_SHADOW, vS);
+        if(lutS){
+          self.skyState.sun.lightingModifier.x = lutS[0];
+          self.skyState.sun.lightingModifier.y = lutS[1];
+          self.skyState.sun.lightingModifier.z = lutS[2];
+        }
+      }
+
       //Tick our light positions before we might just use them to set up the next interpolation
       self.lightingManager.tick(self.lightingColorValues);
 
@@ -9354,7 +9702,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.skyState = {
         sun: {
           position: new THREE.Vector3(),
-          quadOffset: new THREE.Vector3()
+          quadOffset: new THREE.Vector3(),
+          lightingModifier: new THREE.Vector3(1, 1, 1)
         },
         moon: {
           position: new THREE.Vector3(),

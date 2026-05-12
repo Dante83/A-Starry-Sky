@@ -424,6 +424,26 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
           self.skyState.moon.lightingModifier.y = self._eclipseLutEmaG;
           self.skyState.moon.lightingModifier.z = self._eclipseLutEmaB;
         }
+
+        //Solar eclipse: sample the SAME LuT at u = phi_sun / (phi_sun + phi_moon)
+        //(physical, ~0.507 for Earth-Moon-Sun -- sun and moon appear nearly
+        //the same size from an Earth observer). delta is the angle between
+        //the sun and moon as seen from the observer (NOT negated, unlike the
+        //lunar case which uses anti-solar). For an Earth-surface observer the
+        //moon disk is small enough that a single LuT sample at the moon's
+        //center suffices -- no temporal jitter needed.
+        const SOLAR_U_SHADOW = 0.507;
+        const SOLAR_SHADOW_RADIUS_RAD = 0.00917; // phi_sun + phi_moon physical
+        const sx2 = sp.x, sy2 = sp.y, sz2 = sp.z;
+        const cosDeltaS = Math.max(-1.0, Math.min(1.0, mp.x*sx2 + mp.y*sy2 + mp.z*sz2));
+        const deltaS = Math.acos(cosDeltaS);
+        const vS = Math.min(1.0, deltaS / SOLAR_SHADOW_RADIUS_RAD);
+        const lutS = self.assetManager.sampleEclipseShadowLUT(SOLAR_U_SHADOW, vS);
+        if(lutS){
+          self.skyState.sun.lightingModifier.x = lutS[0];
+          self.skyState.sun.lightingModifier.y = lutS[1];
+          self.skyState.sun.lightingModifier.z = lutS[2];
+        }
       }
 
       //Tick our light positions before we might just use them to set up the next interpolation
@@ -537,7 +557,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.skyState = {
         sun: {
           position: new THREE.Vector3(),
-          quadOffset: new THREE.Vector3()
+          quadOffset: new THREE.Vector3(),
+          lightingModifier: new THREE.Vector3(1, 1, 1)
         },
         moon: {
           position: new THREE.Vector3(),
