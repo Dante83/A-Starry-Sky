@@ -29,14 +29,14 @@ StarrySky.DefaultData.lighting = {
   sunBloom: {
     bloomEnabled: true,
     exposure: 1.0,
-    threshold: 0.98,
-    strength: 1.0,
-    radius: 1.0
+    threshold: 4.0,
+    strength: 2.5,
+    radius: 0.4
   },
   moonBloom: {
     bloomEnabled: true,
     exposure: 1.0,
-    threshold: 0.55,
+    threshold: 1.5,
     strength: 0.9,
     radius: 1.4
   },
@@ -46,7 +46,7 @@ StarrySky.DefaultData.lighting = {
   minimumAmbientLighting: 0.01,
   maximumAmbientLighting: Infinity,
   atmosphericPerspectiveDensity: 0.007,
-  atmosphericPerspectiveDistanceMultiplier: 5.0,
+  atmosphericPerspectiveDistanceMultiplier: 2.0,
   atmosphericPerspectiveType: 'normal',
   shadowCameraSize: 32.0,
   shadowCameraResolution: 2048
@@ -118,7 +118,7 @@ class SkyLighting extends HTMLElement {
           else{
             [exposureTags, thresholdTags, strengthTags, radiusTags].forEach(function(childTags){
               if(childTags.length !== 0){
-                console.warning(`The <${tag.tagName}> cannot contain any tags of type <${childTags[0].tagName}>. It won't break, it just won't do anything.`);
+                console.warn(`The <${tag.tagName}> cannot contain any tags of type <${childTags[0].tagName}>. It won't break, it just won't do anything.`);
               }
             });
           }
@@ -210,7 +210,7 @@ class SkyLighting extends HTMLElement {
       dataRef.minimumAmbientLighting = clampAndWarn(dataRef.minimumAmbientLighting, 0.0, Infinity, '<sky-minimum-ambient-lighting>');
       dataRef.maximumAmbientLighting = clampAndWarn(dataRef.maximumAmbientLighting, 0.0, Infinity, '<sky-maximum-ambient-lighting>');
       dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDensity, 0.0, Infinity, '<sky-atmospheric-perspective-density>');
-      dataRef.atmosphericPerspectiveDensity = clampAndWarn(dataRef.atmosphericPerspectiveDistanceMultiplier, 0.0, Infinity, '<sky-atmospheric-perspective-distance-multiplier>');
+      dataRef.atmosphericPerspectiveDistanceMultiplier = clampAndWarn(dataRef.atmosphericPerspectiveDistanceMultiplier, 0.0, Infinity, '<sky-atmospheric-perspective-distance-multiplier>');
       dataRef.shadowCameraSize = clampAndWarn(dataRef.shadowCameraSize, 0.0, Infinity, '<sky-shadow-camera-size>');
       dataRef.shadowCameraResolution = clampAndWarn(dataRef.shadowCameraResolution, 32, 15360, '<sky-shadow-camera-resolution>');
 
@@ -228,7 +228,7 @@ class SkyLighting extends HTMLElement {
             bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML.trim()), 0.0, 2.0, 'sky-bloom-exposure');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-threshold').length > 0){
-            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-threshold');
+            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML.trim()), 0.0, 10.0, 'sky-bloom-threshold');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-strength').length > 0){
             bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML.trim()), 0.0, 3.0, 'sky-bloom-strength');
@@ -257,7 +257,7 @@ class SkyLighting extends HTMLElement {
             bloomDataRef.exposure = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-exposure')[0].innerHTML.trim()), 0.0, 2.0, 'sky-bloom-exposure');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-threshold').length > 0){
-            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML.trim()), 0.0, 1.0, 'sky-bloom-threshold');
+            bloomDataRef.threshold = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-threshold')[0].innerHTML.trim()), 0.0, 10.0, 'sky-bloom-threshold');
           }
           if(tagGroup.getElementsByTagName('sky-bloom-strength').length > 0){
             bloomDataRef.strength = clampAndWarn(parseFloat(tagGroup.getElementsByTagName('sky-bloom-strength')[0].innerHTML.trim()), 0.0, 3.0, 'sky-bloom-strength');

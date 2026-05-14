@@ -1,12 +1,13 @@
 StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.skyDirector = skyDirector;
-  this.geometry = new THREE.IcosahedronBufferGeometry(5000.0, 4);
+  this.geometry = new THREE.IcosahedronGeometry(5000.0, 4);
 
   //Create our material late
   const assetManager = skyDirector.assetManager;
   const auroraParameters = assetManager.data.skyAurora;
   const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const skyState = skyDirector.skyState;
+  const scratchColor = new THREE.Color();
   this.atmosphereMaterial = new THREE.ShaderMaterial({
     uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
       false, //sun pass
@@ -100,6 +101,11 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     uniforms.localSiderealTime.value = skyState.LSRT;
     uniforms.starsExposure.value = skyDirector.exposureVariables.starsExposure;
     uniforms.scatteringSunIntensity.value = skyState.sun.intensity * atmosphericParameters.solarIntensity / 1367.0;
+    // The Schneegans Eclipse-Shadow LuT is physically calibrated: at full
+    // moon the LuT returns ~(1, 1, 1), in deep umbra it returns ~(0.001, 0, 0)
+    // -- already 1000x dimmer matching real lunar-eclipse photometry. So
+    // moonLightColor (= the integrated LuT sample) carries the brightness
+    // modulation on its own; no extra magnitude attenuation needed here.
     uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 
@@ -107,7 +113,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     if(assetManager.data.skyCloud.cloudsEnabled){
       uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
       if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
-        uniforms.ambientLightPY.value = lightingManager.yAxisHemisphericalLight.color.clone().multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
+        uniforms.ambientLightPY.value = scratchColor.copy(lightingManager.yAxisHemisphericalLight.color).multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
       }
     }
   }
@@ -133,8 +139,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     uniforms.saturnBrightness.value = skyState.saturn.intensity;
     uniforms.moonLightColor.value = skyState.moon.lightingModifier;
 
-    //Connect up our images if they don't exist yet
-    if(assetManager){
+    //Connect up our images once they have all finished loading
+    if(assetManager.hasLoadedImages){
       uniforms.starHashCubemap.value = assetManager.images.starImages.starHashCubemap;
       uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
       uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
@@ -153,7 +159,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
         uniforms.cloudEndHeight.value = cloudParams.endHeight;
         uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
         uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
-        uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercentTags;
+        uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercent;
         uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
       }
       assetsNotReadyYet = false;
@@ -161,7 +167,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       //Proceed with the first tick
       self.tick(t);
 
-      //Add this object to the scene
       skyDirector.scene.add(self.skyMesh);
 
       //Delete this method when done

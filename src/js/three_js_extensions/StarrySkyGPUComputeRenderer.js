@@ -119,7 +119,7 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 
 	var passThruShader = createShaderMaterial( getPassThroughFragmentShader(), passThruUniforms );
 
-  let planeGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+  let planeGeometry = new THREE.PlaneGeometry( 2, 2 );
   if(computeTangets){
     THREE.BufferGeometryUtils.computeTangents(planeGeometry);
   }
@@ -395,7 +395,7 @@ THREE.StarrySkyComputationRenderer = function ( sizeX, sizeY, renderer, computeT
 				"\n" +
 				"	vec2 uv = gl_FragCoord.xy / resolution.xy;\n" +
 				"\n" +
-				"	gl_FragColor = texture2D( passThruTexture, uv );\n" +
+				"	gl_FragColor = texture( passThruTexture, uv );\n" +
 				"\n" +
 				"}\n";
 

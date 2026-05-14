@@ -17,11 +17,14 @@ const float ATMOSPHERE_HEIGHT = $atmosphereHeight;
 const float ATMOSPHERE_HEIGHT_SQUARED = $atmosphereHeightSquared;
 const float ONE_OVER_MIE_SCALE_HEIGHT = $oneOverMieScaleHeight;
 const float ONE_OVER_RAYLEIGH_SCALE_HEIGHT = $oneOverRayleighScaleHeight;
-//Mie Beta / 0.9, https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf
+//Mie extinction coefficient (beta_ext). Single-scattering albedo (0.9 for atmospheric Mie)
+//is applied at the LUT bake step, so this is the raw extinction. Reference:
+//https://web.archive.org/web/20170215054740/http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf
 const vec3 EARTH_MIE_BETA_EXTINCTION = $mieBeta;
 const float ELOK_Z_CONST = 0.97267627755;
 const float ONE_OVER_EIGHT_PI = 0.039788735772;
 const float ONE_OVER_FOUR_PI = 0.079577471545;
+const float THREE_OVER_SIXTEEN_PI = 0.05968310365946075;
 const float METERS_TO_KM = 0.001;
 
 const float MIE_G = $mieG;
@@ -56,15 +59,20 @@ vec4 sRGBToLinear( in vec4 value ) {
 	return vec4( mix( pow( value.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), value.rgb * 0.0773993808, vec3( lessThanEqual( value.rgb, vec3( 0.04045 ) ) ) ), value.a );
 }
 
+vec4 LinearTosRGB( in vec4 value ) {
+	return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );
+}
+
 //
 //Scattering functions
 //
 float rayleighPhaseFunction(float cosTheta){
-  return 1.12 + 0.4 * cosTheta;
+  return THREE_OVER_SIXTEEN_PI * (1.0 + cosTheta * cosTheta);
 }
 
 float miePhaseFunction(float cosTheta){
-  return MIE_PHASE_FUNCTION_COEFFICIENT * ((1.0 + cosTheta * cosTheta) / pow(1.0 + MIE_G_SQUARED - 2.0 * MIE_G * cosTheta, 1.5));
+  float t = 1.0 + MIE_G_SQUARED - 2.0 * MIE_G * cosTheta;
+  return MIE_PHASE_FUNCTION_COEFFICIENT * ((1.0 + cosTheta * cosTheta) / (t * sqrt(t)));
 }
 
 //
@@ -75,7 +83,7 @@ vec2 intersectRaySphere(vec2 rayOrigin, vec2 rayDirection) {
     float a = dot(rayDirection, rayDirection);
     float b = 2.0 * dot(rayDirection, rayOrigin);
     float c = dot(rayOrigin, rayOrigin) - radius * radius;
-    float discriminate = sqrt(b * b - 4.0 * a * c);
+    float discriminate = sqrt(max(0.0, b * b - 4.0 * a * c));
     float t0 = (-b - discriminate) /  (2.0 * a);
     float t1 = (-b + discriminate) /  (2.0 * a);
     vec2 ray0 = rayOrigin + t0 * rayDirection;
@@ -91,7 +99,7 @@ vec3 intersectRaySphere3D(vec3 rayOrigin, vec3 rayDirection, float radius) {
     float a = dot(rayDirection, rayDirection);
     float b = 2.0 * dot(rayDirection, rayOrigin);
     float c = dot(rayOrigin, rayOrigin) - radius * radius;
-    float discriminate = sqrt(b * b - 4.0 * a * c);
+    float discriminate = sqrt(max(0.0, b * b - 4.0 * a * c));
     float t0 = (-b - discriminate) /  (2.0 * a);
     float t1 = (-b + discriminate) /  (2.0 * a);
     vec3 ray0 = rayOrigin + t0 * rayDirection;
@@ -132,46 +140,82 @@ bool intersectsSphere3D(vec3 origin, vec3 direction, float radius){
   return collides;
 }
 
-float earthsShadowIntensity(vec3 viewDirection, vec3 lightDirection, float startingHeight, float endingHeight, float scaleHeight){
+//Earth-shadow geometry -- runs the bisection ONCE per (viewDir, lightDir).
+//state: 1.0 = full sun (no shadow), 0.0 = full shadow, 0.5 = needs density weighting
+//via earthsShadowDensityRatio. This split halves the cost when both Mie and
+//Rayleigh need a shadow ratio because only the final exponential differs.
+//sunsetHeight / startingHeightKm carry the GEOMETRIC altitudes of the bisection
+//endpoints. The previous implementation used sunsetPosition.y - startingTargetPoint.y,
+//which is only an altitude difference for vertical view rays -- for any tilted
+//view the y-component understates the true radial altitude (the bisection's
+//sunsetPosition lies on a sphere of radius R+sunsetHeight regardless of where
+//on that sphere it ends up).
+struct EarthShadowGeometry {
+  vec3 startingTargetPoint;
+  vec3 finalTargetPoint;
+  vec3 sunsetPosition;
+  float startingHeightKm;
+  float sunsetHeight;
+  float state;
+};
+
+EarthShadowGeometry earthsShadowGeometry(vec3 viewDirection, vec3 lightDirection, float startingHeight, float endingHeight){
+  EarthShadowGeometry g;
+  g.startingHeightKm = startingHeight;
+  g.sunsetHeight = endingHeight;
   float earthCentricStartingHeight = RADIUS_OF_EARTH + startingHeight + 0.01;
   float earthCentricEndingHeight = RADIUS_OF_EARTH + endingHeight;
-  vec3 startingTargetPoint = vec3(0.0, earthCentricStartingHeight, 0.0);
-  vec3 finalTargetPoint = intersectRaySphere3D(startingTargetPoint, viewDirection, earthCentricEndingHeight);
+  g.startingTargetPoint = vec3(0.0, earthCentricStartingHeight, 0.0);
+  g.finalTargetPoint = intersectRaySphere3D(g.startingTargetPoint, viewDirection, earthCentricEndingHeight);
+  g.sunsetPosition = g.finalTargetPoint;
 
-  //Test at the two ends of our ray path...
-  bool intersection1 = intersectsSphere3D(startingTargetPoint, lightDirection, RADIUS_OF_EARTH);
-  bool intersection2 = intersectsSphere3D(finalTargetPoint, lightDirection, RADIUS_OF_EARTH);
+  bool intersection1 = intersectsSphere3D(g.startingTargetPoint, lightDirection, RADIUS_OF_EARTH);
+  bool intersection2 = intersectsSphere3D(g.finalTargetPoint, lightDirection, RADIUS_OF_EARTH);
 
-  //If both can see the sun, return 1
+  //Both ends see the sun -> no shadow.
   if(!intersection1 && !intersection2){
-    return 1.0;
+    g.state = 1.0;
+    return g;
   }
-
-  //If neither can see the sun, return 0
+  //Neither end sees the sun -> fully in Earth's umbra.
   if(intersection1 && intersection2){
-    return 0.0;
+    g.state = 0.0;
+    return g;
   }
 
-  //If the top one can see the sun, but not the bottom, use the bisection method to determine the
-  //distance along the ray at which the sun can be visible, get the integrated density to this point
-  //over the integrated density of the entire ray and return this as the percent of light to show
+  //Otherwise bisect along the view ray to find the terminator height.
   float heightDiff = (endingHeight - startingHeight) * 0.5;
-  vec3 sunsetPosition = finalTargetPoint;
   float sunsetHeight = endingHeight - heightDiff;
   for(int i = 0; i < 8; i++){
-    sunsetPosition = intersectRaySphere3D(startingTargetPoint, viewDirection, RADIUS_OF_EARTH + sunsetHeight);
-    intersection2 = intersectsSphere3D(sunsetPosition, lightDirection, RADIUS_OF_EARTH);
+    g.sunsetPosition = intersectRaySphere3D(g.startingTargetPoint, viewDirection, RADIUS_OF_EARTH + sunsetHeight);
+    intersection2 = intersectsSphere3D(g.sunsetPosition, lightDirection, RADIUS_OF_EARTH);
     heightDiff *= 0.5;
-    if(intersection2){
-      sunsetHeight += heightDiff;
-    }
-    else{
-      sunsetHeight -= heightDiff;
-    }
+    sunsetHeight += intersection2 ? heightDiff : -heightDiff;
   }
+  g.sunsetHeight = sunsetHeight;
+  g.state = 0.5;
+  return g;
+}
 
-  //return clamp(1.0 - (distance(sunsetPosition, startingTargetPoint) / distance(finalTargetPoint, startingTargetPoint)), 0.0, 1.0);
-  return clamp(1.0 - (exp((sunsetPosition.y - startingTargetPoint.y) * scaleHeight) / exp((finalTargetPoint.y - startingTargetPoint.y) * scaleHeight)), 0.0, 1.0);
+//Fraction of inscattering mass on the view ray that is unshadowed.
+//Approximates integral_sunsetH^inf rho(h)dh / integral_startH^inf rho(h)dh ~ exp(-(sunsetH-startH)/H)
+//for an exponential atmosphere with scale height H (= 1/scaleHeight). The
+//previous form (1 - exp((sunsetY - finalY)*scaleHeight)) returned the wrong
+//shape AND used y-coordinates instead of geometric altitude -- its shadow only
+//kicked in when sunset reached the very top of the atmosphere, producing a
+//narrow ~1 deg band of sharp falloff right before state=0.0 instead of a smooth
+//ramp across twilight.
+float earthsShadowDensityRatio(EarthShadowGeometry g, float scaleHeight){
+  if(g.state > 0.99){ return 1.0; }
+  if(g.state < 0.01){ return 0.0; }
+  return clamp(exp(-(g.sunsetHeight - g.startingHeightKm) * scaleHeight), 0.0, 1.0);
+}
+
+//Backwards-compat wrapper -- single-scaleHeight callers (none in production
+//code today, but kept for symmetry).
+float earthsShadowIntensity(vec3 viewDirection, vec3 lightDirection, float startingHeight, float endingHeight, float scaleHeight){
+  EarthShadowGeometry g = earthsShadowGeometry(viewDirection, lightDirection, startingHeight, endingHeight);
+  return earthsShadowDensityRatio(g, scaleHeight);
 }
 
 //solar-zenith angle parameterization methods

@@ -12,16 +12,18 @@ if(vLocalPosition.y >= 0.0){
   //From https://github.com/supermedium/superframe/blob/master/components/sun-sky/shaders/fragment.glsl
   float sundisk = smoothstep(0.0, 0.1, (0.5 - (pixelDistanceFromSun)));
 
-  //We can use this for our solar limb darkening
-  //From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf
+  //Solar limb darkening, per RGB band -- limb reddens because blue darkens
+  //more than red. ac1/ac2/ac3 are vec3 (B/V/R) declared in the sun-pass
+  //header. At mu=1 (disc center) all channels equal 1; at mu=0 (limb) we
+  //keep ~0.59 R / 0.47 G / 0.30 B.
   float rOverR = pixelDistanceFromSun / 0.5;
   float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));
-  float limbDarkening = (ac1 + ac2 * mu + 2.0 * ac3 * mu * mu);
+  vec3 limbDarkening = ac1 + ac2 * mu + 2.0 * ac3 * mu * mu;
 
   //Apply transmittance to our sun disk direct lighting
   vec3 normalizedWorldPosition = normalize(vLocalPosition);
   vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;
   float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);
-  sunTexel = (3.0 * sundisk * sunDiskIntensity + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;
+  sunTexel = (3.0 * sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;
   sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);
 }

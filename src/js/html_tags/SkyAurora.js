@@ -36,7 +36,7 @@ StarrySky.DefaultData.skyAurora = {
   molecularOxygenIntensity: 2.0,
   atomicOxygenCutOff: 0.12,
   atomicOxygenIntensity: 0.3,
-  raymarchSteps: 64,
+  raymarchSteps: 32,
   cutoffDistance: 1500,
   auroraEnabled: false
 };

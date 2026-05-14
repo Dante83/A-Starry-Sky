@@ -11,6 +11,7 @@ window.customElements.define('sky-bright-star-maps', class extends HTMLElement{}
 window.customElements.define('sky-star-color-map', class extends HTMLElement{});
 window.customElements.define('sky-blue-noise-maps', class extends HTMLElement{});
 window.customElements.define('sky-solar-eclipse-map', class extends HTMLElement{});
+window.customElements.define('sky-eclipse-shadow-lut', class extends HTMLElement{});
 window.customElements.define('sky-aurora-maps', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
@@ -54,6 +55,7 @@ StarrySky.DefaultData.fileNames = {
     'blue-noise-4.bmp'
   ],
   solarEclipseMap: 'solar-eclipse-map.webp',
+  eclipseShadowLUT: 'eclipse-shadow-lut.webp',
   auroraMaps: [
     'aurora-map.webp'
   ]
@@ -66,6 +68,7 @@ StarrySky.DefaultData.assetPaths = {
   moonApertureSizeMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonApertureSizeMap,
   moonApertureOrientationMap: './assets/moon/' + StarrySky.DefaultData.fileNames.moonApertureOrientationMap,
   solarEclipseMap: './assets/solar_eclipse/' + StarrySky.DefaultData.fileNames.solarEclipseMap,
+  eclipseShadowLUT: './assets/lunar_eclipse/' + StarrySky.DefaultData.fileNames.eclipseShadowLUT,
   starHashCubemap: StarrySky.DefaultData.fileNames.starHashCubemap.map(x => './assets/star_data/' + x),
   dimStarDataMaps: StarrySky.DefaultData.fileNames.dimStarDataMaps.map(x => './assets/star_data/' + x),
   medStarDataMaps: StarrySky.DefaultData.fileNames.medStarDataMaps.map(x => './assets/star_data/' + x),
@@ -117,8 +120,8 @@ class SkyAssetsDir extends HTMLElement {
           parentDir = parentDir.endsWith('/') ? parentDir : parentDir + '/';
 
           //Remove the trailing and ending /s for appropriate path construction
-          path = path.startsWith('/') ? path.slice(1, path.length - 1) : path;
-          path = path.endsWith('/') ? path.slice(0, path.length - 2) : path;
+          path = path.startsWith('/') ? path.slice(1) : path;
+          path = path.endsWith('/') ? path.slice(0, -1) : path;
           path = parentDir + path;
         }
         else{
@@ -132,50 +135,44 @@ class SkyAssetsDir extends HTMLElement {
         }
       }
 
-      //Get child tags and acquire their values.
-      const childNodes = Array.from(self.children);
-      const moonDiffuseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-diffuse-map');
-      const moonNormalMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-normal-map');
-      const moonRoughnessMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-roughness-map');
-      const moonApertureSizeMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperture-size-map');
-      const solarEclipseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-solar-eclipse-map');
-      const moonApertureOrientationMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-moon-aperture-orientation-map');
-      const starCubemapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-cubemap-map');
-      const dimStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-dim-star-map');
-      const medStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-med-star-map');
-      const brightStarMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-bright-star-map');
-      const starColorMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-star-color-map');
-      const blueNoiseMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'sky-blue-noise-maps');
-      const auroraMapTags = childNodes.filter(x => x.nodeName.toLowerCase() === 'aurora-maps');
+      //Mapping from child tag name to the asset path key it overrides.
+      const childTagToAssetKey = {
+        'sky-moon-diffuse-map': 'moonDiffuseMap',
+        'sky-moon-normal-map': 'moonNormalMap',
+        'sky-moon-roughness-map': 'moonRoughnessMap',
+        'sky-moon-aperture-size-map': 'moonApertureSizeMap',
+        'sky-moon-aperture-orientation-map': 'moonApertureOrientationMap',
+        'sky-star-cubemap-maps': 'starHashCubemap',
+        'sky-dim-star-maps': 'dimStarDataMaps',
+        'sky-med-star-maps': 'medStarDataMaps',
+        'sky-bright-star-maps': 'brightStarDataMaps',
+        'sky-star-color-map': 'starColorMap',
+        'sky-blue-noise-maps': 'blueNoiseMaps',
+        'sky-solar-eclipse-map': 'solarEclipseMap',
+        'sky-eclipse-shadow-lut': 'eclipseShadowLUT',
+        'sky-aurora-maps': 'auroraMaps'
+      };
 
-      const objectProperties = ['moonDiffuseMap', 'moonNormalMap',
-        'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap', 'starHashCubemap',
-        'dimStarMaps', 'medStarMaps', 'brightStarMaps', 'starColorMap', 'blueNoiseMaps', 'solarEclipseMap',
-        'auroraMaps']
-      const tagsList = [moonDiffuseMapTags, moonNormalMapTags,
-        moonRoughnessMapTags, moonApertureSizeMapTags, moonApertureOrientationMapTags, starCubemapTags,
-        medStarMapTags, dimStarMapTags, brightStarMapTags, starColorMapTags, blueNoiseMapTags, solarEclipseMapTags,
-        auroraMapTags];
-      const numberOfTagTypes = tagsList.length;
       if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
-        'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap'];
-        const multiTextureKeys = ['starHashCubemap','dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
-        'blueNoiseMaps', 'auroraMapTags'];
+        'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap',
+        'eclipseShadowLUT'];
+        const multiTextureKeys = ['starHashCubemap', 'dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
+        'blueNoiseMaps', 'auroraMaps'];
 
         //Process single texture keys
         for(let i = 0; i < singleTextureKeys.length; ++i){
           const textureKey = singleTextureKeys[i];
-          StarrySky.assetPaths[textureKey] = path + '/' + StarrySky.DefaultData.fileNames[textureKey];
+          StarrySky.assetPaths[textureKey] = `${path}/${StarrySky.DefaultData.fileNames[textureKey]}`;
         }
 
         //Process multi texture keys
         for(let i = 0; i < multiTextureKeys.length; ++i){
-          const multiTextureFileNames = multiTextureKeys[i];
-          const multiTextureAssetPath = StarrySky.assetPaths[multiTextureFileNames[i]];
-          const fileNameArray = StarrySky.DefaultData.fileNames[singleTextureKeys[i]];
-          for(let j = 0; j < multiTextureFileNames.length; ++j){
-            multiTextureAssetPath[j] = `${path}/${fileNameArray[j]}`;
+          const multiTextureKey = multiTextureKeys[i];
+          const fileNameArray = StarrySky.DefaultData.fileNames[multiTextureKey];
+          const assetPathArray = StarrySky.assetPaths[multiTextureKey];
+          for(let j = 0; j < fileNameArray.length; ++j){
+            assetPathArray[j] = `${path}/${fileNameArray[j]}`;
           }
         }
       }
@@ -210,10 +207,32 @@ class SkyAssetsDir extends HTMLElement {
       else if(self.hasAttribute('solar-eclipse-path') && self.getAttribute('solar-eclipse-path').toLowerCase() !== 'false'){
         StarrySky.assetPaths['solarEclipseMap'] = `${path}/${StarrySky.DefaultData.fileNames['solarEclipseMap']}`;
       }
+      else if(self.hasAttribute('lunar-eclipse-path') && self.getAttribute('lunar-eclipse-path').toLowerCase() !== 'false'){
+        StarrySky.assetPaths['eclipseShadowLUT'] = `${path}/${StarrySky.DefaultData.fileNames['eclipseShadowLUT']}`;
+      }
       else if(self.hasAttribute('aurora-map-path') && self.getAttribute('aurora-map-path').toLowerCase() !== 'false'){
         const auroraMapPaths = StarrySky.assetPaths['auroraMaps'];
         for(let i = 0; i < 1; ++i){
           auroraMapPaths[i] = `${path}/${StarrySky.DefaultData.fileNames['auroraMaps'][i]}`;
+        }
+      }
+      else{
+        //No category attribute - look for individual asset child tags and apply
+        //this directory to each one. This is the form documented in the README,
+        //e.g. <sky-assets-dir dir="lunar_eclipse"><sky-eclipse-shadow-lut/></sky-assets-dir>.
+        for(const child of self.children){
+          const assetKey = childTagToAssetKey[child.nodeName.toLowerCase()];
+          if(!assetKey) continue;
+          const fileNames = StarrySky.DefaultData.fileNames[assetKey];
+          if(Array.isArray(fileNames)){
+            const assetPathArray = StarrySky.assetPaths[assetKey];
+            for(let i = 0; i < fileNames.length; ++i){
+              assetPathArray[i] = `${path}/${fileNames[i]}`;
+            }
+          }
+          else{
+            StarrySky.assetPaths[assetKey] = `${path}/${fileNames}`;
+          }
         }
       }
 

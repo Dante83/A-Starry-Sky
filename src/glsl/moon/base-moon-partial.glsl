@@ -40,7 +40,7 @@ if(vLocalPosition.y >= 0.0){
   float NDotL = max(dot(bentTangentSpaceSunlightDirection, texelNormal), 0.0);
   float NDotV = max(dot(tangentSpaceViewDirection, texelNormal), 0.0);
   float gamma = dot(tangentSpaceViewDirection - texelNormal * NDotV, bentTangentSpaceSunlightDirection - texelNormal * NDotL);
-  gamma = gamma / (sqrt(clamp(1.0 - NDotV * NDotV, 0.0, 1.0)) * sqrt(clamp(1.0 - NDotL * NDotL, 0.0, 1.0)));
+  gamma = gamma / max(1e-6, sqrt(clamp(1.0 - NDotV * NDotV, 0.0, 1.0)) * sqrt(clamp(1.0 - NDotL * NDotL, 0.0, 1.0)));
   float roughnessSquared = moonRoughnessTexel * moonRoughnessTexel;
   float A = 1.0 - 0.5 * (roughnessSquared / (roughnessSquared + 0.33));
   float B = 0.45 * (roughnessSquared / (roughnessSquared + 0.09));
@@ -49,4 +49,12 @@ if(vLocalPosition.y >= 0.0){
   float C = sin_alpha_beta.x * sin_alpha_beta.y / (1e-6 + cos_alpha_beta.y);
 
   moonTexel = 2.0 * observableSunFraction * NDotL * (A + B * max(0.0, gamma) * C) * lunarDiffuseColor * transmittanceFade * earthsShadow;
+
+  //Earthshine: bluish Earth-reflected light on the lunar dark side
+  //(the old-moon-in-the-new-moons-arms effect). Color biased blue from
+  //the planet albedo plus Rayleigh-tinted atmospheric reflection. Active
+  //only where direct sunlight is absent (NDotL near 0); attenuated by
+  //the umbra so a fully eclipsed moon also loses earthshine.
+  vec3 earthshineTerm = earthshineIntensity * vec3(0.18, 0.30, 0.55) * lunarDiffuseColor * transmittanceFade * earthsShadow;
+  moonTexel += earthshineTerm * (1.0 - smoothstep(0.0, 0.1, NDotL));
 }

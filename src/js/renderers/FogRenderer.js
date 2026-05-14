@@ -10,7 +10,9 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
     const turbidity = 2.53;
     const rayleigh = 3.0;
     const groundDistanceMultp = lightingData.atmosphericPerspectiveDistanceMultiplier;
-    const exposure = 0.17;
+    // Lower than Preetham's 0.17 because the new linear single-scatter formula doesn't
+    // include Preetham's pow(., 1.5) * pow(., 0.5) intensity compression. Tuned by eye.
+    const exposure = 0.012;
     const DEG_2_RAD = 0.017453292519943295769236907684886;
     const sunRadius = Math.sin(atmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
     const moonRadius = Math.sin(atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
@@ -19,21 +21,28 @@ StarrySky.Renderers.FogRenderer = function(skyDirector){
     THREE.ShaderChunk.fog_fragment = StarrySky.Materials.Fog.fogMaterial.fragmentShader(true);
     THREE.ShaderChunk.fog_vertex = StarrySky.Materials.Fog.fogMaterial.vertexShader(true);
 
-    this.fog = new THREE.Fog(new THREE.Vector3(), 0.0, 1.0);
+    this.fog = new THREE.Fog(0x000000, 0.0, 1.0);
     skyDirector.scene.fog = this.fog;
   }
+  // THREE.js applies LinearToSRGB when uploading fog.color as a uniform.
+  // Pre-apply the inverse (SRGBToLinear) so the correct raw radian values reach the shader.
+  const toFogUniform = (v) => v < 0.04045 ? v * 0.0773993808 : Math.pow(v * 0.9478672986 + 0.0521327014, 2.4);
   const self = this;
   this.tick = function(t){
     if(isAdvancedAtmosphericPerspective){
-      //Convert our sun and moon position to rho and phi
+      //Convert our sun and moon position to rho and phi.
+      //sun.position is in the WASM astronomical coordinate system where the visual world-space
+      //direction is (-sp.z, sp.y, -sp.x) - matching sun.quadOffset. We need atan2(z, x) here
+      //(not atan2(x, z) - PI) so that convertRhoThetaToXYZ reconstructs the correct world direction.
       const sunAltitude = Math.acos(skyState.sun.position.y);
-      const sunAzimuth = Math.atan2(skyState.sun.position.x, skyState.sun.position.z) - Math.PI;
+      const sunAzimuth = Math.atan2(skyState.sun.position.z, skyState.sun.position.x);
       const moonAltitude = Math.acos(skyState.moon.position.y);
-      const moonAzimuth = Math.atan2(skyState.moon.position.x, skyState.moon.position.z) - Math.PI;
+      const moonAzimuth = Math.atan2(skyState.moon.position.z, skyState.moon.position.x);
       const moonIntensity = Math.pow(skyState.moon.horizonFade , 3.0) * skyState.moon.intensity;
 
-      //Inject the intensity for the moon
-      this.fog.color.fromArray([sunAltitude, sunAzimuth, moonAltitude]);
+      //Inject the intensity for the moon. Pre-apply SRGBToLinear so Three.js's
+      //LinearToSRGB conversion in getRGB() cancels out, preserving the raw radian values.
+      this.fog.color.fromArray([toFogUniform(sunAltitude), toFogUniform(sunAzimuth), toFogUniform(moonAltitude)]);
       this.fog.near = moonAzimuth;
       this.fog.far = -(atmosphericParameters.lunarMaxIntensity / 29.0) * (1300.0 * moonIntensity) / 20.0;
     }

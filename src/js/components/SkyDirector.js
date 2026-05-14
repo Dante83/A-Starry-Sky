@@ -101,6 +101,12 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.sunRadius;
   this.moonRadius;
   this.distanceForSolarEclipse;
+  // Temporal EMA state for the per-frame jittered Eclipse-Shadow LuT samples.
+  // Seeded on the first sampling pass after the LuT is available.
+  this._eclipseLutEmaR = 1.0;
+  this._eclipseLutEmaG = 1.0;
+  this._eclipseLutEmaB = 1.0;
+  this._eclipseLutEmaInit = false;
 
   //Set up our web assembly hooks
   const self = this;
@@ -109,7 +115,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   //Also colled when our local web assembly has finished loading as both are pre-requisites
   //for running the responses produced by our web worker
   this.initializeSkyDirectorWebWorker = function(){
-    //Attach our asset manager if it has been passed over
     if(self.assetManagerInitialized && self.skyInterpolatorWASMIsReady){
       self.sunRadius = Math.sin(this.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5);
       self.moonRadius = Math.sin(this.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5);
@@ -127,7 +132,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       }, [transferableInitialStateBuffer, self.transferableFinalStateBuffer]);
 
       //Iitialize one of our key constants
-      BASE_RADIUS_OF_SUN = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
+      const BASE_RADIUS_OF_SUN = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
 
       //Initialize our LUTs
       self.atmosphereLUTLibrary = new StarrySky.LUTlibraries.AtmosphericLUTLibrary(self.assetManager.data, self.renderer, self.scene);
@@ -138,7 +143,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   this.initializeRenderers = function(){
-    //All systems must be up and running before we are ready to begin
     if(self.assetManagerInitialized && self.skyDirectorWASMIsReady){
       //Attach our camera, which should be loaded by now.
       const DEG_2_RAD = Math.PI / 180.0;
@@ -150,14 +154,14 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       const sunAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD;
       const sunRendererTextureSize = Math.floor(self.pixelsPerRadian * sunAngularDiameterInRadians * 2.0);
       //Floor and ceiling to nearest power of 2, Page 61 of Hacker's Delight
-      const ceilSRTS = Math.min(parseInt(1 << (32 - Math.clz32(sunRendererTextureSize - 1), 10)), 1024);
+      const ceilSRTS = Math.min(1 << (32 - Math.clz32(sunRendererTextureSize - 1)), 1024);
       const floorSRTS = ceilSRTS >> 1; //Divide by 2! Without the risk of floating point errors
       const SRTSToNearestPowerOfTwo = Math.abs(sunRendererTextureSize - floorSRTS) <= Math.abs(sunRendererTextureSize - ceilSRTS) ? floorSRTS : ceilSRTS;
 
       const moonAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD;
       const moonRendererTextureSize = Math.floor(self.pixelsPerRadian * moonAngularDiameterInRadians * 2.0);
       //Floor and ceiling to nearest power of 2, Page 61 of Hacker's Delight
-      const ceilMRTS = Math.min(parseInt(1 << (32 - Math.clz32(moonRendererTextureSize - 1), 10)), 1024);
+      const ceilMRTS = Math.min(1 << (32 - Math.clz32(moonRendererTextureSize - 1)), 1024);
       const floorMRTS = ceilMRTS >> 1; //Divide by 2! Without the risk of floating point errors
       const MRTSToNearestPowerOfTwo = Math.abs(moonRendererTextureSize - floorMRTS) <= Math.abs(moonRendererTextureSize - ceilMRTS) ? floorMRTS : ceilMRTS;
 
@@ -211,6 +215,23 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
     }, [self.transferableFinalStateBuffer]);
   }
 
+  //Public API for external consumers (e.g. a-water) to access atmospheric LUT textures
+  //and sky state for atmospheric perspective rendering.
+  this.getAtmosphericLUTs = function(){
+    if(!self.atmosphereLUTLibrary || !self.skyState){
+      return null;
+    }
+    return {
+      transmittance: self.atmosphereLUTLibrary.transmittance,
+      mieInscatteringSum: self.atmosphereLUTLibrary.mieScatteringSum,
+      rayleighInscatteringSum: self.atmosphereLUTLibrary.rayleighScatteringSum,
+      atmosphereFunctionsString: self.atmosphereLUTLibrary.atmosphereFunctionsString,
+      skyState: self.skyState,
+      atmosphericParameters: self.assetManager.data.skyAtmosphericParameters,
+      blueNoiseTexture: self.assetManager.images.blueNoiseImages[self.randomBlueNoiseTexture]
+    };
+  };
+
   this.i = 0;
 
   this.globalCameraPosition = new THREE.Vector3();
@@ -220,6 +241,15 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.exposureT += timeDeltaInSeconds;
       self.time = time * 0.001;
       self.interpolationT += timeDeltaInSeconds * self.speed;
+
+      //Refresh WASM heap views if memory grew (e.g. due to Module._malloc growing the heap)
+      if(self.rotatedAstroPositions && Module.HEAPF32.buffer !== self.rotatedAstroPositions.buffer){
+        self.rotatedAstroPositions = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroPositions_ptr, NUMBER_OF_ROTATION_OUTPUT_VALUES);
+        self.astronomicalLinearValues = new Float32Array(Module.HEAPF32.buffer, self.astronomicalLinearValues_ptr, NUMBER_OF_LINEAR_INTERPOLATIONS);
+        self.rotatedAstroDependentValues = new Float32Array(Module.HEAPF32.buffer, self.rotatedAstroDepedentValues_ptr, NUMBER_OF_ROTATIONALLY_DEPENDENT_OUTPUT_VALUES);
+        if(self.lightingColorValues) self.lightingColorValues = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_ptr, NUMBER_OF_LIGHTING_OUT_VALUES);
+        if(self.lightingColorValuesf) self.lightingColorValuesf = new Float32Array(Module.HEAPF32.buffer, self.lightingColorValues_f_ptr, NUMBER_OF_LIGHTING_COLOR_CHANNELS);
+      }
 
       //Update our sky state
       self.skyState.LSRT = Module._tick_astronomicalInterpolations(self.interpolationT);
@@ -233,22 +263,23 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       sceneCamera.getWorldPosition(self.globalCameraPosition);
 
       //Update our astronomical positions
-      self.skyState.sun.position.fromArray(self.rotatedAstroPositions.slice(0, 3));
+      self.skyState.sun.position.fromArray(self.rotatedAstroPositions, 0);
       let sp = self.skyState.sun.position;
       self.skyState.sun.quadOffset.set(-sp.z, sp.y, -sp.x).normalize().multiplyScalar(RADIUS_OF_SKY);
-      self.skyState.moon.position.fromArray(self.rotatedAstroPositions.slice(3, 6));
+      self.skyState.moon.position.fromArray(self.rotatedAstroPositions, 3);
       let mp = self.skyState.moon.position;
       self.skyState.moon.quadOffset.set(-mp.z, mp.y, -mp.x).normalize().multiplyScalar(RADIUS_OF_SKY);
       self.skyState.moon.parallacticAngle = self.rotatedAstroDependentValues[2] - PI_OVER_TWO;
-      self.skyState.mercury.position.fromArray(self.rotatedAstroPositions.slice(6, 9));
-      self.skyState.venus.position.fromArray(self.rotatedAstroPositions.slice(9, 12));
-      self.skyState.mars.position.fromArray(self.rotatedAstroPositions.slice(12, 15));
-      self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions.slice(15, 18));
-      self.skyState.saturn.position.fromArray(self.rotatedAstroPositions.slice(18, 21));
+      self.skyState.mercury.position.fromArray(self.rotatedAstroPositions, 6);
+      self.skyState.venus.position.fromArray(self.rotatedAstroPositions, 9);
+      self.skyState.mars.position.fromArray(self.rotatedAstroPositions, 12);
+      self.skyState.jupiter.position.fromArray(self.rotatedAstroPositions, 15);
+      self.skyState.saturn.position.fromArray(self.rotatedAstroPositions, 18);
 
       //Update our linear values
-      self.skyState.sun.luminosity = 100000.0 * self.astronomicalLinearValues[0] / 1300.0;
-      self.skyState.sun.intensity = 10.0 *  self.astronomicalLinearValues[0] / 1300.0;
+      const SUN_IRRADIANCE_W_PER_M2 = 1367.0;
+      self.skyState.sun.luminosity = 100000.0 * self.astronomicalLinearValues[0] / SUN_IRRADIANCE_W_PER_M2;
+      self.skyState.sun.intensity = 10.0 * self.astronomicalLinearValues[0] / SUN_IRRADIANCE_W_PER_M2;
       self.skyState.sun.horizonFade = self.rotatedAstroDependentValues[0];
       self.skyState.sun.scale = self.astronomicalLinearValues[1];
       self.skyState.moon.luminosity = 200.0 * self.astronomicalLinearValues[2];
@@ -275,8 +306,145 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Update values associated with lunar eclipses
       self.skyState.moon.distanceToEarthsShadowSquared = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX];
       self.skyState.moon.oneOverNormalizedLunarDiameter = self.rotatedAstroDependentValues[START_OF_LUNAR_ECLIPSE_INDEX + 1];
-      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 2, START_OF_LUNAR_ECLIPSE_INDEX + 5));
-      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues.slice(START_OF_LUNAR_ECLIPSE_INDEX + 5, START_OF_LUNAR_ECLIPSE_INDEX + 8));
+      self.skyState.moon.earthsShadowPosition.fromArray(self.rotatedAstroDependentValues, START_OF_LUNAR_ECLIPSE_INDEX + 2);
+      self.skyState.moon.lightingModifier.fromArray(self.rotatedAstroDependentValues, START_OF_LUNAR_ECLIPSE_INDEX + 5);
+
+      //Override the WASM-supplied lightingModifier with the moon's integrated
+      //LuT reflectance across the moon disk. We sample the Eclipse-Shadow LuT
+      //at the moon's center plus a ring of points at the physical moon radius
+      //and average in linear space. The integrated value represents the total
+      //flux reflected by the moon (which is what drives scene lighting and
+      //the atmospheric halo), and crucially it transitions smoothly through
+      //an eclipse: at penumbra ingress only a sliver of the moon is dim, so
+      //the average barely drops; at the umbra-edge crossing the average
+      //slides gradually rather than jumping at the moon-center threshold.
+      //
+      //Sampling only at moon center gave "lights go dark almost instantly"
+      //the moment moon-center crossed the umbra boundary, even though most
+      //of the moon was still in penumbra and reflecting a lot of light.
+      //
+      //Shadow zone is the PHYSICAL Earth-Moon umbra+penumbra (~1.22 deg
+      //radius from antisolar): phi_sun + phi_earth as seen from the moon.
+      //Do NOT scale this by the project's cinematic moonAngularDiameter
+      //(default 3.15 deg vs the physical ~0.5 deg) -- that would bloat the
+      //shadow zone to ~7.4 deg and tint the moon halo every full-moon night.
+      //AtmosphereRenderer's moonLightColor uniform aliases skyState.moon.lightingModifier,
+      //so this override also tints atmospheric scattering during the eclipse.
+      if(self.assetManager && self.assetManager.sampleEclipseShadowLUT){
+        const mp = self.skyState.moon.position;
+        const sp = self.skyState.sun.position;
+        // antisolar = -sun_position
+        const ax = -sp.x, ay = -sp.y, az = -sp.z;
+        const U_SHADOW_LUNAR = 0.2193;
+        const ECLIPSE_SHADOW_RADIUS_RAD = 0.02123;
+        const PHYSICAL_MOON_RADIUS_RAD = 0.00452;
+
+        // Build a tangent basis around the moon position to lay sample
+        // points on the physical moon disk. Pick an arbitrary perpendicular
+        // (use world up as a seed, fall back to world right if degenerate).
+        let tx = 0, ty = 1, tz = 0;
+        let dotMoonUp = mp.x * tx + mp.y * ty + mp.z * tz;
+        if(Math.abs(dotMoonUp) > 0.999){ tx = 1; ty = 0; tz = 0; dotMoonUp = mp.x; }
+        // tangent1 = normalize(up - mp * dot(mp, up))
+        let t1x = tx - mp.x * dotMoonUp;
+        let t1y = ty - mp.y * dotMoonUp;
+        let t1z = tz - mp.z * dotMoonUp;
+        const t1len = Math.sqrt(t1x*t1x + t1y*t1y + t1z*t1z) || 1.0;
+        t1x /= t1len; t1y /= t1len; t1z /= t1len;
+        // tangent2 = cross(mp, tangent1)
+        const t2x = mp.y * t1z - mp.z * t1y;
+        const t2y = mp.z * t1x - mp.x * t1z;
+        const t2z = mp.x * t1y - mp.y * t1x;
+
+        // Sample positions: moon center (weight 1) + 8 ring points (weight 0.5
+        // each) at the physical moon radius. The ring is randomly rotated and
+        // its radius randomly jittered EACH FRAME, so over the temporal EMA
+        // window below we get ~16 frames worth of distinct sample positions
+        // (~144 effective samples) for the price of 9 LuT lookups per frame.
+        // The temporal EMA smooths frame-to-frame variance from the random
+        // jitter; jitter coverage gives variance reduction the EMA can latch
+        // onto.
+        const SAMPLE_COUNT = 9;
+        const ringRotation = Math.random() * (2.0 * Math.PI);
+        const ringRadiusScale = 0.7 + 0.3 * Math.random();
+        const ringR = PHYSICAL_MOON_RADIUS_RAD * ringRadiusScale;
+        let sumR = 0, sumG = 0, sumB = 0, sumW = 0;
+        let i;
+        // Center sample
+        {
+          const cosD = Math.max(-1.0, Math.min(1.0, mp.x*ax + mp.y*ay + mp.z*az));
+          const d = Math.acos(cosD);
+          const v = Math.min(1.0, d / ECLIPSE_SHADOW_RADIUS_RAD);
+          const lut = self.assetManager.sampleEclipseShadowLUT(U_SHADOW_LUNAR, v);
+          if(lut){
+            sumR += lut[0]; sumG += lut[1]; sumB += lut[2]; sumW += 1.0;
+          }
+        }
+        for(i = 0; i < 8; i++){
+          const angle = ringRotation + i * (Math.PI / 4.0);
+          const ox = Math.cos(angle) * ringR;
+          const oy = Math.sin(angle) * ringR;
+          // sample position in 3D = mp + ox*t1 + oy*t2, then normalize
+          let sx = mp.x + ox * t1x + oy * t2x;
+          let sy = mp.y + ox * t1y + oy * t2y;
+          let sz = mp.z + ox * t1z + oy * t2z;
+          const slen = Math.sqrt(sx*sx + sy*sy + sz*sz) || 1.0;
+          sx /= slen; sy /= slen; sz /= slen;
+          const cosD = Math.max(-1.0, Math.min(1.0, sx*ax + sy*ay + sz*az));
+          const d = Math.acos(cosD);
+          const v = Math.min(1.0, d / ECLIPSE_SHADOW_RADIUS_RAD);
+          const lut = self.assetManager.sampleEclipseShadowLUT(U_SHADOW_LUNAR, v);
+          if(lut){
+            sumR += lut[0] * 0.5; sumG += lut[1] * 0.5; sumB += lut[2] * 0.5;
+            sumW += 0.5;
+          }
+        }
+        if(sumW > 0){
+          const frameR = sumR / sumW;
+          const frameG = sumG / sumW;
+          const frameB = sumB / sumW;
+          // Exponential moving average: each new frame contributes ALPHA
+          // weight, old EMA value contributes (1 - ALPHA). ALPHA = 1/16
+          // gives a ~16-frame effective window (~0.27s real-time at 60fps);
+          // older samples decay smoothly to zero weight. On the first tick
+          // there's no history yet, so we seed directly to skip the warm-up
+          // ramp and avoid a visible "fade-in" on page load.
+          const ALPHA = 1.0 / 16.0;
+          if(self._eclipseLutEmaInit){
+            self._eclipseLutEmaR = self._eclipseLutEmaR * (1.0 - ALPHA) + frameR * ALPHA;
+            self._eclipseLutEmaG = self._eclipseLutEmaG * (1.0 - ALPHA) + frameG * ALPHA;
+            self._eclipseLutEmaB = self._eclipseLutEmaB * (1.0 - ALPHA) + frameB * ALPHA;
+          } else {
+            self._eclipseLutEmaR = frameR;
+            self._eclipseLutEmaG = frameG;
+            self._eclipseLutEmaB = frameB;
+            self._eclipseLutEmaInit = true;
+          }
+          self.skyState.moon.lightingModifier.x = self._eclipseLutEmaR;
+          self.skyState.moon.lightingModifier.y = self._eclipseLutEmaG;
+          self.skyState.moon.lightingModifier.z = self._eclipseLutEmaB;
+        }
+
+        //Solar eclipse: sample the SAME LuT at u = phi_sun / (phi_sun + phi_moon)
+        //(physical, ~0.507 for Earth-Moon-Sun -- sun and moon appear nearly
+        //the same size from an Earth observer). delta is the angle between
+        //the sun and moon as seen from the observer (NOT negated, unlike the
+        //lunar case which uses anti-solar). For an Earth-surface observer the
+        //moon disk is small enough that a single LuT sample at the moon's
+        //center suffices -- no temporal jitter needed.
+        const SOLAR_U_SHADOW = 0.507;
+        const SOLAR_SHADOW_RADIUS_RAD = 0.00917; // phi_sun + phi_moon physical
+        const sx2 = sp.x, sy2 = sp.y, sz2 = sp.z;
+        const cosDeltaS = Math.max(-1.0, Math.min(1.0, mp.x*sx2 + mp.y*sy2 + mp.z*sz2));
+        const deltaS = Math.acos(cosDeltaS);
+        const vS = Math.min(1.0, deltaS / SOLAR_SHADOW_RADIUS_RAD);
+        const lutS = self.assetManager.sampleEclipseShadowLUT(SOLAR_U_SHADOW, vS);
+        if(lutS){
+          self.skyState.sun.lightingModifier.x = lutS[0];
+          self.skyState.sun.lightingModifier.y = lutS[1];
+          self.skyState.sun.lightingModifier.z = lutS[2];
+        }
+      }
 
       //Tick our light positions before we might just use them to set up the next interpolation
       self.lightingManager.tick(self.lightingColorValues);
@@ -284,8 +452,13 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Update our random blue noise texture
       self.randomBlueNoiseTexture = Math.floor(Math.random() * 4.9999);
 
-      //Check if we need to update our auto-exposure final state again
-      if(self.exposureT >= HALF_A_SECOND && self.transferableSkyFinalLightingBuffer.byteLength !== 0){
+      //Check if we need to update our auto-exposure final state again.
+      //Skipped when the ambient LUT is driving the lighting - the metering survey
+      //+ worker round-trip is what we're replacing, and its output (lightingState[])
+      //goes unread in that path. Toggling lightingManager.useAmbientLUT to false at
+      //runtime is supported only as a fallback at page load; running this block
+      //while the LUT path is active would just burn cycles.
+      if(!self.lightingManager.useAmbientLUT && self.exposureT >= HALF_A_SECOND && self.transferableSkyFinalLightingBuffer.byteLength !== 0){
         self.exposureT = 0.0;
         //Our colors are normalized and the brightnesses pulled out of them
         //so we need to inject those values back in before updating all of our colors again
@@ -321,7 +494,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
         self.updateAutoExposure(timeDeltaInSeconds);
 
         //Set our previous lookup target
-        const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
+        const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix.elements[8], self.camera.matrix.elements[9], self.camera.matrix.elements[10]);
         self.previousCameraLookAtVector.x = cameraLookAtTarget.x;
         self.previousCameraLookAtVector.y = cameraLookAtTarget.y;
         self.previousCameraLookAtVector.z = cameraLookAtTarget.z;
@@ -384,7 +557,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.skyState = {
         sun: {
           position: new THREE.Vector3(),
-          quadOffset: new THREE.Vector3()
+          quadOffset: new THREE.Vector3(),
+          lightingModifier: new THREE.Vector3(1, 1, 1)
         },
         moon: {
           position: new THREE.Vector3(),
@@ -453,7 +627,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       const deltaT = 1.0 / 60.0; //Presume 60 FPS on this first frame
       self.updateAutoExposure(deltaT);
 
-      //Start the sky here - as we should have everything back and ready by now
       self.start();
     }
     else if(postObject.eventType === self.EVENT_RETURN_AUTOEXPOSURE){
@@ -524,7 +697,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.renderer.readRenderTargetPixels(skyRenderTarget, 0, 0, meteringTextureSize, meteringTextureSize, self.transferableSkyFinalLightingFloat32Array);
 
       //Get the look at target for our camera to see where we are looking
-      const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix[8], self.camera.matrix[9], self.camera.matrix[10]);
+      const cameraLookAtTarget = new THREE.Vector3(self.camera.matrix.elements[8], self.camera.matrix.elements[9], self.camera.matrix.elements[10]);
       self.previousCameraHeight = self.camera.position.y;
       self.previousCameraLookAtVector.x = cameraLookAtTarget.x;
       self.previousCameraLookAtVector.y = cameraLookAtTarget.y;
@@ -620,7 +793,6 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.renderers = {};
 
   this.start = function(){
-    //Update our tick and tock functions
     parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine
       self.tick(time, timeDelta);
@@ -636,6 +808,11 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   this.setupNextTick = function(){
+    //Notify external consumers that atmospheric LUTs are ready
+    document.dispatchEvent(new CustomEvent('starry-sky-atmosphere-ready', {
+      detail: { skyDirector: self }
+    }));
+
     parentComponent.tick = function(time, timeDelta){
       //Run our interpolation engine
       self.tick(time, timeDelta);
@@ -648,13 +825,11 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
     }
   }
 
-  if(document.readyState === "complete" || document.readyState === "loaded"){
-    //Grab all of our assets
+  if(document.readyState === "complete" || document.readyState === "interactive"){
     self.assetManager = new StarrySky.AssetManager(self);
   }
   else{
     window.addEventListener('DOMContentLoaded', function(){
-      //Grab all of our assets
       self.assetManager = new StarrySky.AssetManager(self);
     });
   }
@@ -675,5 +850,14 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       self.skyInterpolatorWASMIsReady = true;
       self.initializeSkyDirectorWebWorker();
   }
-  Module['onRuntimeInitialized'] = onRuntimeInitialized;
+
+  //Check if the WASM module has already initialized before we set the callback.
+  //This happens when the <script> tag in <head> loads and initializes the module
+  //before A-Frame creates this component.
+  if(Module['calledRun']){
+    onRuntimeInitialized();
+  }
+  else{
+    Module['onRuntimeInitialized'] = onRuntimeInitialized;
+  }
 }

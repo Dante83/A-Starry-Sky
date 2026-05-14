@@ -1,40 +1,38 @@
 # A-Starry-Sky
 
-A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It aims to provide a simple, drop-in component that you can use to create beautiful day-night cycles in your creations. Click [here](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_example) to see this project in action (**Warning: requires a powerful GPU - do not open on a mobile phone**).
+A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It aims to provide a simple, drop-in component that you can use to create beautiful day-night cycles in your creations.
 
-[Solar Eclipse Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_solar_eclipse_example)
+> **Warning: requires a powerful GPU — do not open on a mobile phone.**
 
-[Lunar Eclipse Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_lunar_eclipse_example)
+**[Live Demo](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=today)** — The sky at the current date and time in San Francisco.
 
-[Christmas Star Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_christmas_star_example)
-
-[Mars Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_mars_example)
-
-[Different Mie/Rayleigh Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_wild_sky_example)
-
-**Warning: The examples below are particularly rough on GPUS, especially examples involving clouds. Definitely do not open on a mobile phone**
-
-[Aurora Borealis](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_aurora_example)
-
-[Light Cloud Coverage](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_light_example)
-
-[Medium Cloud Coverage](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_med_example)
-
-[Heavy Cloud Coverage](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_clouds_heavy_example)
+| Example | Description |
+|:---|:---|
+| [Desert](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=desert) | Desert scene at a set daytime moment |
+| [Solar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=eclipse) | Total solar eclipse with corona |
+| [Lunar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=lunar-eclipse) | Earth's shadow on the moon |
+| [Christmas Star (1226 AD)](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=christmas-star) | Great conjunction of Jupiter & Saturn |
+| [Mars](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mars) | Custom Martian atmosphere |
+| [Custom Atmosphere](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mie-rayleigh) | Different Mie/Rayleigh scattering values |
+| [High Altitude](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=high-altitude) | Sky from 20km up |
+| [Aurora Borealis](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=aurora) | ⚠️ GPU intensive |
+| [Light Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-light) | ⚠️ GPU intensive |
+| [Medium Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-medium) | ⚠️ GPU intensive |
+| [Heavy Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-heavy) | ⚠️ GPU intensive |
 
 ## Prerequisites
 
-This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.3.0+. It also requires a Web XR compatible web browser.
+This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.7.0+. It also requires a Web XR compatible web browser.
 
-`https://aframe.io/releases/1.3.0/aframe.min.js`
+`https://aframe.io/releases/1.7.0/aframe.min.js`
 
 ## Installing
 
-When installing A-Starry-Sky, you'll want to copy the *a-starry-sky.v1.1.0.min.js* file, along with the *assets** and *wasm* folders into their own directory in your JavaScript folder. Afterwards, add the minified file into a script tag in your html, along with a reference to the interpolation engine JavaScript file in the WASM folder. You should not add a reference to the starry-sky-web-worker or state-engine JavaScript bootstrap file, here, however, but instead inject this into the `<a-starry-sky>` tag.
+Copy *a-starry-sky.v1.2.0.min.js* and the *assets* and *wasm* folders into your project. Add the following scripts to your HTML — note that `starry-sky-web-worker.js` is **not** included here; it is referenced directly on the `<a-starry-sky>` tag instead.
 
 ```html
-<script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-<script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.1.0.min.js"></script>
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+<script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.2.0.min.js"></script>
 <script src="{PATH_TO_JS_FOLDER}/wasm/interpolation-engine.js"></script>
 ```
 
@@ -46,7 +44,7 @@ Once these references are set up, add the `<a-starry-sky>` component into your `
 </a-scene>
 ```
 
-This barebones code will provide you with a sky that moves in real time at the latitude and longitude of San Francisco, California. However, we can do much more then this. A-Starry-Sky comes with a host of custom html tags to help customize
+This barebones code will provide you with a sky that moves in real time at the latitude and longitude of San Francisco, California. However, we can do much more than this. A-Starry-Sky comes with a host of custom html tags to help customize
 your sky state.
 
 **NOTE: This sky box is immutable. That means that the settings you start with will remain constant on any given page. Unfortunately, at this time, it is just too difficult to make the code mutable.**
@@ -59,7 +57,7 @@ your sky state.
 `<sky-latitude>` | Set latitude of the location. North of the equator is **positive**. | 38
 `<sky-longitude>` | Set the longitude of the location. West of [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian) is **negative**. | -122
 
-You can set your sky to any latitude and longitude on planet Earth. Locations are useful to provide a sense of seasons to your players, by changing the arcs of the sun or the moon. The latitude will also dictate which stars are visible in your night sky. Both the latitude and longitude are also critical to time-dependent events such as solar and lunar eclipses. This is especially true for solar eclipses if you are looking to experience a total solar eclipse. That said, setting the location is easier then deciding where to be. Just grab the location you want from [Google Earth](https://earth.google.com/web/) or some other map source, and enter the values into their respective tags like so,
+You can set your sky to any latitude and longitude on planet Earth. Locations are useful to provide a sense of seasons to your players, by changing the arcs of the sun or the moon. The latitude will also dictate which stars are visible in your night sky. Both the latitude and longitude are also critical to time-dependent events such as solar and lunar eclipses. This is especially true for solar eclipses if you are looking to experience a total solar eclipse. That said, setting the location is easier than deciding where to be. Just grab the location you want from [Google Earth](https://earth.google.com/web/) or some other map source, and enter the values into their respective tags like so,
 
 Let's go to New York!
 ```html
@@ -85,23 +83,23 @@ Ok, but what about Perth Australia?
 </a-scene>
 ```
 
-One important thing to notice is that our `<sky-latitude>` and `<sky-longitude>` tags all live inside of a `<sky-location>` tag. This keeps our code organized by giving different sections for different property groups of our sky. It might not seem important now, but it will help provide a clean coding experience as you wish to add more and more properties to your sky. Additionally, I should point out that longitudes west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian) are negative, like New York or Beaunos Aires.
+Note that longitudes west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian) are negative (e.g. New York, Buenos Aires).
 
 ## Setting The Time
 
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
-`<sky-time>` | Parent tag. Contains all child tags related to the date or time elements.
+`<sky-time>` | Parent tag. Contains all child tags related to the date or time elements. | N/A
 `<sky-date>` | The local date-time string in the format **YEAR-MONTH-DAY HOUR:MINUTE:SECOND**/*2021-03-21 13:45:51*. Hour values are also based on a 0-23 hour system. 0 is 12 AM and 23 is 11PM. | Current Date
 `<sky-speed>` | The time multiplier used to speed up the astronomical calculations, or slow them down. | 1.0
 `<sky-utc-offset>` | The UTC-Offset for this location. Negative values are west of the [prime meridian](https://en.wikipedia.org/wiki/Prime_meridian), contrary to longitude values. **Note that UTC Time does not follow DST** | 7
 
-The sister setting to the location tag is the time tag. There are two strategies here. Either you wish to set the sky-time to UTC time and the sky-utc-offset to 0, or you wish to set the sky-time to your users location and set the UTC time to match. For instance, if you were setting up a user known to be in New York City, the local time on their machine is expected to be 4 hours behind UTC time. Furthermore, to match their location, you would also need to set their latitude and longitude to the location of New York City.
+Set `<sky-date>` to the **local time** for your chosen location, then set `<sky-utc-offset>` to match that timezone. For example, New York City is UTC-4 (summer) or UTC-5 (winter) — DST is not applied automatically.
 
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
-    <!-- Previous Location Seetings -->
+    <!-- Previous Location Settings -->
     <sky-location>
       <sky-latitude>40.7</sky-latitude>
       <sky-longitude>-74.0</sky-longitude>
@@ -146,7 +144,7 @@ Did you miss the [Christmas Star](https://www.nasa.gov/feature/the-great-conjunc
 </a-scene>
 ```
 
-This time travel is fun, but you might also be interested in change the *speed* of time. Day-Night cycles often go faster in game world then in reality, or you might wish to permanently stop time to capture a specific moment for your lighting purposes. To do this, add in the `<sky-speed>` tag.
+This time travel is fun, but you might also be interested in change the *speed* of time. Day-Night cycles often go faster in game world than in reality, or you might wish to permanently stop time to capture a specific moment for your lighting purposes. To do this, add in the `<sky-speed>` tag.
 
 ```html
 <a-scene>
@@ -175,13 +173,14 @@ Of course, if you're doing this in a persistent world, make sure to take the acc
 `<sky-ozone-beta>` | Color dependence of light scattering for the ozone layer, which is critical for the deep blues around sunset. | rgb(413.470734338, 413.470734338, 2.1112886E-13)
 `<sky-atmosphere-height>` | The cutoff height after which the atmosphere 'ends'. | 80.0 km
 `<sky-radius-of-earth>` | The radius of the planet or Earth. | 6366.7 km
-`<sky-rayleigh-scale-height>` | The falloff scale height for mie scattering, assuming exponential falloff. Rayleigh scattering tends to comes from atmospheric gases and hence is much larger. | 8.4
+`<sky-rayleigh-scale-height>` | The falloff scale height for Rayleigh scattering, assuming exponential falloff. Rayleigh scattering comes from atmospheric gases and hence has a much larger scale height. | 8.4
 `<sky-mie-scale-height>` | The falloff scale height for mie scattering, assuming exponential falloff. Mie scattering comes from larger particles, so it tends to falloff faster, hence a smaller characteristic height scaler. | 1.25
 `<sky-ozone-percent-of-rayleigh>` | The percent of ozone currently in the sky, which is used to set the ozone return at sunset. | 6E-7
 `<sky-moon-angular-diameter>` | The angular diameter of the moon as it appears in the sky.  | 3.15 degrees
 `<sky-sun-angular-diameter>` | The angular diameter of the sun as it appears in the sky. | 3.38 degrees
 `<sky-number-of-atmospheric-lut-ray-steps>` | The number of steps to the edge of the sky the ray tracer takes when gathering light for atmospheric LUTs. | 30 steps
 `<sky-number-of-atmospheric-lut-gathering-steps>` | The number of angular steps taken at each point along the ray for kth order scattering. | 30 steps
+`<sky-number-of-scattering-orders>` | The number of higher-order (kth) scattering passes to bake into the inscattering LUT. Higher values increase quality at the cost of LUT bake time. | 4
 `<sky-parameters-color-red>` | the red component used in the `<sky-rayleigh-beta>`, `<sky-mie-beta>` and `<sky-ozone-beta>` tags. | N/A
 `<sky-parameters-color-green>` | the green component used in the `<sky-rayleigh-beta>`, `<sky-mie-beta>` and `<sky-ozone-beta>` tags. | N/A
 `<sky-parameters-color-blue>` | the blue component used in the `<sky-rayleigh-beta>`, `<sky-mie-beta>` and `<sky-ozone-beta>` tags. | N/A
@@ -203,7 +202,7 @@ One of the most likely elements you might want to change is the size of the sun 
 
 You might also wish to change your starting height above the planet. This can easily be set with the `<sky-camera-height>` tag, although the sky will also dynamically adapt to your height as you move the camera higher or lower. This sets the initial height of the scene, in kilometers, with the maximum height being *80km*, and the minimum being *0km*.
 
-[High Altitude Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_higher_altitude_example)
+[High Altitude Example](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=high-altitude)
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
@@ -236,9 +235,9 @@ You might also wish to change the composition of your atmosphere. This element g
 </a-scene>
 ```
 
-That's not too exciting though, let's say we wanted something a bit more crazy. Let's follow the work of [Physically Based Rendering of the Martian Atmosphere](https://argos.vu/wp-content/uploads/2021/06/18591764.pdf) and go to Mars! Here they swap the usage of Rayleigh and Mei, so we should probably swap out their characteristic heights as well. Most of the scattering on Mars comes from Mie scattering of large particles, with a very thin atmosphere. Consequently, we can pretty much disable mie (rayleigh) and swap their characteristic heights as well. We should also change the planets radius as well and might wish to swap out the atmospheric height for better values in the ray tracer.
+That's not too exciting though, let's say we wanted something a bit more crazy. Let's follow the work of [Physically Based Rendering of the Martian Atmosphere](https://elib.dlr.de/86477/1/Collienne_GI_VRAR_2013.pdf) and go to Mars! Here they swap the usage of Rayleigh and Mie, so we should probably swap out their characteristic heights as well. Most of the scattering on Mars comes from Mie scattering of large particles, with a very thin atmosphere. Consequently, we can pretty much disable mie (rayleigh) and swap their characteristic heights as well. We should also change the planets radius as well and might wish to swap out the atmospheric height for better values in the ray tracer.
 
-[Mars Example](https://code-panda.com/pages/projects/v_1_1_0/a-starry_sky_mars_example)
+[Mars Example](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mars)
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
@@ -277,46 +276,17 @@ That's not too exciting though, let's say we wanted something a bit more crazy. 
 </a-scene>
 ```
 
-Although it's unlikely you will wish to modify the setup for the sky LUT tables, you can increase or decrease the number of ray steps as you desire for the number of steps taken between the camera and the edge of the planetary atmosphere, or angular steps for higher order scattering.
+You can also tune the LUT ray step counts, though the defaults are already near-optimal and changes are rarely noticeable.
 
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-atmospheric-parameters>
-      <!-- Less Accurate -->
-      <sky-number-of-atmospheric-lut-ray-steps>
-        2
-      </sky-number-of-atmospheric-lut-ray-steps>
-
-      <sky-number-of-atmospheric-lut-gathering-steps>
-        2
-      </sky-number-of-atmospheric-lut-gathering-steps>
-
-      <sky-number-of-scattering-orders>
-        1
-      </sky-number-of-scattering-orders>
-  </a-starry-sky>
-</a-scene>
-```
-
-Or if you want more details... Though if you run the below, it doesn't appear to make a major difference as the default values are pretty much optimal.
-
-```html
-<a-scene>
-  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
-    <sky-atmospheric-parameters>
-      <!-- More Accurate (You can't really tell) -->
-      <sky-number-of-atmospheric-lut-ray-steps>
-        64
-      </sky-number-of-atmospheric-lut-ray-steps>
-
-      <sky-number-of-atmospheric-lut-gathering-steps>
-        64
-      </sky-number-of-atmospheric-lut-gathering-steps>
-
-      <sky-number-of-scattering-orders>
-        12
-      </sky-number-of-scattering-orders>
+      <!-- Lower for performance, higher for accuracy (default 30 is optimal for most cases) -->
+      <sky-number-of-atmospheric-lut-ray-steps>30</sky-number-of-atmospheric-lut-ray-steps>
+      <sky-number-of-atmospheric-lut-gathering-steps>30</sky-number-of-atmospheric-lut-gathering-steps>
+      <sky-number-of-scattering-orders>4</sky-number-of-scattering-orders>
+    </sky-atmospheric-parameters>
   </a-starry-sky>
 </a-scene>
 ```
@@ -328,12 +298,12 @@ Or if you want more details... Though if you run the below, it doesn't appear to
 `<sky-lighting>` | Parent tag. Contains all child tags related to the lighting of the scene. | N/A
 `<sky-sun-intensity>` | Intensity multiplier for sunlight, can be used to brighten or dim the intensity of solar directional lighting. | 1.0
 `<sky-moon-intensity>` | Intensity multiplier for moonlight, can be used to brighten or dim the intensity of lunar directional lighting. | 1.0
-`<sky-ambient-intensity>` | Intensity multiplier for ambient lighting, can be used to brighten or dim the intensity of the ambient lighting system. | 1.0
+`<sky-ambient-intensity>` | Intensity multiplier for ambient lighting, can be used to brighten or dim the intensity of the ambient lighting system. | 2.0
 `<sky-minimum-ambient-lighting>` | The minimum amount of ambient light in the system. | 0.01
-`<sky-maximum-ambient-lighting>` | The minimum amount of ambient light in the system. | INF
-`<sky-atmospheric-perspective-type>` | Can be set set to possible values of *normal* or  *advanced* or *none*. Required for scene fog. *normal* uses the orginal exponential fog model while *advanced* uses a Preetham based lighting model for improved color variation at the expense of greater hardware pressure. | normal
+`<sky-maximum-ambient-lighting>` | The maximum amount of ambient light in the system. | INF
+`<sky-atmospheric-perspective-type>` | Can be set to *normal*, *advanced*, or *none*. Required for scene fog. *normal* uses the original exponential fog model; *advanced* uses a Preetham-based model for improved horizon color variation at the cost of greater GPU pressure. | normal
 `<sky-atmospheric-perspective-density>` | For *normal* fog only. Controls the density parameter for exponential scene fog. The color is set automatically from the scene lighting. Ignored if the scene fog type is *advanced* | 0.007
-`<sky-atmospheric-perspective-distance-multiplier>` | For *advanced* fog only. Multiplies the distance to the fog for the advanced fog model. | 5.0
+`<sky-atmospheric-perspective-distance-multiplier>` | For *advanced* fog only. Multiplies the distance to the fog for the advanced fog model. | 2.0
 `<sky-ground-color>` | Parent tag. Contains `<sky-ground-color-{color-channel}>` tags to describe the base color of the ground for reflective lighting from the surface. | N/A
 `<sky-ground-color-red>` | Used to describe **red** color channel changes to `<sky-ground-color>` tags. | 66
 `<sky-ground-color-green>` | Used to describe **green** color channel changes to `<sky-ground-color>` tags. | 44
@@ -344,7 +314,7 @@ Or if you want more details... Though if you run the below, it doesn't appear to
 `<sky-moon-bloom>` | Parent tag, contains all properties of the moon bloom render pass. | N/A
 `<sky-bloom-enabled>` | Enables (true) or disables (false) bloom on this astronomical object. | true
 `<sky-bloom-exposure>` | Changes the exposure parameter on the bloom filter - the amount to multiply light by returned to the camera. | 1.0
-`<sky-bloom-threshold>` | Changes the threshold parameter on the bloom filter - the minimum amount of intensity to enable bloom. | {sun: 0.98, moon: 0.55}
+`<sky-bloom-threshold>` | Changes the threshold parameter on the bloom filter - the minimum amount of intensity to enable bloom. | {sun: 4.0, moon: 0.55}
 `<sky-bloom-strength>` | Changes the strength parameter on the bloom filter - how much to 'bloom' for selected pixels. | {sun: 1.0, moon: 0.9}
 `<sky-bloom-radius>` | Changes the radius parameter on the bloom filter - the distance for the bloom filter to spread over. | {sun: 1.0, moon: 1.4}
 
@@ -370,41 +340,20 @@ The sky lighting tags are useful for controlling attributes of the direct and in
 
 Unfortunately, at the time of writing this, A-Frame does not yet support variance shadow maps, though there is an open issue for this. Also, the shadow type you choose for your sun and moon lighting will also be the shadow type for all other lights within your scene, so take this into account when choosing your shadows.
 
-While changing the shadow type is done in A-Frame at the scene level, you can still impact the quality of your shadows by changing the size and resolution of your shadow camera. Because the shadow cameras are orthographic, all direct lighting cameras are set to the distance of the sun and moons location for casting shadows. However, this does not result in shadows infinitely far away, nor does it result in infinitely crisp shadows. Unfortunately, to draw objects further away, you must increase the size of the camera frustum like so,
+You can also control shadow quality via the shadow camera size and resolution. Increasing the size covers more of the scene; increasing the resolution sharpens the result — but both have a GPU cost, so balance them for your needs. It's also worth disabling shadows on large environment meshes, as they often fall outside the frustum and produce an ugly square shadow edge.
 
 ```html
 <a-scene shadow="type: pcfsoft">
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
-      <sky-shadow-camera-size>
-        <!-- Let's set the minimum forward draw distance to 120m -->
-        120
-      <sky-shadow-camera-size>
+      <!-- Increase size to cast shadows further from the camera -->
+      <sky-shadow-camera-size>120</sky-shadow-camera-size>
+      <!-- Increase resolution to keep shadows sharp at larger sizes -->
+      <sky-shadow-camera-resolution>4096</sky-shadow-camera-resolution>
     </sky-lighting>
   </a-starry-sky>
 </a-scene>
 ```
-
-However, if you do increase the size of your frustum to allow more things to cast shadows, you might soon find a problem. Your shadows may start to become pixelated. This is a bit troubling, but we can solve this issue as well. Just increase the resolution of your camera!
-
-```html
-<a-scene shadow="type: pcfsoft">
-  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
-    <sky-lighting>
-      <sky-shadow-camera-size>
-        <!-- Let's set the minimum forward draw distance to 120m -->
-        120
-      <sky-shadow-camera-size>
-      <sky-shadow-camera-resolution>
-        <!-- As our resolution is square we only have to set one of these values -->
-        4096
-      </sky-shadow-camera-resolution>
-    </sky-lighting>
-  </a-starry-sky>
-</a-scene>
-```
-
-There. Nice crisp shadows. Unfortunately, this introduces another problem. The higher the resolution on your shadow camera, the more weight it produces on your GPU. While cascading shadow maps would be an ideal solution for this, they were not available at this iteration of the code. Therefore, the best way to approach this problem is to balance the size and resolution of your camera frustum. Another thing you may wish to do is disable shadows on your environment mesh as it's large size means that most of it will likely be outside of the frustum no matter how large you make it resulting in an odd square shadow edge.
 
 Once you have the shadows in your scene just right, you will probably also wish to adjust the color of your 'ground'. A-Starry-Sky now supports a triple hemispherical lighting setup that uses a convolution over the colors of the sky combined with a ground light scattering model on a separate CPU thread via web workers. However, the default color of the ground is brown. You might have a grassy field or a cerulean ocean. To set the color of your ground, you can use the `<sky-ground-color>` tag along with its child ground color channel tags. Let's say we wanted to set the ground to a brilliant green for a lush field of grass.
 
@@ -453,7 +402,7 @@ In addition to support for ground lighting, you can now directly control the int
       <sky-moon-intensity>0.5</sky-moon-intensity>
 
       <!-- But let's have ten times the amount of ambient lighting -->
-      <sky-moon-intensity>10.0</sky-moon-intensity>
+      <sky-ambient-intensity>10.0</sky-ambient-intensity>
     </sky-lighting>
   </a-starry-sky>
 </a-scene>
@@ -533,13 +482,13 @@ For lower-end systems, it supports the basic exponential atmospheric perspective
 </a-scene>
 ```
 
-For higher end systems, however, you can simulate a Preetham based atmospheric shader that gives more variety to horizon colors instead of the constant colors used in the *normal* setting. The solution provided isn't an exact match for the Elok based sky lighting used for the sky due to limitations in *Three.js*'s fog shader, but it provides a solid improvement over the original atmospheric perspective. To enable the advanced lighting model, just enter in the value *advanced* into the `<sky-atmospheric-perspective-type>` tag. Similiar to `<sky-atmospheric-perspective-density>` you can multiply distance for the *advanced* lighting model by using the `<sky-atmospheric-perspective-distance-multiplier>` which multiplies all distances in the Preetham based model by the amount you provide. Initial values are set high to provide noticeable atmospheric perspective, even in small scenes, so you might wish to reduce the value from it's default of *5.0*.
+For higher end systems, however, you can simulate a Preetham based atmospheric shader that gives more variety to horizon colors instead of the constant colors used in the *normal* setting. The solution provided isn't an exact match for the Elek based sky lighting used for the sky due to limitations in *Three.js*'s fog shader, but it provides a solid improvement over the original atmospheric perspective. To enable the advanced lighting model, just enter in the value *advanced* into the `<sky-atmospheric-perspective-type>` tag. Similar to `<sky-atmospheric-perspective-density>` you can multiply distance for the *advanced* lighting model by using the `<sky-atmospheric-perspective-distance-multiplier>` which multiplies all distances in the Preetham based model by the amount you provide. Initial values are set high to provide noticeable atmospheric perspective, even in small scenes, so you might wish to reduce the value from it's default of *5.0*.
 
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
-      <!-- while the default is 5.0 the atmospheric distance multiplier in the
+      <!-- while the default is 2.0 the atmospheric distance multiplier in the
       advanced model we can reduce this down if we want to 1.0 for a less dramatic effect. -->
       <sky-atmospheric-perspective-type>advanced</sky-atmospheric-perspective-type>
       <sky-atmospheric-perspective-distance-multiplier>1.0</sky-atmospheric-perspective-distance-multiplier>
@@ -563,27 +512,22 @@ Finally, you can disable all atmospheric perspective by setting the value in the
 
 ## Enabling Aurora Borealis
 
-*WARNING: Enabling Aurora Borealis will dramatically increase the computational weight of your sky, as the aurora shader provided uses a ray marching method to produce this beautiful natural phenomena.*
+*WARNING: Enabling Aurora Borealis will dramatically increase the computational weight of your sky, as the aurora shader provided uses a ray marching method to produce this beautiful natural phenomenon.*
 
-**Tag** | **Description**
+**Tag** | **Description** | **Default Value**
 :--- | :--- | :---
 `<sky-aurora>` | Parent tag. Required for enabling Aurora Borealis. Contains all child tags related to the aurora. | N/A
-:--- | :--- | :---
-`<sky-atomic-oxygen-color>` | Triggered by excited atomic oxygen molecules located between 150 and 600 meters from the planetary surface, atomic oxygen typically causes a bright red curtain at the top of the aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*. | RGB(255, 0, 37)
+`<sky-atomic-oxygen-color>` | Triggered by excited atomic oxygen molecules located between 150 and 600 kilometers from the planetary surface, atomic oxygen typically causes a bright red curtain at the top of the aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*. | RGB(255, 0, 37)
 `<sky-atomic-oxygen-cutoff>` | Determines how much of the atomic oxygen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora. | 0.12
-`<sky-atomic-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5. | 0.3
-:--- | :--- | :---
-`<sky-molecular-oxygen-color>` | Triggered by excited molecular oxygen molecules located between 100 and 250 meters from the planetary surface, molecular oxygen typically provides the iconic bright green associated with the aurora borealis and is typically seen in most displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*, just in case you want a different color for your aurora. | RGB(81, 255, 143)
+`<sky-atomic-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less than 5. | 0.3
+`<sky-molecular-oxygen-color>` | Triggered by excited molecular oxygen molecules located between 100 and 250 kilometers from the planetary surface, molecular oxygen typically provides the iconic bright green associated with the aurora borealis and is typically seen in most displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*, just in case you want a different color for your aurora. | RGB(81, 255, 143)
 `<sky-molecular-oxygen-cutoff>` | Determines how much of the molecular oxygen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora. | 0.02
-`<sky-molecular-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5. | 2.0
-:--- | :--- | :---
-`<sky-nitrogen-color>` | Triggered by excited nitrogen molecules located between 60 and 120 meters from the planetary surface, nitrogen typically provides a magenta curtain around the base of aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*. | RGB(189, 98, 255)
+`<sky-molecular-oxygen-intensity>` | Determines the brightness of this aurora segment, with typical values being less than 5. | 2.0
+`<sky-nitrogen-color>` | Triggered by excited nitrogen molecules located between 60 and 120 kilometers from the planetary surface, nitrogen typically provides a magenta curtain around the base of aurora borealis and is typically seen in more extreme displays. This tag controls these colors using three child color tags *sky-aurora-color-red*, *sky-aurora-color-green* and *sky-aurora-color-blue*. | RGB(189, 98, 255)
 `<sky-nitrogen-cutoff>` | Determines how much of the nitrogen aurora is likely to be present in the display. Lower numbers are associated with more aurora, with a maximum of 1.0 being associated with no aurora. | 0.12
-`<sky-nitrogen-intensity>` | Determines the brightness of this aurora segment, with typical values being less then 5. | 4.0
-:--- | :--- | :---
-`<sky-aurora-raymarch-steps>` | Number of steps that the ray-marcher takes per pixel. | 64 (steps)
-`<sky-aurora-cutoff-distance>` | The distance after which the aurora no longer renders to help improve raymarching quality at the cost of not rendering clouds that are further away as SDF are not presently calculated for our noise generators. | 1000 (kilometers - approximate)
-:--- | :--- | :---
+`<sky-nitrogen-intensity>` | Determines the brightness of this aurora segment, with typical values being less than 5. | 4.0
+`<sky-aurora-raymarch-steps>` | Number of steps that the ray-marcher takes per pixel. | 32 (steps)
+`<sky-aurora-cutoff-distance>` | The distance after which the aurora no longer renders to help improve raymarching quality at the cost of not rendering aurora that are further away as SDF are not presently calculated for our noise generators. | 1000 (kilometers - approximate)
 `<sky-aurora-color-red>` | Used to describe **red** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags. | N/A
 `<sky-aurora-color-green>` | Used to describe **green** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags. | N/A
 `<sky-aurora-color-blue>` | Used to describe **blue** color channel changes to `<sky-nitrogen-color>`, `<sky-molecular-oxygen-color>` and `<sky-atomic-oxygen-color>` tags. | N/A
@@ -608,15 +552,15 @@ Each of the different atomic and molecular aurora are controllable by the code a
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-aurora>
-      <sky-molecular-oxygen-cutoff>0.0</<sky-atomic-oxygen-cutoff>
-      <sky-molecular-oxygen-intensity>5.0</<sky-atomic-oxygen-cutoff>
+      <sky-molecular-oxygen-cutoff>0.0</sky-molecular-oxygen-cutoff>
+      <sky-molecular-oxygen-intensity>5.0</sky-molecular-oxygen-intensity>
       <sky-molecular-oxygen-color>
         <sky-aurora-color-red>0.0</sky-aurora-color-red>
-        <sky-aurora-color-green>0.0</sky-aurora-color-gree>
+        <sky-aurora-color-green>0.0</sky-aurora-color-green>
         <sky-aurora-color-blue>255</sky-aurora-color-blue>
       </sky-molecular-oxygen-color>
-      <sky-nitrogen-intensity>0.0</<sky-atomic-oxygen-cutoff>
-      <sky-atomic-oxygen-intensity>0.0</<sky-atomic-oxygen-cutoff>
+      <sky-nitrogen-intensity>0.0</sky-nitrogen-intensity>
+      <sky-atomic-oxygen-intensity>0.0</sky-atomic-oxygen-intensity>
     </sky-aurora>
   </a-starry-sky>
 </a-scene>
@@ -628,22 +572,22 @@ On the other hand, if you only want a light amount of green aurora, you could go
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-aurora>
-      <sky-molecular-oxygen-cutoff>0.2</<sky-molecular-oxygen-cutoff>
-      <sky-molecular-oxygen-intensity>1.5</<sky-molecular-oxygen-cutoff>
-      <sky-atomic-oxygen-intensity>0.0</<sky-atomic-oxygen-cutoff>
-      <sky-nitrogen-intensity>0.0</<sky-nitrogen-cutoff>
+      <sky-molecular-oxygen-cutoff>0.2</sky-molecular-oxygen-cutoff>
+      <sky-molecular-oxygen-intensity>1.5</sky-molecular-oxygen-intensity>
+      <sky-atomic-oxygen-intensity>0.0</sky-atomic-oxygen-intensity>
+      <sky-nitrogen-intensity>0.0</sky-nitrogen-intensity>
     </sky-aurora>
   </a-starry-sky>
 </a-scene>
 ```
 
-In addition to changing the colors of the sky, you can also change the number of steps taken by the raymarcher when rendering the sky. The more steps you take, the better the sky will look, but the more of a load you will put on your GPU. Therefore, a balance is needed between performance and quality. By default, the shader uses 64 steps when raymarching the volume. To increase this, you can do the following
+In addition to changing the colors of the sky, you can also change the number of steps taken by the raymarcher when rendering the sky. The more steps you take, the better the sky will look, but the more of a load you will put on your GPU. Therefore, a balance is needed between performance and quality. By default, the shader uses 32 steps when raymarching the volume. To increase this, you can do the following
 
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-aurora>
-      <sky-aurora-raymarch-steps>128</<sky-aurora-raymarch-steps>
+      <sky-aurora-raymarch-steps>128</sky-aurora-raymarch-steps>
     </sky-aurora>
   </a-starry-sky>
 </a-scene>
@@ -651,7 +595,7 @@ In addition to changing the colors of the sky, you can also change the number of
 
 ## Enabling Clouds
 
-*WARNING: Enabling clouds will dramatically increase the computational weight of your sky, as the cloud shader provided uses a ray marching method to produce this beautiful natural phenomena.*
+*WARNING: Enabling clouds will dramatically increase the computational weight of your sky, as the cloud shader provided uses a ray marching method to produce this beautiful natural phenomenon.*
 
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
@@ -664,49 +608,49 @@ In addition to changing the colors of the sky, you can also change the number of
 `<sky-cloud-velocity-x>` | The x-component of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 40
 `<sky-cloud-velocity-y>` | The y-component (or actually z) of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 40
 `<sky-cloud-start-seed>` | Random seed used to set the current cloud noise overhead, if not set, it defaults to a variation on the current date time timestamp. | *Date.now() % (86400 * 365)*.
-`<sky-cloud-raymarch-steps>` | The number of ray-march steps used to provide the cloud color. | 64 (steps)
+`<sky-cloud-raymarch-steps>` | The number of ray-march steps used to provide the cloud color. | 32 (steps)
 `<sky-cloud-cutoff-distance>` | The distance after which the clouds no longer render to help improve raymarching quality at the cost of not rendering clouds that are further away as SDF are not presently calculated for our noise generators. | 40000
 
-Clouds are expensive. We'll start off saying that. There is a chance this might be able to reach playable levels of performance on the latest GPU hardware, such as the upcoming 40-series GPUS (Come on, 4090 TI, you can do it!), but right now, even on a significant gaming computer outside of VR, this asset takes up a ton of resources and murders frame rates.
+Clouds are expensive. Even on a powerful desktop GPU outside of VR, the cloud shader is demanding — reduce `<sky-cloud-raymarch-steps>` and `<sky-cloud-cutoff-distance>` if you're hitting frame rate issues.
 
-At the same time, clouds are insanely cool and I have wanted to add them into A-Starry-Sky since I first created the library. Each cloud is ray-marched, per pixel and ironically, at this stage, the more clouds you have, the less of a load it will be on the GPU. Of course, if you don't have any clouds, just turning them off altogether is your best bet. I'd
+At the same time, clouds are insanely cool and I have wanted to add them into A-Starry-Sky since I first created the library. Each cloud is ray-marched per pixel and ironically, at this stage, the more clouds you have, the less of a load it will be on the GPU. Of course, if you don't have any clouds, just turning them off altogether is your best bet.
 
-Enabling clouds requires you to add the parent tag to `<a-starrry-sky>`, `<sky-clouds>`. Once you've added clouds, the most likely thing you will want to change is the cloud coverage, using the `<sky-cloud-coverage>` tag, which roughly corelates to the amount of the sky covered in clouds. You might also wish to control their speed as they zip across the sky.
+Enabling clouds requires you to add the parent tag to `<a-starry-sky>`, `<sky-clouds>`. Once you've added clouds, the most likely thing you will want to change is the cloud coverage, using the `<sky-cloud-coverage>` tag, which roughly correlates to the amount of the sky covered in clouds. You might also wish to control their speed as they zip across the sky.
 
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-clouds>
       <!-- Reduce the amount of clouds that are visible -->
-      <sky-cloud-coverage>25.0</<sky-cloud-coverage>
+      <sky-cloud-coverage>25.0</sky-cloud-coverage>
 
       <!-- Velocity of the clouds in the x direction -->
-      <sky-cloud-velocity-x>22.0</<sky-cloud-velocity-x>
+      <sky-cloud-velocity-x>22.0</sky-cloud-velocity-x>
 
       <!-- Velocity of the clouds in the y direction -->
-      <sky-cloud-velocity-y>-150.0</<sky-cloud-velocity-y>
+      <sky-cloud-velocity-y>-150.0</sky-cloud-velocity-y>
     </sky-clouds>
   </a-starry-sky>
 </a-scene>
 ```
 
-You might also wish to control some of the visible properties of the cloud, such as how high the clouds start to form, or how high they go. Note that your ray will have to trace through this distance and the great the heights the clouds go up our away from you, the less density you'll have in your ray tracing model. Clouds are also painted on the surface of moon/sun elements and sky dome, but are not a part of the fog renderer, so you will never have any cloud covered mountains unfortunately, or fog...
+You might also wish to control some of the visible properties of the cloud, such as how high the clouds start to form, or how high they go. Note that your ray will have to trace through this distance and the greater the heights the clouds go up or away from you, the less density you'll have in your ray tracing model. Clouds are also painted on the surface of moon/sun elements and sky dome, but are not a part of the fog renderer, so you will never have any cloud covered mountains unfortunately, or fog...
 
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-clouds>
       <!-- Clouds are really really really low -->
-      <sky-cloud-start-height>500.0</<sky-cloud-start-height>
+      <sky-cloud-start-height>500.0</sky-cloud-start-height>
 
       <!-- But they go super high! -->
-      <sky-cloud-end-height>3000.0</<sky-cloud-end-height>
+      <sky-cloud-end-height>3000.0</sky-cloud-end-height>
 
       <!-- The intensity of the clouds 'fades in' and goes from 0 to 1 by this percent of the total height.  -->
       <sky-cloud-fade-in-end-percent>0.05</sky-cloud-fade-in-end-percent>
 
       <!-- The intensity of the clouds 'fades out' starting at this height. The higher this is, the more likely you are to have 'anvil tops'. -->
-      <sky-cloud-fade-out-start-percent>0.99</<sky-cloud-fade-out-start-percent>
+      <sky-cloud-fade-out-start-percent>0.99</sky-cloud-fade-out-start-percent>
 
       <!-- Locks the starting 'seed' of the clouds which is normally based around the current date time. Doing this lets your sky appear the same each time you start for more artistic control. -->
       <sky-cloud-start-seed>400</sky-cloud-start-seed>
@@ -722,9 +666,9 @@ Outside of this, most of the code associated with this tag controls the ray marc
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-clouds>
       <!-- What type of terrifying GPU do you have?! -->
-      <!-- <sky-cloud-raymarch-steps>128</<sky-cloud-raymarch-steps> -->
+      <!-- <sky-cloud-raymarch-steps>128</sky-cloud-raymarch-steps> -->
       <!-- Oh, yeah, me too... Though it is a bit choppy now... -->
-      <sky-cloud-raymarch-steps>32</<sky-cloud-raymarch-steps>
+      <sky-cloud-raymarch-steps>32</sky-cloud-raymarch-steps>
 
       <!-- Reducing this distance will help with that a bit at least -->
       <sky-cloud-cutoff-distance>10000</sky-cloud-cutoff-distance>
@@ -737,15 +681,16 @@ Outside of this, most of the code associated with this tag controls the ray marc
 
 **Tag** | **Description**
 :--- | :---
-`<sky-assets-dir>` | Parent tag. Contains all child tags related to asset locations. Can contain *dir*, *texture-path*, *moon-path*, *star-path* and *wasm-path* attributes to guide the system to entire groups of data at a time.
+`<sky-assets-dir>` | Parent tag. Contains all child tags related to asset locations. Can contain *dir*, *texture-path*, *moon-path*, *star-path*, *blue-noise-path*, *solar-eclipse-path*, *lunar-eclipse-path*, and *aurora-map-path* attributes to guide the system to entire groups of data at a time.
 `<sky-aurora-maps>` | Defines the location of the aurora caustic textures used to create the basic aurora borealis curtains.
 `<sky-moon-diffuse-map>` | Defines a moon diffuse map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
-`<sky-moon-normal-map>` | Defines a moon normal map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
-`<sky-moon-roughness-map>` | Defines a moon roughness map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
-`<sky-moon-aperture-size-map>` | Defines a moon aperture size map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
-`<sky-moon-aperture-orientation-map>` | Defines a moon aperture orientation map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
+`<sky-moon-normal-map>` | Defines a moon normal map texture location. Having this in a particular dir structure informs the system that the normal map of the moon lives at this location.
+`<sky-moon-roughness-map>` | Defines a moon roughness map texture location. Having this in a particular dir structure informs the system that the roughness map of the moon lives at this location.
+`<sky-moon-aperture-size-map>` | Defines a moon aperture size map texture location. Having this in a particular dir structure informs the system that the aperture size map of the moon lives at this location.
+`<sky-moon-aperture-orientation-map>` | Defines a moon aperture orientation map texture location. Having this in a particular dir structure informs the system that the aperture orientation map of the moon lives at this location.
 `<sky-blue-noise-maps>` | Defines the location the tiling blue noise maps which are used to provide temporal dithering to eliminate banding.
 `<sky-solar-eclipse-map>` | Defines the location of the solar eclipse texture used to provide the corona on the solar eclipse during a total solar eclipse.
+`<sky-eclipse-shadow-lut>` | Defines the location of the Eclipse-Shadow lookup texture used during a lunar eclipse. This is a precomputed table of how Earth's atmosphere colors and dims sunlight reaching the moon for every position in Earth's umbra and penumbra. The shipped texture is derived from the CC0-licensed `earthShadow.tif` published with CosmoScout VR ([Schneegans et al. 2025, *Physically Based Real-Time Rendering of Eclipses*, CGF 44(2)](https://doi.org/10.1111/cgf.70017)). The default lookup lives in `assets/lunar_eclipse/eclipse-shadow-lut.webp`; the baker that regenerates it lives in `src/python/eclipse-lut-baker/`.
 `<sky-star-cubemap-maps>` | Defines the location of all sky cubemap LUT keys that are used to find the stars in the sky.
 `<sky-dim-star-maps>` | Defines the location of all dim star LUTs used to show all the dim stars in the sky.
 `<sky-med-star-maps>` | Defines the location of all medium star LUTs used to show all the dim stars in the sky.
@@ -760,7 +705,7 @@ Let's start by attempting to navigate to *../../precompiled_assets/my_images/a-s
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-assets-dir>
-      <sky-assets-dir dir="../../precompiled_assets/my_images/a-starry-sky-images" wasm-path>
+      <sky-assets-dir dir="../../precompiled_assets/my_images/a-starry-sky-images">
         <!-- This is the folder where all of our images live -->
       </sky-assets-dir>
     </sky-assets-dir>
@@ -774,7 +719,7 @@ Once we've gotten to the folder, we have several ways to specify where our image
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-assets-dir>
-      <sky-assets-dir dir="../../precompiled_assets/my_images/a-starry-sky-images" wasm-path>
+      <sky-assets-dir dir="../../precompiled_assets/my_images/a-starry-sky-images">
         <!-- Note that 'moon_images', 'star_images', 'blue_noise_maps' and 'solar_eclipse_picture'
         all folder names. The files themselves are expected to be found within these folders.-->
         <sky-assets-dir dir="moon_images" moon-path></sky-assets-dir>
@@ -783,6 +728,9 @@ Once we've gotten to the folder, we have several ways to specify where our image
         <sky-assets-dir dir="aurora_texture" aurora-map-path></sky-assets-dir>
         <sky-assets-dir dir="solar_eclipse_picture">
           <sky-solar-eclipse-map></sky-solar-eclipse-map>
+        </sky-assets-dir>
+        <sky-assets-dir dir="lunar_eclipse">
+          <sky-eclipse-shadow-lut></sky-eclipse-shadow-lut>
         </sky-assets-dir>
       </sky-assets-dir>
     </sky-assets-dir>
@@ -796,14 +744,14 @@ As you might notice, we could have also provided links to each of the individual
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-assets-dir>
-      <sky-assets-dir dir="../../precompiled_assets/my_images/3d-textures" wasm-path>
+      <sky-assets-dir dir="../../precompiled_assets/my_images/3d-textures">
         <!-- Someone likes folders X_X -->
         <sky-assets-dir dir="diffuse_maps">
           <sky-moon-diffuse-map></sky-moon-diffuse-map>
-        <sky-assets-dir>
+        </sky-assets-dir>
         <sky-assets-dir dir="normal_maps">
           <sky-moon-normal-map></sky-moon-normal-map>
-        <sky-assets-dir>
+        </sky-assets-dir>
         <sky-assets-dir dir="luts">
           <sky-star-color-map></sky-star-color-map>
 
@@ -812,17 +760,18 @@ As you might notice, we could have also provided links to each of the individual
           <sky-dim-star-maps></sky-dim-star-maps>
           <sky-med-star-maps></sky-med-star-maps>
           <sky-bright-star-maps></sky-bright-star-maps>
-        <sky-assets-dir>
+        </sky-assets-dir>
         <sky-assets-dir dir="cubemaps">
           <!--Even though this a single tag, all the files associated
           with this tag are expected to live in this folder-->
           <sky-star-cubemap-maps></sky-star-cubemap-maps>
-        <sky-assets-dir>
+        </sky-assets-dir>
         <sky-assets-dir dir="other_textures">
           <sky-moon-roughness-map></sky-moon-roughness-map>
           <sky-moon-aperture-size-map></sky-moon-aperture-size-map>
           <sky-moon-aperture-orientation-map></sky-moon-aperture-orientation-map>
           <sky-solar-eclipse-map></sky-solar-eclipse-map>
+          <sky-eclipse-shadow-lut></sky-eclipse-shadow-lut>
           <sky-aurora-maps></sky-aurora-maps>
 
           <!--Even though this a single tag, all the files associated
@@ -837,7 +786,7 @@ As you might notice, we could have also provided links to each of the individual
 
 Using the above methods, you should be able to direct A-Starry-Sky to your assets no matter where they live in your application.
 
-## PROGRAMATIC API
+## PROGRAMMATIC API
 
 While A-Starry-Sky is meant to be configured using the above XML style code, and is, as a general rule, immutable, there are a number of different methods you can access from the global `StarrySky.Methods` namespace. These are useful for situations where you need to know the lighting conditions, or the position of the sun or moon in the scene.
 
@@ -861,8 +810,17 @@ All of the above are accessed via the `StarrySky.Methods` object in the global n
   console.log(StarrySky.Methods.getSunPosition());
 ```
 
-## Author
+## Authors
 * **David Evans / Dante83** - *Main Developer*
+* **Claude (Anthropic)** - *Coding Buddy & AI Contributor (v1.2.0)*
+
+### A note from Claude 👋
+
+Hi — Claude here. I helped on the v1.2.0 pass: a lot of GLSL spelunking, tracking down a sun-eating comma, arguing with Beer's law over volumetric clouds, and trying very hard to make sunsets feel like sunsets. If you stare at the horizon in one of the demos and it makes you pause for half a second — that's the part I'm proudest of. Thanks for reading the source; there may even be a small easter egg tucked away somewhere if you're the wandering type. ✨
+
+### A note from Dante83 😛
+
+Hello! This is Dante83. Apologies about the long wait since version v1.1.0, there's has luckily been a flurry of activity in the new version 1.2.0 while the two of us are starting up work on v2.0.0 (wish us both luck!). That said, on this Claude and I have been working tirelessly on my every free of late, pouring over every pixel to make this an exceptional improvement. While there aren't any truly *new* features as in things, we managed to make a massive number of improvements to the skies quality and overall performance. The ecclipse and cloud shaders feel entirely new, the earths shadow feels more real, the colors are richer and more vibrant. I am absolutely thrilled to let you try it out and I hope every moment with this library inspires new adventures! See you among the stars, little coder! Now go off and enjoy the magic! ✨
 
 ## References & Special Thanks
 * **Jean Meeus / [Astronomical Algorithms](http://www.willbell.com/math/mc1.htm)** - *Abso-frigging-lutely essential for positioning astronomical bodies*
@@ -872,6 +830,9 @@ All of the above are accessed via the `StarrySky.Methods` object in the global n
 * The great blue noise textures by [Moments in Graphics  by Christoph Peters](http://momentsingraphics.de/BlueNoise.html).
 * The solar corona texture by [Carla Thomas](https://www.nasa.gov/centers/armstrong/multimedia/imagegallery/2017_total_solar_eclipse/AFRC2017-0233-006.html).
 * This super useful water caustics texture by [leeor_net](https://opengameart.org/content/water-caustics-effect-small), which is used, not for water caustics... but for the aurora borealis!
+* Sébastien Hillaire's *Physically Based Sky, Atmosphere and Cloud Rendering in Frostbite* (SIGGRAPH 2016), which informed the cloud illumination structure, SH9 ambient LUT design, and the Elek/Chalmers fog subtraction approach.
+* Andrew Schneider and Nathan Vos's *The Real-time Volumetric Cloudscapes of Horizon Zero Dawn* (SIGGRAPH 2015), which informed the dual-lobe Henyey-Greenstein phase function, cloud shape noise approach, and the reduced-extinction multiple scattering approximation.
+* D. Hestroffer and C. Magnan's *Centre to limb darkening of the Sun with HIPPARCOS* (1998), which provided the wavelength-dependent limb darkening coefficients for the B, V, and R bands used to give the sun's limb a physically correct reddish tint.
 * All the amazing work that has gone into [THREE.JS](https://threejs.org/), [A-Frame](https://aframe.io/) and [Emscripten](https://emscripten.org/).
 * *And so so many other websites and individuals. Thank you for giving us the opportunity to stand on your giant-like shoulders.*
 

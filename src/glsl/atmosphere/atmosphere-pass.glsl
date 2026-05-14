@@ -79,7 +79,7 @@ uniform sampler2D blueNoiseTexture;
 const float piOver2 = 1.5707963267948966192313;
 const float piTimes2 = 6.283185307179586476925286;
 const float pi = 3.141592653589793238462;
-const vec3 intensityVector = vec3(0.3, 0.59, 0.11);
+const vec3 intensityVector = vec3(0.2126, 0.7152, 0.0722); // BT.709 luminance weights
 
 #if($isSunPass)
   uniform float sunAngularDiameterCos;
@@ -89,10 +89,14 @@ const vec3 intensityVector = vec3(0.3, 0.59, 0.11);
   varying vec2 vUv;
   const float sunDiskIntensity = 30.0;
 
-  //From https://twiki.ph.rhul.ac.uk/twiki/pub/Public/Solar_Limb_Darkening_Project/Solar_Limb_Darkening.pdf
-  const float ac1 = 0.46787619;
-  const float ac2 = 0.67104811;
-  const float ac3 = -0.06948355;
+  //Solar limb darkening, per RGB band (B/V/R after Hestroffer & Magnan 1998).
+  //Each channel obeys I(mu)/I_center = ac1 + ac2*mu + 2*ac3*mu^2 and integrates
+  //to ~1 at the disc center (mu=1). At the limb (mu=0) red retains ~0.59,
+  //green ~0.47, blue ~0.30 -- the disc reddens toward its edge, complementing
+  //atmospheric reddening for a richer sunset.
+  const vec3 ac1 = vec3(0.590, 0.468, 0.300);
+  const vec3 ac2 = vec3(0.450, 0.671, 0.930);
+  const vec3 ac3 = vec3(-0.020, -0.069, -0.115);
 #elif($isMoonPass)
   uniform float starsExposure;
   uniform float moonExposure;
@@ -105,6 +109,8 @@ const vec3 intensityVector = vec3(0.3, 0.59, 0.11);
   uniform sampler2D moonRoughnessMap;
   uniform sampler2D moonApertureSizeMap;
   uniform sampler2D moonApertureOrientationMap;
+  uniform float earthshineIntensity;
+  uniform sampler2D eclipseShadowLUT;
   varying vec2 vUv;
 
   //Tangent space lighting
@@ -181,7 +187,7 @@ float noise(float x){
 
   float fastAiry(float r){
     //Variation of Airy Disk approximation from https://www.shadertoy.com/view/tlc3zM to create our stars brightness
-    float one_over_r_cubed = 1.0 / abs(r * r * r);
+    float one_over_r_cubed = 1.0 / max(abs(r * r * r), 1e-6);
     float gauss_r_over_1_4 = exp(-.5 * (0.71428571428 * r) * (0.71428571428 * r));
     return abs(r) < 1.88 ? gauss_r_over_1_4 : abs(r) > 6.0 ? 1.35 * one_over_r_cubed : (gauss_r_over_1_4 + 2.7 * one_over_r_cubed) * 0.5;
   }
@@ -203,7 +209,7 @@ float noise(float x){
 
   vec3 getStarColor(float temperature, float normalizedYPosition, float noise){
     //Convert our temperature to a z-coordinate
-    float zCoordinate = floor(sqrt((temperature - 2000.0) * (961.0 / 15000.0)));//range: [0-31]
+    float zCoordinate = floor(31.0 * sqrt((temperature - 2000.0) / 15000.0)); // T in [2000K,17000K] -> [0,31]
     vec2 uv = getUV2OffsetFromStarColorTemperature(zCoordinate, normalizedYPosition, noise);
 
     vec3 starColor = texture(starColorMap, uv).rgb;
@@ -219,7 +225,7 @@ float noise(float x){
 
     //Early out if we're too far away
     float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;
-    if(approximateDistanceOnSphereStar > 100.0){
+    if(approximateDistanceOnSphereStar > 10.0){
       return vec3(0.0);
     }
 
@@ -229,7 +235,7 @@ float noise(float x){
     float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);
 
     //Use the distance to the star to determine it's perceived twinkling
-    float starBrightness = pow(150.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);
+    float starBrightness = pow(100.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);
 
     //Modify the intensity and color of this star using approximation of stellar scintillation
     vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));
@@ -260,22 +266,45 @@ float noise(float x){
 #endif
 
 #if($isMoonPass)
+  //Sample the precomputed Eclipse-Shadow LuT (Schneegans et al. 2025) to get
+  //the RGB shadow color at this moon-disk pixel. LuT parameterization:
+  //  u_shadow = phi_sun / (phi_sun + phi_occ)  -- ratio of apparent radii
+  //  v_shadow = delta / (phi_sun + phi_occ)    -- normalized angle to shadow axis
+  //phi_sun, phi_occ, and delta are measured *from the moon's surface* (the
+  //observer position in the shadow). For the Earth-Moon-Sun system these are
+  //essentially fixed:
+  //  phi_sun_from_moon ~ R_sun / d_earth_sun       ~ 0.00465 rad
+  //  phi_occ_from_moon ~ R_earth / d_earth_moon    ~ 0.01657 rad
+  //  -> phi_sun + phi_occ                          ~ 0.02123 rad (~1.22 deg)
+  //  -> physical moon angular radius (R_moon/d_em) ~ 0.00452 rad (~0.26 deg)
+  //
+  //The project draws the moon at a *cinematic* angular size
+  //(<sky-moon-angular-diameter>, default 3.15 deg vs the physical ~0.5 deg)
+  //for visual impact. If we just sampled the LuT at the per-pixel delta from
+  //antisolar, the shadow would only cover the central ~1.22 deg of the
+  //inflated cinematic disk -- a tiny bite. To make the cinematic moon show
+  //a full eclipse the way the *physical* moon would, we map each cinematic-
+  //disk pixel back to its physical-moon-equivalent position, then look the
+  //LuT up at that physical delta. The result: when the moon center is in the
+  //umbra, the entire cinematic disk is dim red; when partially eclipsed, the
+  //gradient spans the whole cinematic disk; when not eclipsed at all
+  //(deltaCenter > 1.22 deg), every pixel clamps to v=1 -> (1, 1, 1).
+  const float U_SHADOW_LUNAR = 0.2193;
+  const float ECLIPSE_SHADOW_RADIUS_RAD = 0.02123;
+  const float PHYSICAL_MOON_RADIUS_RAD = 0.00452;
+
   vec3 getLunarEcclipseShadow(vec3 sphericalPosition){
-    //Determine the distance from this pixel to the center of the sun.
-    float distanceToPixel = distance(sphericalPosition, earthsShadowPosition);
-    float pixelToCenterDistanceInMoonDiameter = 4.0 * distanceToPixel * oneOverNormalizedLunarDiameter;
-    float umbDistSq = pixelToCenterDistanceInMoonDiameter * pixelToCenterDistanceInMoonDiameter * 0.5;
-    float pUmbDistSq = umbDistSq * 0.3;
-    float umbraBrightness = 0.5 + 0.5 * clamp(umbDistSq, 0.0, 1.0);
-    float penumbraBrightness = 0.15 + 0.85 * clamp(pUmbDistSq, 0.0, 1.0);
-    float totalBrightness = clamp(min(umbraBrightness, penumbraBrightness), 0.0, 1.0);
+    //physicalPerCinematic = physical_moon_radius / cinematic_moon_radius
+    //                     = PHYSICAL_MOON_RADIUS_RAD / (1 / (2 * oneOverNormalizedLunarDiameter))
+    //                     = 2 * PHYSICAL_MOON_RADIUS_RAD * oneOverNormalizedLunarDiameter
+    float physicalPerCinematic = 2.0 * PHYSICAL_MOON_RADIUS_RAD * oneOverNormalizedLunarDiameter;
+    vec3 scaledPos = normalize(moonPosition + (sphericalPosition - moonPosition) * physicalPerCinematic);
 
-    //Get color intensity based on distance from penumbra
-    vec3 colorOfLunarEcclipse = vec3(1.0, 0.45, 0.05);
-    float colorIntensity = clamp(16.0 * distanceToEarthsShadowSquared * oneOverNormalizedLunarDiameter * oneOverNormalizedLunarDiameter, 0.0, 1.0);
-    colorOfLunarEcclipse = clamp(colorOfLunarEcclipse + (1.0 - colorOfLunarEcclipse) * colorIntensity, 0.0, 1.0);
+    float cosDelta = clamp(dot(scaledPos, earthsShadowPosition), -1.0, 1.0);
+    float delta = acos(cosDelta);
+    float vShadow = clamp(delta / ECLIPSE_SHADOW_RADIUS_RAD, 0.0, 1.0);
 
-    return totalBrightness * colorOfLunarEcclipse;
+    return texture2D(eclipseShadowLUT, vec2(U_SHADOW_LUNAR, vShadow)).rgb;
   }
 #endif
 
@@ -343,10 +372,8 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
   //in combination with the aurora 'height' (which is a rough estimate for quantity)
   //to determine which aurora is visible. At this point, we are just faking it till
   //we can get more accurate values for simulating this.
-  vec3 auroraColor(float auroraNoiseValue, float heightOfRay, float avgElectronVelocityScalar){
-    vec3 excitedNitrogenSpectrumEmission = sRGBToLinear(vec4(nitrogenColor, 1.0)).rgb; //Visible in intense displays below 60-120km. (magenta)
-    vec3 molecularO2SpectralEmission = sRGBToLinear(vec4(molecularOxygenColor, 1.0)).rgb; //Below 100km-250km.
-    vec3 atomicOxygenSpectralEmission = sRGBToLinear(vec4(atomicOxygenColor, 1.0)).rgb; //Beginning at 150km-600km (red)
+  vec3 auroraColor(float auroraNoiseValue, float heightOfRay, float avgElectronVelocityScalar,
+                   vec3 excitedNitrogenSpectrumEmission, vec3 molecularO2SpectralEmission, vec3 atomicOxygenSpectralEmission){
 
     float h = heightOfRay - RADIUS_OF_EARTH;
     vec3 outputLightIntensity = vec3(0.0);
@@ -389,19 +416,24 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     vec3 linearAuroraGlow = vec3(0.0);
     float auroraBrightness = pow(150.0, min(starAndSkyExposureReduction, 2.7) * 0.20);
     if(rayInterceptStartTime > 0.0){
+      vec3 nitrogenLinear = sRGBToLinear(vec4(nitrogenColor, 1.0)).rgb;
+      vec3 molecularO2Linear = sRGBToLinear(vec4(molecularOxygenColor, 1.0)).rgb;
+      vec3 atomicOxygenLinear = sRGBToLinear(vec4(atomicOxygenColor, 1.0)).rgb;
       lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
       vec2 auroraNoiseTextureUV = vec2(lastPosition.x, lastPosition.z);
       auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);
-      auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
+      auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5, nitrogenLinear, molecularO2Linear, atomicOxygenLinear); //Setting the velocity value to a constant while we test this out.
       for(float i = 1.0; i < numberOfAuroraRaymarchingSteps; i++){
         //Determine the position of our raymarcher in the sky
-        float blueNoise = texture(blueNoiseTexture, vec2(lastPosition.x + uTime, lastPosition.z + uTime) * 0.0078125).r - 1.0;
-        float d = (rayDeltaT * (0.75 + 0.5 * blueNoise));
+        //Per-pixel, per-step blue noise lookup using screen coords
+        vec2 noiseUV = (gl_FragCoord.xy + vec2(i * 7.0, i * 11.0)) * 0.0078125;
+        float blueNoise = texture(blueNoiseTexture, noiseUV).r * 2.0 - 1.0;
+        float d = rayDeltaT * (0.75 + 0.5 * blueNoise);
         vec3 currentPosition = lastPosition + rayDirection * d;
 
         auroraNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);
         auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);
-        auroraColorValuef = auroraColor(auroraNoiseValue, currentPosition.y, 0.5); //Setting the velocity value to a constant while we test this out.
+        auroraColorValuef = auroraColor(auroraNoiseValue, currentPosition.y, 0.5, nitrogenLinear, molecularO2Linear, atomicOxygenLinear); //Setting the velocity value to a constant while we test this out.
 
         //Integrate using the trapezoidal rule
         linearAuroraGlow += 0.5 * (auroraColorValue0 + auroraColorValuef) * d;//We linearly scale by the longer distances to cancel out the effect of fewer samples
@@ -511,32 +543,74 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     vec3 offsetM1 = offsetM * rot1;
     vec3 offsetM2 = offsetM * rot2;
     vec3 offsetM3 = offsetM * rot3;
-    float simplexFractal = 0.5000152*simplex3d(offsetM1) + 0.2500305 * simplex3d(2.0 * offsetM2)
+    float baseFbm = 0.5000152*simplex3d(offsetM1) + 0.2500305 * simplex3d(2.0 * offsetM2)
     + 0.125061*simplex3d(4.0 * offsetM3) + 0.0625221 * simplex3d(8.0 * offsetM)
     + 0.031494*simplex3d(16.0 * offsetM1) + 0.0161132 * simplex3d(32.0 * offsetM2)
     + 0.008789*simplex3d(64.0 * offsetM3) + 0.0058875 * simplex3d(128.0 * offsetM);
-    simplexFractal = clamp(0.5 * simplexFractal + 0.5, 0.0, 1.0);
+    baseFbm = clamp(0.5 * baseFbm + 0.5, 0.0, 1.0);
     float fadeOut = linearGradient(1.0, cloudFadeOutStartPercent, heightPercentage);
     float fadeIn = linearGradient(0.0, cloudFadeInEndPercent, heightPercentage);
-    float cloudNoise = clamp(dot(texture(cloudLUTs, offsetM * 7.0).rgb, vec3(0.625, 0.125, 0.25)) + 0.09, 0.00, 1.0);
-    float simplexFractal1 = min(cloudDensity - simplexFractal * fadeIn * fadeOut, 0.0) / (cloudDensity - 1.0);
-    float simplexFractal2 = min(cloudDensity - mix(0.0, simplexFractal, cloudNoise) * fadeIn * fadeOut, 0.0) / (cloudDensity - 1.0);
-    return mix(simplexFractal1, simplexFractal2, linearGradient(0.0, cloudFadeInEndPercent + 0.05, heightPercentage));
+    // Height blend: 0 at cloud bottom, 1 at cloud top
+    float heightBlend = linearGradient(0.0, cloudFadeInEndPercent + 0.05, heightPercentage);
+    vec4 worleyTex = texture(cloudLUTs, offsetM * rot2 * 7.0);
+    float worleyCoarse = clamp(dot(worleyTex.rgb, vec3(0.625, 0.125, 0.25)) + 0.09, 0.0, 1.0);
+    // Perlin-Worley carving: applied at cloud top only, preserving FBM bumps at cloud bottom/sides
+    // This gives puffy rounded tops while keeping visible detail when looking up at clouds
+    float cloudBase = clamp(baseFbm - (1.0 - worleyCoarse) * 0.20 * heightBlend, 0.0, 1.0);
+    return min(cloudDensity - cloudBase * fadeIn * fadeOut, 0.0) / (cloudDensity - 1.0);
+  }
+
+  // Cheap 4-octave density for cone shadow sampling (avoids full 8-octave cost per shadow sample)
+  float cloudDensityFast(vec3 m, float cloudDensityParam, float heightPercentage) {
+    vec3 cloudOffset = -vec3(cloudVelocity * cloudTime / 500.0, 0.0);
+    cloudOffset = vec3(cloudOffset.x, 0.0, cloudOffset.y);
+    vec3 offsetM = (m + cloudOffset) * vec3(1.5E-4, 3.0E-4, 1.5E-4);
+    float fbm = 0.5000152*simplex3d(offsetM * rot1) + 0.2500305*simplex3d(2.0 * offsetM * rot2)
+    + 0.125061*simplex3d(4.0 * offsetM * rot3) + 0.0625221*simplex3d(8.0 * offsetM);
+    fbm = clamp(0.5 * fbm + 0.5, 0.0, 1.0);
+    float fadeOut = linearGradient(1.0, cloudFadeOutStartPercent, heightPercentage);
+    float fadeIn = linearGradient(0.0, cloudFadeInEndPercent, heightPercentage);
+    // Worley carving must match simplex3dFractal so shadow samples see the same bulge structure
+    float heightBlend = linearGradient(0.0, cloudFadeInEndPercent + 0.05, heightPercentage);
+    float worleyCoarse = clamp(dot(texture(cloudLUTs, offsetM * rot2 * 7.0).rgb, vec3(0.625, 0.125, 0.25)) + 0.09, 0.0, 1.0);
+    float cloudBase = clamp(fbm - (1.0 - worleyCoarse) * 0.20 * heightBlend, 0.0, 1.0);
+    return min(cloudDensityParam - cloudBase * fadeIn * fadeOut, 0.0) / (cloudDensityParam - 1.0);
   }
 
   float henyayGreenstein(float g, float cosOfVAndL){
-    return ONE_OVER_FOUR_PI * (1.0 - g * g) /  pow(1.0 + g * g - 2.0 * g * cosOfVAndL, 1.5);
+    float t = 1.0 + g * g - 2.0 * g * cosOfVAndL;
+    return ONE_OVER_FOUR_PI * (1.0 - g * g) / (t * sqrt(t));
   }
 
-  //https://www.shadertoy.com/view/4sjBDG
-  float hillaireHenyayGreenstein(float cosOfVAndL){
-    return mix(henyayGreenstein(-0.5, cosOfVAndL), henyayGreenstein(0.8, cosOfVAndL), 0.5);
+  //Three-lobe phase function: softened forward bulk (g=0.5), gentle
+  //backward (g=-0.2) for anti-sun pickup at high density, and a separate
+  //narrow silver-lining lobe (g=0.95, weight 0.04). The previous
+  //g=0.8/-0.3 dual-lobe gave a 256x sun/perpendicular ratio for the bulk
+  //(HG(0.8,1)=3.58 vs HG(0.8,0)=0.014) -- far above what real cumulus
+  //exhibits -- which made cumulonimbus viewed perpendicular to the sun
+  //read as dim flat haze. Decoupling silver into its own lobe keeps the
+  //bulk integrand soft (~32x ratio with g=0.5) so MS terms can carry the
+  //bulk diffuse component, while the narrow silver lobe (peak HG=62 at
+  //cos=1, weight 0.04 -> ~2.48 contribution, total cos=1 peak ~2.95)
+  //gives sun-edge sparkle that reads as visible glow. Silver weight is
+  //small because the lobe is very tall: at silver=0.10 the spike was
+  //4.6x the bulk forward and added an arc-welder sheen; at silver=0.01
+  //the peak was only ~1.10 (1/3 of the old dual-lobe's 3.58) and cloud
+  //tops looked flat-white with no glow. 0.04 sits between, restoring
+  //sun-edge pop without arc-welder.
+  float hillaireHenyayGreenstein(float cosOfVAndL, float density){
+    float forward = henyayGreenstein(0.5, cosOfVAndL);
+    float backward = henyayGreenstein(-0.2, cosOfVAndL);
+    float silver = henyayGreenstein(0.95, cosOfVAndL) * 0.04;
+    float w = clamp(density * 5.0, 0.0, 1.0);
+    return mix(forward, mix(forward, backward, 0.5), w) + silver;
   }
 
-  vec4 cloudRayMarcher(vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction, vec3 dominantLightDirection, vec3 dominantLightSourceColor, vec3 atmosphericFog){
+  vec4 cloudRayMarcher(vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction, vec3 sunSourceColor, vec3 moonSourceColor, vec3 atmosphericFog){
     //This is in meters
     float globalCloudStartHeight = cloudStartHeight + rayStartPosition.y;
     float globalCloudEndHeight = cloudEndHeight + rayStartPosition.y;
+    float cloudThickness = globalCloudEndHeight - globalCloudStartHeight;
     float rayStartPositionInKm = rayStartPosition.y * METERS_TO_KM;
     float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, rayStartPosition.y + cloudStartHeight  + RADIUS_OF_EARTH, cloudCutoffDistance);
     float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, rayStartPosition.y + cloudEndHeight  + RADIUS_OF_EARTH, cloudCutoffDistance);
@@ -546,46 +620,223 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
     float cloudDensity0;
     vec3 firstContactPosition = rayStartPosition;
     bool hasFirstContact = false;
+    // ambientFactor: steep sun-elevation fade. Moon weight reduced from
+    // 0.5 to 0.15 -- at twilight with moon at moderate elevation, the old
+    // 0.5 weight kept ambientFactor at ~0.25, which combined with the
+    // 8x->3x ambient coefficient still produced enough zenith-blue ambient
+    // to wash out the (correctly-reddened-but-DIM) sun direct/MS at
+    // alpenglow times. Real moonlight is ~1/400000 of sunlight; our HDR
+    // ratio is ~1/6 (heavily compressed), so the moon contribution to
+    // cloud-body ambient was overstated. 0.15 keeps full moon nights
+    // visibly silver but lets the sun's reddened direct path read as
+    // orange when it's the dominant source.
+    //
+    // Floor 0 (was 0.05): the 0.05 floor multiplied ambientLightPY which
+    // LightingManager pre-ramps with sunGate = max(0, sun.y*1.5 + 0.3),
+    // so pre-dawn (sun.y = -0.1 to -0.2) had hemispherical intensity 6x
+    // higher than late-night floor and a noticeably-blue Rayleigh-tinted
+    // color from the upper-atmosphere sky LUT. The 0.05 x that produced
+    // visible blue cloud tint at pre-dawn even with sky still nearly
+    // black. Floor 0 means clouds silhouette properly when both lights
+    // are below their cloud-local horizon -- direct+MS carry whenever
+    // there's any actual delivered light.
+    float ambientFactor = clamp(max(sunPosition.y * 2.0, moonPosition.y * 0.15), 0.0, 1.0);
+
+    // Dual-light path: compute sun and moon contributions independently and
+    // sum them at each step. Eliminates the dominance-switch jump that
+    // happened when picking ONE source at the sun/moon brightness crossover
+    // (direction flip -> cone shadow flip -> bright/dark cloud sides swap
+    // instantly). Now sun fades out smoothly via sunSourceColor while moon
+    // fades in via moonSourceColor -- both physically present.
+    //
+    // Skip flags are uniform across all pixels (driven by source colors which
+    // are uniform-derived), so the GPU branch is a free skip when one light
+    // is well below horizon. Mid-day skips moon, deep night skips sun, only
+    // ~30 min around twilight runs both.
+    //
+    // Sign convention: light positions are direction vectors FROM origin TO
+    // sun/moon. rayDirection is camera-into-scene. cosViewLight = dot(rayDir,
+    // lightDir) is the cos of the scattering angle: +1 = looking AT light
+    // (forward Mie peak / silver), -1 = looking away (backward HG).
+    bool computeSun = dot(sunSourceColor, vec3(1.0)) > 0.0;
+    bool computeMoon = dot(moonSourceColor, vec3(1.0)) > 0.0;
+    float cosViewSunLight = dot(rayDirection, sunPosition);
+    float cosViewMoonLight = dot(rayDirection, moonPosition);
+
+    // Cone shadow step size: 15% of cloud thickness per sample
+    float coneShadowStep = cloudThickness * 0.15;
+
     if(rayInterceptStartTime > 0.0){
       vec3 lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;
-      float heightPercentage = (lastPosition.y - globalCloudStartHeight) / (globalCloudEndHeight - globalCloudStartHeight);
+      float heightPercentage = (lastPosition.y - globalCloudStartHeight) / cloudThickness;
       cloudDensity0 = simplex3dFractal(lastPosition, cloudVelocity, cloudCoverage, heightPercentage);
       float cloudDensity = 0.0;
-      if(cloudDensity > 0.0){
+      if(cloudDensity0 > 0.0){
         firstContactPosition = lastPosition;
         hasFirstContact = true;
       }
 
+      //Jitter starting position using blue noise (before the loop). Full-step
+      //jitter is required -- half-step let visible banding rings through, and
+      //the buzz from full jitter is preferable. Real cleanup of the noise
+      //needs either much higher numberOfCloudMarchSteps or a TAA pass that
+      //averages over recent frames.
+      float cloudBlueNoise = texture(blueNoiseTexture, gl_FragCoord.xy * 0.0078125).r;
+      float startJitter = cloudBlueNoise * rayDeltaT;
+      lastPosition += rayDirection * startJitter;
+
       for(float i = 0.0; i < numberOfCloudMarchSteps; i++){
         //Determine the position of our raymarcher in the sky
         vec3 currentPosition = lastPosition + rayDirection * rayDeltaT;
-        heightPercentage = (currentPosition.y - globalCloudStartHeight) / (globalCloudEndHeight - globalCloudStartHeight);
+        heightPercentage = (currentPosition.y - globalCloudStartHeight) / cloudThickness;
 
-        //Calculate our transmittance to this point
+        //Calculate cloud density at this step
         float cloudDensityf = simplex3dFractal(currentPosition, cloudVelocity, cloudCoverage, heightPercentage);
         cloudDensity += 0.5 * (cloudDensity0 + cloudDensityf) * rayDeltaT;
         rayTransmittance = exp(-0.2 * cloudDensity);
 
-        //Determine the luminance
-        float innerTransmittance = clamp(1.0 - (1.0 - rayTransmittance), 0.0, 1.0);
+        //Empty-space skip: if there's no cloud at this sample, the entire
+        //lighting block (8 cone density samples for shadow + 2 transmittance
+        //LUT lookups + 2 phase evals + ambient) contributes 0 (everything
+        //multiplies through cloudDensityf = 0 via stepBase). Gating here
+        //avoids the wasted work. Trapezoidal density integration above and
+        //the cloudDensity0/lastPosition/early-exit updates below stay
+        //unconditional so accumulation and termination remain correct.
+        //Big win on clear-sky pixels (most of frame in typical scenes).
+        if(cloudDensityf > 0.0){
+          //Per-sample atmospheric transmittance Y param (independent of light dir).
+        //BUG FIX: currentPosition.y is in METERS with RADIUS_OF_EARTH*1000
+        //already baked in (see rayStartPosition construction in main()),
+        //so `currentPosition.y * METERS_TO_KM` already gives R_e + altitude
+        //in km. The previous form was adding RADIUS_OF_EARTH on top, producing
+        //~2*R_e + altitude (~12733 km) which clamped to Y=1 (top of atmosphere)
+        //in the LUT -- returning transmittance ~ (1,1,1) with NO reddening.
+        //That's why sun-lit clouds at sunset never got their orange tint:
+        //the per-sample atmospheric transmittance was always sampling the
+        //out-of-range top-of-atmosphere cell, giving white sun light to the
+        //cloud regardless of sun elevation.
+        float yLightSrc = parameterizationOfHeightToY(currentPosition.y * METERS_TO_KM);
+
+        // Powder + SHADOW_SIGMA_T factor are light-independent -- compute once.
         //
-        //NOTE: Turning this off because it's too hard on the GPU
-        //We will return to add this in when we get some performance improvements...
-        //Also, the GPU shortage over Mwah ha ha ha ha! This would be the inner loop
-        //scattering light back from the sun, but currently we allow 100% transmittance.
+        // Schneider Beer-Powder (HZD GDC 2015): density-dependent contrast --
+        // thin wisps dim sharply, dense puffs stay bright. Multiplier 6.0
+        // chosen so density 0.05 -> 0.26, density 0.3 -> 0.83. Direct only;
+        // MS terms keep their smooth fill so cores don't go fully dark.
         //
-        //Update our luminance
-        float lightSourceHeight = RADIUS_OF_EARTH + ((currentPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);
-        vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(dominantLightDirection.y, 0.0)), parameterizationOfHeightToY(lightSourceHeight));
-        vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
-        float scatteringToRayPoint = hillaireHenyayGreenstein(dot(dominantLightDirection, dominantLightDirection));
-        float scatteringToCamera = hillaireHenyayGreenstein(dot(rayDirection, dominantLightDirection));
-        luminance += 0.0003 * dominantLightSourceColor * dominantLightSourceAtmosphericTransmittance * innerTransmittance * rayDeltaT * rayTransmittance * scatteringToRayPoint * scatteringToCamera;
+        // SHADOW_SIGMA_T 0.32 calibrated for the 4-sample linear-near-weighted
+        // shadow scheme (CloudRenderer-style taper, our sample budget): 4
+        // evenly-spaced samples at mid-quartiles 0.125/0.375/0.625/0.875 of
+        // coneShadowStep, weights (4-k)/4 so closest sample contributes 1.0
+        // and farthest contributes 0.25 (sum 2.5, vs 4 for uniform). At
+        // uniform density the OD matches the previous 4-sample far-weighted
+        // scheme. The visual difference shows up at non-uniform density:
+        // bumps with another bump immediately above get sharply darker
+        // crevices (near-weighted), while bottoms of thick overcast get
+        // slightly lighter (far-weighted under-counted). Net effect is
+        // crisper cauliflower self-shadow.
+        // We tried 8 samples for noticeably better velvet but the 2x shadow
+        // cost wasn't worth it -- 4 near-weighted captures most of the gain
+        // for the same cost as the old 4 far-weighted.
+        float powder = 1.0 - exp(-cloudDensityf * 6.0);
+        const float SHADOW_SIGMA_T = 0.32;
+        float shadowFactor = SHADOW_SIGMA_T * coneShadowStep / 4.0;
+
+        // sigma_s = 0.18 (m^-1 coefficient on density). Below sigma_t=0.2
+        // for albedo ~0.9 -- slightly under physical (real cumulus is ~0.99)
+        // but tuned for our HDR scale + AESFilmic tonemap.
+        //
+        // The * cloudDensityf factor in the integrand ties luminance to local
+        // scattering material -- without it, a clear-air step contributes the
+        // same as a dense puff step.
+        //
+        // MS weights canonical Wrenninge a=b=0.5: MS1 weight 0.5 with 0.5x
+        // extinction reduction, MS2 weight 0.25 with 0.25x reduction.
+        vec3 stepBase = rayDeltaT * cloudDensityf * vec3(0.18);
+
+        // === SUN CONTRIBUTION ===
+        if(computeSun){
+          vec2 uvSun = vec2(parameterizationOfCosOfViewZenithToX(max(sunPosition.y, 0.0)), yLightSrc);
+          vec3 sunAtmoTrans = texture(transmittance, uvSun).rgb;
+
+          // 4 shadow samples at mid-quartiles of coneShadowStep, linearly
+          // near-weighted. See SHADOW_SIGMA_T comment above for rationale.
+          vec3 ssp0 = currentPosition + sunPosition * coneShadowStep * 0.125;
+          vec3 ssp1 = currentPosition + sunPosition * coneShadowStep * 0.375;
+          vec3 ssp2 = currentPosition + sunPosition * coneShadowStep * 0.625;
+          vec3 ssp3 = currentPosition + sunPosition * coneShadowStep * 0.875;
+          float sh0 = clamp((ssp0.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+          float sh1 = clamp((ssp1.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+          float sh2 = clamp((ssp2.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+          float sh3 = clamp((ssp3.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+          float sd0 = cloudDensityFast(ssp0, cloudCoverage, sh0);
+          float sd1 = cloudDensityFast(ssp1, cloudCoverage, sh1);
+          float sd2 = cloudDensityFast(ssp2, cloudCoverage, sh2);
+          float sd3 = cloudDensityFast(ssp3, cloudCoverage, sh3);
+          float sunOD = shadowFactor * (sd0 * 1.0 + sd1 * 0.75 + sd2 * 0.5 + sd3 * 0.25);
+          float sunShB = exp(-sunOD);
+          float sunShB1 = exp(-sunOD * 0.5);
+          float sunShB2 = exp(-sunOD * 0.25);
+
+          float phaseSun = hillaireHenyayGreenstein(cosViewSunLight, cloudDensityf);
+          float phaseSunMS = mix(phaseSun, ONE_OVER_FOUR_PI, 0.5);
+
+          vec3 sunBase = stepBase * sunSourceColor * sunAtmoTrans;
+          luminance += sunBase * rayTransmittance * sunShB * phaseSun * powder;
+          luminance += 0.5 * sunBase * exp(-0.1 * cloudDensity) * sunShB1 * phaseSunMS;
+          luminance += 0.25 * sunBase * exp(-0.05 * cloudDensity) * sunShB2 * ONE_OVER_FOUR_PI;
+        }
+
+        // === MOON CONTRIBUTION ===
+        if(computeMoon){
+          vec2 uvMoon = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), yLightSrc);
+          vec3 moonAtmoTrans = texture(transmittance, uvMoon).rgb;
+
+          vec3 msp0 = currentPosition + moonPosition * coneShadowStep * 0.125;
+          vec3 msp1 = currentPosition + moonPosition * coneShadowStep * 0.375;
+          vec3 msp2 = currentPosition + moonPosition * coneShadowStep * 0.625;
+          vec3 msp3 = currentPosition + moonPosition * coneShadowStep * 0.875;
+          float mh0 = clamp((msp0.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+          float mh1 = clamp((msp1.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+          float mh2 = clamp((msp2.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+          float mh3 = clamp((msp3.y - globalCloudStartHeight) / cloudThickness, 0.0, 1.0);
+          float md0 = cloudDensityFast(msp0, cloudCoverage, mh0);
+          float md1 = cloudDensityFast(msp1, cloudCoverage, mh1);
+          float md2 = cloudDensityFast(msp2, cloudCoverage, mh2);
+          float md3 = cloudDensityFast(msp3, cloudCoverage, mh3);
+          float moonOD = shadowFactor * (md0 * 1.0 + md1 * 0.75 + md2 * 0.5 + md3 * 0.25);
+          float moonShB = exp(-moonOD);
+          float moonShB1 = exp(-moonOD * 0.5);
+          float moonShB2 = exp(-moonOD * 0.25);
+
+          float phaseMoon = hillaireHenyayGreenstein(cosViewMoonLight, cloudDensityf);
+          float phaseMoonMS = mix(phaseMoon, ONE_OVER_FOUR_PI, 0.5);
+
+          vec3 moonBase = stepBase * moonSourceColor * moonAtmoTrans;
+          luminance += moonBase * rayTransmittance * moonShB * phaseMoon * powder;
+          luminance += 0.5 * moonBase * exp(-0.1 * cloudDensity) * moonShB1 * phaseMoonMS;
+          luminance += 0.25 * moonBase * exp(-0.05 * cloudDensity) * moonShB2 * ONE_OVER_FOUR_PI;
+        }
+
+        // Height-modulated ambient inside the loop (Enscape shadertoy style,
+        // ref: https://www.shadertoy.com/view/4dSBDt). Quadratic ramp on
+        // h*h with floor 0.05 concentrates ambient near cloud tops so dense
+        // overcast bottoms drop to ~1/30 of the top brightness -- gives the
+        // dramatic ominous-dark cumulus underside character of stormy
+        // weather. Was previously linear 0.2->1.5 (1/7.5 ratio), which left
+        // bottoms readably grey rather than dim. The trailing *1.5 boost
+        // was dropped -- heightAmbientFactor already maxes at 1.5 at cloud
+        // top, so the extra multiplier was double-dipping and pushed
+        // shadow-side cloud tops to nearly the same tonemapped brightness
+        // as direct-sunlit faces, killing cauliflower contrast.
+        float heightAmbientFactor = mix(0.05, 1.5, heightPercentage * heightPercentage);
+        luminance += 0.2 * rayTransmittance * rayDeltaT * cloudDensityf * heightAmbientFactor * ambientLightPY * ambientFactor;
+        } // end empty-space skip gate
 
         //Update previous values
         cloudDensity0 = cloudDensityf;
         lastPosition = currentPosition;
-        if(cloudDensity > 0.0 && !hasFirstContact){
+        if(cloudDensityf > 0.0 && !hasFirstContact){
           firstContactPosition = lastPosition;
           hasFirstContact = true;
         }
@@ -594,17 +845,85 @@ float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float heig
         }
       }
     }
-    luminance += 0.09 * ambientLightPY * length(dominantLightSourceColor) * (1.0 - rayTransmittance);
     if(hasFirstContact){
-      float lightSourceHeight = RADIUS_OF_EARTH + 2.0 * ((rayStartPosition.y * METERS_TO_KM) - RADIUS_OF_EARTH);
-      vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(normalize(firstContactPosition.y), 0.0)), parameterizationOfHeightToY(lightSourceHeight));
-      vec3 dominantLightSourceAtmosphericTransmittance = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
-      vec3 distVect = firstContactPosition - rayStartPosition;
-      luminance *= dominantLightSourceAtmosphericTransmittance * exp(-2.5E-5 * sqrt(dot(distVect, distVect)));
-      luminance += atmosphericFog * (1.0 - exp(-2.5E-5 * sqrt(dot(distVect, distVect))));
+      //Proper atmospheric perspective using the Elek/Chalmers LUT subtraction:
+      //  S(viewer->cloud) = S(viewer->inf) - T(viewer->cloud) * S(cloud->inf)
+      //The inscattering LUTs don't have earth shadow baked in (that's applied
+      //post-hoc in linearAtmosphericPass), so this naturally gives shadow-free
+      //fog for the short near-ground viewer-to-cloud path.
+      float viewCosZenith = max(rayDirection.y, 0.0);
+      float xParam = parameterizationOfCosOfViewZenithToX(viewCosZenith);
+      float observerR = rayStartPosition.y * METERS_TO_KM;
+      float cloudR = firstContactPosition.y * METERS_TO_KM;
+      float yObs = parameterizationOfHeightToY(observerR);
+      float yCloud = parameterizationOfHeightToY(cloudR);
+
+      //Viewer-to-cloud transmittance: T(v->c) = T(v->inf) / T(c->inf)
+      vec3 T_obs = texture(transmittance, vec2(xParam, yObs)).rgb;
+      vec3 T_cloud = texture(transmittance, vec2(xParam, yCloud)).rgb;
+      vec3 T_path = T_obs / max(T_cloud, vec3(0.001));
+
+      //Attenuate cloud luminance by viewer-to-cloud extinction
+      luminance *= T_path;
+
+      //Compute inscattering along viewer-to-cloud path for sun
+      float zSun = parameterizationOfCosOfSourceZenithToZ(sunPosition.y);
+      vec3 uv3ObsSun = vec3(xParam, yObs, zSun);
+      vec3 uv3CloudSun = vec3(xParam, yCloud, zSun);
+      vec3 fogMieSun = max(texture(mieInscatteringSum, uv3ObsSun).rgb - T_path * texture(mieInscatteringSum, uv3CloudSun).rgb, vec3(0.0));
+      vec3 fogRaySun = max(texture(rayleighInscatteringSum, uv3ObsSun).rgb - T_path * texture(rayleighInscatteringSum, uv3CloudSun).rgb, vec3(0.0));
+      float cosViewSun = dot(rayDirection, sunPosition);
+      // Soft-saturate the Mie phase peak on the viewer->cloud fog inscatter
+      // path. miePhaseFunction (Cornette-Shanks, g~0.76) peaks at ~50 at
+      // cos=1 (looking toward the sun), which produced the "arc light" /
+      // "edges glowing" behaviour at sunset where the short fog path
+      // multiplied by the unbounded peak overwhelmed cloud silhouettes.
+      // Soft form `x / (1 + x/CAP)` smoothly asymptotes to CAP=10 with
+      // no kink -- at cos=1 reduces ~50->8.3, at cos=0.9 reduces ~4.6->3.2,
+      // perpendicular angles unaffected. Hard min(x, 10) would create a
+      // visible ring at the cap transition.
+      float miePhaseSun = miePhaseFunction(cosViewSun);
+      float cappedMiePhaseSun = miePhaseSun / (1.0 + miePhaseSun * 0.1);
+      // Extra smoothstep gate on cloud-fog (in addition to sunHorizonFade^2):
+      // C++ horizonFade only zeros at sun 18 deg below horizon, so at nautical
+      // twilight (sun -6 deg to -10 deg) sunHorizonFade is still 0.4-0.7. Squared
+      // and times scatteringSunIntensity (default 20), the fog term gets a
+      // ~3-10x multiplier on dim-blue Rayleigh LUT values -- visible blue
+      // tint on cloud bodies even with sky still nearly black. The sky
+      // pass uses sunHorizonFade^2 unchanged because it SHOULD glow during
+      // astronomical twilight; clouds shouldn't pick up the same scatter
+      // since they're being viewed against an already-near-dark sky.
+      // Cuts fog at sun -6 deg (smoothstep -0.10 -> -0.02 in y units, ~ -5.7 deg -> -1.1 deg).
+      float fogGateSun = smoothstep(-0.10, -0.02, sunPosition.y);
+      vec3 fogSun = sunHorizonFade * sunHorizonFade * fogGateSun * scatteringSunIntensity * (cappedMiePhaseSun * fogMieSun + rayleighPhaseFunction(cosViewSun) * fogRaySun);
+
+      //Compute inscattering along viewer-to-cloud path for moon
+      float zMoon = parameterizationOfCosOfSourceZenithToZ(moonPosition.y);
+      vec3 uv3ObsMoon = vec3(xParam, yObs, zMoon);
+      vec3 uv3CloudMoon = vec3(xParam, yCloud, zMoon);
+      vec3 fogMieMoon = max(texture(mieInscatteringSum, uv3ObsMoon).rgb - T_path * texture(mieInscatteringSum, uv3CloudMoon).rgb, vec3(0.0));
+      vec3 fogRayMoon = max(texture(rayleighInscatteringSum, uv3ObsMoon).rgb - T_path * texture(rayleighInscatteringSum, uv3CloudMoon).rgb, vec3(0.0));
+      float cosViewMoon = dot(rayDirection, moonPosition);
+      // Same soft-cap as the sun path -- moonlight is dimmer overall but the
+      // forward Mie peak still produces a visible bright halo around the
+      // moon when looking through cloud fog at low altitude. Same fog gate
+      // as sun for symmetric behavior -- moon fog dies when moon is well
+      // below horizon rather than persisting via permissive C++ horizonFade.
+      float miePhaseMoon = miePhaseFunction(cosViewMoon);
+      float cappedMiePhaseMoon = miePhaseMoon / (1.0 + miePhaseMoon * 0.1);
+      float fogGateMoon = smoothstep(-0.10, -0.02, moonPosition.y);
+      vec3 fogMoon = moonHorizonFade * moonHorizonFade * fogGateMoon * scatteringMoonIntensity * moonLightColor * (cappedMiePhaseMoon * fogMieMoon + rayleighPhaseFunction(cosViewMoon) * fogRayMoon);
+
+      luminance += fogSun + fogMoon;
     }
 
-    return vec4(luminance * max(sunHorizonFade, moonHorizonFade), 1.0 - rayTransmittance); //Linear multiplier for artistic control
+    //No final * max(sunHorizonFade, moonHorizonFade): sun/moonSourceColor
+    //are already faded via sunCloudFade/moonCloudFade in main() (so direct +
+    //MS terms fade naturally), and fogSun/fogMoon carry their own ^2 fade.
+    //Multiplying again here produced double-fade (fade*fade for direct,
+    //fade^3 for fog) which collapsed twilight clouds to near-black before
+    //the sun had even crossed the horizon.
+    return vec4(luminance, 1.0 - rayTransmittance);
   }
 #endif
 
@@ -620,13 +939,24 @@ vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 spher
   vec3 mieShadow = intensityFader * texture(mieLookupTable, uv3_2).rgb;
   vec3 rayleighShadow = intensityFader * texture(rayleighLookupTable, uv3_2).rgb;
 
-  //Percent of sun visible across the length of the ray extending in this direction
-  float percentShadowMie = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT, ONE_OVER_MIE_SCALE_HEIGHT);
-  float percentShadowRayleigh = earthsShadowIntensity(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT, ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
-  interpolatedMieScattering = mix(mieShadow, interpolatedMieScattering, percentShadowMie);
-  interpolatedRayleighScattering = mix(rayleighShadow, interpolatedRayleighScattering, percentShadowRayleigh);
+  //Percent of sun visible along the view ray. Geometry (the 8-iteration bisection)
+  //is computed ONCE -- only the final density weighting differs between Mie and
+  //Rayleigh, so this halves the per-pixel shadow-test cost for sun + moon.
+  EarthShadowGeometry shadowGeom = earthsShadowGeometry(sphericalPosition, sourcePosition, 0.0, ATMOSPHERE_HEIGHT);
+  float percentShadowMie = earthsShadowDensityRatio(shadowGeom, ONE_OVER_MIE_SCALE_HEIGHT);
+  float percentShadowRayleigh = earthsShadowDensityRatio(shadowGeom, ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+  //Clamp shadow result to never exceed the original inscattering - the shadow
+  //should only ever darken, never brighten (the horizon-sampled mieShadow/rayleighShadow
+  //can be brighter than the actual view-direction inscattering at high zenith angles)
+  interpolatedMieScattering = min(mix(mieShadow, interpolatedMieScattering, percentShadowMie), interpolatedMieScattering);
+  interpolatedRayleighScattering = min(mix(rayleighShadow, interpolatedRayleighScattering, percentShadowRayleigh), interpolatedRayleighScattering);
 
-  return pow(intensityFader, 3.0) * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);
+  // Twilight horizon falloff: squared (not cubed) so post-sunset Rayleigh +
+  // Mie inscattering still glows visibly. Cube was a hack masking that the
+  // Elek z-parameterization squashes everything when cos(sunZenith) goes
+  // negative; squaring is closer to physics and the difference is barely
+  // visible above the horizon.
+  return intensityFader * intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);
 }
 
 //Including this because someone removed this in a future version of THREE. Why?!
@@ -638,7 +968,7 @@ void main(){
 
   #if($isMeteringPass)
     float rho = length(vUv.xy);
-    float height = sqrt(1.0 - rho * rho);
+    float height = sqrt(max(0.0, 1.0 - rho * rho));
     float phi = piOver2 - atan(height, rho);
     float theta = atan(vUv.y, vUv.x);
     vec3 sphericalPosition;
@@ -672,7 +1002,14 @@ void main(){
   //Atmosphere (We multiply the scattering sun intensity by vec3 to convert it to a vector)
   vec3 solarAtmosphericPass = linearAtmosphericPass(sunPosition, scatteringSunIntensity * vec3(1.0), sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, sunHorizonFade, uv2OfTransmittance);
   vec3 lunarAtmosphericPass = linearAtmosphericPass(moonPosition, scatteringMoonIntensity * moonLightColor, sphericalPosition, mieInscatteringSum, rayleighInscatteringSum, moonHorizonFade, uv2OfTransmittance);
-  vec3 baseSkyLighting = 0.25 * vec3(2E-3, 3.5E-3, 9E-3) * transmittanceFade;
+  //Night-sky baseline ("airglow") -- moonless desert tail of the spectrum.
+  //RGB ratio captures atmospheric airglow + zodiacal washout (slightly bluer
+  //than starlight). Faded with moon presence: a bright moon overwhelms
+  //airglow for the human eye (loss of dark adaptation), so we dim the
+  //baseline by up to 50% as the moon climbs above the horizon.
+  const vec3 SKY_BASELINE = vec3(2E-3, 3.5E-3, 9E-3);
+  float airglowIntensity = 0.25 * (1.0 - 0.5 * moonHorizonFade);
+  vec3 baseSkyLighting = airglowIntensity * SKY_BASELINE * transmittanceFade;
 
   #if(!$isSunPass)
     float starAndSkyExposureReduction = starsExposure - 10.0 * dot(LinearTosRGB(vec4(solarAtmosphericPass + lunarAtmosphericPass, 1.0)).rgb, intensityVector);
@@ -684,7 +1021,7 @@ void main(){
     if(vLocalPosition.y >= 0.0){
       //Get the stellar starting id data from the galactic cube map
       vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);
-      vec4 starHashData = textureCube(starHashCubemap, normalizedGalacticCoordinates);
+      vec4 starHashData = texture(starHashCubemap, normalizedGalacticCoordinates);
 
       //Red
       float scaledBits = starHashData.r * 255.0;
@@ -742,6 +1079,11 @@ void main(){
   #if($auroraEnabled)
     //Add aurora lighting if it exists
     auroraLighting = auroraRayMarchPass(vec3(0.0, RADIUS_OF_EARTH, 0.0), sphericalPosition, starAndSkyExposureReduction);
+    //Aurora emits at 100-600 km altitude -- well above the bulk of the
+    //atmosphere -- so applying the full ground-to-TOA transmittance here is
+    //technically over-counting Mie attenuation (Mie is low-altitude). In
+    //practice Mie at the relevant viewing angles is small enough that the
+    //correct-but-cheaper approximation matches reality to within ~5%.
     auroraLighting = auroraLighting * transmittanceFade;
   #endif
 
@@ -753,17 +1095,50 @@ void main(){
   //Calculate the impact of clouds on the scene
   //These should be pulled out into uniforms that are determined by the initial parameters
   #if(!$isMeteringPass && $cloudsEnabled)
-    vec3 dominantLightSourcePosition = moonPosition;
-    vec3 dominantLightSourceColor = 0.3 * scatteringMoonIntensity * moonLightColor * moonPosition.y;
-    vec2 uv2OfTransmittanceOfPrimaryLightSource = vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), parameterizationOfHeightToY(RADIUS_OF_EARTH + clamp(cameraHeight + vWorldPosition.y * METERS_TO_KM, 0.0, ATMOSPHERE_HEIGHT)));
-    vec3 transmittanceOfPrimaryLightSource = texture(transmittance, uv2OfTransmittanceOfPrimaryLightSource).rgb;
-    vec3 sunDominantLightSourceColor = scatteringSunIntensity * vec3(1.0) * sunPosition.y;
-    if(sunDominantLightSourceColor.b > dominantLightSourceColor.b){
-      dominantLightSourceColor = sunDominantLightSourceColor;
-      dominantLightSourcePosition = sunPosition;
-    }
+    //Cloud-illumination strength uses CLOUD-LOCAL horizon, not world horizon.
+    //A cloud at altitude h has its horizon dipped below the world horizon by
+    //sqrt(2h/R_earth) (small-angle approximation). For default 1000-2500m
+    //clouds the dip is ~1.34deg; for 10km cirrus, ~3.2deg. So a moon at
+    //-2deg world-elevation is still fully above a 10km cirrus local horizon
+    //and should be lighting it even though it appears to be below horizon
+    //from the ground observer perspective. The previous sunPosition.y-based
+    //fade got this wrong (clouds went dark as soon as the light source
+    //crossed the world horizon, regardless of cloud altitude).
+    //
+    //Above the cloud local horizon: full intensity (clouds are 3D
+    //scatterers, not flat surfaces, so no Lambert cosine). Below: smoothstep
+    //fades over a ~5.7deg band so the transition is soft. The atmospheric
+    //transmittance LUT inside the marcher still reddens the light at low
+    //sun, so sunset color comes through correctly without needing fade
+    //gymnastics here. The marcher 0.001 scale is halved to 0.0005 to
+    //compensate for losing Lambert (which was eating ~half the brightness
+    //at typical daytime sun elevations).
+    float cloudMidHeightKm = (cloudStartHeight + cloudEndHeight) * 0.0005;
+    float cloudHorizonDip = sqrt(2.0 * cloudMidHeightKm / RADIUS_OF_EARTH);
+    float effectiveSunY = sunPosition.y + cloudHorizonDip;
+    float effectiveMoonY = moonPosition.y + cloudHorizonDip;
+    float sunCloudFade = smoothstep(-0.1, 0.05, effectiveSunY);
+    float moonCloudFade = smoothstep(-0.1, 0.05, effectiveMoonY);
 
-    vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + clamp(cameraHeight * 1000.0 + vWorldPosition.y, 0.0, ATMOSPHERE_HEIGHT), vWorldPosition.z), sphericalPosition, 0.0, dominantLightSourcePosition, dominantLightSourceColor, solarAtmosphericPass + lunarAtmosphericPass + auroraLighting);
+    //Pre-transmittance source colors. Pass these into the cloud marcher
+    //unmodified -- the marcher re-applies atmospheric transmittance
+    //per-cloud-sample (which is the physically correct place since each
+    //cloud sample is at a different altitude with a different path length
+    //to the sun/moon).
+    vec3 sunSourceColor = scatteringSunIntensity * vec3(1.0) * sunCloudFade;
+    vec3 moonSourceColor = 0.3 * scatteringMoonIntensity * moonLightColor * moonCloudFade;
+
+    //Pass BOTH sun and moon source colors into the marcher. The previous
+    //dominant-light-selection here picked one source by total post-transmittance
+    //luminance, which produced a hard switch at the crossover (sun ~3 deg below
+    //horizon): cone shadow direction flipped, phase function flipped, bright
+    //sides of clouds swapped instantly. The marcher now sums both light paths
+    //per step, with adaptive skip when one source's color is zero (mid-day
+    //skips moon, deep night skips sun, only ~30 min of twilight runs both).
+
+    //atmosphericFog param is unused - atmospheric perspective is now computed
+    //inside the ray marcher using the Elek/Chalmers LUT subtraction method
+    vec4 cloudLighting = cloudRayMarcher(vec3(vWorldPosition.x, RADIUS_OF_EARTH * 1000.0 + clamp(cameraHeight * 1000.0 + vWorldPosition.y, 0.0, ATMOSPHERE_HEIGHT), vWorldPosition.z), sphericalPosition, 0.0, sunSourceColor, moonSourceColor, vec3(0.0));
   #endif
 
   //Sun and Moon layers
@@ -779,8 +1154,7 @@ void main(){
       combinedPass = combinedPass + sunTexel;
     #endif
 
-    //And bring it back to the normal sRGB afterwards afterwards
-    combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;
+    //Leave in linear HDR for bloom - tonemapping happens in the output shader
   #elif($isMoonPass)
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;
     vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);
@@ -799,8 +1173,7 @@ void main(){
       combinedPass = mix(combinedPass, cloudLighting.rgb, cloudLighting.a);
     #endif
 
-    //And bring it back to the normal sRGB afterwards afterwards
-    combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;
+    //Leave in linear HDR for bloom - tonemapping happens in the output shader
   #elif($isMeteringPass)
     //Cut this down to the circle of the sky ignoring the galatic lighting
     float circularMask = 1.0 - step(1.0, rho);
@@ -835,7 +1208,14 @@ void main(){
     combinedPass = LinearTosRGB(vec4(MyAESFilmicToneMapping(combinedPass), 1.0)).rgb;
 
     //Now apply the blue noise
-    combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + ivec2(128.0 * noise(uTime),  128.0 * noise(uTime + 511.0))) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);
+    //Use golden ratio for quasi-random temporal offset (R2 sequence)
+    float goldenRatio = 1.61803398875;
+    float framePhase = fract(uTime * 0.001);
+    ivec2 temporalOffset = ivec2(
+      128.0 * fract(framePhase * goldenRatio),
+      128.0 * fract(framePhase * goldenRatio * goldenRatio)
+    );
+    combinedPass += (texelFetch(blueNoiseTexture, (ivec2(gl_FragCoord.xy) + temporalOffset) % 128, 0).rgb - vec3(0.5)) / vec3(128.0);
   #endif
 
   #if($isMeteringPass)

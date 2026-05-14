@@ -6,7 +6,7 @@
       //or use the advanced fog lighting method - that way we destroy nothing...
       //Although if advanced fog is disabled, none of this should happen at all.
       if(fogFar <= 0.0){
-      	vFogWorldPosition = worldPosition.xyz;
+      	vFogWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;
 
         //
         //Sun values
@@ -15,49 +15,17 @@
         vec3 sunPosition = convertRhoThetaToXYZ(sunAltitudeAzimuth);
         vec2 moonAltitudeAzimuth = vec2(fogColor.z, fogNear); //Swap the sign bit on fogNear
         vec3 moonPosition = convertRhoThetaToXYZ(moonAltitudeAzimuth);
-      	vSunDirection = normalize(sunPosition);
-      	vSunE = sourceIntensity( dot( vSunDirection, up ), 1300.0 ); //Sun EE is constant at 1300.0
-        vSunE = solarEclipseLightingModifier(sunPosition, moonPosition) * vSunE;
-      	vSunfade = 1.0 - clamp( 1.0 - exp( ( sunPosition.y ) ), 0.0, 1.0 );
-
-      	float rayleighCoefficientSun = rayleigh - ( 1.0 - vSunfade );
-
-        // extinction (absorbtion + out scattering)
-      	// rayleigh coefficients
-      	vBetaRSun = totalRayleigh * rayleighCoefficientSun;
-
-        // mie coefficients
-      	vBetaM = totalMie( turbidity ) * mieCoefficient;
+        vSunDirection = normalize(sunPosition);
+        vSunE = sourceIntensityWithExtinction( vSunDirection, 1300.0 ); //Sun EE constant; Kasten-Young air mass x beta extinction reddens at low altitudes
+        vSunE *= solarEclipseLightingModifier(sunPosition, moonPosition);
 
         //
         //Moon
         //
         float moonEE = -fogFar; //the uniform's true value
         vMoonDirection = normalize(moonPosition);
-      	vMoonE = sourceIntensity( dot( vMoonDirection, up ), moonEE);
+        vMoonE = sourceIntensityWithExtinction( vMoonDirection, moonEE );
         vMoonLightColor = lunarEclipseLightingModifier(sunPosition, moonPosition);
-      	vMoonfade = 1.0 - clamp( 1.0 - exp( ( moonPosition.y ) ), 0.0, 1.0 );
-
-      	float rayleighCoefficientMoon = rayleigh - ( 1.0 * ( 1.0 - vMoonfade ) );
-
-      	// extinction (absorbtion + out scattering)
-      	// rayleigh coefficients
-      	vBetaRMoon = totalRayleigh * rayleighCoefficientMoon;
-
-        //Pixel
-        float fogPixelFade = 1.0 - clamp(1.0 - exp(normalize(vFogWorldPosition).y), 0.0, 1.0);
-        float rayleighCoefficientPixel = rayleigh - ( 1.0 * ( 1.0 - fogPixelFade ) );
-        vec3 betaRPixel = totalRayleigh * rayleighCoefficientPixel;
-        // optical length
-        // cutoff angle at 90 to avoid singularity in next formula.
-        float fogDistToPoint = length(vFogWorldPosition - cameraPosition) * groundFexDistanceMultiplier;
-
-        // combined extinction factor
-        float sR = fogDistToPoint;
-        float sM = fogDistToPoint;
-
-        // combined extinction factor
-        vFexPixel = sqrt(clamp(exp( -( betaRPixel * sR + vBetaM * sM ) ), 0.0, 1.0));
       }
       else if(fogNear < 0.0){
         //$$OCEAN_SHADER_SHADER_VERTEX_RESERVATION$$

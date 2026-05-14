@@ -78,23 +78,28 @@ void main(){
     //Prime our trapezoidal rule
     float previousMieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);
     float previousRayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+    //Tent-shaped ozone profile (Chappuis-band absorber). See transmittance.glsl
+    //for the 0.56 normalization rationale.
+    float previousOzoneDensity = max(0.0, 1.0 - abs(h - 25.0) / 15.0) * 0.56;
     float totalDensityMie = 0.0;
     float totalDensityRayleigh = 0.0;
+    float totalDensityOzone = 0.0;
 
     vec3 transmittancePaToP = vec3(1.0);
     vec2 uvt = vec2(parameterizationOfCosOfViewZenithToX(cosOfSunZenith), parameterizationOfHeightToY(r));
 
     vec3 gatheringFunction = gatherInscatteredLight(length(p), initialSunAngle);
     #if($isRayleigh)
-      vec3 previousInscattering = gatheringFunction * previousMieDensity * transmittancePaToP;
-    #else
       vec3 previousInscattering = gatheringFunction * previousRayleighDensity * transmittancePaToP;
+    #else
+      vec3 previousInscattering = gatheringFunction * previousMieDensity * transmittancePaToP;
     #endif
 
     //Integrate from Pa to Pb to determine the total transmittance
     //Using the trapezoidal rule.
     float mieDensity;
     float rayleighDensity;
+    float ozoneDensity;
     float integralOfOzoneDensityFunction;
     float r_p;
     float sunAngle;
@@ -112,9 +117,11 @@ void main(){
         //Iterate our progress through the transmittance along P
         mieDensity = exp(-h * ONE_OVER_MIE_SCALE_HEIGHT);
         rayleighDensity = exp(-h * ONE_OVER_RAYLEIGH_SCALE_HEIGHT);
+        ozoneDensity = max(0.0, 1.0 - abs(h - 25.0) / 15.0) * 0.56;
         totalDensityMie += (previousMieDensity + mieDensity) * chunkLength * 0.5;
         totalDensityRayleigh += (previousRayleighDensity + rayleighDensity) * chunkLength * 0.5;
-        integralOfOzoneDensityFunction = totalDensityRayleigh * OZONE_PERCENT_OF_RAYLEIGH;
+        totalDensityOzone += (previousOzoneDensity + ozoneDensity) * chunkLength * 0.5;
+        integralOfOzoneDensityFunction = totalDensityOzone * OZONE_PERCENT_OF_RAYLEIGH;
         transmittancePaToP = exp(-1.0 * (totalDensityRayleigh * RAYLEIGH_BETA + totalDensityMie * EARTH_MIE_BETA_EXTINCTION + integralOfOzoneDensityFunction * OZONE_BETA));
 
         //Now that we have the transmittance from Pa to P, get the transmittance from P to Pc
@@ -132,12 +139,16 @@ void main(){
         previousInscattering = inscattering;
         previousMieDensity = mieDensity;
         previousRayleighDensity = rayleighDensity;
+        previousOzoneDensity = ozoneDensity;
       }
     }
     #if($isRayleigh)
-      totalInscattering *= ONE_OVER_EIGHT_PI * RAYLEIGH_BETA;
+      totalInscattering *= RAYLEIGH_BETA;
     #else
-      totalInscattering *= ONE_OVER_EIGHT_PI * EARTH_MIE_BETA_EXTINCTION / 0.9;
+      //beta_sca = beta_ext x single-scattering albedo (0.9 for atmospheric Mie). Matches
+      //the cleanup in single-scattering.glsl -- phase function is fully normalized so
+      //no 1/(8pi) factor needed here.
+      totalInscattering *= EARTH_MIE_BETA_EXTINCTION * 0.9;
     #endif
   }
 

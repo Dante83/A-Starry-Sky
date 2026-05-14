@@ -51,7 +51,7 @@
 			const highPassShader = THREE.LuminosityHighPassShader;
 			this.highPassUniforms = THREE.UniformsUtils.clone( highPassShader.uniforms );
 			this.highPassUniforms[ 'luminosityThreshold' ].value = threshold;
-			this.highPassUniforms[ 'smoothWidth' ].value = 0.01;
+			this.highPassUniforms[ 'smoothWidth' ].value = 0.02;
 			this.materialHighPassFilter = new THREE.ShaderMaterial( {
 				uniforms: this.highPassUniforms,
 				vertexShader: highPassShader.vertexShader,
@@ -85,7 +85,7 @@
 			this.compositeMaterial.needsUpdate = true;
 			const bloomFactors = [ 1.0, 0.8, 0.6, 0.4, 0.2 ];
 			this.compositeMaterial.uniforms[ 'bloomFactors' ].value = bloomFactors;
-			this.bloomTintColors = [ new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1, 1, 1 ) ];
+			this.bloomTintColors = [ new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1.0, 0.98, 0.94 ), new THREE.Vector3( 1.0, 0.95, 0.88 ), new THREE.Vector3( 1.0, 0.92, 0.82 ), new THREE.Vector3( 1.0, 0.88, 0.75 ) ];
 			this.compositeMaterial.uniforms[ 'bloomTintColors' ].value = this.bloomTintColors; // copy material
 
 			if ( THREE.CopyShader === undefined ) {
@@ -152,6 +152,13 @@
 		}
 
 		render( renderer, writeBuffer, readBuffer, deltaTime, maskActive ) {
+
+			if ( !this._floatBlendReady ) {
+
+				renderer.getContext().getExtension( 'EXT_float_blend' );
+				this._floatBlendReady = true;
+
+			}
 
 			renderer.getClearColor( this._oldClearColor );
 			this.oldClearAlpha = renderer.getClearAlpha();
@@ -233,7 +240,7 @@
 			return new THREE.ShaderMaterial( {
 				defines: {
 					'KERNEL_RADIUS': kernelRadius,
-					'SIGMA': kernelRadius
+					'SIGMA': Math.max(1.0, kernelRadius / 2.0)
 				},
 				uniforms: {
 					'colorTexture': {

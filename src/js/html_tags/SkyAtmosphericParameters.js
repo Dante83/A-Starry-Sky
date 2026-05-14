@@ -47,9 +47,9 @@ StarrySky.DefaultData.skyAtmosphericParameters = {
   radiusOfEarth: 6366.7,
   ozonePercentOfRayleigh: 6e-7,
   mieDirectionalG: 0.8,
-  numberOfRaySteps: 30,
-  numberOfGatheringSteps: 30,
-  numberOfScatteringOrders: 7,
+  numberOfRaySteps: 60,
+  numberOfGatheringSteps: 32,
+  numberOfScatteringOrders: 4,
   sunAngularDiameter: 3.38,
   moonAngularDiameter: 3.15,
 };

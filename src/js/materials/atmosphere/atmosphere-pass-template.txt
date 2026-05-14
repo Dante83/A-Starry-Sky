@@ -8,8 +8,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       sunPosition: {value: new THREE.Vector3()},
       moonPosition: {value: new THREE.Vector3()},
       moonLightColor: {value: new THREE.Vector3()},
-      mieInscatteringSum: {value: new THREE.DataTexture3D()},
-      rayleighInscatteringSum: {value: new THREE.DataTexture3D()},
+      mieInscatteringSum: {value: new THREE.Data3DTexture()},
+      rayleighInscatteringSum: {value: new THREE.Data3DTexture()},
       transmittance: {value: null},
       sunHorizonFade: {value: 1.0},
       moonHorizonFade: {value: 1.0},
@@ -20,7 +20,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     }
 
     if(cloudsEnabled && !isMeteringShader){
-      uniforms.cloudLUTs = {value: new THREE.DataTexture3D()};
+      uniforms.cloudLUTs = {value: new THREE.Data3DTexture()};
       uniforms.ambientLightPY = {value: new THREE.Vector3(0, 181, 226)};
       uniforms.cloudCoverage = {value: 0.5};
       uniforms.cloudVelocity = {value: new THREE.Vector2(0.0, 0.0)};
@@ -77,6 +77,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonApertureSizeMap = {value: null};
       uniforms.moonApertureOrientationMap = {value: null};
       uniforms.cameraPosition = {value: new THREE.Vector3()};
+      uniforms.earthshineIntensity = {value: 0.0};
+      uniforms.eclipseShadowLUT = {value: null};
     }
 
     if(!isSunShader){

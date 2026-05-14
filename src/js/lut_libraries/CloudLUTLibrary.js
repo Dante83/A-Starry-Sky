@@ -36,7 +36,7 @@ StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
   cloudNoiseSliceVar.magFilter = THREE.NearestFilter;
   cloudNoiseSliceVar.wrapS = THREE.ClampToEdgeWrapping;
   cloudNoiseSliceVar.wrapT = THREE.ClampToEdgeWrapping;
-  cloudNoiseSliceVar.encoding = THREE.LinearEncoding;
+  cloudNoiseSliceVar.colorSpace = THREE.LinearSRGBColorSpace;
 
   let error1 = cloudTextureRenderer.init();
   if(error1 !== null){
@@ -75,7 +75,7 @@ StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
   cloudNoiseSliceVar.material.dispose();
 
   //Turn this array into a 3D texture
-  this.repeating3DCloudNoiseTextures = new THREE.DataTexture3D(cloud3DNoiseRenderTargetBufferFloat32Array, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE);
+  this.repeating3DCloudNoiseTextures = new THREE.Data3DTexture(cloud3DNoiseRenderTargetBufferFloat32Array, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE);
   this.repeating3DCloudNoiseTextures.type = THREE.FloatType;
   this.repeating3DCloudNoiseTextures.format = THREE.RGBAFormat;
   this.repeating3DCloudNoiseTextures.minFilter = THREE.LinearFilter;
@@ -83,6 +83,6 @@ StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
   this.repeating3DCloudNoiseTextures.wrapS = THREE.RepeatWrapping;
   this.repeating3DCloudNoiseTextures.wrapT = THREE.RepeatWrapping;
   this.repeating3DCloudNoiseTextures.wrapR = THREE.RepeatWrapping;
-  this.repeating3DCloudNoiseTextures.encoding = THREE.LinearEncoding;
+  this.repeating3DCloudNoiseTextures.colorSpace = THREE.LinearSRGBColorSpace;
   this.repeating3DCloudNoiseTextures.needsUpdate = true;
 }

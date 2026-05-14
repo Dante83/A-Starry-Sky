@@ -18,7 +18,7 @@ StarrySky.DefaultData.skyCloud = {
   fadeInEndPercent: 10.0,
   velocity: new THREE.Vector2(40.0, 40.0),
   startSeed: Date.now() % (86400 * 365),
-  numberOfRayMarchSteps: 64.0,
+  numberOfRayMarchSteps: 32.0,
   cutoffDistance: 40000.0,
   cloudsEnabled: false
 };
