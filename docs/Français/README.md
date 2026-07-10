@@ -175,10 +175,10 @@ Bien entendu, si vous implémentez cela dans un monde persistant, veillez à pre
 `<sky-rayleigh-scale-height>` | La hauteur d'échelle d'atténuation pour la diffusion de Rayleigh, en supposant une atténuation exponentielle. La diffusion de Rayleigh provient des gaz atmosphériques et possède donc une hauteur d'échelle beaucoup plus importante. | 8.4
 `<sky-mie-scale-height>` | La hauteur d'échelle d'atténuation pour la diffusion de Mie, en supposant une atténuation exponentielle. La diffusion de Mie provient de particules plus grosses, elle a donc tendance à s'atténuer plus rapidement, d'où un facteur de hauteur caractéristique plus faible. | 1.25
 `<sky-ozone-percent-of-rayleigh>` | Le pourcentage d'ozone présent dans le ciel, utilisé pour définir le rendu de l'ozone au coucher du soleil. | 6E-7
-`<sky-moon-angular-diameter>` | Le diamètre angulaire de la lune tel qu'il apparaît dans le ciel.  | 3.15 degrees
-`<sky-sun-angular-diameter>` | Le diamètre angulaire du soleil tel qu'il apparaît dans le ciel. | 3.38 degrees
-`<sky-number-of-atmospheric-lut-ray-steps>` | Le nombre d'étapes vers le bord du ciel effectuées par le traceur de rayons lors de la collecte de lumière pour les LUT atmosphériques. | 30 steps
-`<sky-number-of-atmospheric-lut-gathering-steps>` | Le nombre d'étapes angulaires effectuées à chaque point le long du rayon pour la diffusion d'ordre k. | 30 steps
+`<sky-moon-angular-diameter>` | Le diamètre angulaire de la lune tel qu'il apparaît dans le ciel.  | 3.15 degrés
+`<sky-sun-angular-diameter>` | Le diamètre angulaire du soleil tel qu'il apparaît dans le ciel. | 3.38 degrés
+`<sky-number-of-atmospheric-lut-ray-steps>` | Le nombre d'étapes vers le bord du ciel effectuées par le traceur de rayons lors de la collecte de lumière pour les LUT atmosphériques. | 30 étapes
+`<sky-number-of-atmospheric-lut-gathering-steps>` | Le nombre d'étapes angulaires effectuées à chaque point le long du rayon pour la diffusion d'ordre k. | 30 étapes
 `<sky-number-of-scattering-orders>` | Le nombre de passes de diffusion d'ordre supérieur (k) à intégrer dans la LUT de diffusion entrante (*inscattering*). Des valeurs plus élevées augmentent la qualité au détriment du temps de calcul de la LUT. | 4
 `<sky-parameters-color-red>` | La composante rouge utilisée dans les balises `<sky-rayleigh-beta>`, `<sky-mie-beta>` et `<sky-ozone-beta>`. | N/A
 `<sky-parameters-color-green>` | La composante verte utilisée dans les balises `<sky-rayleigh-beta>`, `<sky-mie-beta>` et `<sky-ozone-beta>`. | N/A

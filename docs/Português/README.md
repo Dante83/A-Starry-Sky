@@ -98,13 +98,13 @@ Defina `<sky-date>` para a **hora local** do local escolhido e, em seguida, conf
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
-    <!-- Previous Location Settings -->
+    <!-- Configurações de localização anteriores -->
     <sky-location>
       <sky-latitude>40.7</sky-latitude>
       <sky-longitude>-74.0</sky-longitude>
     </sky-location>
 
-    <!-- You can set up the utc offset like so! -->
+    <!-- Você pode configurar o offset UTC assim! -->
     <sky-time>
       <sky-utc-offset>-4</sky-utc-offset>
     </sky-time>
@@ -149,7 +149,7 @@ Viajar no tempo é divertido, mas você também pode ter interesse em alterar a 
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-time>
-      <!-- There will now be eight in-world days for every real life day.-->
+      <!-- Haverá oito dias no mundo virtual para cada dia real. -->
       <sky-speed>8</sky-speed>
     </sky-time>
   </a-starry-sky>
@@ -805,7 +805,7 @@ Embora o A-Starry-Sky tenha sido projetado para ser configurado usando o código
 Todos os itens acima são acessados através do objeto `StarrySky.Methods` no namespace global. Portanto, se você quisesse, por exemplo, capturar o objeto de posição atual do sol e registrá-lo no console, bastaria fazer o seguinte:
 
 ```JavaScript
-  //Let's log the sun position object
+  // Vamos registrar o objeto de posição do sol
   console.log(StarrySky.Methods.getSunPosition());
 ```
 

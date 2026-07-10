@@ -98,13 +98,13 @@ A-Starry-Sky 是一个为 [A-Frame Web Framework](https://aframe.io/) 设计的�
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
-    <!-- Previous Location Settings -->
+    <!-- 以前的位置设置 -->
     <sky-location>
       <sky-latitude>40.7</sky-latitude>
       <sky-longitude>-74.0</sky-longitude>
     </sky-location>
 
-    <!-- You can set up the utc offset like so! -->
+    <!-- 你可以这样设置 UTC 偏移量！ -->
     <sky-time>
       <sky-utc-offset>-4</sky-utc-offset>
     </sky-time>
@@ -149,7 +149,7 @@ A-Starry-Sky 是一个为 [A-Frame Web Framework](https://aframe.io/) 设计的�
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-time>
-      <!-- There will now be eight in-world days for every real life day.-->
+      <!-- 现在虚拟世界中的每一天会变成现实中的八天。 -->
       <sky-speed>8</sky-speed>
     </sky-time>
   </a-starry-sky>
