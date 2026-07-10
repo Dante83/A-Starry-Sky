@@ -2,7 +2,7 @@
 
 A beautiful day-night cycle sky dome for the A-Frame Web Framework. Please select your language to continue:
 
-- 🇮🇩 Selamat datang! [Bahasa Indonesia](docs/Bahasa\ Indonesia/README.md)
+- 🇮🇩 Selamat datang! [Bahasa Indonesia](docs/Bahasa_Indonesia/README.md)
 - 🇩🇪 Willkommen! [Deutsch](docs/Deutsch/README.md)
 - 🌐 Welcome! [English](docs/English/README.md)
 - 🇪🇸 ¡Bienvenido! [Español](docs/Español/README.md)
