@@ -175,10 +175,10 @@ Tentu saja, jika Anda menerapkan ini dalam dunia yang persisten (*persistent wor
 `<sky-rayleigh-scale-height>` | Ketinggian skala peluruhan (falloff) untuk hamburan Rayleigh, dengan asumsi peluruhan eksponensial. Hamburan Rayleigh berasal dari gas atmosfer sehingga memiliki ketinggian skala yang jauh lebih besar. | 8.4
 `<sky-mie-scale-height>` | Ketinggian skala peluruhan untuk hamburan Mie, dengan asumsi peluruhan eksponensial. Hamburan Mie berasal dari partikel yang lebih besar, sehingga cenderung meluruh lebih cepat, maka pengali ketinggian karakteristiknya lebih kecil. | 1.25
 `<sky-ozone-percent-of-rayleigh>` | Persentase ozon yang saat ini ada di langit, digunakan untuk mengatur pantulan ozon saat matahari terbenam. | 6E-7
-`<sky-moon-angular-diameter>` | Diameter sudut bulan sebagaimana terlihat di langit.  | 3.15 degrees
-`<sky-sun-angular-diameter>` | Diameter sudut matahari sebagaimana terlihat di langit. | 3.38 degrees
-`<sky-number-of-atmospheric-lut-ray-steps>` | Jumlah langkah menuju tepi langit yang diambil oleh ray tracer saat mengumpulkan cahaya untuk LUT atmosfer. | 30 steps
-`<sky-number-of-atmospheric-lut-gathering-steps>` | Jumlah langkah sudut yang diambil di setiap titik sepanjang sinar untuk hamburan orde ke-k. | 30 steps
+`<sky-moon-angular-diameter>` | Diameter sudut bulan sebagaimana terlihat di langit.  | 3.15 derajat
+`<sky-sun-angular-diameter>` | Diameter sudut matahari sebagaimana terlihat di langit. | 3.38 derajat
+`<sky-number-of-atmospheric-lut-ray-steps>` | Jumlah langkah menuju tepi langit yang diambil oleh ray tracer saat mengumpulkan cahaya untuk LUT atmosfer. | 30 langkah
+`<sky-number-of-atmospheric-lut-gathering-steps>` | Jumlah langkah sudut yang diambil di setiap titik sepanjang sinar untuk hamburan orde ke-k. | 30 langkah
 `<sky-number-of-scattering-orders>` | Jumlah pass hamburan orde tinggi (ke-k) yang dipanggang (bake) ke dalam LUT inscattering. Nilai yang lebih tinggi meningkatkan kualitas namun memperlama waktu pemanggangan LUT. | 4
 `<sky-parameters-color-red>` | komponen merah yang digunakan dalam tag `<sky-rayleigh-beta>`, `<sky-mie-beta>`, dan `<sky-ozone-beta>`. | N/A
 `<sky-parameters-color-green>` | komponen hijau yang digunakan dalam tag `<sky-rayleigh-beta>`, `<sky-mie-beta>`, dan `<sky-ozone-beta>`. | N/A

@@ -600,10 +600,10 @@ Apart from changing colors, you fit also change how many steps the raymarcher go
 :--- | :--- | :---
 `<sky-clouds>` | Parent tag. Main tag wey hold all cloud settings. Required for enabling Clouds. | N/A
 `<sky-cloud-coverage>` | How much of the sky clouds go cover. | 70 (percent)
-`<sky-cloud-start-height>` | Height, in meters, where clouds start to form. | 1000 (meters)
-`<sky-cloud-end-height>` | Height, in meters, where clouds stop forming. | 2500 (meters)
-`<sky-cloud-fade-out-start-percent>` | Where cloud coverage start to *fade out* towards zero based on the height of the cloud. | 90 (percent)
-`<sky-cloud-fade-in-end-percent>` | Where cloud coverage finish *fading in* towards 100% based on the height of the cloud. | 10 (percent)
+`<sky-cloud-start-height>` | How high (for meters) clouds go start to form. | 1000 (meters)
+`<sky-cloud-end-height>` | How high (for meters) clouds go stop to form. | 2500 (meters)
+`<sky-cloud-fade-out-start-percent>` | Na from this percent of the cloud height, the cloud coverage go start 'fade out' reach zero. | 90 (percent)
+`<sky-cloud-fade-in-end-percent>` | Na by this percent of the cloud height, the cloud coverage go don finish 'fade in' reach 100%. | 10 (percent)
 `<sky-cloud-velocity-x>` | How fast clouds dey move for X axis. Clouds go follow your position, but this one go make them move overhead on their own. | 40
 `<sky-cloud-velocity-y>` | How fast clouds dey move for Y (or actually Z) axis. Clouds go follow your position, but this one go make them move overhead on their own. | 40
 `<sky-cloud-start-seed>` | Random seed to set the cloud noise overhead; if you no set am, e go just use today's date and time timestamp. | *Date.now() % (86400 * 365)*.

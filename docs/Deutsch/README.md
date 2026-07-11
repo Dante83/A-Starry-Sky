@@ -175,10 +175,10 @@ Falls Sie dies in einer persistenten Welt umsetzen, achten Sie bei der Erstellun
 `<sky-rayleigh-scale-height>` | Die Skalierungshöhe für den Abfall (Falloff) der Rayleigh-Streuung, unter Annahme eines exponentiellen Abfalls. Rayleigh-Streuung entsteht durch atmosphärische Gase und hat daher eine wesentlich größere Skalierungshöhe. | 8.4
 `<sky-mie-scale-height>` | Die Skalierungshöhe für den Abfall der Mie-Streuung, unter Annahme eines exponentiellen Abfalls. Mie-Streuung entsteht durch größere Partikel und fällt daher schneller ab, was zu einer geringeren charakteristischen Höhenskalierung führt. | 1.25
 `<sky-ozone-percent-of-rayleigh>` | Der Prozentsatz an Ozon am Himmel, der zur Bestimmung des Ozon-Effekts beim Sonnenuntergang verwendet wird. | 6E-7
-`<sky-moon-angular-diameter>` | Der scheinbare Durchmesser (Winkeldurchmesser) des Mondes am Himmel.  | 3.15 degrees
-`<sky-sun-angular-diameter>` | Der scheinbare Durchmesser (Winkeldurchmesser) der Sonne am Himmel. | 3.38 degrees
-`<sky-number-of-atmospheric-lut-ray-steps>` | Die Anzahl der Schritte zum Rand des Himmels, die der Raytracer beim Sammeln von Licht für atmosphärische Look-Up Tables (LUTs) ausführt. | 30 steps
-`<sky-number-of-atmospheric-lut-gathering-steps>` | Die Anzahl der Winkelschritte an jedem Punkt entlang des Strahls für die Streuung k-ter Ordnung. | 30 steps
+`<sky-moon-angular-diameter>` | Der scheinbare Durchmesser (Winkeldurchmesser) des Mondes am Himmel.  | 3.15 Grad
+`<sky-sun-angular-diameter>` | Der scheinbare Durchmesser (Winkeldurchmesser) der Sonne am Himmel. | 3.38 Grad
+`<sky-number-of-atmospheric-lut-ray-steps>` | Die Anzahl der Schritte zum Rand des Himmels, die der Raytracer beim Sammeln von Licht für atmosphärische Look-Up Tables (LUTs) ausführt. | 30 Schritte
+`<sky-number-of-atmospheric-lut-gathering-steps>` | Die Anzahl der Winkelschritte an jedem Punkt entlang des Strahls für die Streuung k-ter Ordnung. | 30 Schritte
 `<sky-number-of-scattering-orders>` | Die Anzahl der Streuungen höherer Ordnung (k-te Ordnung), die in die Inscattering-LUT berechnet (baked) werden. Höhere Werte steigern die Qualität auf Kosten der Berechnungszeit der LUT. | 4
 `<sky-parameters-color-red>` | Die Rotkomponente, die in den Tags `<sky-rayleigh-beta>`, `<sky-mie-beta>` und `<sky-ozone-beta>` verwendet wird. | N/A
 `<sky-parameters-color-green>` | Die Grünkomponente, die in den Tags `<sky-rayleigh-beta>`, `<sky-mie-beta>` und `<sky-ozone-beta>` verwendet wird. | N/A

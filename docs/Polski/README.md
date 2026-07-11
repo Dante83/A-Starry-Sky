@@ -175,10 +175,10 @@ Oczywiście, jeśli tworzycie świat trwały (persistent world), pamiętajcie o 
 `<sky-rayleigh-scale-height>` | Skalowanie wysokości zaniku dla rozpraszania Rayleigha, przy założeniu wykładniczego spadku. Rozpraszanie Rayleigha wynika z gazów atmosferycznych, dlatego ma znacznie większą wysokość skalowania. | 8.4
 `<sky-mie-scale-height>` | Skalowanie wysokości zaniku dla rozpraszania Mie, przy założeniu wykładniczego spadku. Rozpraszanie Mie wynika z większych cząsteczek, więc zanika szybciej, co przekłada się na mniejszy współczynnik wysokości charakterystycznej. | 1.25
 `<sky-ozone-percent-of-rayleigh>` | Procent ozonu w niebie, używany do ustawienia efektu ozonowego podczas zachodu słońca. | 6E-7
-`<sky-moon-angular-diameter>` | Średnica kątowa księżyca widoczna na niebie.  | 3.15 degrees
-`<sky-sun-angular-diameter>` | Średnica kątowa słońca widoczna na niebie. | 3.38 degrees
-`<sky-number-of-atmospheric-lut-ray-steps>` | Liczba kroków do krawędzi nieba, które wykonuje ray tracer podczas zbierania światła dla tablic LUT atmosfery. | 30 steps
-`<sky-number-of-atmospheric-lut-gathering-steps>` | Liczba kroków kątowych wykonywanych w każdym punkcie wzdłuż promienia dla rozpraszania rzędu k. | 30 steps
+`<sky-moon-angular-diameter>` | Średnica kątowa księżyca widoczna na niebie.  | 3.15 stopnia
+`<sky-sun-angular-diameter>` | Średnica kątowa słońca widoczna na niebie. | 3.38 stopnia
+`<sky-number-of-atmospheric-lut-ray-steps>` | Liczba kroków do krawędzi nieba, które wykonuje ray tracer podczas zbierania światła dla tablic LUT atmosfery. | 30 kroków
+`<sky-number-of-atmospheric-lut-gathering-steps>` | Liczba kroków kątowych wykonywanych w każdym punkcie wzdłuż promienia dla rozpraszania rzędu k. | 30 kroków
 `<sky-number-of-scattering-orders>` | Liczba przejść rozpraszania wyższego rzędu (k), które zostaną wypalone w tablicy LUT inscatteringu. Wyższe wartości zwiększają jakość kosztem czasu wypalania LUT. | 4
 `<sky-parameters-color-red>` | Komponent czerwony używany w tagach `<sky-rayleigh-beta>`, `<sky-mie-beta>` i `<sky-ozone-beta>`. | N/A
 `<sky-parameters-color-green>` | Komponent zielony używany w tagach `<sky-rayleigh-beta>`, `<sky-mie-beta>` i `<sky-ozone-beta>`. | N/A

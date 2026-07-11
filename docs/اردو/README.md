@@ -345,9 +345,9 @@ A-Starry-Sky [A-Frame Web Framework](https://aframe.io/) کے لیے ایک آس
 <a-scene shadow="type: pcfsoft">
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-lighting>
-      <!-- Increase size to cast shadows further from the camera -->
+      <!-- سائز بڑھائیں تاکہ سائے کیمرے سے مزید دور تک پڑیں -->
       <sky-shadow-camera-size>120</sky-shadow-camera-size>
-      <!-- Increase resolution to keep shadows sharp at larger sizes -->
+      <!-- بڑے سائز پر سائے واضح رکھنے کے لیے ریزولوشن بڑھائیں -->
       <sky-shadow-camera-resolution>4096</sky-shadow-camera-resolution>
     </sky-lighting>
   </a-starry-sky>
