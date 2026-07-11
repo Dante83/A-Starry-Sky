@@ -1,6 +1,6 @@
 # A-Starry-Sky
 
-A-Starry-Sky adalah kubah langit (*sky dome*) untuk [A-Frame Web Framework](https://aframe.io/). Komponen ini dirancang agar mudah dipasang (*drop-in component*) sehingga Anda dapat menciptakan siklus siang-malam yang indah dalam karya Anda.
+A-Starry-Sky adalah kubah langit (*kotak langit*) untuk [A-Frame Web Framework](https://aframe.io/). Komponen ini dirancang agar mudah dipasang (*komponen siap pasang*) sehingga Anda dapat menciptakan siklus siang-malam yang indah dalam karya Anda.
 
 > **Peringatan: membutuhkan GPU yang kuat — jangan buka di ponsel.**
 
@@ -8,17 +8,17 @@ A-Starry-Sky adalah kubah langit (*sky dome*) untuk [A-Frame Web Framework](http
 
 | Contoh | Deskripsi |
 |:---|:---|
-| [Desert](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=desert) | Pemandangan gurun pada momen siang hari yang telah ditentukan |
-| [Solar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=eclipse) | Gerhana matahari total dengan korona |
-| [Lunar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=lunar-eclipse) | Bayangan Bumi pada bulan |
-| [Christmas Star (1226 AD)](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=christmas-star) | Konjungsi agung Jupiter & Saturnus |
+| [Gurun](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=desert) | Pemandangan gurun pada momen siang hari yang telah ditentukan |
+| [Gerhana Matahari](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=eclipse) | Gerhana matahari total dengan korona |
+| [Gerhana Bulan](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=lunar-eclipse) | Bayangan Bumi pada bulan |
+| [CBintang Natal (1226 AD)](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=christmas-star) | Konjungsi agung Jupiter & Saturnus |
 | [Mars](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mars) | Atmosfer Mars kustom |
-| [Custom Atmosphere](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mie-rayleigh) | Nilai hamburan Mie/Rayleigh yang berbeda |
-| [High Altitude](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=high-altitude) | Langit dari ketinggian 20km |
+| [Atmosfer Kustom](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mie-rayleigh) | Nilai hamburan Mie/Rayleigh yang berbeda |
+| [Ketinggian Tinggi](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=high-altitude) | Langit dari ketinggian 20km |
 | [Aurora Borealis](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=aurora) | ⚠️ Intensif GPU |
-| [Light Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-light) | ⚠️ Intensif GPU |
-| [Medium Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-medium) | ⚠️ Intensif GPU |
-| [Heavy Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-heavy) | ⚠️ Intensif GPU |
+| [Awan Tipis](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-light) | ⚠️ Intensif GPU |
+| [Awan Sedang](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-medium) | ⚠️ Intensif GPU |
+| [Awan Tebal](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-heavy) | ⚠️ Intensif GPU |
 
 ## Prasyarat
 
@@ -46,7 +46,7 @@ Setelah referensi ini siap, tambahkan komponen `<a-starry-sky>` ke dalam tag `<a
 
 Kode dasar ini akan menampilkan langit yang bergerak secara *real-time* berdasarkan garis lintang dan garis bujur San Francisco, California. Namun, kita bisa melakukan lebih dari sekadar itu. A-Starry-Sky dilengkapi dengan berbagai tag HTML kustom untuk membantu Anda menyesuaikan status langit.
 
-**CATATAN: *Sky box* ini bersifat *immutable* (tidak dapat diubah). Artinya, pengaturan awal yang Anda gunakan akan tetap konstan pada halaman tersebut. Sayangnya, untuk saat ini, membuat kode ini menjadi *mutable* masih terlalu sulit.**
+**CATATAN: *Sky box* ini bersifat *tidak dapat diubah* (tidak dapat diubah). Artinya, pengaturan awal yang Anda gunakan akan tetap konstan pada halaman tersebut. Sayangnya, untuk saat ini, membuat kode ini menjadi *dapat diubah* masih terlalu sulit.**
 
 ## Mengatur Lokasi
 
@@ -156,7 +156,7 @@ Perjalanan waktu ini memang menyenangkan, tetapi Anda mungkin juga tertarik untu
 </a-scene>
 ```
 
-Tentu saja, jika Anda menerapkan ini dalam dunia yang persisten (*persistent world*), pastikan untuk mempertimbangkan aliran waktu yang dipercepat saat membuat HTML Anda. Namun, pengaturan HTML dinamis untuk langit Anda sepenuhnya terserah Anda.
+Tentu saja, jika Anda menerapkan ini dalam dunia yang persisten (*dunia yang persisten*), pastikan untuk mempertimbangkan aliran waktu yang dipercepat saat membuat HTML Anda. Namun, pengaturan HTML dinamis untuk langit Anda sepenuhnya terserah Anda.
 
 ## Mengubah Pengaturan Atmosfer
 
@@ -167,7 +167,7 @@ Tentu saja, jika Anda menerapkan ini dalam dunia yang persisten (*persistent wor
 `<sky-mie-directional-g>` | Menjelaskan seberapa banyak cahaya yang terhambur ke depan oleh hamburan Mie, yaitu halo keputihan yang terlihat di sekitar matahari akibat partikel besar di atmosfer. Semakin tinggi nilai mie-directional G, semakin berdebu tampilan atmosfernya. | 0.8
 `<sky-sun-intensity>` | Intensitas matahari dalam shader atmosfer. | 1367.0
 `<sky-moon-intensity>` | Intensitas bulan dalam shader atmosfer. | 29.0
-`<sky-mie-beta>` | Ketergantungan warna dari hamburan cahaya untuk hamburan Mie, yang terutama bertanggung jawab atas 'pendaran' (glow) di dekat matahari. Hamburannya cukup seragam di semua frekuensi. | rgb(4.44E-3, 4.44E-3, 4.44E-3)
+`<sky-mie-beta>` | Ketergantungan warna dari hamburan cahaya untuk hamburan Mie, yang terutama bertanggung jawab atas 'pendaran' (pendaran) di dekat matahari. Hamburannya cukup seragam di semua frekuensi. | rgb(4.44E-3, 4.44E-3, 4.44E-3)
 `<sky-rayleigh-beta>` | Ketergantungan warna dari hamburan cahaya untuk hamburan Rayleigh, yang terutama bertanggung jawab atas hamburan biru di langit. Perhatikan bahwa saluran biru memiliki hamburan terbanyak secara default. | rgb(5.8e-3, 1.35e-2, 3.31e-2)
 `<sky-ozone-beta>` | Ketergantungan warna dari hamburan cahaya untuk lapisan ozon, yang sangat penting untuk warna biru tua saat matahari terbenam. | rgb(413.470734338, 413.470734338, 2.1112886E-13)
 `<sky-atmosphere-height>` | Ketinggian batas di mana atmosfer 'berakhir'. | 80.0 km
@@ -179,7 +179,7 @@ Tentu saja, jika Anda menerapkan ini dalam dunia yang persisten (*persistent wor
 `<sky-sun-angular-diameter>` | Diameter sudut matahari sebagaimana terlihat di langit. | 3.38 derajat
 `<sky-number-of-atmospheric-lut-ray-steps>` | Jumlah langkah menuju tepi langit yang diambil oleh ray tracer saat mengumpulkan cahaya untuk LUT atmosfer. | 30 langkah
 `<sky-number-of-atmospheric-lut-gathering-steps>` | Jumlah langkah sudut yang diambil di setiap titik sepanjang sinar untuk hamburan orde ke-k. | 30 langkah
-`<sky-number-of-scattering-orders>` | Jumlah pass hamburan orde tinggi (ke-k) yang dipanggang (bake) ke dalam LUT inscattering. Nilai yang lebih tinggi meningkatkan kualitas namun memperlama waktu pemanggangan LUT. | 4
+`<sky-number-of-scattering-orders>` | Jumlah pass hamburan orde tinggi (ke-k) yang dipanggang (disatukan) ke dalam LUT hamburan masuk. Nilai yang lebih tinggi meningkatkan kualitas namun memperlama waktu pemanggangan LUT. | 4
 `<sky-parameters-color-red>` | komponen merah yang digunakan dalam tag `<sky-rayleigh-beta>`, `<sky-mie-beta>`, dan `<sky-ozone-beta>`. | N/A
 `<sky-parameters-color-green>` | komponen hijau yang digunakan dalam tag `<sky-rayleigh-beta>`, `<sky-mie-beta>`, dan `<sky-ozone-beta>`. | N/A
 `<sky-parameters-color-blue>` | komponen biru yang digunakan dalam tag `<sky-rayleigh-beta>`, `<sky-mie-beta>`, dan `<sky-ozone-beta>`. | N/A
@@ -275,7 +275,7 @@ Tapi itu kurang seru, bagaimana jika kita ingin sesuatu yang lebih gila? Mari ki
 </a-scene>
 ```
 
-Anda juga dapat menyetel jumlah langkah sinar (ray step) LUT, meskipun nilai default-nya sudah hampir optimal dan perubahannya jarang terlihat.
+Anda juga dapat menyetel jumlah langkah sinar (langkah sinar) LUT, meskipun nilai default-nya sudah hampir optimal dan perubahannya jarang terlihat.
 
 ```html
 <a-scene>
@@ -300,7 +300,7 @@ Anda juga dapat menyetel jumlah langkah sinar (ray step) LUT, meskipun nilai def
 `<sky-ambient-intensity>` | Pengali intensitas pencahayaan ambient, dapat digunakan untuk mencerahkan atau meredupkan intensitas sistem pencahayaan ambient. | 2.0
 `<sky-minimum-ambient-lighting>` | Jumlah minimum cahaya ambient dalam sistem. | 0.01
 `<sky-maximum-ambient-lighting>` | Jumlah maksimum cahaya ambient dalam sistem. | INF
-`<sky-atmospheric-perspective-type>` | Dapat diatur ke *normal*, *advanced*, atau *none*. Diperlukan untuk kabut pemandangan (scene fog). *normal* menggunakan model kabut eksponensial asli; *advanced* menggunakan model berbasis Preetham untuk variasi warna cakrawala yang lebih baik dengan konsekuensi beban GPU yang lebih tinggi. | normal
+`<sky-atmospheric-perspective-type>` | Dapat diatur ke *normal*, *advanced*, atau *none*. Diperlukan untuk kabut pemandangan (kabut pemandangan). *normal* menggunakan model kabut eksponensial asli; *advanced* menggunakan model berbasis Preetham untuk variasi warna cakrawala yang lebih baik dengan konsekuensi beban GPU yang lebih tinggi. | normal
 `<sky-atmospheric-perspective-density>` | Hanya untuk kabut *normal*. Mengontrol parameter densitas untuk kabut pemandangan eksponensial. Warna diatur secara otomatis dari pencahayaan pemandangan. Diabaikan jika tipe kabut pemandangan adalah *advanced*. | 0.007
 `<sky-atmospheric-perspective-distance-multiplier>` | Hanya untuk kabut *advanced*. Mengalikan jarak ke kabut untuk model kabut advanced. | 2.0
 `<sky-ground-color>` | Tag induk. Berisi tag `<sky-ground-color-{color-channel}>` untuk mendeskripsikan warna dasar tanah bagi pencahayaan reflektif dari permukaan. | N/A
@@ -313,8 +313,8 @@ Anda juga dapat menyetel jumlah langkah sinar (ray step) LUT, meskipun nilai def
 `<sky-moon-bloom>` | Tag induk, berisi semua properti dari render pass bloom bulan. | N/A
 `<sky-bloom-enabled>` | Mengaktifkan (true) atau menonaktifkan (false) bloom pada objek astronomi ini. | true
 `<sky-bloom-exposure>` | Mengubah parameter eksposur pada filter bloom - jumlah pengali cahaya yang dikembalikan ke kamera. | 1.0
-`<sky-bloom-threshold>` | Mengubah parameter ambang batas (threshold) pada filter bloom - jumlah intensitas minimum untuk mengaktifkan bloom. | {sun: 4.0, moon: 0.55}
-`<sky-bloom-strength>` | Mengubah parameter kekuatan (strength) pada filter bloom - seberapa besar efek 'bloom' untuk piksel yang dipilih. | {sun: 1.0, moon: 0.9}
+`<sky-bloom-threshold>` | Mengubah parameter ambang batas (ambang batas) pada filter bloom - jumlah intensitas minimum untuk mengaktifkan bloom. | {sun: 4.0, moon: 0.55}
+`<sky-bloom-strength>` | Mengubah parameter kekuatan (kekuatan) pada filter bloom - seberapa besar efek 'bloom' untuk piksel yang dipilih. | {sun: 1.0, moon: 0.9}
 `<sky-bloom-radius>` | Mengubah parameter radius pada filter bloom - jarak penyebaran filter bloom. | {sun: 1.0, moon: 1.4}
 
 Tag pencahayaan langit berguna untuk mengontrol atribut pencahayaan langsung dan tidak langsung dalam pemandangan. Pada versi 1.0.0, jumlah lampu direksional dikurangi dari 2 (matahari dan bulan) menjadi 1 (hanya satu untuk sumber cahaya yang paling dominan). Lampu direksional selalu terfokus pada kamera pengguna dan menciptakan bayangan di sekitar kamera tersebut. Meskipun lampu direksional dapat mendukung berbagai tipe bayangan, pustaka ini sebenarnya bukan tempat untuk mengontrol hal tersebut. Sebaliknya, tipe bayangan diatur dalam tag `<a-scene>`, seperti yang dijelaskan [di sini](https://aframe.io/docs/1.2.0/components/light.html#adding-real-time-shadows). Dengan kata lain, Anda dapat mengatur nilainya ke salah satu dari opsi berikut.
@@ -407,7 +407,7 @@ Selain dukungan untuk pencahayaan tanah, kini Anda dapat mengontrol intensitas p
 </a-scene>
 ```
 
-Anda mungkin juga ingin mengontrol batas bawah (*floor*) atau batas atas (*ceiling*) untuk pencahayaan ambient, guna memastikan Anda selalu memiliki jumlah cahaya tertentu, atau jumlah cahaya maksimum.
+Anda mungkin juga ingin mengontrol batas bawah (*batas bawah*) atau batas atas (*batas atas*) untuk pencahayaan ambient, guna memastikan Anda selalu memiliki jumlah cahaya tertentu, atau jumlah cahaya maksimum.
 
 ```html
 <a-scene>
@@ -481,7 +481,7 @@ Untuk sistem kelas bawah, tersedia dukungan untuk perspektif atmosfer eksponensi
 </a-scene>
 ```
 
-Namun untuk sistem kelas atas, Anda dapat mensimulasikan shader atmosfer berbasis Preetham yang memberikan lebih banyak variasi warna cakrawala dibandingkan warna konstan yang digunakan pada pengaturan *normal*. Solusi yang disediakan bukan merupakan kecocokan tepat untuk pencahayaan langit berbasis Elek karena keterbatasan pada shader kabut *Three.js*, namun ini memberikan peningkatan yang signifikan dibandingkan perspektif atmosfer asli. Untuk mengaktifkan model pencahayaan advanced, cukup masukkan nilai *advanced* ke dalam tag `<sky-atmospheric-perspective-type>`. Serupa dengan `<sky-atmospheric-perspective-density>`, Anda dapat mengalikan jarak untuk model pencahayaan *advanced* menggunakan `<sky-atmospheric-perspective-distance-multiplier>` yang akan mengalikan semua jarak dalam model berbasis Preetham sesuai jumlah yang Anda berikan. Nilai awal diatur tinggi untuk memberikan perspektif atmosfer yang nyata, bahkan dalam pemandangan kecil, jadi Anda mungkin ingin mengurangi nilainya dari default *5.0*.
+Namun untuk sistem kelas atas, Anda dapat mensimulasikan shader atmosfer berbasis Preetham yang memberikan lebih banyak variasi warna cakrawala dibandingkan warna konstan yang digunakan pada pengaturan *normal*. Solusi yang disediakan bukan merupakan kecocokan tepat untuk pencahayaan langit berbasis Elek karena keterbatasan pada shader kabut *Three.js*, namun ini memberikan peningkatan yang signifikan dibandingkan perspektif atmosfer asli. Untuk mengaktifkan model pencahayaan tingkat lanjut, cukup masukkan nilai *advanced* ke dalam tag `<sky-atmospheric-perspective-type>`. Serupa dengan `<sky-atmospheric-perspective-density>`, Anda dapat mengalikan jarak untuk model pencahayaan *advanced* menggunakan `<sky-atmospheric-perspective-distance-multiplier>` yang akan mengalikan semua jarak dalam model berbasis Preetham sesuai jumlah yang Anda berikan. Nilai awal diatur tinggi untuk memberikan perspektif atmosfer yang nyata, bahkan dalam pemandangan kecil, jadi Anda mungkin ingin mengurangi nilainya dari default *5.0*.
 
 ```html
 <a-scene>
@@ -787,7 +787,7 @@ Dengan menggunakan metode di atas, Anda seharusnya dapat mengarahkan A-Starry-Sk
 
 ## API PROGRAMATIK
 
-Meskipun A-Starry-Sky dimaksudkan untuk dikonfigurasi menggunakan kode bergaya XML di atas, dan secara umum bersifat immutable, terdapat sejumlah metode berbeda yang dapat Anda akses dari namespace global `StarrySky.Methods`. Metode-metode ini berguna untuk situasi di mana Anda perlu mengetahui kondisi pencahayaan, atau posisi matahari maupun bulan di dalam scene.
+Meskipun A-Starry-Sky dimaksudkan untuk dikonfigurasi menggunakan kode bergaya XML di atas, dan secara umum bersifat tidak dapat diubah, terdapat sejumlah metode berbeda yang dapat Anda akses dari namespace global `StarrySky.Methods`. Metode-metode ini berguna untuk situasi di mana Anda perlu mengetahui kondisi pencahayaan, atau posisi matahari maupun bulan di dalam scene.
 
 **Metode** | **Deskripsi**
 :--- | :---
