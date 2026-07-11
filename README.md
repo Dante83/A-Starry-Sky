@@ -11,7 +11,7 @@ A beautiful day-night cycle sky dome for the A-Frame Web Framework. Please selec
 - 💬 Welcome o! [Naijá](docs/Naijá/README.md)
 - 🇵🇱 Witaj! [Polski](docs/Polski/README.md)
 - 🌐 Bem-vindo! [Português](docs/Português/README.md)
-- 🇻🇳 Chào mừng bạn! [Tiếng Việt](docs/Tiếng Việt/README.md)
+- 🇻🇳 Chào mừng bạn! [Tiếng Việt](docs/Tiếng_Việt/README.md)
 - 🇷🇺 Добро пожаловать! [Русский](docs/Русский/README.md)
 - 💬 خوش آمدید [اردو](docs/اردو/README.md)
 - 💬 أهلاً بك [العربية](docs/العربية/README.md)
