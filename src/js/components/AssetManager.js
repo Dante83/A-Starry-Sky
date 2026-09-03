@@ -6,6 +6,7 @@ StarrySky.AssetManager = function(skyDirector){
     starImages: {},
     blueNoiseImages: {},
     auroraImages: {},
+    milkyWayImages: {},
     solarEclipseImage: null,
     eclipseShadowLUTImage: null
   };
@@ -28,6 +29,8 @@ StarrySky.AssetManager = function(skyDirector){
   tagLists.push(skyAuroraTags);
   const skyCloudTags = starrySkyComponent.el.getElementsByTagName('sky-clouds');
   tagLists.push(skyCloudTags);
+  const skyMilkyWayTags = starrySkyComponent.el.getElementsByTagName('sky-milky-way');
+  tagLists.push(skyMilkyWayTags);
   tagLists.forEach(function(tags){
     if(tags.length > 1){
       console.error(`The <a-starry-sky> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
@@ -73,7 +76,11 @@ StarrySky.AssetManager = function(skyDirector){
     const oneSolarEclipseImage = 1;
     const oneEclipseShadowLUT = 1;
     const numberOfAuroraTextures = 1;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfAuroraTextures;
+    //Emission + absorption, but only when the band is switched on -- a disabled
+    //Milky Way should not cost the user a download.
+    const milkyWayEnabled = this.data.skyMilkyWay.milkyWayEnabled;
+    const numberOfMilkyWayTextures = milkyWayEnabled ? 2 : 0;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfAuroraTextures + numberOfMilkyWayTextures;
 
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
@@ -115,6 +122,49 @@ StarrySky.AssetManager = function(skyDirector){
         console.error(err);
       });
     })(0);
+
+    //Load our Milky Way maps -- emission (unresolved galactic starlight) and
+    //absorption (interstellar dust). Both are equirectangular in galactic
+    //coordinates and are sampled with a single UV, so they must share their
+    //wrapping and filtering: repeat in S because galactic longitude wraps at
+    //l=180, clamp in T because latitude does not.
+    if(milkyWayEnabled){
+      const milkyWayMaps = [
+        {assetKey: 'milkyWayEmissionMap', uniformName: 'milkyWayEmissionMap'},
+        {assetKey: 'milkyWayAbsorptionMap', uniformName: 'milkyWayAbsorptionMap'}
+      ];
+      for(let i = 0; i < milkyWayMaps.length; ++i){
+        const milkyWayMap = milkyWayMaps[i];
+        const milkyWayTexturePromise = new Promise(function(resolve, reject){
+          textureLoader.load(StarrySky.assetPaths[milkyWayMap.assetKey], function(texture){resolve(texture);});
+        });
+        milkyWayTexturePromise.then(function(texture){
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.ClampToEdgeWrapping;
+          texture.magFilter = THREE.LinearFilter;
+          texture.minFilter = THREE.LinearMipmapLinearFilter;
+          texture.generateMipmaps = true;
+          //The band is grazed at shallow angles across most of the sky, which is
+          //exactly where trilinear filtering smears it into a grey smudge.
+          texture.anisotropy = 4;
+          //These carry brightness and optical depth, not color -- no sRGB decode.
+          texture.colorSpace = THREE.LinearSRGBColorSpace;
+          self.images.milkyWayImages[milkyWayMap.assetKey] = texture;
+
+          if(self.skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
+            self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms[milkyWayMap.uniformName].value = texture;
+            skyDirector.renderers.moonRenderer.moonMaterial.uniforms[milkyWayMap.uniformName].value = texture;
+          }
+
+          self.numberOfTexturesLoaded += 1;
+          if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+            self.hasLoadedImages = true;
+          }
+        }, function(err){
+          console.error(err);
+        });
+      }
+    }
 
     //Load our star color LUT
     let texturePromise = new Promise(function(resolve, reject){
@@ -557,6 +607,7 @@ StarrySky.AssetManager = function(skyDirector){
       self.data.skyLighting = self.hasSkyLightingTag ? self.skyLightingTag.data : defaultValues.lighting;
       self.data.skyAurora = self.hasAuroraTag ? self.skyAuroraTag.data : defaultValues.skyAurora;
       self.data.skyCloud = self.hasCloudTag ? self.skyCloudTag.data : defaultValues.skyCloud;
+      self.data.skyMilkyWay = self.hasMilkyWayTag ? self.skyMilkyWayTag.data : defaultValues.skyMilkyWay;
       self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
       self.loadImageAssets(self.skyDirector.renderer);
       skyDirector.assetManagerInitialized = true;
@@ -629,6 +680,12 @@ StarrySky.AssetManager = function(skyDirector){
     this.skyCloudTag = skyCloudTags[0];
     this.hasCloudTag = true;
     activeTags.push(this.skyCloudTag);
+  }
+  if(skyMilkyWayTags.length === 1){
+    this.skyDataSetsLength += 1;
+    this.skyMilkyWayTag = skyMilkyWayTags[0];
+    this.hasMilkyWayTag = true;
+    activeTags.push(this.skyMilkyWayTag);
   }
   for(let i = 0; i < activeTags.length; ++i){
     checkIfAllHTMLDataLoaded(activeTags[i]);

@@ -1,6 +1,6 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false,
-  auroraEnabled = false, cloudsEnabled = false){
+  auroraEnabled = false, cloudsEnabled = false, milkyWayEnabled = false){
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -110,6 +110,12 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonLuminosity = {value: 1.4};
     }
 
+    if(milkyWayEnabled && !isMeteringShader){
+      uniforms.milkyWayEmissionMap = {value: null};
+      uniforms.milkyWayAbsorptionMap = {value: null};
+      uniforms.milkyWayIntensity = {value: 0.7};
+    }
+
     return uniforms;
   },
   vertexShader: [
@@ -117,7 +123,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   ].join('\n'),
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth,
   packingHeight, atmosphereFunctions, sunCode = false, moonCode = false,
-  meteringCode = false, auroraEnabled = false, cloudsEnabled = false){
+  meteringCode = false, auroraEnabled = false, cloudsEnabled = false,
+  milkyWayEnabled = false){
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -182,6 +189,17 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       }
       else{
         updatedGLSL = updatedGLSL.replace(/\$cloudsEnabled/g, '0');
+      }
+
+      //The Milky Way chunk is only injected when it is switched on, so a
+      //disabled band costs no samplers and no shader instructions at all.
+      if(milkyWayEnabled && !meteringCode){
+        updatedGLSL = updatedGLSL.replace(/\$milkyWayEnabled/g, '1');
+        updatedGLSL = updatedGLSL.replace(/\$milkyWayFunctions/g, StarrySky.Materials.Stars.milkyWay.partialFragmentShader);
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$milkyWayEnabled/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$milkyWayFunctions/g, '');
       }
 
       updatedLines.push(updatedGLSL);

@@ -1,6 +1,6 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false,
-  auroraEnabled = false, cloudsEnabled = false){
+  auroraEnabled = false, cloudsEnabled = false, milkyWayEnabled = false){
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -110,6 +110,12 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonLuminosity = {value: 1.4};
     }
 
+    if(milkyWayEnabled && !isMeteringShader){
+      uniforms.milkyWayEmissionMap = {value: null};
+      uniforms.milkyWayAbsorptionMap = {value: null};
+      uniforms.milkyWayIntensity = {value: 0.7};
+    }
+
     return uniforms;
   },
   vertexShader: [
@@ -162,7 +168,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   ].join('\n'),
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth,
   packingHeight, atmosphereFunctions, sunCode = false, moonCode = false,
-  meteringCode = false, auroraEnabled = false, cloudsEnabled = false){
+  meteringCode = false, auroraEnabled = false, cloudsEnabled = false,
+  milkyWayEnabled = false){
     let originalGLSL = [
     'precision highp sampler3D;',
 
@@ -222,6 +229,12 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform sampler2D medStarData;',
       'uniform sampler2D brightStarData;',
       'uniform sampler2D starColorMap;',
+
+      '#if($milkyWayEnabled)',
+        'uniform sampler2D milkyWayEmissionMap;',
+        'uniform sampler2D milkyWayAbsorptionMap;',
+        'uniform float milkyWayIntensity;',
+      '#endif',
 
       'uniform vec3 mercuryPosition;',
       'uniform vec3 venusPosition;',
@@ -337,11 +350,120 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '}',
 
       'const float twinkleDust = 0.0010;',
-      'float twinkleFactor(vec3 starposition, float atmosphericDistance, float starBrightness){',
+
+      '//Fractional swing of the scintillation for the faintest stars AT THE ZENITH,',
+      '//where the air is thinnest and twinkling is weakest. 0.25 lets such a star',
+      '//range roughly 0.75x to 1.25x its mean flux straight overhead, rising with',
+      '//airmass to near +/-90% on the horizon. This is the dial for how hard the',
+      '//stars twinkle.',
+      '//',
+      '//It is deliberately keyed to the zenith rather than the horizon. The obvious',
+      '//alternative -- scaling by (1 - atmosphericDistance), the slant path as a',
+      '//fraction of the HORIZON path -- silently kills the effect, because that',
+      '//fraction is only 0.079 straight up for the default 80 km atmosphere over a',
+      '//6366.7 km earth. It reaches 1.0 solely in the last degree or so above the',
+      '//horizon, so a depth sized against it leaves the entire rest of the sky',
+      '//twinkling at about 4%, which reads as no twinkling at all.',
+      'const float starScintillationDepth = 0.25;',
+
+      '//Overall star brightness. This knob used to be hidden inside twinkleFactor,',
+      '//which quietly multiplied every star by between 1.2x and 5x depending on its',
+      '//magnitude and how low it sat. Now that the scintillation is centred on 1.0',
+      '//and no longer smuggles in gain, the level lives here where it can actually',
+      '//be reasoned about. 1.0 is the honest value; raise it if the field reads too',
+      '//dim now that the free brightness is gone.',
+      'const float starBrightnessGain = 1.0;',
+
+      '//Extra washout applied on top of the legacy curve below, in magnitudes of',
+      '//limiting stellar magnitude lost per magnitude the sky background brightens.',
+      '//',
+      '//This only ever ADDS to the original behaviour -- see the max() at the call',
+      '//site -- so it is safe to turn. Roughly what it buys in a moonlit sky, over',
+      '//and above what the old curve already did:',
+      '//    0.0  legacy behaviour exactly     0.7  about +0.5 to +0.9 magnitudes',
+      '//    1.0  about +1.5                   1.3  about +3, which is far too much',
+      '//',
+      '//1.3 was tried and wiped the sky clean: being linear in sky magnitude it',
+      '//overtook the legacy curve all the way up to a sky luminance of 0.97, so it',
+      '//applied everywhere across night and twilight rather than only where the old',
+      '//curve was too gentle. It also stacks with starsExposure, which the state',
+      '//engine has already reduced for a bright sky, so the two double up.',
+      'const float starSkyWashoutRate = 0.7;',
+
+      "//Exponent on the star's point-spread function, kept separate from the",
+      '//magnitude compression below.',
+      '//',
+      '//The two used to share a single sqrt, which was doing two unrelated jobs at',
+      '//once. Compressing the magnitude scale it does about right. Widening the',
+      '//profile it does far too much: sqrt of a gaussian is a gaussian sqrt(2)',
+      "//wider, and sqrt of the Airy function's r^-3 tail is r^-1.5, which at the",
+      '//r=10 cutoff leaves 27x more halo than the profile actually has. That halo,',
+      '//not the core, is what reads as a fuzzy dot -- and there are 8192 dim stars',
+      '//carrying one each.',
+      '//',
+      '//Measured radius at 5% of peak, where one screen pixel is about 1.92 r-units',
+      '//at a 70 degree field of view:',
+      '//    0.5 (the old sqrt) 4.2 px    0.7  2.5 px    1.0 (true Airy) 1.8 px',
+      '//The 50% radius barely moves (1.2 px -> 0.9 px) because the core is',
+      '//sub-pixel either way, so raising this tightens the halo without costing the',
+      '//star its visible centre. 1.0 is physically honest but leaves the core small',
+      '//enough to alias, so 0.7 is the compromise.',
+      'const float starProfileSharpness = 0.7;',
+
+      '//Value of sunHorizonFade below which the sky is dark enough to let stars',
+      '//through untouched. 0.8 corresponds to a solar altitude of about -3.5',
+      '//degrees.',
+      '//',
+      '//Stars have to be pushed out of the daytime sky explicitly. The',
+      '//sky-brightness washout gets a midday sky down to a few tenths of a percent',
+      '//contrast, which sounds like plenty, but the eye picks a point discontinuity',
+      '//out of a smooth gradient at far lower contrast than that -- so a handful of',
+      '//the brightest were surviving into full daylight as faint specks.',
+      '//',
+      '//sunHorizonFade is clamp(3.24 * sin(solar altitude) + 1, 0, 1): it pins at',
+      '//1.0 for every sun-above-horizon position and falls to 0 at -18 degrees.',
+      '//Keying off the very top of that range keeps this surgical. It engages only',
+      '//in the last few degrees before sunrise and after sunset and is fully out of',
+      '//the way below that, leaving the rest of twilight to the washout, which is',
+      '//driven by real sky luminance and already behaves correctly there.',
+      'const float starDaylightCutoffFade = 0.8;',
+
+      '//brownianNoise sums five octaves at gain 0.2, so for a unit initial amplitude',
+      '//it spans [0, 1.2496]. Feeding it the reciprocal normalizes the result to',
+      '//[0, 1] so it can be centred cleanly below.',
+      'const float oneOverBrownianNoiseSum = 0.8002561;',
+
+      '//Atmospheric scintillation.',
+      '//',
+      '//The noise is centred on zero so a star spends as much time below its mean',
+      '//flux as above it. That centring is the whole correction here: brownianNoise',
+      '//sums strictly non-negative octaves, so the previous form could only ever',
+      '//*brighten* a star. Sampled over a minute of playback it never once dipped',
+      '//below 1.0, and averaged 1.2x at the zenith, 2.0x mid-sky and 3.0x at the',
+      '//horizon -- which is most of the reason the faint stars read too bright.',
+      '//',
+      '//The 6 Hz base octave is deliberately left alone. Atmospheric turbulence',
+      '//rolls off at a characteristic Greenwood frequency near 7 Hz rather than',
+      '//being white noise, and value noise with smoothstep interpolation at 6 Hz is',
+      '//already precisely that "frozen flow" model: quantize time into coherence',
+      '//cells and ease between them. The slower octaves beneath it supply the',
+      '//low-frequency drift real seeing has.',
+      '//',
+      '//relativeAirmass is the slant path through the atmosphere divided by the',
+      '//vertical one: 1.0 at the zenith, about 12.7 at the horizon. magnitudeDepth',
+      '//carries the per-star half of the modulation.',
+      'float twinkleFactor(vec3 starposition, float relativeAirmass, float magnitudeDepth){',
         'float randSeed = uTime * twinkleDust + (starposition.x + starposition.y + starposition.z) * 10000.0;',
 
         '//lacunarity, gain, initialAmplitude, initialFrequency',
-        'return 1.0 + (1.0 - atmosphericDistance) * brownianNoise(0.5, 0.2, starBrightness, 6.0, randSeed);',
+        'float centeredNoise = 2.0 * brownianNoise(0.5, 0.2, oneOverBrownianNoiseSum, 6.0, randSeed) - 1.0;',
+
+        '//Scintillation deepens with airmass but saturates rather than growing',
+        '//linearly, so the square root: a 12.7x airmass buys 3.6x the swing, not',
+        '//12.7x, which would have the horizon blinking stars fully out.',
+        'float depth = clamp(starScintillationDepth * sqrt(relativeAirmass) * magnitudeDepth, 0.0, 0.95);',
+
+        'return max(1.0 + depth * centeredNoise, 0.0);',
       '}',
 
       'float colorTwinkleFactor(vec3 starposition){',
@@ -398,17 +520,40 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '//Get the distance the light ray travels',
         'vec2 skyIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), normalize(vec2(length(vec2(skyPosition.xz)), skyPosition.y)));',
         'vec2 normalizationIntersectionPoint = intersectRaySphere(vec2(0.0, RADIUS_OF_EARTH), vec2(1.0, 0.0));',
-        'float distanceToEdgeOfSky = clamp((1.0 - distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint) / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);',
+        'float slantPathToEdgeOfSky = distance(vec2(0.0, RADIUS_OF_EARTH), skyIntersectionPoint);',
+        'float distanceToEdgeOfSky = clamp((1.0 - slantPathToEdgeOfSky / distance(vec2(0.0, RADIUS_OF_EARTH), normalizationIntersectionPoint)), 0.0, 1.0);',
+
+        '//Relative airmass, straight from the geometry: the slant path over the',
+        '//vertical one. 1.0 overhead, about 12.7 on the horizon.',
+        'float relativeAirmass = slantPathToEdgeOfSky / ATMOSPHERE_HEIGHT;',
 
         "//Use the distance to the star to determine it's perceived twinkling",
-        'float starBrightness = pow(100.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);',
+        'float starBrightness = starBrightnessGain * pow(100.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);',
 
         '//Modify the intensity and color of this star using approximation of stellar scintillation',
         'vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));',
 
-        '//Pass this brightness into the fast Airy function to make the star glow',
-        'starBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0) * twinkleFactor(normalizedStarPosition, distanceToEdgeOfSky, sqrt(starBrightness) + 3.0);',
-        'return vec3(sqrt(starBrightness)) * pow(starColor, vec3(1.2));',
+        '//Scintillation is very nearly magnitude-independent, so this only tilts the',
+        '//depth slightly rather than scaling it.',
+        '//',
+        '//The scintillation index is a property of the ATMOSPHERE, not of the star:',
+        '//every star is an unresolved point, so the same wavefront distortion hits',
+        '//them all equally. It is the planets that hold steady, because they are',
+        '//resolved discs whose separate points average out. An earlier 0.4 floor',
+        '//here had bright stars twinkling 2.4x less than faint ones, which is',
+        '//backwards -- Sirius dancing near the horizon is the canonical example of',
+        '//the effect, not a counterexample to it. All that survives is a small',
+        "//perceptual nod: a star near the eye's threshold visibly blinks out where a",
+        '//bright one only shimmers, so the faintest keep a little extra depth.',
+        'float magnitudeDepth = mix(0.75, 1.0, pow(smoothstep(-1.5, 6.0, starData.a), 1.5));',
+        'starBrightness *= twinkleFactor(normalizedStarPosition, relativeAirmass, magnitudeDepth);',
+
+        '//Point spread evaluated separately so it keeps its own falloff. At the',
+        "//centre fastAiry is 1.0, so the star's peak is exactly what it was before",
+        '//the split -- only the halo tightens.',
+        'float starProfile = pow(max(fastAiry(approximateDistanceOnSphereStar), 0.0), starProfileSharpness);',
+
+        'return vec3(sqrt(starBrightness) * starProfile) * pow(starColor, vec3(1.2));',
       '}',
 
       'vec3 drawPlanetLight(vec3 planetColor, float planetMagnitude, vec3 planetPosition, vec3 skyPosition, float starAndSkyExposureReduction){',
@@ -429,6 +574,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'planetBrightness *= max(fastAiry(approximateDistanceOnSphereStar), 0.0);',
         'return sqrt(vec3(planetBrightness)) * planetColor;',
       '}',
+
+      '#if($milkyWayEnabled)',
+        '$milkyWayFunctions',
+      '#endif',
     '#endif',
 
     '#if($isMoonPass)',
@@ -1178,12 +1327,51 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'vec3 baseSkyLighting = airglowIntensity * SKY_BASELINE * transmittanceFade;',
 
       '#if(!$isSunPass)',
-        'float starAndSkyExposureReduction = starsExposure - 10.0 * dot(LinearTosRGB(vec4(solarAtmosphericPass + lunarAtmosphericPass, 1.0)).rgb, intensityVector);',
+        '//Sky background washes stars out. What governs that is the RATIO of the sky',
+        '//to a dark moonless one expressed in MAGNITUDES -- the eye gives up roughly',
+        '//one magnitude of limiting stellar magnitude for each magnitude the',
+        '//background brightens. The previous form subtracted a linear multiple of an',
+        '//sRGB-encoded radiance, which is neither of those, and ran far too flat',
+        '//through the moonlit and twilight range: a gibbous moon over twilight took',
+        '//only 2.7 magnitudes off the limit where it should take nearer 6. That is',
+        '//why a moonlit sky still came out carrying a dense field of faint stars.',
+        '//',
+        '//Two properties worth keeping: on a genuinely moonless night there is no',
+        '//sun or moon scatter, the ratio is 1, the log is 0, and the dark-sky star',
+        '//field is left bit-for-bit unchanged; and at full daylight the curve lands',
+        '//within 0.1 magnitudes of where the old one did.',
+        'float skyLuminance = dot(solarAtmosphericPass + lunarAtmosphericPass, intensityVector);',
+        'float darkSkyReferenceLuminance = dot(0.25 * SKY_BASELINE, intensityVector);',
+
+        '//0.7525750 is 2.5 * log10(2), turning the log2 into magnitudes.',
+        'float skyBrightnessInMagnitudes = 0.7525750 * log2(1.0 + skyLuminance / darkSkyReferenceLuminance);',
+
+        '//Floor the washout at the original curve rather than replacing it. That',
+        '//curve grows exponentially in sky magnitude -- too flat under moonlight,',
+        '//but correctly brutal by daylight -- so keeping it as a lower bound means',
+        '//a bright sky is guaranteed to behave exactly as it always did, and the',
+        '//logarithmic term only adds washout down in the dim regime where the old',
+        '//one was too gentle.',
+        '//',
+        '//It also bounds how far the rate above can run away. At 0.7 the log term',
+        '//stops winning past a sky luminance near 0.11, so the legacy curve takes',
+        '//back over well before daylight no matter how the knob is set. Replacing',
+        '//the curve outright, with no such floor, is what emptied the sky.',
+        'float legacyWashout = 10.0 * dot(LinearTosRGB(vec4(solarAtmosphericPass + lunarAtmosphericPass, 1.0)).rgb, intensityVector);',
+        'float starAndSkyExposureReduction = starsExposure - max(legacyWashout, starSkyWashoutRate * skyBrightnessInMagnitudes);',
       '#endif',
 
       '//This stuff never shows up near our sun, so we can exclude it',
       '#if(!$isSunPass && !$isMeteringPass)',
         'vec3 galacticLighting = vec3(0.0);',
+
+        '#if($milkyWayEnabled)',
+          '//Built out here, not inside the horizon test below: it takes screen-space',
+          '//derivatives to pick its mip level, and those are only defined in uniform',
+          '//control flow.',
+          'MilkyWayLookup milkyWayData = milkyWayLookup(normalize(galacticCoordinates));',
+        '#endif',
+
         'if(vLocalPosition.y >= 0.0){',
           '//Get the stellar starting id data from the galactic cube map',
           'vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);',
@@ -1235,7 +1423,22 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
           'galacticLighting += max(drawPlanetLight(marsColor, marsBrightness, marsPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
           'galacticLighting += max(drawPlanetLight(jupiterColor, jupiterBrightness, jupiterPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
           'galacticLighting += max(drawPlanetLight(saturnColor, saturnBrightness, saturnPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);',
+
           'galacticLighting = sRGBToLinear(vec4(galacticLighting, 1.0)).rgb;',
+
+          '#if($milkyWayEnabled)',
+            '//Converted on its own and added in LINEAR space rather than folded into',
+            '//the accumulator above. sRGB->linear is convex, so a diffuse pedestal',
+            "//sitting under a star lands that star's own delta on a far steeper part",
+            '//of the curve: measured, faint-star wings that used to fade to black',
+            '//came back 2x to 5x brighter across the band, turning every star into a',
+            '//fuzzy dot. Two independent emitters belong added in radiance anyway.',
+            '//',
+            '//The band itself is untouched by this move -- wherever there is no star',
+            '//under it, converting the sum and summing the conversions are the same',
+            '//number. Only the star cross-term goes away, which is the bug.',
+            'galacticLighting += sRGBToLinear(vec4(max(drawMilkyWay(milkyWayData, starAndSkyExposureReduction), 0.0), 1.0)).rgb;',
+          '#endif',
         '}',
       '#elif($isMeteringPass)',
         'vec3 galacticLighting = vec3(0.0);',
@@ -1254,8 +1457,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '#endif',
 
       '#if(!$isSunPass)',
-        '//Apply the transmittance function to all of our light sources',
-        'galacticLighting = galacticLighting * transmittanceFade;',
+        '//Apply the transmittance function to all of our light sources, and take the',
+        '//stars, planets and Milky Way out of the sky entirely once the sun is up.',
+        'float starDaylightFade = 1.0 - smoothstep(starDaylightCutoffFade, 1.0, sunHorizonFade);',
+        'galacticLighting = galacticLighting * transmittanceFade * starDaylightFade;',
       '#endif',
 
       '//Calculate the impact of clouds on the scene',
@@ -1453,6 +1658,17 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       }
       else{
         updatedGLSL = updatedGLSL.replace(/\$cloudsEnabled/g, '0');
+      }
+
+      //The Milky Way chunk is only injected when it is switched on, so a
+      //disabled band costs no samplers and no shader instructions at all.
+      if(milkyWayEnabled && !meteringCode){
+        updatedGLSL = updatedGLSL.replace(/\$milkyWayEnabled/g, '1');
+        updatedGLSL = updatedGLSL.replace(/\$milkyWayFunctions/g, StarrySky.Materials.Stars.milkyWay.partialFragmentShader);
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$milkyWayEnabled/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$milkyWayFunctions/g, '');
       }
 
       updatedLines.push(updatedGLSL);

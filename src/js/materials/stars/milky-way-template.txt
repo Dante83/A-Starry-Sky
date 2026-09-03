@@ -1,0 +1,10 @@
+//This is not your usual file, instead it is a kind of fragment file that contains
+//a partial glsl fragment file with the functions that draw the Milky Way. It gets
+//injected into atmosphere-pass.glsl at the $milkyWayFunctions token, so it is
+//never compiled on its own and has no uniforms of its own -- they are declared
+//in atmosphere-pass.glsl and created by the atmosphereShader uniforms factory.
+StarrySky.Materials.Stars.milkyWay = {
+  partialFragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+}

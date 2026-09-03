@@ -13,6 +13,8 @@ window.customElements.define('sky-blue-noise-maps', class extends HTMLElement{})
 window.customElements.define('sky-solar-eclipse-map', class extends HTMLElement{});
 window.customElements.define('sky-eclipse-shadow-lut', class extends HTMLElement{});
 window.customElements.define('sky-aurora-maps', class extends HTMLElement{});
+window.customElements.define('sky-milky-way-emission-map', class extends HTMLElement{});
+window.customElements.define('sky-milky-way-absorption-map', class extends HTMLElement{});
 
 StarrySky.DefaultData.fileNames = {
   moonDiffuseMap: 'lunar-diffuse-map.webp',
@@ -58,7 +60,9 @@ StarrySky.DefaultData.fileNames = {
   eclipseShadowLUT: 'eclipse-shadow-lut.webp',
   auroraMaps: [
     'aurora-map.webp'
-  ]
+  ],
+  milkyWayEmissionMap: 'milky-way-emission-map.webp',
+  milkyWayAbsorptionMap: 'milky-way-absorption-map.webp'
 };
 
 StarrySky.DefaultData.assetPaths = {
@@ -76,6 +80,8 @@ StarrySky.DefaultData.assetPaths = {
   starColorMap: './assets/star_data/' + StarrySky.DefaultData.fileNames.starColorMap,
   blueNoiseMaps: StarrySky.DefaultData.fileNames.blueNoiseMaps.map(x => './assets/blue_noise/' + x),
   auroraMaps: StarrySky.DefaultData.fileNames.auroraMaps.map(x => './assets/aurora_maps/' + x),
+  milkyWayEmissionMap: './assets/milky_way/' + StarrySky.DefaultData.fileNames.milkyWayEmissionMap,
+  milkyWayAbsorptionMap: './assets/milky_way/' + StarrySky.DefaultData.fileNames.milkyWayAbsorptionMap,
 };
 
 //Clone the above, in the event that any paths are found to differ, we will
@@ -150,13 +156,15 @@ class SkyAssetsDir extends HTMLElement {
         'sky-blue-noise-maps': 'blueNoiseMaps',
         'sky-solar-eclipse-map': 'solarEclipseMap',
         'sky-eclipse-shadow-lut': 'eclipseShadowLUT',
-        'sky-aurora-maps': 'auroraMaps'
+        'sky-aurora-maps': 'auroraMaps',
+        'sky-milky-way-emission-map': 'milkyWayEmissionMap',
+        'sky-milky-way-absorption-map': 'milkyWayAbsorptionMap'
       };
 
       if(self.hasAttribute('texture-path') && self.getAttribute('texture-path').toLowerCase() !== 'false'){
         const singleTextureKeys = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap',
         'moonApertureSizeMap', 'moonApertureOrientationMap', 'starColorMap', 'solarEclipseMap',
-        'eclipseShadowLUT'];
+        'eclipseShadowLUT', 'milkyWayEmissionMap', 'milkyWayAbsorptionMap'];
         const multiTextureKeys = ['starHashCubemap', 'dimStarDataMaps', 'medStarDataMaps', 'brightStarDataMaps',
         'blueNoiseMaps', 'auroraMaps'];
 
@@ -215,6 +223,10 @@ class SkyAssetsDir extends HTMLElement {
         for(let i = 0; i < 1; ++i){
           auroraMapPaths[i] = `${path}/${StarrySky.DefaultData.fileNames['auroraMaps'][i]}`;
         }
+      }
+      else if(self.hasAttribute('milky-way-path') && self.getAttribute('milky-way-path').toLowerCase() !== 'false'){
+        StarrySky.assetPaths['milkyWayEmissionMap'] = `${path}/${StarrySky.DefaultData.fileNames['milkyWayEmissionMap']}`;
+        StarrySky.assetPaths['milkyWayAbsorptionMap'] = `${path}/${StarrySky.DefaultData.fileNames['milkyWayAbsorptionMap']}`;
       }
       else{
         //No category attribute - look for individual asset child tags and apply

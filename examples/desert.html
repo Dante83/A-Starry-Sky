@@ -10,7 +10,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no,user-scalable=no,maximum-scale=1">
 
     <!-- Built for A-Frame -->
-    <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.6.1/dist/aframe-extras.min.js"></script>
     <!-- <script src="https://unpkg.com/aframe-fps-counter-component/dist/aframe-fps-counter-component.min.js"></script> -->
     <!--This commented out code is the unfurled stack which I use for debugging-->
@@ -50,6 +50,7 @@
     <script src="../src/js/materials/sun/base-sun-partial.js"></script>
     <script src="../src/js/materials/moon/base-moon-partial.js"></script>
     <script src="../src/js/materials/stars/star-data-map.js"></script>
+    <script src="../src/js/materials/stars/milky-way.js"></script>
     <script src="../src/js/materials/autoexposure/metering-survey.js"></script>
     <script src="../src/js/materials/clouds/cloud-noise.js"></script>
     <script src="../src/js/materials/fog/fog-pars.js"></script>
@@ -64,6 +65,7 @@
     <script src="../src/js/html_tags/SkyTime.js"></script>
     <script src="../src/js/html_tags/SkyAurora.js"></script>
     <script src="../src/js/html_tags/SkyClouds.js"></script>
+    <script src="../src/js/html_tags/SkyMilkyWay.js"></script>
 
     <!-- LUT Libraries -->
     <script src="../src/js/lut_libraries/AtmosphericLUTLibrary.js"></script>
@@ -99,13 +101,19 @@
             <sky-longitude>-100.8959</sky-longitude>
           </sky-location>
           <sky-time>
-            <sky-date>2024-04-08 10:00:00</sky-date>
+            <sky-date>2026-11-20 19:00:00</sky-date>
             <sky-utc-offset>-5</sky-utc-offset>
             <sky-speed>200</sky-speed>
           </sky-time>
         <sky-lighting>
           <sky-atmospheric-perspective-type>advanced</sky-atmospheric-perspective-type>
         </sky-lighting>
+        <!-- The Milky Way is on by default, so this tag is only needed to tune
+             it. Drop <sky-milky-way-enabled>false</sky-milky-way-enabled> in
+             here to switch the band off entirely. -->
+        <sky-milky-way>
+          <sky-milky-way-intensity>0.7</sky-milky-way-intensity>
+        </sky-milky-way>
       </a-starry-sky>
 
       <a-assets>

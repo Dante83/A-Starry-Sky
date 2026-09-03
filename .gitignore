@@ -1,4 +1,6 @@
 node_modules/
+__pycache__/
+*.pyc
 package-lock.json
 package-lock0.json
 package.json
@@ -10,3 +12,4 @@ src/python/VSOP87B_data/VSOP87B_Mars.txt
 src/python/VSOP87B_data/VSOP87B_Jupiter.txt
 src/python/VSOP87B_data/VSOP87B_Saturn.txt
 src/python/eclipse-lut-baker/venv/
+src/python/milky-way-mapper/venv/

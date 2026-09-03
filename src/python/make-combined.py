@@ -31,6 +31,7 @@ def main():
     'materials/sun/base-sun-partial.js',\
     'materials/moon/base-moon-partial.js',\
     'materials/stars/star-data-map.js',\
+    'materials/stars/milky-way.js',\
     'materials/autoexposure/metering-survey.js',\
     'materials/clouds/cloud-noise.js',\
     'materials/fog/fog-pars.js',\
@@ -43,6 +44,7 @@ def main():
     'html_tags/SkyTime.js',\
     'html_tags/SkyAurora.js',\
     'html_tags/SkyClouds.js',\
+    'html_tags/SkyMilkyWay.js',\
     'lut_libraries/AtmosphericLUTLibrary.js',\
     'lut_libraries/StellarLUTLibrary.js',\
     'lut_libraries/CloudLUTLibrary.js',\

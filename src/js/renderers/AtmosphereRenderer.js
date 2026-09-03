@@ -14,7 +14,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       false, //moon pass
       false, //metering pass
       assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
-      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
+      assetManager.data.skyCloud.cloudsEnabled,  //clouds enabled
+      assetManager.data.skyMilkyWay.milkyWayEnabled  //milky way enabled
     ))),
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
@@ -31,7 +32,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       false, //moon pass
       false, //metering pass
       assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
-      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
+      assetManager.data.skyCloud.cloudsEnabled,  //clouds enabled
+      assetManager.data.skyMilkyWay.milkyWayEnabled  //milky way enabled
     )
   });
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
@@ -70,8 +72,17 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     this.atmosphereMaterial.uniforms.auroraCutoffDistance.value = auroraParameters.cutoffDistance;
   }
 
+  if(assetManager.data.skyMilkyWay.milkyWayEnabled){
+    this.atmosphereMaterial.uniforms.milkyWayIntensity.value = assetManager.data.skyMilkyWay.milkyWayIntensity;
+  }
+
   if(assetManager.hasLoadedImages){
     this.atmosphereMaterial.uniforms.starColorMap.value = assetManager.images.starImages.starColorMap;
+
+    if(assetManager.data.skyMilkyWay.milkyWayEnabled){
+      this.atmosphereMaterial.uniforms.milkyWayEmissionMap.value = assetManager.images.milkyWayImages.milkyWayEmissionMap;
+      this.atmosphereMaterial.uniforms.milkyWayAbsorptionMap.value = assetManager.images.milkyWayImages.milkyWayAbsorptionMap;
+    }
   }
 
   //Attach the material to our geometry

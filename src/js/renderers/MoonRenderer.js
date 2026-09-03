@@ -48,7 +48,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       true,
       false,
       assetManager.data.skyAurora.auroraEnabled,
-      assetManager.data.skyCloud.cloudsEnabled
+      assetManager.data.skyCloud.cloudsEnabled,
+      assetManager.data.skyMilkyWay.milkyWayEnabled
     ))),
     vertexShader: StarrySky.Materials.Moon.baseMoonPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
@@ -62,7 +63,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       StarrySky.Materials.Moon.baseMoonPartial.fragmentShader(this.moonAngularRadiusInRadians),
       false, //Metering Code
       assetManager.data.skyAurora.auroraEnabled, //aurora enabled
-      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
+      assetManager.data.skyCloud.cloudsEnabled,  //clouds enabled
+      assetManager.data.skyMilkyWay.milkyWayEnabled  //milky way enabled
     )
   });
   if(assetManager.data.skyCloud.cloudsEnabled){
@@ -98,6 +100,10 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.auroraCutoffDistance.value = auroraParameters.cutoffDistance;
   }
 
+  if(assetManager.data.skyMilkyWay.milkyWayEnabled){
+    moonMaterial.uniforms.milkyWayIntensity.value = assetManager.data.skyMilkyWay.milkyWayIntensity;
+  }
+
   //Attach the material to our geometry
   moonMaterial.uniforms.radiusOfMoonPlane.value = radiusOfMoonPlane;
   moonMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
@@ -126,6 +132,11 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     moonMaterial.uniforms.starColorMap.value = assetManager.images.starImages.starColorMap;
     if(assetManager.images.eclipseShadowLUTImage){
       moonMaterial.uniforms.eclipseShadowLUT.value = assetManager.images.eclipseShadowLUTImage;
+    }
+
+    if(assetManager.data.skyMilkyWay.milkyWayEnabled){
+      moonMaterial.uniforms.milkyWayEmissionMap.value = assetManager.images.milkyWayImages.milkyWayEmissionMap;
+      moonMaterial.uniforms.milkyWayAbsorptionMap.value = assetManager.images.milkyWayImages.milkyWayAbsorptionMap;
     }
   }
 

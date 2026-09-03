@@ -1,3 +1,8 @@
+**Version 1.3.0**
+* Added the **Milky Way**, drawn from two equirectangular galactic-coordinate maps: emission from galpy's `MWPotential2014` stellar density integrated along each line of sight, and dust extinction from [Schlegel, Finkbeiner & Davis (1998)](https://doi.org/10.1086/305772) applied per channel, so the lanes warm rather than merely darken. On by default via a new `<sky-milky-way>` tag; both maps regenerate from `src/python/milky-way-mapper/`.
+* Fixed stellar scintillation, which summed non-negative noise and so could only ever *brighten* a star — averaging 1.2 to 5 times its true value and never once dimming. The centred version is driven by real relative airmass and is near magnitude-independent, as the physics requires.
+* Reworked star brightness. A star's point spread is no longer folded into the same square root as its magnitude compression, tightening each halo by 5 to 15 times without touching its peak. Sky washout is now logarithmic in sky brightness instead of linear in an sRGB-encoded radiance, so moonlight properly thins the faint field, and stars fade out entirely once the sun clears the horizon.
+
 **Version 1.2.0**
 * Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).
 * Fixed several atmospheric physics bugs: corrected Rayleigh phase function, missing Mie density weighting in transmittance, and a Rayleigh/Mie density swap in the scattering LUT bake passes — resulting in more accurate sky colors, particularly at sunset.

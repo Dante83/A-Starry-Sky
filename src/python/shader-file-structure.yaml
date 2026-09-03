@@ -54,6 +54,10 @@ groups:
         fragment: 'star-data-map.glsl'
         template: 'star-data-map-template.txt'
         material: 'star-data-map.js'
+      -
+        fragment: 'milky-way.glsl'
+        template: 'milky-way-template.txt'
+        material: 'milky-way.js'
   -
     base_glsl_dir: '../glsl/autoexposure'
     base_js_dir: '../js/materials/autoexposure'

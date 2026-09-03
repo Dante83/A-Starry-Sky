@@ -1,0 +1,21 @@
+# Milky Way map generator dependencies.
+#
+# The emission map needs galpy (+ astropy for the coordinate transform); the
+# absorption map needs dustmaps (+ healpy, which dustmaps uses to read the
+# SFD-98 HEALPix files). Both share numpy/scipy/Pillow.
+
+# Emission map (galpy MWPotential2014 line-of-sight density integration)
+galpy>=1.9
+astropy>=5.3
+psutil>=5.9
+tqdm>=4.66
+
+# Absorption map (Schlegel, Finkbeiner & Davis 1998 dust reddening)
+dustmaps>=1.0.12
+healpy>=1.16
+
+# Shared
+numpy>=1.24
+scipy>=1.11
+matplotlib>=3.7
+Pillow>=10.0
