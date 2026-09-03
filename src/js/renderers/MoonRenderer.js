@@ -5,7 +5,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
 	const skyState = skyDirector.skyState;
   const scratchColor = new THREE.Color();
-  const RENDER_TARGET_SIZE = 512;
+  //Sized by SkyDirector from the moon's angular diameter and the camera FOV, so that a
+  //moon blown up to a cinematic size gets a texture to match instead of a stretched 512.
+  const RENDER_TARGET_SIZE = skyDirector.moonRendererSize;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
   const sunAngularRadiusInRadians = assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD * 0.5;
@@ -21,13 +23,21 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   const outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
+  //The target is deliberately supersampled against the screen, so it is minified on the
+  //way out and needs the mip chain and anisotropy to resolve cleanly -- the quad is
+  //rolled by the parallactic angle, which is exactly the off axis case anisotropic
+  //filtering exists for.
   outputRenderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
   outputRenderTarget.texture.magFilter = THREE.LinearFilter;
   outputRenderTarget.texture.format = THREE.RGBAFormat;
   outputRenderTarget.texture.type = THREE.FloatType;
   outputRenderTarget.texture.generateMipmaps = true;
   outputRenderTarget.texture.anisotropy = 4;
-  outputRenderTarget.samples = 8;
+  //No MSAA here. The only thing drawn into this target is a quad that covers the target
+  //exactly, so there are no primitive edges for multisampling to find -- it just multiplied
+  //the cost of every texel. The moon's limb is a texture alpha edge, and resolution is what
+  //sharpens that.
+  outputRenderTarget.samples = 0;
   const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
   composer.renderToScreen = false;
 

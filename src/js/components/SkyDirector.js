@@ -71,7 +71,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   this.pixelsPerRadian;
   this.atmosphereLUTLibrary;
   this.stellarLUTLibrary;
-  this.moonAndSunRendererSize;
+  this.sunRendererSize;
+  this.moonRendererSize;
   this.dominantLightIsSun0;
   this.dominantLightIsSunf;
   this.dominantLightY0;
@@ -148,29 +149,54 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       const DEG_2_RAD = Math.PI / 180.0;
       self.camera = self.parentComponent.el.sceneEl.camera;
       self.previousCameraHeight = self.camera.position.y;
-      self.pixelsPerRadian = screen.width / (self.camera.fov * DEG_2_RAD);
+      //Pixels per radian at the CENTRE of the screen, which is where a perspective
+      //projection is densest and therefore the rate an offscreen texture has to match
+      //to survive the trip to the screen. The old form paired the operating system's
+      //screen width with the camera's VERTICAL field of view, which overstated this by
+      //roughly the aspect ratio and ignored the canvas size entirely -- a windowed page
+      //on a 4K display was sized as though it filled the display.
+      const drawingBufferSize = self.renderer.getDrawingBufferSize(new THREE.Vector2());
+      const drawingBufferHeight = drawingBufferSize.y > 0 ? drawingBufferSize.y : screen.height;
+      self.pixelsPerRadian = 0.5 * drawingBufferHeight / Math.tan(0.5 * self.camera.fov * DEG_2_RAD);
 
-      //Determine the best texture size for our renderers
+      //Determine the best texture size for our renderers.
+      //
+      //The sun and the moon are each drawn into an off screen square whose side
+      //is FOUR times the body's own angular diameter. The extra room carries the
+      //bloom and the ring of sky that fades the quad into the background, and it
+      //means the body itself only ever occupies the middle quarter of the
+      //texture. A one texel per pixel target therefore needs FOUR times the
+      //body's on screen size, not the body's size.
+      //
+      //Then supersample. The quad is rotated by the parallactic angle and lands on
+      //the screen at an arbitrary sub pixel offset, so a texture built at exactly
+      //the screen's rate still loses a good part of an edge to the resample -- and
+      //the limb of the moon is one long edge. Two texels per pixel gives the
+      //trilinear filter something to average, which is what keeps the limb clean
+      //rather than merely dense. The old sizing got roughly this much by accident,
+      //through the aspect ratio error above; it is deliberate now.
+      //
+      //Round UP to a power of two: rounding to the nearest one can halve the
+      //resolution, this number is a quality floor rather than an estimate, and the
+      //mip chain the supersampling relies on wants clean halvings. The floors are
+      //the sizes these renderers used when they were hardcoded, so a default sky
+      //never comes out coarser than it did. The cap is where the source art runs
+      //out -- the lunar maps are 512x512 across the disk and the disk covers a
+      //quarter of the texture, so past 2048 we would only be magnifying texels we
+      //already have.
+      const QUAD_WIDTHS_PER_BODY_DIAMETER = 4.0;
+      const TEXELS_PER_SCREEN_PIXEL = 2.0;
+      const textureSizeForQuad = function(bodyAngularDiameterInRadians, minimumSize, maximumSize){
+        const texelsAcrossQuad = self.pixelsPerRadian * bodyAngularDiameterInRadians * QUAD_WIDTHS_PER_BODY_DIAMETER * TEXELS_PER_SCREEN_PIXEL;
+        const ceiling = texelsAcrossQuad <= 1.0 ? 1 : (1 << (32 - Math.clz32(Math.ceil(texelsAcrossQuad) - 1)));
+        return Math.min(Math.max(ceiling, minimumSize), maximumSize);
+      };
+
       const sunAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.sunAngularDiameter * DEG_2_RAD;
-      const sunRendererTextureSize = Math.floor(self.pixelsPerRadian * sunAngularDiameterInRadians * 2.0);
-      //Floor and ceiling to nearest power of 2, Page 61 of Hacker's Delight
-      const ceilSRTS = Math.min(1 << (32 - Math.clz32(sunRendererTextureSize - 1)), 1024);
-      const floorSRTS = ceilSRTS >> 1; //Divide by 2! Without the risk of floating point errors
-      const SRTSToNearestPowerOfTwo = Math.abs(sunRendererTextureSize - floorSRTS) <= Math.abs(sunRendererTextureSize - ceilSRTS) ? floorSRTS : ceilSRTS;
+      self.sunRendererSize = textureSizeForQuad(sunAngularDiameterInRadians, 256, 2048);
 
       const moonAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD;
-      const moonRendererTextureSize = Math.floor(self.pixelsPerRadian * moonAngularDiameterInRadians * 2.0);
-      //Floor and ceiling to nearest power of 2, Page 61 of Hacker's Delight
-      const ceilMRTS = Math.min(1 << (32 - Math.clz32(moonRendererTextureSize - 1)), 1024);
-      const floorMRTS = ceilMRTS >> 1; //Divide by 2! Without the risk of floating point errors
-      const MRTSToNearestPowerOfTwo = Math.abs(moonRendererTextureSize - floorMRTS) <= Math.abs(moonRendererTextureSize - ceilMRTS) ? floorMRTS : ceilMRTS;
-
-      if(SRTSToNearestPowerOfTwo !== MRTSToNearestPowerOfTwo){
-        console.warn("The moon and sun should be a similiar angular diameters to avoid unwanted texture artifacts.");
-      }
-
-      //Choose the bigger of the two textures
-      self.moonAndSunRendererSize = Math.max(SRTSToNearestPowerOfTwo, MRTSToNearestPowerOfTwo);
+      self.moonRendererSize = textureSizeForQuad(moonAngularDiameterInRadians, 512, 2048);
 
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;

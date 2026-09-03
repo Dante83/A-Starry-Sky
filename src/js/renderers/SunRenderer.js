@@ -5,7 +5,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
 	const skyState = skyDirector.skyState;
   const scratchColor = new THREE.Color();
-	const RENDER_TARGET_SIZE = 256;
+	//Sized by SkyDirector from the sun's angular diameter and the camera FOV, so that a
+	//sun blown up to a cinematic size gets a texture to match instead of a stretched 256.
+	const RENDER_TARGET_SIZE = skyDirector.sunRendererSize;
   const RADIUS_OF_SKY = 5000.0;
   const DEG_2_RAD = 0.017453292519943295769236907684886;
   const moonAngularRadiusInRadians = atmosphericParameters.moonAngularDiameter * DEG_2_RAD * 0.5;
@@ -36,13 +38,19 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 	const outputRenderTarget = new THREE.WebGLRenderTarget(RENDER_TARGET_SIZE, RENDER_TARGET_SIZE);
+  //The target is deliberately supersampled against the screen, so it is minified on the
+  //way out and needs the mip chain and anisotropy to resolve cleanly -- the quad is
+  //rolled by the parallactic angle, which is exactly the off axis case anisotropic
+  //filtering exists for.
   outputRenderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
   outputRenderTarget.texture.magFilter = THREE.LinearFilter;
-	outputRenderTarget.texture.format = THREE.RGBAFormat;
+  outputRenderTarget.texture.format = THREE.RGBAFormat;
   outputRenderTarget.texture.type = THREE.FloatType;
   outputRenderTarget.texture.generateMipmaps = true;
   outputRenderTarget.texture.anisotropy = 4;
-  outputRenderTarget.samples = 8;
+  //No MSAA here -- see the note in MoonRenderer. A full target quad has no primitive
+  //edges to antialias, so the samples were pure cost.
+  outputRenderTarget.samples = 0;
 	const composer = new THREE.EffectComposer(renderer, outputRenderTarget);
 	composer.renderToScreen = false;
 
