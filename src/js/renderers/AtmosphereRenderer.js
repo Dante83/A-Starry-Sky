@@ -153,9 +153,7 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     //Connect up our images once they have all finished loading
     if(assetManager.hasLoadedImages){
       uniforms.starHashCubemap.value = assetManager.images.starImages.starHashCubemap;
-      uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
-      uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
-      uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
+      uniforms.starData.value = skyDirector.stellarLUTLibrary.starDataArray;
       uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
       uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
       if(assetManager.data.skyAurora.auroraEnabled){

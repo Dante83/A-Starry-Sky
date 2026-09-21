@@ -59,7 +59,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.moonRadius = {value: 1.0};
       uniforms.worldMatrix = {value: new THREE.Matrix4()};
       uniforms.solarEclipseMap = {value: null};
-      uniforms.moonDiffuseMap = {value: null};
       uniforms.cameraPosition = {value: new THREE.Vector3()};
     }
     else if(isMoonShader){
@@ -71,21 +70,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.worldMatrix = {value: new THREE.Matrix4()};
       uniforms.sunLightDirection = {value: new THREE.Vector3()};
       uniforms.earthsShadowPosition = {value: new THREE.Vector3()};
-      uniforms.moonDiffuseMap = {value: null};
-      uniforms.moonNormalMap = {value: null};
-      uniforms.moonRoughnessMap = {value: null};
-      uniforms.moonApertureSizeMap = {value: null};
-      uniforms.moonApertureOrientationMap = {value: null};
+      uniforms.moonMaps = {value: null};
       uniforms.cameraPosition = {value: new THREE.Vector3()};
       uniforms.earthshineIntensity = {value: 0.0};
       uniforms.eclipseShadowLUT = {value: null};
     }
 
-    if(!isSunShader){
+    if(!isSunShader && !isMeteringShader){
       uniforms.starHashCubemap = {value: null};
-      uniforms.dimStarData = {value: null};
-      uniforms.medStarData = {value: null};
-      uniforms.brightStarData = {value: null};
+      uniforms.starData = {value: null};
       uniforms.starColorMap = {value: null};
 
       uniforms.mercuryPosition = {value: new THREE.Vector3()};

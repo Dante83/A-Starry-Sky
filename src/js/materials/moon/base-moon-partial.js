@@ -13,15 +13,15 @@ StarrySky.Materials.Moon.baseMoonPartial = {
     '//be our sun position in the sky.',
     'vec3 moonTexel = vec3(0.0);',
     'if(vLocalPosition.y >= 0.0){',
-      'vec3 texelNormal = normalize(2.0 * texture2D(moonNormalMap, offsetUV).rgb - 1.0);',
+      'vec3 texelNormal = normalize(2.0 * texture(moonMaps, vec3(offsetUV, float(MOON_NORMAL_LAYER))).rgb - 1.0);',
 
       '//Lunar surface roughness from https://sos.noaa.gov/datasets/moon-surface-roughness/',
-      'float moonRoughnessTexel = piOver2 - (1.0 - texture2D(moonRoughnessMap, offsetUV).r);',
+      'float moonRoughnessTexel = piOver2 - (1.0 - texture(moonMaps, vec3(offsetUV, float(MOON_ROUGHNESS_LAYER))).r);',
 
       '//Implmentatation of the Ambient Appeture Lighting Equation',
       'float sunArea = pi * sunRadius * sunRadius;',
-      'float apertureRadius = acos(1.0 - texture2D(moonApertureSizeMap, offsetUV).r);',
-      'vec3 apertureOrientation = normalize(2.0 * texture2D(moonApertureOrientationMap, offsetUV).rgb - 1.0);',
+      'float apertureRadius = acos(1.0 - texture(moonMaps, vec3(offsetUV, float(MOON_APERTURE_SIZE_LAYER))).r);',
+      'vec3 apertureOrientation = normalize(2.0 * texture(moonMaps, vec3(offsetUV, float(MOON_APERTURE_ORIENTATION_LAYER))).rgb - 1.0);',
       'float apertureToSunHaversineDistance = acos(dot(apertureOrientation, tangentSpaceSunLightDirection));',
 
       'float observableSunFraction;',

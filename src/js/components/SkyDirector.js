@@ -211,6 +211,58 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
     }
   }
 
+  //WebGL2 only guarantees MAX_TEXTURE_IMAGE_UNITS >= 16, and a program that wants more
+  //than a device offers does not link -- silently, with no degraded path. Our moon pass
+  //used to ask for nineteen. Counting the samplers three actually linked, rather than the
+  //ones our GLSL declares, is the only honest measurement, because the pass shaders are
+  //specialized by feature flags and by which branch of the uber-shader they compiled.
+  this.auditTextureUnitBudget = function(){
+    const renderer = self.renderer;
+    const gl = renderer.getContext();
+    const textureUnitLimit = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
+
+    const samplerTypes = [gl.SAMPLER_2D, gl.SAMPLER_CUBE, gl.SAMPLER_3D, gl.SAMPLER_2D_ARRAY,
+      gl.SAMPLER_2D_SHADOW, gl.SAMPLER_2D_ARRAY_SHADOW, gl.SAMPLER_CUBE_SHADOW,
+      gl.INT_SAMPLER_2D, gl.INT_SAMPLER_3D, gl.INT_SAMPLER_CUBE, gl.INT_SAMPLER_2D_ARRAY,
+      gl.UNSIGNED_INT_SAMPLER_2D, gl.UNSIGNED_INT_SAMPLER_3D, gl.UNSIGNED_INT_SAMPLER_CUBE,
+      gl.UNSIGNED_INT_SAMPLER_2D_ARRAY];
+
+    const countSamplers = function(program){
+      let samplerCount = 0;
+      const numberOfUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+      for(let i = 0; i < numberOfUniforms; ++i){
+        const uniformInfo = gl.getActiveUniform(program, i);
+        if(uniformInfo !== null && samplerTypes.indexOf(uniformInfo.type) !== -1){
+          //An array of samplers occupies one unit per element.
+          samplerCount += uniformInfo.size;
+        }
+      }
+      return samplerCount;
+    };
+
+    const report = [];
+    let worstCount = 0;
+    const programs = renderer.info.programs;
+    for(let i = 0, numberOfPrograms = programs.length; i < numberOfPrograms; ++i){
+      const programInfo = programs[i];
+      if(programInfo.program === undefined || programInfo.program === null){
+        continue;
+      }
+      const samplerCount = countSamplers(programInfo.program);
+      worstCount = Math.max(worstCount, samplerCount);
+      report.push({program: programInfo.name, samplers: samplerCount});
+    }
+
+    report.sort(function(a, b){return b.samplers - a.samplers;});
+    self.textureUnitAudit = {limit: textureUnitLimit, worstCount: worstCount, programs: report};
+
+    if(worstCount > textureUnitLimit){
+      console.error(`A-Starry-Sky: a shader program needs ${worstCount} texture units but this device only offers ${textureUnitLimit}. It will not link, and the sky will not draw.`, report);
+    }
+
+    return self.textureUnitAudit;
+  };
+
   this.updateFinalSkyState = function(lsrt_0, lsrt_f){
     //Update the Module Heap and final LSRT
     const intitialLSRT = self.finalLSRT;
@@ -834,6 +886,10 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   }
 
   this.setupNextTick = function(){
+    //Every pass has drawn once by now, so three has linked its programs and there is
+    //something real to count.
+    self.auditTextureUnitBudget();
+
     //Notify external consumers that atmospheric LUTs are ready
     document.dispatchEvent(new CustomEvent('starry-sky-atmosphere-ready', {
       detail: { skyDirector: self }

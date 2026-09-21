@@ -1,4 +1,7 @@
 **Version 1.3.0**
+* Collapsed the five lunar maps and the three star-data LUTs into texture arrays. The moon pass asked for 19 texture units against WebGL2's guaranteed 16, so it could not link at all on integrated graphics; it now needs 13, and the sky pass 11.
+* Stopped uploading 8-bit images as 32-bit float textures. A sampler returns the same value either way, so this recovers roughly 40MB of texture memory for nothing -- the star hash cubemap alone was 25MB.
+* Removed a lunar occlusion mask in the sun pass that was computed from a texture that was never bound, and never read afterwards.
 * Fixed a blurry sun and moon at large angular diameters. Their off-screen textures were a fixed size, so a bigger body just got a softer one; they now follow angular diameter, field of view and canvas resolution.
 * Added the **Milky Way**, drawn from two equirectangular galactic-coordinate maps: emission from galpy's `MWPotential2014` stellar density integrated along each line of sight, and dust extinction from [Schlegel, Finkbeiner & Davis (1998)](https://doi.org/10.1086/305772) applied per channel, so the lanes warm rather than merely darken. On by default via a new `<sky-milky-way>` tag; both maps regenerate from `src/python/milky-way-mapper/`.
 * Fixed stellar scintillation, which summed non-negative noise and so could only ever *brighten* a star — averaging 1.2 to 5 times its true value and never once dimming. The centred version is driven by real relative airmass and is near magnitude-independent, as the physics requires.

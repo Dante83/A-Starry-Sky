@@ -133,11 +133,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
   //If our images have finished loading, update our uniforms
   if(assetManager.hasLoadedImages){
-    const moonTextures = ['moonDiffuseMap', 'moonNormalMap', 'moonRoughnessMap', 'moonApertureSizeMap', 'moonApertureOrientationMap'];
-    for(let i = 0; i < moonTextures.length; ++i){
-      const moonTextureProperty = moonTextures[i];
-      moonMaterial.uniforms[moonTextureProperty].value = assetManager.images[moonTextureProperty];
-    }
+    moonMaterial.uniforms.moonMaps.value = assetManager.images.moonImages.moonMaps;
 
     moonMaterial.uniforms.starColorMap.value = assetManager.images.starImages.starColorMap;
     if(assetManager.images.eclipseShadowLUTImage){
@@ -276,16 +272,12 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     //Connect up our images once they have all finished loading
     if(assetManager.hasLoadedImages){
       //Moon Textures
-      for(let [property, value] of Object.entries(assetManager.images.moonImages)){
-        moonMaterial.uniforms[property].value = value;
-      }
+      moonMaterial.uniforms.moonMaps.value = assetManager.images.moonImages.moonMaps;
 
       //Update our star data
       moonMaterial.uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
       moonMaterial.uniforms.starHashCubemap.value = assetManager.images.starImages.starHashCubemap;
-      moonMaterial.uniforms.dimStarData.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
-      moonMaterial.uniforms.medStarData.value = skyDirector.stellarLUTLibrary.medStarDataMap;
-      moonMaterial.uniforms.brightStarData.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
+      moonMaterial.uniforms.starData.value = skyDirector.stellarLUTLibrary.starDataArray;
 
       //Update sky parameters
       moonMaterial.uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;

@@ -61,6 +61,48 @@ StarrySky.AssetManager = function(skyDirector){
   this.totalNumberOfTextures;
   const self = this;
 
+  //Blits the five staged lunar maps into the layers of one texture array and hands back
+  //its texture. Layer order is the order of `moonTextures`, and it is mirrored by the
+  //MOON_*_LAYER constants in atmosphere-pass.glsl -- the two lists must not drift apart.
+  //
+  //The staging textures are disposed on the way out: they have been copied onto the GPU
+  //already, and holding them would keep the memory this consolidation is meant to recover.
+  this.buildMoonTextureArray = function(renderer, moonTextures, stagingTextures, size){
+    const builder = StarrySky.TextureArrayBuilder;
+    const arrayRenderTarget = builder.build({
+      width: size,
+      height: size,
+      layers: moonTextures.length,
+      wrapS: THREE.ClampToEdgeWrapping,
+      wrapT: THREE.ClampToEdgeWrapping,
+      magFilter: THREE.LinearFilter,
+      minFilter: THREE.LinearMipmapLinearFilter,
+      format: THREE.RGBAFormat,
+      //The sources are 8 bit PNG and WebP. Uploading them as float, as we used to, spends
+      //four times the memory to store exactly the same values -- a sampler returns b/255
+      //either way, and it is the sampler's precision qualifier, not the storage type, that
+      //decides whether that value survives.
+      type: THREE.UnsignedByteType,
+      colorSpace: THREE.LinearSRGBColorSpace,
+      anisotropy: 4,
+      generateMipmaps: true
+    });
+
+    for(let i = 0; i < moonTextures.length; ++i){
+      builder.copyTextureToLayer(renderer, arrayRenderTarget, i, stagingTextures[moonTextures[i]]);
+    }
+
+    const moonMaps = builder.finalize(renderer, arrayRenderTarget);
+
+    for(let i = 0; i < moonTextures.length; ++i){
+      stagingTextures[moonTextures[i]].dispose();
+      delete stagingTextures[moonTextures[i]];
+    }
+
+    this.images.moonImages.moonMaps = moonMaps;
+    return moonMaps;
+  };
+
   //Asynchronously load all of our images because, we don't care about when these load
   this.loadImageAssets = async function(renderer){
     //Just use our THREE Texture Loader for now
@@ -82,6 +124,19 @@ StarrySky.AssetManager = function(skyDirector){
     const numberOfMilkyWayTextures = milkyWayEnabled ? 2 : 0;
     this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfAuroraTextures + numberOfMilkyWayTextures;
 
+    //All five lunar maps are 512x512, share their filtering and wrapping, and are sampled
+    //at the same UV, so they are one family and collapse into a single sampler2DArray.
+    //That is four texture units back for the moon pass, which was asking for nineteen
+    //against a guaranteed sixteen.
+    //
+    //Each map loads as a staging texture that exists only to be blitted into its layer and
+    //then disposed. Staging wants NearestFilter and no mips: the blit is 1:1, so nearest
+    //makes it byte-exact, and mips on a texture we are about to throw away are wasted work.
+    //The array itself carries the filtering the moon actually renders with.
+    const MOON_MAP_SIZE = 512;
+    const moonStagingTextures = {};
+    let numberOfMoonTexturesLoaded = 0;
+
     //Recursive based functional for loop, with asynchronous execution because
     //Each iteration is not dependent upon the last, but it's just a set of similiar code
     //that can be run in parallel.
@@ -95,23 +150,24 @@ StarrySky.AssetManager = function(skyDirector){
         textureLoader.load(StarrySky.assetPaths[moonTextures[i]], function(texture){resolve(texture);});
       });
       texturePromise.then(function(texture){
-        //Fill in the details of our texture
+        //Fill in the details of our staging texture
         texture.format = THREE.RGBAFormat;
-        texture.type = THREE.FloatType;
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
-        texture.magFilter = THREE.LinearFilter;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.anisotropy = 4;
-
-        texture.generateMipmaps = true;
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.generateMipmaps = false;
         texture.colorSpace = THREE.LinearSRGBColorSpace;
-        self.images.moonImages[moonTextures[i]] = texture;
+        moonStagingTextures[moonTextures[i]] = texture;
 
-        //If the renderer already exists, go in and update the uniform
-        if(self.skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
-          const textureRef = self.skyDirector.renderers.moonRenderer.moonMaterial.uniforms[moonTextures[i]];
-          textureRef.value = texture;
+        numberOfMoonTexturesLoaded += 1;
+        if(numberOfMoonTexturesLoaded === numberOfMoonTextures){
+          const moonMaps = self.buildMoonTextureArray(renderer, moonTextures, moonStagingTextures, MOON_MAP_SIZE);
+
+          //If the renderer already exists, go in and update the uniform
+          if(self.skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
+            self.skyDirector.renderers.moonRenderer.moonMaterial.uniforms.moonMaps.value = moonMaps;
+          }
         }
 
         self.numberOfTexturesLoaded += 1;
@@ -178,7 +234,6 @@ StarrySky.AssetManager = function(skyDirector){
       texture.magFilter = THREE.LinearFilter;
       texture.minFilter = THREE.LinearMipmapLinearFilter;
       texture.colorSpace = THREE.LinearSRGBColorSpace;
-      texture.type = THREE.FloatType;
       texture.generateMipmaps = true;
       //Swap this tomorrow and implement custom mip-maps
       self.images.starImages.starColorMap = texture;
@@ -213,7 +268,6 @@ StarrySky.AssetManager = function(skyDirector){
       cubemap.magFilter = THREE.NearestFilter;
       cubemap.minFilter = THREE.NearestFilter;
       cubemap.colorSpace = THREE.LinearSRGBColorSpace;
-      cubemap.type = THREE.FloatType;
 
       self.numberOfTexturesLoaded += 1;
       if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
@@ -254,7 +308,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.colorSpace = THREE.LinearSRGBColorSpace;
-        texture.type = THREE.FloatType;
         dimStarChannelImages[channels[i]] = texture;
 
         numberOfDimStarChannelsLoaded += 1;
@@ -266,16 +319,15 @@ StarrySky.AssetManager = function(skyDirector){
           }
 
           //Create our texture from these four textures
-          skyDirector.stellarLUTLibrary.dimStarMapPass(dimStarChannelImages.r, dimStarChannelImages.g, dimStarChannelImages.b, dimStarChannelImages.a);
+          const starDataArray = skyDirector.stellarLUTLibrary.dimStarMapPass(dimStarChannelImages.r, dimStarChannelImages.g, dimStarChannelImages.b, dimStarChannelImages.a);
 
           //And send it off as a uniform for our atmospheric renderer
           //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-          if(self.skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
-            const atmosphereTextureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.dimStarData;
-            atmosphereTextureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
-
-            const moonTextureRef = skyDirector.renderers.moonRenderer.moonMaterial.uniforms.dimStarData;
-            moonTextureRef.value = skyDirector.stellarLUTLibrary.dimStarDataMap;
+          //The array is only handed back once all three tiers have been baked into it, so
+          //this stays null until then rather than pointing at half-filled layers.
+          if(starDataArray !== undefined && skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
+            skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starData.value = starDataArray;
+            skyDirector.renderers.moonRenderer.moonMaterial.uniforms.starData.value = starDataArray;
           }
 
           self.numberOfTexturesLoaded += 1;
@@ -311,7 +363,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.colorSpace = THREE.LinearSRGBColorSpace;
-        texture.type = THREE.FloatType;
         medStarChannelImages[channels[i]] = texture;
 
         numberOfMedStarChannelsLoaded += 1;
@@ -323,16 +374,13 @@ StarrySky.AssetManager = function(skyDirector){
           }
 
           //Create our texture from these four textures
-          skyDirector.stellarLUTLibrary.medStarMapPass(medStarChannelImages.r, medStarChannelImages.g, medStarChannelImages.b, medStarChannelImages.a);
+          const starDataArray = skyDirector.stellarLUTLibrary.medStarMapPass(medStarChannelImages.r, medStarChannelImages.g, medStarChannelImages.b, medStarChannelImages.a);
 
           //And send it off as a uniform for our atmospheric renderer
           //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-          if(skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
-            const atmosphereTextureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.medStarData;
-            atmosphereTextureRef.value = skyDirector.stellarLUTLibrary.medStarDataMap;
-
-            const moonTextureRef = skyDirector.renderers.moonRenderer.moonMaterial.uniforms.medStarData;
-            moonTextureRef.value = skyDirector.stellarLUTLibrary.medStarDataMap;
+          if(starDataArray !== undefined && skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
+            skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starData.value = starDataArray;
+            skyDirector.renderers.moonRenderer.moonMaterial.uniforms.starData.value = starDataArray;
           }
 
           self.numberOfTexturesLoaded += 1;
@@ -368,7 +416,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.NearestFilter;
         texture.minFilter = THREE.NearestFilter;
         texture.colorSpace = THREE.LinearSRGBColorSpace;
-        texture.type = THREE.FloatType;
         brightStarChannelImages[channels[i]] = texture;
 
         numberOfBrightStarChannelsLoaded += 1;
@@ -380,16 +427,13 @@ StarrySky.AssetManager = function(skyDirector){
           }
 
           //Create our texture from these four textures
-          skyDirector.stellarLUTLibrary.brightStarMapPass(brightStarChannelImages.r, brightStarChannelImages.g, brightStarChannelImages.b, brightStarChannelImages.a);
+          const starDataArray = skyDirector.stellarLUTLibrary.brightStarMapPass(brightStarChannelImages.r, brightStarChannelImages.g, brightStarChannelImages.b, brightStarChannelImages.a);
 
           //And send it off as a uniform for our atmospheric renderer
           //I presume if the moon renderer is loaded the atmosphere renderer is loaded as well
-          if(skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
-            const atmosphereTextureRef = skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.brightStarData;
-            atmosphereTextureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
-
-            const moonTextureRef = skyDirector.renderers.moonRenderer.moonMaterial.uniforms.brightStarData;
-            moonTextureRef.value = skyDirector.stellarLUTLibrary.brightStarDataMap;
+          if(starDataArray !== undefined && skyDirector?.renderers?.moonRenderer?.moonMaterial !== undefined){
+            skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.starData.value = starDataArray;
+            skyDirector.renderers.moonRenderer.moonMaterial.uniforms.starData.value = starDataArray;
           }
 
           self.numberOfTexturesLoaded += 1;
@@ -424,7 +468,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.LinearFilter;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.colorSpace = THREE.LinearSRGBColorSpace;
-        texture.type = THREE.FloatType;
         self.images.blueNoiseImages[i] = texture;
 
         self.numberOfTexturesLoaded += 1;
@@ -457,7 +500,6 @@ StarrySky.AssetManager = function(skyDirector){
         texture.magFilter = THREE.LinearFilter;
         texture.minFilter = THREE.LinearFilter;
         texture.colorSpace = THREE.LinearSRGBColorSpace;
-        texture.type = THREE.FloatType;
         self.images.auroraImages[i] = texture;
 
         self.numberOfTexturesLoaded += 1;
@@ -480,7 +522,6 @@ StarrySky.AssetManager = function(skyDirector){
       texture.magFilter = THREE.LinearFilter;
       texture.minFilter = THREE.LinearMipmapLinearFilter;
       texture.colorSpace = THREE.LinearSRGBColorSpace;
-      texture.type = THREE.FloatType;
       self.images.solarEclipseImage = texture;
 
       //If the renderer already exists, go in and update the uniform

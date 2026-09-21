@@ -21,6 +21,7 @@ def main():
     'three_js_extensions/UnrealBloom.js',\
     'three_js_extensions/StarrySkyGPUComputeRenderer.js',\
     'StarrySky.js',\
+    'components/TextureArrayBuilder.js',\
     'materials/atmosphere/atmosphere-functions.js',\
     'materials/atmosphere/transmittance.js',\
     'materials/atmosphere/single-scattering.js',\

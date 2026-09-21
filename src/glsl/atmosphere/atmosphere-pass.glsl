@@ -1,4 +1,10 @@
 precision highp sampler3D;
+//Both of our texture arrays carry data rather than color. The star LUT holds decoded
+//galactic coordinates reaching +/-17000, where a half float's spacing is 16, and the moon
+//maps feed a normal and two aperture terms. three declares samplers at the renderer's own
+//precision, which is highp unless the context asked for less, so this is belt and braces
+//-- but a mediump array sampler would quietly wreck both and look merely a little wrong.
+precision highp sampler2DArray;
 
 varying vec3 vWorldPosition;
 varying vec3 vLocalPosition;
@@ -52,9 +58,13 @@ uniform sampler2D blueNoiseTexture;
 
 #if(!$isSunPass && !$isMeteringPass)
   uniform samplerCube starHashCubemap;
-  uniform sampler2D dimStarData;
-  uniform sampler2D medStarData;
-  uniform sampler2D brightStarData;
+  //The three star tiers differ only in size, so they ride in one array. Their layers are
+  //sized to the largest tier and the smaller two occupy a corner, which is why every read
+  //below is a texelFetch on integer star indices rather than a normalized UV.
+  uniform sampler2DArray starData;
+  const int DIM_STAR_LAYER = 0;
+  const int MED_STAR_LAYER = 1;
+  const int BRIGHT_STAR_LAYER = 2;
   uniform sampler2D starColorMap;
 
   #if($milkyWayEnabled)
@@ -90,7 +100,6 @@ const vec3 intensityVector = vec3(0.2126, 0.7152, 0.0722); // BT.709 luminance w
 #if($isSunPass)
   uniform float sunAngularDiameterCos;
   uniform float moonRadius;
-  uniform sampler2D moonDiffuseMap;
   uniform sampler2D solarEclipseMap;
   varying vec2 vUv;
   const float sunDiskIntensity = 30.0;
@@ -110,11 +119,15 @@ const vec3 intensityVector = vec3(0.2126, 0.7152, 0.0722); // BT.709 luminance w
   uniform float distanceToEarthsShadowSquared;
   uniform float oneOverNormalizedLunarDiameter;
   uniform vec3 earthsShadowPosition;
-  uniform sampler2D moonDiffuseMap;
-  uniform sampler2D moonNormalMap;
-  uniform sampler2D moonRoughnessMap;
-  uniform sampler2D moonApertureSizeMap;
-  uniform sampler2D moonApertureOrientationMap;
+  //Diffuse, normal, roughness, aperture size and aperture orientation are all 512x512,
+  //share their filtering, and are read at the same UV, so they are one array. Layer order
+  //is set by AssetManager.buildMoonTextureArray and must match it.
+  uniform sampler2DArray moonMaps;
+  const int MOON_DIFFUSE_LAYER = 0;
+  const int MOON_NORMAL_LAYER = 1;
+  const int MOON_ROUGHNESS_LAYER = 2;
+  const int MOON_APERTURE_SIZE_LAYER = 3;
+  const int MOON_APERTURE_ORIENTATION_LAYER = 4;
   uniform float earthshineIntensity;
   uniform sampler2D eclipseShadowLUT;
   varying vec2 vUv;
@@ -333,10 +346,10 @@ float noise(float x){
     return starColor;
   }
 
-  vec3 drawStarLight(vec4 starData, vec3 galacticSphericalPosition, vec3 skyPosition, float starAndSkyExposureReduction){
+  vec3 drawStarLight(vec4 starDatum, vec3 galacticSphericalPosition, vec3 skyPosition, float starAndSkyExposureReduction){
     //I hid the temperature inside of the magnitude of the stars equitorial position, as the position vector must be normalized.
-    float temperature = sqrt(dot(starData.xyz, starData.xyz));
-    vec3 normalizedStarPosition = starData.xyz / temperature;
+    float temperature = sqrt(dot(starDatum.xyz, starDatum.xyz));
+    vec3 normalizedStarPosition = starDatum.xyz / temperature;
 
     //Early out if we're too far away
     float approximateDistanceOnSphereStar = distance(galacticSphericalPosition, normalizedStarPosition) * 1700.0;
@@ -355,7 +368,7 @@ float noise(float x){
     float relativeAirmass = slantPathToEdgeOfSky / ATMOSPHERE_HEIGHT;
 
     //Use the distance to the star to determine it's perceived twinkling
-    float starBrightness = starBrightnessGain * pow(100.0, (-starData.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);
+    float starBrightness = starBrightnessGain * pow(100.0, (-starDatum.a + min(starAndSkyExposureReduction, 2.7)) * 0.20);
 
     //Modify the intensity and color of this star using approximation of stellar scintillation
     vec3 starColor = getStarColor(temperature, distanceToEdgeOfSky, colorTwinkleFactor(normalizedStarPosition));
@@ -372,7 +385,7 @@ float noise(float x){
     //the effect, not a counterexample to it. All that survives is a small
     //perceptual nod: a star near the eye's threshold visibly blinks out where a
     //bright one only shimmers, so the faintest keep a little extra depth.
-    float magnitudeDepth = mix(0.75, 1.0, pow(smoothstep(-1.5, 6.0, starData.a), 1.5));
+    float magnitudeDepth = mix(0.75, 1.0, pow(smoothstep(-1.5, 6.0, starDatum.a), 1.5));
     starBrightness *= twinkleFactor(normalizedStarPosition, relativeAirmass, magnitudeDepth);
 
     //Point spread evaluated separately so it keeps its own falloff. At the
@@ -1133,12 +1146,14 @@ void main(){
   #if($isMoonPass)
     //Get our lunar occlusion texel
     vec2 offsetUV = clamp(vUv * 4.0 - vec2(1.5), vec2(0.0), vec2(1.0));
-    vec4 lunarDiffuseTexel = texture(moonDiffuseMap, offsetUV);
+    vec4 lunarDiffuseTexel = texture(moonMaps, vec3(offsetUV, float(MOON_DIFFUSE_LAYER)));
     vec3 lunarDiffuseColor = lunarDiffuseTexel.rgb;
   #elif($isSunPass)
-    //Get our lunar occlusion texel in the frame of the sun
+    //The sun disk is drawn in this frame, so base-sun-partial reads offsetUV for its
+    //distance from the sun's center. It used to also sample the lunar diffuse map here for
+    //a lunarMask that nothing ever read, off a uniform SunRenderer never bound -- the
+    //eclipse silhouette comes from solarEclipseMap instead.
     vec2 offsetUV = clamp(vUv * 4.0 - vec2(1.5), vec2(0.0), vec2(1.0));
-    float lunarMask = texture(moonDiffuseMap, offsetUV).a;
   #endif
 
   //Atmosphere (We multiply the scattering sun intensity by vec3 to convert it to a vector)
@@ -1204,45 +1219,51 @@ void main(){
       vec3 normalizedGalacticCoordinates = normalize(galacticCoordinates);
       vec4 starHashData = texture(starHashCubemap, normalizedGalacticCoordinates);
 
+      //The unpacked bits are a star's integer position in its tier, and they always were.
+      //They used to be divided by one less than the tier width and handed to texture(),
+      //which under NearestFilter lands on texel i for every i -- so a texelFetch on the
+      //index itself reads exactly the same texel, and it keeps reading it now that the
+      //three tiers share layers sized to the largest of them.
+
       //Red
       float scaledBits = starHashData.r * 255.0;
       float leftBits = floor(scaledBits / 2.0);
-      float starXCoordinate = leftBits / 127.0; //Dim Star
+      float starXIndex = leftBits; //Dim Star
       float rightBits = scaledBits - leftBits * 2.0;
 
       //Green
       scaledBits = starHashData.g * 255.0;
       leftBits = floor(scaledBits / 8.0);
-      float starYCoordinate = (rightBits + leftBits * 2.0) / 63.0; //Dim Star
+      float starYIndex = rightBits + leftBits * 2.0; //Dim Star
       rightBits = scaledBits - leftBits * 8.0;
 
       //Add the dim stars lighting
-      vec4 starData = texture(dimStarData, vec2(starXCoordinate, starYCoordinate));
-      galacticLighting = max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      vec4 starDatum = texelFetch(starData, ivec3(int(starXIndex), int(starYIndex), DIM_STAR_LAYER), 0);
+      galacticLighting = max(drawStarLight(starDatum, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
       //Blue
       scaledBits = starHashData.b * 255.0;
       leftBits = floor(scaledBits / 64.0);
-      starXCoordinate = (rightBits + leftBits * 8.0) / 31.0; //Medium Star
+      starXIndex = rightBits + leftBits * 8.0; //Medium Star
       rightBits = scaledBits - leftBits * 64.0;
       leftBits = floor(rightBits / 2.0);
-      starYCoordinate = (leftBits  / 31.0); //Medium Star
+      starYIndex = leftBits; //Medium Star
 
       //Add the medium stars lighting
-      starData = texture(medStarData, vec2(starXCoordinate, starYCoordinate));
-      galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      starDatum = texelFetch(starData, ivec3(int(starXIndex), int(starYIndex), MED_STAR_LAYER), 0);
+      galacticLighting += max(drawStarLight(starDatum, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
       //Alpha
       scaledBits = starHashData.a * 255.0;
       leftBits = floor(scaledBits / 32.0);
-      starXCoordinate = leftBits / 7.0;
+      starXIndex = leftBits;
       rightBits = scaledBits - leftBits * 32.0;
       leftBits = floor(rightBits / 4.0);
-      starYCoordinate = leftBits  / 7.0;
+      starYIndex = leftBits;
 
       //Add the bright stars lighting
-      starData = texture(brightStarData, vec2(starXCoordinate, starYCoordinate));
-      galacticLighting += max(drawStarLight(starData, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
+      starDatum = texelFetch(starData, ivec3(int(starXIndex), int(starYIndex), BRIGHT_STAR_LAYER), 0);
+      galacticLighting += max(drawStarLight(starDatum, normalizedGalacticCoordinates, sphericalPosition, starAndSkyExposureReduction), 0.0);
 
       //Check our distance from each of the four primary planets
       galacticLighting += max(drawPlanetLight(mercuryColor, mercuryBrightness, mercuryPosition, sphericalPosition, starAndSkyExposureReduction), 0.0);
