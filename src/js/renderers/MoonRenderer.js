@@ -4,7 +4,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 	const assetManager = skyDirector.assetManager;
 	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
 	const skyState = skyDirector.skyState;
-  const scratchColor = new THREE.Color();
   //Sized by SkyDirector from the moon's angular diameter and the camera FOV, so that a
   //moon blown up to a cinematic size gets a texture to match instead of a stretched 512.
   const RENDER_TARGET_SIZE = skyDirector.moonRendererSize;
@@ -77,9 +76,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       assetManager.data.skyMilkyWay.milkyWayEnabled  //milky way enabled
     )
   });
-  if(assetManager.data.skyCloud.cloudsEnabled){
-    moonMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
-  }
   if(assetManager.data.skyAurora.auroraEnabled){
     moonMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
       auroraParameters.nitrogenColor.red / 255.0,
@@ -224,12 +220,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     const blueNoiseTextureRef = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
     moonMaterial.uniforms.blueNoiseTexture.value = blueNoiseTextureRef;
 
-    const lightingManager = skyDirector.lightingManager;
     if(assetManager.data.skyCloud.cloudsEnabled){
-      moonMaterial.uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
-      if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
-        moonMaterial.uniforms.ambientLightPY.value = scratchColor.copy(lightingManager.yAxisHemisphericalLight.color).multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
-      }
+      moonMaterial.uniforms.cloudMap.value = skyDirector.renderers.cloudRenderer.cloudMap;
     }
 
     //Update our bloom threshold so we don't bloom the moon during the day
@@ -286,18 +278,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
         moonMaterial.uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
       }
 
-      if(assetManager.data.skyCloud.cloudsEnabled){
-        const cloudParams = assetManager.data.skyCloud;
-
-        moonMaterial.uniforms.cloudCoverage.value = cloudParams.coverage;
-        moonMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
-        moonMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;
-        moonMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
-        moonMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
-        moonMaterial.uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
-        moonMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercent;
-        moonMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
-      }
       assetsNotReadyYet = false;
 
       //Proceed with the first tick

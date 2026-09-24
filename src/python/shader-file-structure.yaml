@@ -83,6 +83,20 @@ groups:
         fragment: 'cloud-noise.glsl'
         template: 'cloud-noise-template.txt'
         material: 'cloud-noise.js'
+      -
+        fragment: 'cloud-density.glsl'
+        template: 'cloud-density-template.txt'
+        material: 'cloud-density.js'
+      -
+        fragment: 'cloud-march.glsl'
+        vertex: 'cloud-map-vertex.glsl'
+        template: 'cloud-march-template.txt'
+        material: 'cloud-march.js'
+      -
+        fragment: 'cloud-resolve.glsl'
+        vertex: 'cloud-map-vertex.glsl'
+        template: 'cloud-resolve-template.txt'
+        material: 'cloud-resolve.js'
   -
     base_glsl_dir: '../glsl/fog'
     base_js_dir: '../js/materials/fog'

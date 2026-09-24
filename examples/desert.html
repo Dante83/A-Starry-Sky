@@ -54,6 +54,9 @@
     <script src="../src/js/materials/stars/milky-way.js"></script>
     <script src="../src/js/materials/autoexposure/metering-survey.js"></script>
     <script src="../src/js/materials/clouds/cloud-noise.js"></script>
+    <script src="../src/js/materials/clouds/cloud-density.js"></script>
+    <script src="../src/js/materials/clouds/cloud-march.js"></script>
+    <script src="../src/js/materials/clouds/cloud-resolve.js"></script>
     <script src="../src/js/materials/fog/fog-pars.js"></script>
     <script src="../src/js/materials/fog/fog.js"></script>
 
@@ -75,6 +78,7 @@
 
     <!-- Renderers -->
     <script src="../src/js/renderers/FogRenderer.js"></script>
+    <script src="../src/js/renderers/CloudRenderer.js"></script>
     <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
     <script src="../src/js/renderers/SunRenderer.js"></script>
     <script src="../src/js/renderers/MoonRenderer.js"></script>
@@ -101,8 +105,10 @@
           <sky-latitude>-40.9</sky-latitude>
           <sky-longitude>174.9</sky-longitude>
         </sky-location>
+        <!-- Early afternoon at 60x, so there are about seven minutes of daylight to
+             look at the clouds in before the sun sets. -->
         <sky-time >
-          <sky-date>2018-01-28 17:00:00</sky-date>
+          <sky-date>2018-01-28 13:00:00</sky-date>
           <sky-utc-offset>13</sky-utc-offset>
           <sky-speed>200</sky-speed>
         </sky-time>
@@ -115,6 +121,30 @@
         <sky-milky-way>
           <sky-milky-way-intensity>0.7</sky-milky-way-intensity>
         </sky-milky-way>
+        <!-- Clouds. The mere presence of <sky-clouds> enables them.
+             <sky-cloud-type> picks the species, 0 to 1:
+               0.0  stratus         - a thin, flat sheet low down
+               0.25 stratocumulus   - broad lumpy patches
+               0.5  cumulus         - fair weather puffs, about a kilometre across
+               0.75 congestus       - taller, building towers
+               1.0  cumulonimbus    - storm towers up to ~7.5km with an anvil
+             The sky varies the species a little from place to place, so a 0.6 sky
+             mixes cumulus with the odd building tower.
+
+             Presets worth trying (swap the two values below):
+               Fair weather:   coverage 35, type 0.5
+               Building day:   coverage 40, type 0.65   (this one)
+               Stormy:         coverage 20, type 1.0    (higher coverage closes into overcast)
+               Grey deck:      coverage 70, type 0.2
+               Stratus sheet:  coverage 60, type 0.0
+             Clouds now run all the way to the horizon; <sky-cloud-cutoff-distance>
+             (default 160000m) is where they fade out, not a wall. -->
+        <sky-clouds>
+          <sky-cloud-coverage>70.0</sky-cloud-coverage>
+          <sky-cloud-type>1.0</sky-cloud-type>
+          <sky-cloud-velocity-x>22.0</sky-cloud-velocity-x>
+          <sky-cloud-velocity-y>-15.0</sky-cloud-velocity-y>
+        </sky-clouds>
       </a-starry-sky>
 
       <a-assets>

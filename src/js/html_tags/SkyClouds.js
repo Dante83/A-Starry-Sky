@@ -1,5 +1,6 @@
 //child tags
 window.customElements.define('sky-cloud-coverage', class extends HTMLElement{});
+window.customElements.define('sky-cloud-type', class extends HTMLElement{});
 window.customElements.define('sky-cloud-start-height', class extends HTMLElement{});
 window.customElements.define('sky-cloud-end-height', class extends HTMLElement{});
 window.customElements.define('sky-cloud-fade-out-start-percent', class extends HTMLElement{});
@@ -12,14 +13,24 @@ window.customElements.define('sky-cloud-cutoff-distance', class extends HTMLElem
 
 StarrySky.DefaultData.skyCloud = {
   coverage: 70.0,
+  //0 stratus, 0.25 stratocumulus, 0.5 cumulus, 0.75 congestus, 1 cumulonimbus --
+  //the same scale as the-cloud-factory's low deck.
+  type: 0.5,
+  //The condensation level, where cumulus bases sit; each species' own base and
+  //depth come from the meteorology relative to it (cloud-density.glsl).
   startHeight: 1000.0,
-  endHeight: 2500.0,
+  //A cap on how high anything builds -- by default the tropopause, so cumulonimbus
+  //can reach their 11km tops.
+  endHeight: 12000.0,
   fadeOutStartPercent: 90.0,
   fadeInEndPercent: 10.0,
   velocity: new THREE.Vector2(40.0, 40.0),
   startSeed: Date.now() % (86400 * 365),
   numberOfRayMarchSteps: 32.0,
-  cutoffDistance: 40000.0,
+  //Clouds now follow the curve of the Earth down to the horizon, which from the
+  //ground is ~110km away for a 1km cloud base. They thin out over the last 40% of
+  //this distance rather than stopping dead.
+  cutoffDistance: 160000.0,
   cloudsEnabled: false
 };
 
@@ -44,6 +55,7 @@ class SkyClouds extends HTMLElement {
       //The mere presence of this tag enables clouds
       dataRef.cloudsEnabled = true;
       const cloudCoverageTags = self.getElementsByTagName('sky-cloud-coverage');
+      const cloudTypeTags = self.getElementsByTagName('sky-cloud-type');
       const startHeightTags = self.getElementsByTagName('sky-cloud-start-height');
       const endHeightTags = self.getElementsByTagName('sky-cloud-end-height');
       const fadeOutStartPercentTags = self.getElementsByTagName('sky-cloud-fade-out-start-percent');
@@ -54,7 +66,7 @@ class SkyClouds extends HTMLElement {
       const raymarchStepsTags = self.getElementsByTagName('sky-cloud-raymarch-steps');
       const cutoffDistanceTags = self.getElementsByTagName('sky-cloud-cutoff-distance');
 
-      [cloudCoverageTags, startHeightTags, endHeightTags, endHeightTags, fadeOutStartPercentTags,
+      [cloudCoverageTags, cloudTypeTags, startHeightTags, endHeightTags, endHeightTags, fadeOutStartPercentTags,
       fadeInEndPercentTags, cloudVelocityXTags, cloudVelocityYTags, startSeedTags,
       raymarchStepsTags, cutoffDistanceTags].forEach(function(tags){
         if(tags.length > 1){
@@ -63,6 +75,7 @@ class SkyClouds extends HTMLElement {
       });
 
       dataRef.coverage = cloudCoverageTags.length > 0 ? parseFloat(cloudCoverageTags[0].innerHTML) : dataRef.coverage;
+      dataRef.type = cloudTypeTags.length > 0 ? parseFloat(cloudTypeTags[0].innerHTML) : dataRef.type;
       dataRef.startHeight = startHeightTags.length > 0 ? parseFloat(startHeightTags[0].innerHTML) : dataRef.startHeight;
       dataRef.endHeight = endHeightTags.length > 0 ? parseFloat(endHeightTags[0].innerHTML) : dataRef.endHeight;
       dataRef.fadeOutStartPercent = fadeOutStartPercentTags.length > 0 ? parseFloat(fadeOutStartPercentTags[0].innerHTML) : dataRef.fadeOutStartPercent;
@@ -78,7 +91,10 @@ class SkyClouds extends HTMLElement {
       //Clamp the values in our tags
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
       dataRef.coverage = clampAndWarn(dataRef.coverage, 0.0, 100.0, '<sky-cloud-coverage>');
-      dataRef.coverage = (100.0 - (dataRef.coverage + 20.0) * 0.5833333333333) / 100.0; //Clouds don't start until 20% and end at 70%
+      //A plain fraction now. The old remap was a threshold tuned to the retired fBm
+      //density; the new density takes coverage directly (see cloud-density.glsl).
+      dataRef.coverage = dataRef.coverage / 100.0;
+      dataRef.type = clampAndWarn(dataRef.type, 0.0, 1.0, '<sky-cloud-type>');
       dataRef.startHeight = clampAndWarn(dataRef.startHeight, 0.0, 100000.0, '<sky-cloud-start-height>');
       dataRef.endHeight = clampAndWarn(dataRef.endHeight, 0.1, 9999999.9, '<sky-cloud-end-height>');
       dataRef.fadeOutStartPercent = clampAndWarn(dataRef.fadeOutStartPercent, 0.01, 100.0, '<sky-cloud-fade-out-start-percent>') / 100.0;

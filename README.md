@@ -601,10 +601,10 @@ In addition to changing the colors of the sky, you can also change the number of
 :--- | :--- | :---
 `<sky-clouds>` | Parent tag. Contains all child tags related to clouds. Required for enabling Clouds. Contains all child tags related to clouds in the sky. | N/A
 `<sky-cloud-coverage>` | Roughly correlates to the amount of the sky covered in clouds. | 70 (percent)
-`<sky-cloud-start-height>` | The height, in meters, at which clouds start to form. | 1000 (meters)
-`<sky-cloud-end-height>` | The height, in meters at which clouds stop forming. | 2500 (meters)
-`<sky-cloud-fade-out-start-percent>` | Cloud coverage starts to *fade out* towards zero at this *percent* of height of the cloud. | 90 (percent)
-`<sky-cloud-fade-in-end-percent>` | Cloud coverage starts to *fade in* towards 100% at this *percent* of height of the cloud. | 10 (percent)
+`<sky-cloud-start-height>` | The condensation level, in meters: where cumulus bases sit. Other cloud types set their own bases and heights relative to it (stratus forms lower, cumulonimbus builds to about 11km). | 1000 (meters)
+`<sky-cloud-end-height>` | The height, in meters, above which no cloud builds. | 12000 (meters)
+`<sky-cloud-fade-out-start-percent>` | Cloud density starts to *fade out* towards zero at this *percent* of the height of the cloud type. | 90 (percent)
+`<sky-cloud-fade-in-end-percent>` | How soft the cloud base is: density fades in over a quarter of this *percent* of the height of the cloud type. | 10 (percent)
 `<sky-cloud-velocity-x>` | The x-component of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 40
 `<sky-cloud-velocity-y>` | The y-component (or actually z) of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 40
 `<sky-cloud-start-seed>` | Random seed used to set the current cloud noise overhead, if not set, it defaults to a variation on the current date time timestamp. | *Date.now() % (86400 * 365)*.

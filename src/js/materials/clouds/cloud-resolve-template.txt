@@ -1,0 +1,23 @@
+StarrySky.Materials.Clouds.cloudResolve = {
+  uniforms: function(){
+    return {
+      cloudMarchMap: {value: null},
+      cloudHistoryMap: {value: null},
+      cloudJitter: {value: new THREE.Vector2()},
+      cloudMarchSize: {value: new THREE.Vector2()},
+      cloudMarchTexelSize: {value: new THREE.Vector2()},
+      cloudReprojectionShift: {value: new THREE.Vector3()},
+      cloudReprojectionHeight: {value: 1750.0},
+      cloudEarthRadius: {value: 6366700.0},
+      cloudCutoffDistance: {value: 40000.0},
+      cloudHistoryBlend: {value: 1.0},
+      cloudResolveSize: {value: new THREE.Vector2()}
+    };
+  },
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+};

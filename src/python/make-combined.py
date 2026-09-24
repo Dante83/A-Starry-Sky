@@ -35,6 +35,9 @@ def main():
     'materials/stars/milky-way.js',\
     'materials/autoexposure/metering-survey.js',\
     'materials/clouds/cloud-noise.js',\
+    'materials/clouds/cloud-density.js',\
+    'materials/clouds/cloud-march.js',\
+    'materials/clouds/cloud-resolve.js',\
     'materials/fog/fog-pars.js',\
     'materials/fog/fog.js',\
     'html_tags/HTMLTagUtils.js',\
@@ -50,6 +53,7 @@ def main():
     'lut_libraries/StellarLUTLibrary.js',\
     'lut_libraries/CloudLUTLibrary.js',\
     'renderers/FogRenderer.js',\
+    'renderers/CloudRenderer.js',\
     'renderers/AtmosphereRenderer.js',\
     'renderers/SunRenderer.js',\
     'renderers/MoonRenderer.js',\

@@ -4,7 +4,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	const atmosphereLUTLibrary = skyDirector.atmosphereLUTLibrary;
 	const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
 	const skyState = skyDirector.skyState;
-  const scratchColor = new THREE.Color();
 	//Sized by SkyDirector from the sun's angular diameter and the camera FOV, so that a
 	//sun blown up to a cinematic size gets a texture to match instead of a stretched 256.
 	const RENDER_TARGET_SIZE = skyDirector.sunRendererSize;
@@ -82,9 +81,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   baseSunMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   baseSunMaterial.uniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
 	baseSunMaterial.uniforms.cameraPosition.value = new THREE.Vector3(0.0);
-	if(assetManager.data.skyCloud.cloudsEnabled){
-    baseSunMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
-  }
   baseSunMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
 	const renderBufferMesh = new THREE.Mesh(
     new THREE.PlaneGeometry(2, 2),
@@ -156,12 +152,8 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     baseSunMaterial.uniforms.localSiderealTime.value = skyState.LSRT;
     baseSunMaterial.uniforms.moonRadius.value = skyState.moon.scale * baseRadiusOfTheMoon;
 
-		const lightingManager = skyDirector.lightingManager;
 		if(assetManager.data.skyCloud.cloudsEnabled){
-      baseSunMaterial.uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
-      if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
-        baseSunMaterial.uniforms.ambientLightPY.value = scratchColor.copy(lightingManager.yAxisHemisphericalLight.color).multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
-      }
+      baseSunMaterial.uniforms.cloudMap.value = skyDirector.renderers.cloudRenderer.cloudMap;
     }
 
     //Sun bloom: lower threshold near horizon (sun dimmer due to extinction ->
@@ -200,17 +192,6 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
 	    //Image of the solar corona for our solar ecclipse
 	    baseSunMaterial.uniforms.solarEclipseMap.value = assetManager.images.solarEclipseImage;
 
-			if(assetManager.data.skyCloud.cloudsEnabled){
-				const cloudParams = assetManager.data.skyCloud;
-				baseSunMaterial.uniforms.cloudCoverage.value = cloudParams.coverage;
-        baseSunMaterial.uniforms.cloudVelocity.value = cloudParams.velocity;
-        baseSunMaterial.uniforms.cloudStartHeight.value = cloudParams.startHeight;
-        baseSunMaterial.uniforms.cloudEndHeight.value = cloudParams.endHeight;
-        baseSunMaterial.uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
-				baseSunMaterial.uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
-        baseSunMaterial.uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercent;
-        baseSunMaterial.uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
-			}
 			assetsNotReadyYet = false;
 
 			//Proceed with the first tick

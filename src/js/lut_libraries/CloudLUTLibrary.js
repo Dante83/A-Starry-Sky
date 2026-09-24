@@ -1,88 +1,85 @@
+//Bakes the tileable noise the clouds are built from, once, on the GPU:
+//  baseNoise    128^3 RGBA8  Perlin-Worley + three Worley fBms -- the cloud mass
+//  detailNoise   32^3 RGBA8  three Worley fBms -- erodes the edges
+//  weatherMap   512^2 RGBA8  where clouds are, what species, and the cirrus streaks
+//See cloud-noise.glsl for the channel layout and cloud-density.glsl for how they are
+//combined.
+//
+//Every layer is rendered straight into its render target, the same way the texture
+//array builder fills its arrays. The old baker read a 2048x1024 float slice sheet
+//back to the CPU and reshuffled it into a Data3DTexture, which stalled the pipeline
+//and cost 32MB of RGBA32F for data that is perfectly happy at 8 bits.
 StarrySky.LUTlibraries.CloudLUTLibrary = function(data, renderer, scene){
-  //Enable the OES_texture_float_linear extension
-  if(!renderer.capabilities.isWebGL2 && !renderer.extensions.get("OES_texture_float_linear")){
-    console.error("No linear interpolation of OES textures allowed.");
-    return false;
-  }
+  const BASE_NOISE_SIZE = 128;
+  const DETAIL_NOISE_SIZE = 32;
+  const WEATHER_MAP_SIZE = 512;
 
-  //Enable 32 bit float textures
-  if(!renderer.capabilities.isWebGL2 && !renderer.extensions.get("WEBGL_color_buffer_float")){
-    console.error("No float WEBGL color buffers allowed.");
-    return false;
-  }
-  const materials = StarrySky.Materials.Clouds;
+  const builder = StarrySky.TextureArrayBuilder;
+  const noiseTemplate = StarrySky.Materials.Clouds.cloudNoiseMaterial;
+  const material = builder.createMaterial(noiseTemplate.fragmentShader, noiseTemplate.uniforms());
 
-  const CLOUD_RENDER_TEXTURE_SIZE = 128;
-  const OUTPUT_RENDER_TEXTURE_WIDTH = 2048;
-  const OUTPUT_RENDER_TEXTURE_HEIGHT = 1024;
-  const cloudTextureRenderer = new THREE.StarrySkyComputationRenderer(OUTPUT_RENDER_TEXTURE_WIDTH, OUTPUT_RENDER_TEXTURE_HEIGHT, renderer);
+  //No mipmaps. The base noise tiles every few kilometres, so it is never minified
+  //inside the cloud cutoff, and the detail noise is faded out with distance in the
+  //density function before it would alias.
+  const createVolume = function(size){
+    const target = new THREE.WebGL3DRenderTarget(size, size, size, {
+      format: THREE.RGBAFormat,
+      type: THREE.UnsignedByteType,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      wrapS: THREE.RepeatWrapping,
+      wrapT: THREE.RepeatWrapping,
+      generateMipmaps: false,
+      depthBuffer: false,
+      stencilBuffer: false
+    });
+    target.texture.wrapS = THREE.RepeatWrapping;
+    target.texture.wrapT = THREE.RepeatWrapping;
+    target.texture.wrapR = THREE.RepeatWrapping;
+    target.texture.generateMipmaps = false;
+    target.texture.colorSpace = THREE.NoColorSpace;
+    return target;
+  };
 
-  const BYTES_PER_32_BIT_FLOAT = 4;
-  const cloud3DNoiseRenderTargetBuffer = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * 4);
-  const cloud3DNoiseRenderTargetBufferFloat32Array = new Float32Array(cloud3DNoiseRenderTargetBuffer);
-  const cloud3DNoiseRenderTargetBufferSlice = new ArrayBuffer(BYTES_PER_32_BIT_FLOAT * OUTPUT_RENDER_TEXTURE_WIDTH * OUTPUT_RENDER_TEXTURE_HEIGHT * 4);
-  const cloud3DNoiseRenderTargetBufferFloat32ArraySlice = new Float32Array(cloud3DNoiseRenderTargetBufferSlice);
-
-  const cloudNoiseSliceTexture = cloudTextureRenderer.createTexture();
-  const cloudNoiseSliceVar = cloudTextureRenderer.addVariable('cloudNoise',
-    materials.cloudNoiseMaterial.fragmentShader,
-    cloudNoiseSliceTexture
-  );
-  cloudTextureRenderer.setVariableDependencies(cloudNoiseSliceVar, []);
-  cloudNoiseSliceVar.material.uniforms = JSON.parse(JSON.stringify(materials.cloudNoiseMaterial.uniforms));
-  cloudNoiseSliceVar.type = THREE.FloatType;
-  cloudNoiseSliceVar.format = THREE.RGBAFormat;
-  cloudNoiseSliceVar.minFilter = THREE.NearestFilter;
-  cloudNoiseSliceVar.magFilter = THREE.NearestFilter;
-  cloudNoiseSliceVar.wrapS = THREE.ClampToEdgeWrapping;
-  cloudNoiseSliceVar.wrapT = THREE.ClampToEdgeWrapping;
-  cloudNoiseSliceVar.colorSpace = THREE.LinearSRGBColorSpace;
-
-  let error1 = cloudTextureRenderer.init();
-  if(error1 !== null){
-    console.error(`Cloud Texture Renderer: ${error1}`);
-  }
-
-  //Read data one slice at a time into the 3D texture array buffer
-  const inverseCloudRenderTextureSize = 1.0 / CLOUD_RENDER_TEXTURE_SIZE;
-  const NUM_DATA_POINTS_IN_SLICE = CLOUD_RENDER_TEXTURE_SIZE * CLOUD_RENDER_TEXTURE_SIZE * 4;
-  cloudTextureRenderer.compute();
-  const renderTarget = cloudTextureRenderer.getCurrentRenderTarget(cloudNoiseSliceVar);
-  renderer.readRenderTargetPixels(renderTarget, 0, 0, OUTPUT_RENDER_TEXTURE_WIDTH, OUTPUT_RENDER_TEXTURE_HEIGHT, cloud3DNoiseRenderTargetBufferFloat32ArraySlice);
-  for(let i = 0; i < OUTPUT_RENDER_TEXTURE_HEIGHT; ++i){
-    for(let j = 0; j < OUTPUT_RENDER_TEXTURE_WIDTH; ++j){
-      for(let k = 0; k < 4; ++k){
-        //Convert this 2D pixel coordinate into a position from our render target read
-        const xIndex = Math.floor(j / 128.0);
-      	const yIndex = Math.floor(i / 128.0);
-      	const z = (xIndex + yIndex * 16);
-      	const x = (j - xIndex * 128);
-      	const y = (i - yIndex * 128);
-
-        //Convert this 2D pixel coordinate into its' appropriate read position in the 3D texture render buffer
-        const inputLocation = (i * OUTPUT_RENDER_TEXTURE_WIDTH + j) * 4 + k;
-        const outputLocation = (x + y * 128 + z * 128 * 128) * 4 + k;
-
-        cloud3DNoiseRenderTargetBufferFloat32Array[outputLocation] = cloud3DNoiseRenderTargetBufferFloat32ArraySlice[inputLocation];
-      }
+  const bakeVolume = function(size, mode){
+    const target = createVolume(size);
+    material.uniforms.noiseMode.value = mode;
+    material.uniforms.depth.value = size;
+    for(let z = 0; z < size; ++z){
+      material.uniforms.slice.value = z;
+      builder.renderLayer(renderer, target, z, material);
     }
-  }
+    return target;
+  };
 
-  //Delete the shader
-  for(let renderTarget of cloudNoiseSliceVar.renderTargets){
-    renderTarget.dispose();
-  }
-  cloudNoiseSliceVar.material.dispose();
+  const bakeStart = performance.now();
+  this.baseNoiseTarget = bakeVolume(BASE_NOISE_SIZE, 0);
+  this.detailNoiseTarget = bakeVolume(DETAIL_NOISE_SIZE, 1);
 
-  //Turn this array into a 3D texture
-  this.repeating3DCloudNoiseTextures = new THREE.Data3DTexture(cloud3DNoiseRenderTargetBufferFloat32Array, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE, CLOUD_RENDER_TEXTURE_SIZE);
-  this.repeating3DCloudNoiseTextures.type = THREE.FloatType;
-  this.repeating3DCloudNoiseTextures.format = THREE.RGBAFormat;
-  this.repeating3DCloudNoiseTextures.minFilter = THREE.LinearFilter;
-  this.repeating3DCloudNoiseTextures.magFilter = THREE.LinearFilter;
-  this.repeating3DCloudNoiseTextures.wrapS = THREE.RepeatWrapping;
-  this.repeating3DCloudNoiseTextures.wrapT = THREE.RepeatWrapping;
-  this.repeating3DCloudNoiseTextures.wrapR = THREE.RepeatWrapping;
-  this.repeating3DCloudNoiseTextures.colorSpace = THREE.LinearSRGBColorSpace;
-  this.repeating3DCloudNoiseTextures.needsUpdate = true;
+  this.weatherMapTarget = new THREE.WebGLRenderTarget(WEATHER_MAP_SIZE, WEATHER_MAP_SIZE, {
+    format: THREE.RGBAFormat,
+    type: THREE.UnsignedByteType,
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    wrapS: THREE.RepeatWrapping,
+    wrapT: THREE.RepeatWrapping,
+    generateMipmaps: false,
+    depthBuffer: false,
+    stencilBuffer: false
+  });
+  this.weatherMapTarget.texture.colorSpace = THREE.NoColorSpace;
+  material.uniforms.noiseMode.value = 2;
+  material.uniforms.depth.value = 1.0;
+  material.uniforms.slice.value = 0.0;
+  builder.renderLayer(renderer, this.weatherMapTarget, 0, material);
+
+  material.dispose();
+
+  this.baseNoise = this.baseNoiseTarget.texture;
+  this.detailNoise = this.detailNoiseTarget.texture;
+  this.weatherMap = this.weatherMapTarget.texture;
+
+  //The GPU work is queued, not finished, so this is a lower bound -- but it is the
+  //number that shows up as a hitch on the main thread.
+  console.log(`Cloud noise baked in ${(performance.now() - bakeStart).toFixed(1)}ms`);
 }

@@ -19,18 +19,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       cameraHeight: {value: 0.0}
     }
 
+    //Clouds are marched by CloudRenderer into a direction indexed map; every sky
+    //pass just samples it.
     if(cloudsEnabled && !isMeteringShader){
-      uniforms.cloudLUTs = {value: new THREE.Data3DTexture()};
-      uniforms.ambientLightPY = {value: new THREE.Vector3(0, 181, 226)};
-      uniforms.cloudCoverage = {value: 0.5};
-      uniforms.cloudVelocity = {value: new THREE.Vector2(0.0, 0.0)};
-      uniforms.cloudStartHeight = {value: 1000.0};
-      uniforms.cloudEndHeight = {value: 2500.0};
-      uniforms.numberOfCloudMarchSteps = {value: 64.0};
-      uniforms.cloudFadeOutStartPercent = {value: 0.9};
-      uniforms.cloudFadeInEndPercent = {value: 0.05};
-      uniforms.cloudTime = {value: 0.0};
-      uniforms.cloudCutoffDistance = {value: 40000.0};
+      uniforms.cloudMap = {value: null};
     }
 
     if(auroraEnabled){

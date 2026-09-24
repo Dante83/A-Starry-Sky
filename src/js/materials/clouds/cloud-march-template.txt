@@ -1,0 +1,53 @@
+StarrySky.Materials.Clouds.cloudMarch = {
+  uniforms: function(){
+    return {
+      sunPosition: {value: new THREE.Vector3()},
+      moonPosition: {value: new THREE.Vector3()},
+      sunHorizonFade: {value: 1.0},
+      moonHorizonFade: {value: 1.0},
+      scatteringSunIntensity: {value: 20.0},
+      scatteringMoonIntensity: {value: 1.4},
+      moonLightColor: {value: new THREE.Vector3()},
+      mieInscatteringSum: {value: null},
+      rayleighInscatteringSum: {value: null},
+      transmittance: {value: null},
+      blueNoiseTexture: {value: null},
+      numberOfCloudMarchSteps: {value: 32.0},
+
+      //cloud-density.glsl
+      cloudBaseNoise: {value: null},
+      cloudDetailNoise: {value: null},
+      cloudWeatherMap: {value: null},
+      cloudCoverage: {value: 0.5},
+      cloudType: {value: 0.5},
+      cloudStartHeight: {value: 1000.0},
+      cloudEndHeight: {value: 2500.0},
+      cloudFadeInEndPercent: {value: 0.1},
+      cloudFadeOutStartPercent: {value: 0.9},
+      cloudCutoffDistance: {value: 160000.0},
+      cloudObserverRadius: {value: 6366700.0},
+      cloudNoiseOffset: {value: new THREE.Vector2()},
+
+      cloudJitter: {value: new THREE.Vector2()},
+      cloudMarchTexelSize: {value: new THREE.Vector2()},
+      cloudFrame: {value: 0.0}
+    };
+  },
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+  fragmentShader: function(atmosphereFunctions){
+    let originalGLSL = [
+      {fragment_glsl}
+    ];
+
+    let updatedLines = [];
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      let updatedGLSL = originalGLSL[i].replace(/\$atmosphericFunctions/g, atmosphereFunctions);
+      updatedGLSL = updatedGLSL.replace(/\$cloudDensityFunctions/g, StarrySky.Materials.Clouds.cloudDensity.partialFragmentShader);
+      updatedLines.push(updatedGLSL);
+    }
+
+    return updatedLines.join('\n');
+  }
+};

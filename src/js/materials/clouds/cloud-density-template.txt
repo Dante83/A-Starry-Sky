@@ -1,0 +1,7 @@
+//Shared cloud density GLSL (see cloud-density.glsl). Injected as $cloudDensityFunctions
+//into every shader that needs to know where the clouds are.
+StarrySky.Materials.Clouds.cloudDensity = {
+  partialFragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+};

@@ -7,7 +7,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   const auroraParameters = assetManager.data.skyAurora;
   const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const skyState = skyDirector.skyState;
-  const scratchColor = new THREE.Color();
   this.atmosphereMaterial = new THREE.ShaderMaterial({
     uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
       false, //sun pass
@@ -39,9 +38,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
-  if(assetManager.data.skyCloud.cloudsEnabled){
-    this.atmosphereMaterial.uniforms.cloudLUTs.value = skyDirector.cloudLUTLibrary.repeating3DCloudNoiseTextures;
-  }
   if(assetManager.data.skyAurora.auroraEnabled){
     this.atmosphereMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
       auroraParameters.nitrogenColor.red / 255.0,
@@ -120,12 +116,9 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 
-    const lightingManager = skyDirector.lightingManager;
+    //CloudRenderer ticks first and ping-pongs its targets, so take this frame's map.
     if(assetManager.data.skyCloud.cloudsEnabled){
-      uniforms.cloudTime.value = assetManager.data.skyCloud.startSeed + t;
-      if(assetManager && assetManager.data.skyCloud.cloudsEnabled && lightingManager){
-        uniforms.ambientLightPY.value = scratchColor.copy(lightingManager.yAxisHemisphericalLight.color).multiplyScalar(lightingManager.yAxisHemisphericalLight.intensity);
-      }
+      uniforms.cloudMap.value = skyDirector.renderers.cloudRenderer.cloudMap;
     }
   }
 
@@ -160,17 +153,6 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
         uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
       }
 
-      if(assetManager.data.skyCloud.cloudsEnabled){
-        const cloudParams = assetManager.data.skyCloud;
-        uniforms.cloudCoverage.value = cloudParams.coverage;
-        uniforms.cloudVelocity.value = cloudParams.velocity;
-        uniforms.cloudStartHeight.value = cloudParams.startHeight;
-        uniforms.cloudEndHeight.value = cloudParams.endHeight;
-        uniforms.numberOfCloudMarchSteps.value = (cloudParams.numberOfRayMarchSteps + 0.0);
-        uniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
-        uniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercent;
-        uniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
-      }
       assetsNotReadyYet = false;
 
       //Proceed with the first tick

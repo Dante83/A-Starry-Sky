@@ -198,9 +198,32 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       const moonAngularDiameterInRadians = self.assetManager.data.skyAtmosphericParameters.moonAngularDiameter * DEG_2_RAD;
       self.moonRendererSize = textureSizeForQuad(moonAngularDiameterInRadians, 512, 2048);
 
+      //The cloud map is a stereographic projection of the sky from the nadir (see
+      //cloud-march.glsl), so its density in texels per radian is N / (2 K) at the
+      //horizon and half that at the zenith. At CLOUD_MAP_TEXELS_PER_PIXEL = 1 the
+      //horizon lands at one texel per screen pixel and the zenith at half that.
+      //
+      //This is THE sharpness-for-speed knob. The ray march runs at half the map's
+      //size on each axis, so its cost goes with the square of this value. At 1.0 the
+      //march is a quarter of the screen's resolution at the horizon, and the 100 to
+      //250m lobes on a cloud 15km away fell under two march texels and blurred
+      //away. 1.5 costs 2.25x the march time (measured: the clouds went from 0.75x
+      //to 1.35x the cost of the old recipe at 1.0) for lobes that stay crisp. The
+      //cap is a memory budget: two half float targets at 1536 are ~38MB, and a
+      //headset's pixels per radian would otherwise ask for more. Raise both together.
+      const CLOUD_MAP_TEXELS_PER_PIXEL = 1.5;
+      const CLOUD_MAP_K = Math.tan(0.5 * 94.0 * DEG_2_RAD);
+      const CLOUD_MAP_MIN_SIZE = 768;
+      const CLOUD_MAP_MAX_SIZE = 1536;
+      const cloudMapTexels = 2.0 * CLOUD_MAP_K * self.pixelsPerRadian * CLOUD_MAP_TEXELS_PER_PIXEL;
+      self.cloudMapSize = Math.min(Math.max(Math.ceil(cloudMapTexels / 64.0) * 64, CLOUD_MAP_MIN_SIZE), CLOUD_MAP_MAX_SIZE);
+
       //Prepare all of our renderers to display stuff
       self.speed = self.assetManager.data.skyTimeData.speed;
       self.renderers.fogRenderer = new StarrySky.Renderers.FogRenderer(self);
+      if(self.assetManager.data.skyCloud.cloudsEnabled){
+        self.renderers.cloudRenderer = new StarrySky.Renderers.CloudRenderer(self);
+      }
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
       self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
@@ -875,7 +898,11 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Run our interpolation engine
       self.tick(time, timeDelta);
 
-      //Update all of our renderers
+      //Update all of our renderers. Clouds go first: every sky pass samples the
+      //cloud map, and the sun and moon targets render inside their own ticks.
+      if(self.renderers.cloudRenderer){
+        self.renderers.cloudRenderer.tick(time);
+      }
       self.renderers.atmosphereRenderer.firstTick(time);
       self.renderers.sunRenderer.firstTick(time);
       self.renderers.moonRenderer.firstTick(time);
@@ -899,7 +926,10 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Run our interpolation engine
       self.tick(time, timeDelta);
 
-      //Update all of our renderers
+      //Update all of our renderers, clouds first (see start above)
+      if(self.renderers.cloudRenderer){
+        self.renderers.cloudRenderer.tick(time);
+      }
       self.renderers.atmosphereRenderer.tick(time);
       self.renderers.sunRenderer.tick(time);
       self.renderers.moonRenderer.tick(time);
