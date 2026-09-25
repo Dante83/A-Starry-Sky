@@ -83,6 +83,11 @@ const float CLOUD_DETAIL_AMOUNT = 1.0;
 //same value, since their tops overhang, so they sit a little lower
 //(CLOUD_TOWERING_COVERAGE_OFFSET). Re-measure whenever the recipe changes.
 const float CLOUD_COVERAGE_TABLE[11] = float[11](0.0, 0.082, 0.097, 0.112, 0.126, 0.139, 0.154, 0.171, 0.191, 0.223, 0.45);
+//The same for stratiform decks. Their footprint never falls below half (so that
+//the coverage can close them into an overcast), which bunched the heap table
+//further still: 10% on the tag covered 28% of the sky and 90% only 87%. Measured
+//on stratus the same way; blended in with the stratiform weight.
+const float CLOUD_STRATIFORM_COVERAGE_TABLE[11] = float[11](0.0, 0.036, 0.066, 0.090, 0.111, 0.131, 0.151, 0.172, 0.194, 0.221, 0.35);
 const float CLOUD_TOWERING_COVERAGE_OFFSET = 0.008;
 
 //Extinction at full density, per meter. takram's 0.2 -- the dense end of real
@@ -197,10 +202,18 @@ float cloudStepScale(){
   return sqrt(cloudShapeScale());
 }
 
+//How much a species is a spreading sheet rather than a heap: 1 for stratus, 0 from
+//cumulus up.
+float cloudStratiformWeight(float type){
+  return 1.0 - smoothstep(0.1, 0.4, type);
+}
+
 float cloudRecipeCoverage(float coverage, float type){
   float x = clamp(coverage, 0.0, 1.0) * 10.0;
   int i = min(int(x), 9);
-  float k = mix(CLOUD_COVERAGE_TABLE[i], CLOUD_COVERAGE_TABLE[i + 1], x - float(i));
+  float heaps = mix(CLOUD_COVERAGE_TABLE[i], CLOUD_COVERAGE_TABLE[i + 1], x - float(i));
+  float sheets = mix(CLOUD_STRATIFORM_COVERAGE_TABLE[i], CLOUD_STRATIFORM_COVERAGE_TABLE[i + 1], x - float(i));
+  float k = mix(heaps, sheets, cloudStratiformWeight(type));
   return max(k - CLOUD_TOWERING_COVERAGE_OFFSET * smoothstep(0.5, 1.0, type), 0.0);
 }
 
@@ -243,7 +256,7 @@ CloudWeather cloudSampleWeather(vec3 q, float distance){
 
   //Footprints: stratiform decks spread from the kilometres wide coverage field;
   //heaps stand on the Worley footprints, scaled up with the species.
-  float stratiform = 1.0 - smoothstep(0.1, 0.4, type);
+  float stratiform = cloudStratiformWeight(type);
   float shapeScale = cloudShapeScale();
   float heaps = shapeScale == 1.0 ? map.r : texture(cloudWeatherMap, weather.noisePosition.xz / (CLOUD_WEATHER_TILE * shapeScale)).r;
   //A deck's footprint never falls to zero, so the coverage can close it into an
