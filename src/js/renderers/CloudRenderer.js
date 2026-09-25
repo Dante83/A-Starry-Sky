@@ -136,6 +136,11 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   marchUniforms.midCloudCoverage.value = cloudParams.midCoverage;
   marchUniforms.midCloudType.value = cloudParams.midType;
   marchUniforms.midCloudHeight.value = cloudParams.midHeight;
+  //The wind in the noise frame (see cloudNoiseOffset in tick), for the mid deck's
+  //rows, which line up across it. Straight along x when there is no wind.
+  if(cloudParams.velocity.lengthSq() > 0.0){
+    marchUniforms.cloudWindDirection.value.set(cloudParams.velocity.x, cloudParams.velocity.y).normalize();
+  }
   marchUniforms.cloudMarchTexelSize.value.set(1.0 / MARCH_SIZE, 1.0 / MARCH_SIZE);
 
   const resolveMaterial = new THREE.ShaderMaterial({

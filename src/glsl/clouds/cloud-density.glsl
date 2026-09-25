@@ -44,6 +44,7 @@ uniform float cloudFadeOutStartPercent; //0..1 of each species' depth
 uniform float cloudCutoffDistance;      //Meters. Clouds fade out approaching this.
 uniform float cloudObserverRadius;      //Meters from the planet centre to the observer
 uniform vec2 cloudNoiseOffset;          //Camera position minus wind drift, sky frame x/z, wrapped
+uniform vec2 cloudWindDirection;        //Unit vector the clouds drift along, sky frame x/z
 uniform float midCloudCoverage;         //0..1, the mid deck (see MID DECK below)
 uniform float midCloudType;             //0 altocumulus .. 1 altostratus
 uniform float midCloudHeight;           //Meters above the observer: the mid deck's base
@@ -211,16 +212,12 @@ float cloudStratiformWeight(float type){
   return 1.0 - smoothstep(0.1, 0.4, type);
 }
 
-float cloudRecipeCoverageBlend(float coverage, float stratiform){
+float cloudRecipeCoverage(float coverage, float type){
   float x = clamp(coverage, 0.0, 1.0) * 10.0;
   int i = min(int(x), 9);
   float heaps = mix(CLOUD_COVERAGE_TABLE[i], CLOUD_COVERAGE_TABLE[i + 1], x - float(i));
   float sheets = mix(CLOUD_STRATIFORM_COVERAGE_TABLE[i], CLOUD_STRATIFORM_COVERAGE_TABLE[i + 1], x - float(i));
-  return mix(heaps, sheets, stratiform);
-}
-
-float cloudRecipeCoverage(float coverage, float type){
-  float k = cloudRecipeCoverageBlend(coverage, cloudStratiformWeight(type));
+  float k = mix(heaps, sheets, cloudStratiformWeight(type));
   return max(k - CLOUD_TOWERING_COVERAGE_OFFSET * smoothstep(0.5, 1.0, type), 0.0);
 }
 
@@ -405,23 +402,52 @@ const vec2 MID_CLOUD_PATCH_OFFSET = vec2(17000.0, 41000.0);
 const float MID_CLOUD_COVERAGE_VARIATION = 1.0;
 const float MID_CLOUD_CLUMP_WEIGHT = 0.5;
 
+//Rows (undulatus): billow waves in the wind shear line the cells up in crests
+//across the wind, about a kilometre apart, in some parts of the sky and not
+//others. A zero mean wave, so the coverage holds, bent by the clump field so the
+//crests wander. At twice this strength the rows ran long, straight and evenly
+//spaced, and read as combed rather than as cloud. The wave is not periodic in the
+//360km noise wrap unless the wind is axis aligned, so the rows jump once per wrap.
+const float MID_CLOUD_ROW_WAVELENGTH = 1000.0;
+const float MID_CLOUD_ROW_STRENGTH = 0.1;
+const float MID_CLOUD_ROW_BEND = 12.0;
+
 //                                        Ac       As
 //Altocumulus cells are lenses, several times wider than they are deep: at 500m
 //deep, as deep as the cells were wide, they stood up as pillars towards the
 //horizon, where real ones flatten into stripes.
 const vec2 MID_CLOUD_DEPTH           = vec2(250.0, 1500.0); //Meters
 //Extinction at full density, per meter. Altocumulus holds 0.1 to 0.3 g/m^3 of water
-//against cumulus' 0.5 to 1, with similar droplets, so about a quarter of cumulus'
-//0.2: a core optical depth of 5 to 15, enough to shade. Altostratus is thinner
-//still per meter but deeper: 10 or so through the layer, the ground glass sun.
-const vec2 MID_CLOUD_DENSITY_SCALE   = vec2(0.05, 0.008);
-//Altostratus is close to featureless: any real erosion carves it into billows,
-//and it reads as a sky of big stratocumulus instead of a sheet.
-const vec2 MID_CLOUD_SHAPE_AMOUNT    = vec2(1.0, 0.08);
-const vec2 MID_CLOUD_DETAIL_AMOUNT   = vec2(1.0, 0.1);
+//in droplets of 5 to 10 microns, 1.5 LWC / (rho r) = 0.04 to 0.09/m, and the soft
+//threshold leaves a typical core at about half of full density. At 0.05 the cells
+//were cotton wool, lit right through; at 0.12 their thick middles go grey under
+//bright thin rims, as real ones do seen from below. Altostratus is thinner still
+//per meter but deeper: 10 or so through the layer, the ground glass sun.
+const vec2 MID_CLOUD_DENSITY_SCALE   = vec2(0.12, 0.008);
+//Full erosion broke each altocumulus cell into cauliflower lumps; real cells are
+//smoother lenses. Altostratus is close to featureless: any real erosion carves it
+//into billows, and it reads as a sky of big stratocumulus instead of a sheet.
+const vec2 MID_CLOUD_SHAPE_AMOUNT    = vec2(0.7, 0.08);
+const vec2 MID_CLOUD_DETAIL_AMOUNT   = vec2(0.7, 0.1);
 
 float midCloudKey(vec2 key){
   return mix(key.x, key.y, midCloudType);
+}
+
+//The recipe coverages that cover 0%, 10% ... 100% of the sky with each, as the
+//low deck's tables do: the fraction of columns more than half opaque looking
+//straight up, measured with the density probe over 3 x 60km squares. Borrowing
+//the low deck's tables, 50% on the tag covered 40% of the sky with altocumulus
+//and 57% with altostratus. Re-measure whenever the mid recipe changes.
+const float MID_CLOUD_AC_COVERAGE_TABLE[11] = float[11](0.0, 0.102, 0.117, 0.128, 0.139, 0.149, 0.160, 0.172, 0.187, 0.208, 0.32);
+const float MID_CLOUD_AS_COVERAGE_TABLE[11] = float[11](0.0, 0.032, 0.057, 0.078, 0.097, 0.115, 0.133, 0.151, 0.171, 0.194, 0.232);
+
+float midCloudRecipeCoverage(float coverage){
+  float x = clamp(coverage, 0.0, 1.0) * 10.0;
+  int i = min(int(x), 9);
+  float cells = mix(MID_CLOUD_AC_COVERAGE_TABLE[i], MID_CLOUD_AC_COVERAGE_TABLE[i + 1], x - float(i));
+  float sheet = mix(MID_CLOUD_AS_COVERAGE_TABLE[i], MID_CLOUD_AS_COVERAGE_TABLE[i + 1], x - float(i));
+  return mix(cells, sheet, midCloudType);
 }
 
 float midCloudBase(){
@@ -463,13 +489,16 @@ CloudWeather midCloudSampleWeather(vec3 q, float distance){
   float cells = texture(cloudWeatherMap, weather.noisePosition.xz / MID_CLOUD_FOOTPRINT_TILE).r;
   float clumps = texture(cloudWeatherMap, (weather.noisePosition.xz + MID_CLOUD_PATCH_OFFSET.yx) / MID_CLOUD_CLUMP_TILE).r;
   cells = mix(cells, clumps, MID_CLOUD_CLUMP_WEIGHT);
+  float rowPhase = dot(weather.noisePosition.xz, cloudWindDirection) / MID_CLOUD_ROW_WAVELENGTH;
+  float rows = cos(PI_TIMES_TWO * rowPhase + MID_CLOUD_ROW_BEND * (clumps - 0.5));
+  cells += MID_CLOUD_ROW_STRENGTH * smoothstep(0.35, 0.65, patches.a) * rows;
   float sheet = 0.5 + 0.5 * smoothstep(0.2, 0.8, patches.b);
   float footprint = mix(cells, sheet, stratiform);
 
   float bias = mix(CLOUD_SHAPE_ALTERING_BIAS, 1.0, stratiform);
   float x = max(pow(hf, bias) * 2.0 - 1.0, 0.0);
   float heightScale = 1.0 - x * x;
-  float reach = max(cloudRecipeCoverageBlend(coverage, stratiform) * heightScale, 1e-4);
+  float reach = max(midCloudRecipeCoverage(coverage) * heightScale, 1e-4);
   float threshold = 1.0 - reach;
   float profile = cloudRemap(mix(footprint, 1.0, CLOUD_COVERAGE_FILTER_WIDTH), threshold, threshold + CLOUD_COVERAGE_FILTER_WIDTH, 0.0, 1.0);
   weather.density = clamp(profile * CLOUD_COVERAGE_FILTER_WIDTH / reach, 0.0, 1.0);
