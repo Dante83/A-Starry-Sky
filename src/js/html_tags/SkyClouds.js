@@ -10,6 +10,9 @@ window.customElements.define('sky-cloud-velocity-y', class extends HTMLElement{}
 window.customElements.define('sky-cloud-start-seed', class extends HTMLElement{});
 window.customElements.define('sky-cloud-raymarch-steps', class extends HTMLElement{});
 window.customElements.define('sky-cloud-cutoff-distance', class extends HTMLElement{});
+window.customElements.define('sky-mid-cloud-coverage', class extends HTMLElement{});
+window.customElements.define('sky-mid-cloud-type', class extends HTMLElement{});
+window.customElements.define('sky-mid-cloud-height', class extends HTMLElement{});
 
 StarrySky.DefaultData.skyCloud = {
   coverage: 70.0,
@@ -31,6 +34,11 @@ StarrySky.DefaultData.skyCloud = {
   //ground is ~110km away for a 1km cloud base. They thin out over the last 40% of
   //this distance rather than stopping dead.
   cutoffDistance: 160000.0,
+  //A second deck above the first: 0 altocumulus .. 1 altostratus, off by default.
+  midCoverage: 0.0,
+  midType: 0.0,
+  //Its base, in meters above the observer. Mid level clouds live 2 to 7km up.
+  midHeight: 4000.0,
   cloudsEnabled: false
 };
 
@@ -65,10 +73,13 @@ class SkyClouds extends HTMLElement {
       const startSeedTags = self.getElementsByTagName('sky-cloud-start-seed');
       const raymarchStepsTags = self.getElementsByTagName('sky-cloud-raymarch-steps');
       const cutoffDistanceTags = self.getElementsByTagName('sky-cloud-cutoff-distance');
+      const midCoverageTags = self.getElementsByTagName('sky-mid-cloud-coverage');
+      const midTypeTags = self.getElementsByTagName('sky-mid-cloud-type');
+      const midHeightTags = self.getElementsByTagName('sky-mid-cloud-height');
 
       [cloudCoverageTags, cloudTypeTags, startHeightTags, endHeightTags, endHeightTags, fadeOutStartPercentTags,
       fadeInEndPercentTags, cloudVelocityXTags, cloudVelocityYTags, startSeedTags,
-      raymarchStepsTags, cutoffDistanceTags].forEach(function(tags){
+      raymarchStepsTags, cutoffDistanceTags, midCoverageTags, midTypeTags, midHeightTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-cloud-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -83,6 +94,9 @@ class SkyClouds extends HTMLElement {
       dataRef.startSeed = startSeedTags.length > 0 ? parseInt(startSeedTags[0].innerHTML) : dataRef.startSeed;
       dataRef.numberOfRayMarchSteps = raymarchStepsTags.length > 0 ? parseInt(raymarchStepsTags[0].innerHTML) : dataRef.numberOfRayMarchSteps;
       dataRef.cutoffDistance = cutoffDistanceTags.length > 0 ? parseFloat(cutoffDistanceTags[0].innerHTML) : dataRef.cutoffDistance;
+      dataRef.midCoverage = midCoverageTags.length > 0 ? parseFloat(midCoverageTags[0].innerHTML) : dataRef.midCoverage;
+      dataRef.midType = midTypeTags.length > 0 ? parseFloat(midTypeTags[0].innerHTML) : dataRef.midType;
+      dataRef.midHeight = midHeightTags.length > 0 ? parseFloat(midHeightTags[0].innerHTML) : dataRef.midHeight;
 
       //Handle the special case of our xy values
       let velocityDataX = cloudVelocityXTags.length > 0 ? parseFloat(cloudVelocityXTags[0].innerHTML) : dataRef.velocity.x;
@@ -101,6 +115,9 @@ class SkyClouds extends HTMLElement {
       dataRef.fadeInEndPercent = clampAndWarn(dataRef.fadeInEndPercent, 0.0, 99.99, '<sky-cloud-fade-in-end-percent>') / 100.0;
       dataRef.startSeed = clampAndWarn(dataRef.startSeed, 0, Number.MAX_SAFE_INTEGER, '<sky-cloud-start-seed>');
       dataRef.cutoffDistance = clampAndWarn(dataRef.cutoffDistance, 0.1, 9999999.9, '<sky-cloud-cutoff-distance>');
+      dataRef.midCoverage = clampAndWarn(dataRef.midCoverage, 0.0, 100.0, '<sky-mid-cloud-coverage>') / 100.0;
+      dataRef.midType = clampAndWarn(dataRef.midType, 0.0, 1.0, '<sky-mid-cloud-type>');
+      dataRef.midHeight = clampAndWarn(dataRef.midHeight, 0.0, 100000.0, '<sky-mid-cloud-height>');
       velocityDataX = clampAndWarn(velocityDataX, -9999.0, 9999.0, '<sky-cloud-velocity-x>');
       velocityDataY = clampAndWarn(velocityDataY, -9999.0, 9999.0, '<sky-cloud-velocity-y>');
       dataRef.velocity.x = velocityDataX;

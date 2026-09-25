@@ -611,6 +611,9 @@ In addition to changing the colors of the sky, you can also change the number of
 `<sky-cloud-start-seed>` | Random seed used to set the current cloud noise overhead, if not set, it defaults to a variation on the current date time timestamp. | *Date.now() % (86400 * 365)*.
 `<sky-cloud-raymarch-steps>` | How many ray-march steps cross a 1.5km cumulus. Steps grow with distance, so far clouds cost less. | 32 (steps)
 `<sky-cloud-cutoff-distance>` | The distance, in meters, by which clouds have faded out. Clouds follow the curve of the Earth down to the horizon and thin out over the last 40% of this distance rather than stopping at a wall. | 160000 (meters)
+`<sky-mid-cloud-coverage>` | The fraction of the sky covered by a second, mid level deck above the first. 0 turns it off. | 0 (percent)
+`<sky-mid-cloud-type>` | The kind of mid level cloud, from 0 to 1: 0 altocumulus, 1 altostratus. Values in between blend the two. | 0
+`<sky-mid-cloud-height>` | The base of the mid level deck, in meters. Mid level clouds live 2 to 7km up. | 4000 (meters)
 
 Clouds are still the heaviest part of the sky. If you're hitting frame rate issues, reduce `<sky-cloud-raymarch-steps>` or `<sky-cloud-cutoff-distance>`.
 

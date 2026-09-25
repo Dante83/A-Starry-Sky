@@ -27,6 +27,9 @@ StarrySky.Materials.Clouds.cloudMarch = {
       cloudCutoffDistance: {value: 160000.0},
       cloudObserverRadius: {value: 6366700.0},
       cloudNoiseOffset: {value: new THREE.Vector2()},
+      midCloudCoverage: {value: 0.0},
+      midCloudType: {value: 0.0},
+      midCloudHeight: {value: 4000.0},
 
       cloudJitter: {value: new THREE.Vector2()},
       cloudMarchTexelSize: {value: new THREE.Vector2()},

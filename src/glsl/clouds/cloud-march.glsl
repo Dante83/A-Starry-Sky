@@ -150,6 +150,18 @@ float cloudLightOpticalDepth(vec3 p, vec3 light, float t, float longReach){
     float longLength = 1800.0 * (longReach - 1.0);
     opticalDepth += longLength * cloudDensityCheap(p + light * (1240.0 + 0.5 * longLength), t);
   }
+  //The mid deck's shadow on everything below it: one sample halfway up the deck,
+  //weighted by the slant path through it. Altocumulus cells are a few hundred meters
+  //across, so each one throws its own shadow, as they do on real cumulus beneath.
+  if(midCloudCoverage > 0.0){
+    float h = cloudHeight(p);
+    if(h < midCloudBase()){
+      float cosLight = max(dot(light, cloudLocalUp(p)), 0.05);
+      float midDepth = midCloudTop() - midCloudBase();
+      float reach = (midCloudBase() + 0.5 * midDepth - h) / cosLight;
+      opticalDepth += min(midDepth / cosLight, 8.0 * midDepth) * midCloudDensityCheap(p + light * reach, t + reach);
+    }
+  }
   return opticalDepth;
 }
 
@@ -182,13 +194,31 @@ vec3 cloudMeanSkyRadiance(vec3 sunLight, vec3 moonLight, float yObserver){
   return sum / 12.0;
 }
 
-vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColor){
+vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColor, vec3 midSunSourceColor, vec3 midMoonSourceColor){
   float mu = rayDirection.y;
-  float tStart = cloudDistanceToHeight(mu, cloudShellBaseHeight());
-  float tEnd = min(cloudDistanceToHeight(mu, cloudShellTopHeight()), cloudCutoffDistance);
+  //The ray crosses the low shell and then the mid one. Where they do not overlap the
+  //march jumps the clear air between them (gapStart to gapEnd).
+  const float CLOUD_NO_INTERVAL = 1e30;
+  float lowStart = CLOUD_NO_INTERVAL;
+  float lowEnd = -CLOUD_NO_INTERVAL;
+  if(cloudCoverage > 0.0){
+    lowStart = cloudDistanceToHeight(mu, cloudShellBaseHeight());
+    lowEnd = cloudDistanceToHeight(mu, cloudShellTopHeight());
+  }
+  float midStart = CLOUD_NO_INTERVAL;
+  float midEnd = -CLOUD_NO_INTERVAL;
+  if(midCloudCoverage > 0.0){
+    midStart = cloudDistanceToHeight(mu, midCloudBase());
+    midEnd = cloudDistanceToHeight(mu, midCloudTop());
+  }
+  float tStart = min(lowStart, midStart);
+  float tEnd = min(max(lowEnd, midEnd), cloudCutoffDistance);
   if(tStart >= tEnd){
     return vec4(0.0);
   }
+  float gapStart = lowEnd;
+  float gapEnd = midStart;
+  float midSwitch = midStart;
 
   //See CLOUD_STEP_GROWTH. <sky-cloud-raymarch-steps> is how many steps cross a
   //1500m cumulus, 47m at the default of 32; towering species step coarser
@@ -215,8 +245,8 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
   // sun/moon. rayDirection is camera-into-scene. cosViewLight = dot(rayDir,
   // lightDir) is the cos of the scattering angle: +1 = looking AT light
   // (forward peak / silver), -1 = looking away (backward lobe).
-  bool computeSun = dot(sunSourceColor, vec3(1.0)) > 0.0;
-  bool computeMoon = dot(moonSourceColor, vec3(1.0)) > 0.0;
+  bool computeSun = dot(sunSourceColor + midSunSourceColor, vec3(1.0)) > 0.0;
+  bool computeMoon = dot(moonSourceColor + midMoonSourceColor, vec3(1.0)) > 0.0;
   float cosViewSunLight = dot(rayDirection, sunPosition);
   float cosViewMoonLight = dot(rayDirection, moonPosition);
 
@@ -254,7 +284,7 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
   if(computeMoon){
     sunGroundIrradiance += moonSourceColor * max(moonPosition.y, 0.0) * texture(transmittance, vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), yObserver)).rgb;
   }
-  vec3 groundRadiance = CLOUD_GROUND_ALBEDO * (meanSkyRadiance + (1.0 - cloudCoverage) * sunGroundIrradiance / PI);
+  vec3 groundRadiance = CLOUD_GROUND_ALBEDO * (meanSkyRadiance + (1.0 - cloudCoverage) * (1.0 - midCloudCoverage) * sunGroundIrradiance / PI);
 
   int emptyRun = 0;
   //For the skin (see CLOUD_SKIN_STEP_FRACTION): how far the last step went, whether
@@ -266,6 +296,16 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
   for(int i = 0; i < MAX_CLOUD_MARCH_STEPS; ++i){
     if(t >= tEnd){
       break;
+    }
+    //Clear air between the decks: jump to the mid deck's base, jittered like the start
+    //of the march, and let the skin bisection find the first cell from there.
+    if(t > gapStart && t < gapEnd){
+      float jump = cloudBlueNoise * max(baseStep, gapEnd * CLOUD_STEP_GROWTH);
+      t = gapEnd + jump;
+      lastStep = jump;
+      wasEmpty = true;
+      emptyRun = 0;
+      continue;
     }
     vec3 currentPosition = rayDirection * t;
     //Deeper into a cloud, whatever lies further along is seen through less and less
@@ -298,8 +338,7 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
     }
     emptyRun = 0;
 
-    float heightFraction;
-    float extinction = cloudDensityFull(currentPosition, t, heightFraction);
+    float extinction = cloudDensityFull(currentPosition, t);
     //Just entered a cloud on a step longer than the skin step: find its surface
     //between the last clear sample and here, then come back in through the skin
     //from just outside it, jittered by a skin step rather than a whole step.
@@ -329,16 +368,18 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
       vec3 localUp = cloudLocalUp(currentPosition);
       float yLightSrc = parameterizationOfHeightToY((cloudObserverRadius + cloudHeight(currentPosition)) * METERS_TO_KM);
 
+      //Above the mid deck's base, its own horizon fade (see main).
+      bool inMidDeck = t >= midSwitch && cloudHeight(currentPosition) >= midCloudBase();
       vec3 radiance = vec3(0.0);
       if(computeSun){
         vec2 uvSun = vec2(parameterizationOfCosOfViewZenithToX(max(dot(sunPosition, localUp), 0.0)), yLightSrc);
-        vec3 sunLight = sunSourceColor * texture(transmittance, uvSun).rgb;
+        vec3 sunLight = (inMidDeck ? midSunSourceColor : sunSourceColor) * texture(transmittance, uvSun).rgb;
         float sunOpticalDepth = cloudLightOpticalDepth(currentPosition, sunPosition, t, longShadowReach);
         radiance += sunLight * cloudMultipleScattering(sunOpticalDepth, cosViewSunLight);
       }
       if(computeMoon){
         vec2 uvMoon = vec2(parameterizationOfCosOfViewZenithToX(max(dot(moonPosition, localUp), 0.0)), yLightSrc);
-        vec3 moonLight = moonSourceColor * texture(transmittance, uvMoon).rgb;
+        vec3 moonLight = (inMidDeck ? midMoonSourceColor : moonSourceColor) * texture(transmittance, uvMoon).rgb;
         float moonOpticalDepth = cloudLightOpticalDepth(currentPosition, moonPosition, t, longShadowReach);
         radiance += moonLight * cloudMultipleScattering(moonOpticalDepth, cosViewMoonLight);
       }
@@ -508,6 +549,10 @@ void main(){
   float effectiveMoonY = moonPosition.y + cloudHorizonDip;
   float sunCloudFade = smoothstep(-0.1, 0.05, effectiveSunY);
   float moonCloudFade = smoothstep(-0.1, 0.05, effectiveMoonY);
+  //The mid deck sits higher, so it keeps the light a few minutes longer after sunset.
+  float midCloudHorizonDip = sqrt(2.0 * (midCloudBase() + midCloudTop()) * 0.0005 / RADIUS_OF_EARTH);
+  float midSunCloudFade = smoothstep(-0.1, 0.05, sunPosition.y + midCloudHorizonDip);
+  float midMoonCloudFade = smoothstep(-0.1, 0.05, moonPosition.y + midCloudHorizonDip);
 
   //Pre-transmittance source colors. Pass these into the cloud marcher
   //unmodified -- the marcher re-applies atmospheric transmittance
@@ -521,12 +566,14 @@ void main(){
   //day. The old 0.3 (tuned against the retired density) left clouds as near black
   //silhouettes beside a bright gibbous moon.
   vec3 moonSourceColor = scatteringMoonIntensity * moonLightColor * moonCloudFade;
+  vec3 midSunSourceColor = scatteringSunIntensity * vec3(1.0) * midSunCloudFade;
+  vec3 midMoonSourceColor = scatteringMoonIntensity * moonLightColor * midMoonCloudFade;
 
   //The ray starts at the camera, which is the origin of the cloud frame. The sky
   //dome used to start it at the dome vertex, which pushed the origin 5km out along
   //the horizontal view direction and quietly stretched the cloud field towards the
   //horizon. Where the camera is over the ground rides in cloudNoiseOffset.
-  vec4 cloud = cloudRayMarcher(rayDirection, sunSourceColor, moonSourceColor);
+  vec4 cloud = cloudRayMarcher(rayDirection, sunSourceColor, moonSourceColor, midSunSourceColor, midMoonSourceColor);
 
   //Stored premultiplied, (L * a, a), and composited as sky * (1 - a) + rgb. It has
   //to be premultiplied BEFORE anything filters the map: the temporal resolve

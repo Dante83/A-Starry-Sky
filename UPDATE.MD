@@ -10,6 +10,7 @@
 * Replaced the noise-blob clouds with a species recipe after [takram](https://github.com/takram-design-engineering/three-geospatial) and Guerrilla's Nubis: baked noise, a weather map, and a new `<sky-cloud-type>` tag running from stratus to cumulonimbus. `<sky-cloud-coverage>` now means the fraction of sky covered, for every type.
 * Relit the clouds with energy-conserving step integration, eight octaves of multiple scattering over a diffusion floor, and occluded sky and ground bounce, so sunlit tops are white and bases grey. The sky now tonemaps with Khronos PBR Neutral, handing its darks back to AES so nights stay dark.
 * Fixed the transmittance table's ground row, which baked black and halved the light of every cloud while doubling the haze in front of distant ones.
+* Added a mid level cloud deck, altocumulus to altostratus, above the low one, with `<sky-mid-cloud-coverage>`, `<sky-mid-cloud-type>` and `<sky-mid-cloud-height>`. It shades the clouds below and catches the sunset longer.
 * Calmed the shimmer on distant clouds: rays refine where they enter a cloud and cross its sunlit skin in fine steps, and the temporal filter keeps a longer history towards the horizon.
 
 **Version 1.2.0**

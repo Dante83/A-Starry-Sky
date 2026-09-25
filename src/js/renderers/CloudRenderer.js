@@ -133,6 +133,9 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   marchUniforms.cloudFadeOutStartPercent.value = cloudParams.fadeOutStartPercent;
   marchUniforms.cloudFadeInEndPercent.value = cloudParams.fadeInEndPercent;
   marchUniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
+  marchUniforms.midCloudCoverage.value = cloudParams.midCoverage;
+  marchUniforms.midCloudType.value = cloudParams.midType;
+  marchUniforms.midCloudHeight.value = cloudParams.midHeight;
   marchUniforms.cloudMarchTexelSize.value.set(1.0 / MARCH_SIZE, 1.0 / MARCH_SIZE);
 
   const resolveMaterial = new THREE.ShaderMaterial({
