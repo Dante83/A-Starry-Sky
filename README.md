@@ -595,12 +595,13 @@ In addition to changing the colors of the sky, you can also change the number of
 
 ## Enabling Clouds
 
-*WARNING: Enabling clouds will dramatically increase the computational weight of your sky, as the cloud shader provided uses a ray marching method to produce this beautiful natural phenomenon.*
+*WARNING: Enabling clouds adds a real cost to your sky: they are volumetric and ray marched. They are marched once per frame into a map of the sky at half resolution and sharpened over time with temporal anti-aliasing, so the sky dome, the sun, the moon and both eyes in VR all share one march.*
 
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
 `<sky-clouds>` | Parent tag. Contains all child tags related to clouds. Required for enabling Clouds. Contains all child tags related to clouds in the sky. | N/A
-`<sky-cloud-coverage>` | Roughly correlates to the amount of the sky covered in clouds. | 70 (percent)
+`<sky-cloud-coverage>` | The fraction of the sky covered by cloud, looking straight up. | 70 (percent)
+`<sky-cloud-type>` | The kind of cloud, from 0 to 1: 0 stratus, 0.25 stratocumulus, 0.5 cumulus, 0.75 cumulus congestus, 1 cumulonimbus. Values in between blend the neighbouring types, and the type drifts a little across the sky. | 0.5
 `<sky-cloud-start-height>` | The condensation level, in meters: where cumulus bases sit. Other cloud types set their own bases and heights relative to it (stratus forms lower, cumulonimbus builds to about 11km). | 1000 (meters)
 `<sky-cloud-end-height>` | The height, in meters, above which no cloud builds. | 12000 (meters)
 `<sky-cloud-fade-out-start-percent>` | Cloud density starts to *fade out* towards zero at this *percent* of the height of the cloud type. | 90 (percent)
@@ -608,12 +609,12 @@ In addition to changing the colors of the sky, you can also change the number of
 `<sky-cloud-velocity-x>` | The x-component of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 40
 `<sky-cloud-velocity-y>` | The y-component (or actually z) of the velocity of the clouds. Clouds will move with your position, but this will cause them to move overhead on their own. | 40
 `<sky-cloud-start-seed>` | Random seed used to set the current cloud noise overhead, if not set, it defaults to a variation on the current date time timestamp. | *Date.now() % (86400 * 365)*.
-`<sky-cloud-raymarch-steps>` | The number of ray-march steps used to provide the cloud color. | 32 (steps)
-`<sky-cloud-cutoff-distance>` | The distance after which the clouds no longer render to help improve raymarching quality at the cost of not rendering clouds that are further away as SDF are not presently calculated for our noise generators. | 40000
+`<sky-cloud-raymarch-steps>` | How many ray-march steps cross a 1.5km cumulus. Steps grow with distance, so far clouds cost less. | 32 (steps)
+`<sky-cloud-cutoff-distance>` | The distance, in meters, by which clouds have faded out. Clouds follow the curve of the Earth down to the horizon and thin out over the last 40% of this distance rather than stopping at a wall. | 160000 (meters)
 
-Clouds are expensive. Even on a powerful desktop GPU outside of VR, the cloud shader is demanding — reduce `<sky-cloud-raymarch-steps>` and `<sky-cloud-cutoff-distance>` if you're hitting frame rate issues.
+Clouds are still the heaviest part of the sky. If you're hitting frame rate issues, reduce `<sky-cloud-raymarch-steps>` or `<sky-cloud-cutoff-distance>`.
 
-At the same time, clouds are insanely cool and I have wanted to add them into A-Starry-Sky since I first created the library. Each cloud is ray-marched per pixel and ironically, at this stage, the more clouds you have, the less of a load it will be on the GPU. Of course, if you don't have any clouds, just turning them off altogether is your best bet.
+At the same time, clouds are insanely cool and I have wanted to add them into A-Starry-Sky since I first created the library. A ray stops marching once the cloud in front of it is opaque, so an overcast sky is cheaper than a scattered one. Of course, if you don't have any clouds, just turning them off altogether is your best bet.
 
 Enabling clouds requires you to add the parent tag to `<a-starry-sky>`, `<sky-clouds>`. Once you've added clouds, the most likely thing you will want to change is the cloud coverage, using the `<sky-cloud-coverage>` tag, which roughly correlates to the amount of the sky covered in clouds. You might also wish to control their speed as they zip across the sky.
 
@@ -634,23 +635,23 @@ Enabling clouds requires you to add the parent tag to `<a-starry-sky>`, `<sky-cl
 </a-scene>
 ```
 
-You might also wish to control some of the visible properties of the cloud, such as how high the clouds start to form, or how high they go. Note that your ray will have to trace through this distance and the greater the heights the clouds go up or away from you, the less density you'll have in your ray tracing model. Clouds are also painted on the surface of moon/sun elements and sky dome, but are not a part of the fog renderer, so you will never have any cloud covered mountains unfortunately, or fog...
+You might also wish to control some of the visible properties of the cloud, such as the kind of cloud or how high they start to form. Each type sets its own base and depth relative to `<sky-cloud-start-height>`, the condensation level: stratus forms lower, and cumulonimbus builds up towards `<sky-cloud-end-height>`. Clouds are also painted on the surface of moon/sun elements and sky dome, but are not a part of the fog renderer, so you will never have any cloud covered mountains unfortunately, or fog...
 
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-clouds>
+      <!-- Towering cumulus congestus -->
+      <sky-cloud-type>0.75</sky-cloud-type>
+
       <!-- Clouds are really really really low -->
       <sky-cloud-start-height>500.0</sky-cloud-start-height>
 
-      <!-- But they go super high! -->
-      <sky-cloud-end-height>3000.0</sky-cloud-end-height>
+      <!-- Crisp, flat cloud bases: the density fades in over a quarter of this percent of the cloud's height. -->
+      <sky-cloud-fade-in-end-percent>4.0</sky-cloud-fade-in-end-percent>
 
-      <!-- The intensity of the clouds 'fades in' and goes from 0 to 1 by this percent of the total height.  -->
-      <sky-cloud-fade-in-end-percent>0.05</sky-cloud-fade-in-end-percent>
-
-      <!-- The intensity of the clouds 'fades out' starting at this height. The higher this is, the more likely you are to have 'anvil tops'. -->
-      <sky-cloud-fade-out-start-percent>0.99</sky-cloud-fade-out-start-percent>
+      <!-- Soft tops: the density starts to fade out at this percent of the cloud's height. -->
+      <sky-cloud-fade-out-start-percent>80.0</sky-cloud-fade-out-start-percent>
 
       <!-- Locks the starting 'seed' of the clouds which is normally based around the current date time. Doing this lets your sky appear the same each time you start for more artistic control. -->
       <sky-cloud-start-seed>400</sky-cloud-start-seed>
