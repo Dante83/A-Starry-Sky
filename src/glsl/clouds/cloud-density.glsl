@@ -94,6 +94,14 @@ const float CLOUD_DENSITY_SCALE = 0.2;
 const float CLOUD_DETAIL_FADE_START = 15000.0;
 const float CLOUD_DETAIL_FADE_END = 50000.0;
 
+//Means of the two detail modifiers over the whole detail texture, pow(d, 6) and
+//1 - d, measured. Where the detail is not sampled -- in the distance, and in the
+//cheap density used for shadows -- the erosion runs with these instead, so the
+//density keeps the same average. Skipping the erosion outright skipped its doubling
+//too: distant clouds and every far shadow sample came out at half density.
+const float CLOUD_DETAIL_MEAN_WISPY = 0.15;
+const float CLOUD_DETAIL_MEAN_BILLOWY = 0.3;
+
 //Clouds thin out over the last 40% of the cutoff distance rather than stopping at a
 //wall, and the atmospheric perspective in the march melts what is left into the sky.
 const float CLOUD_FAR_FADE_START_FRACTION = 0.6;
@@ -294,14 +302,23 @@ bool cloudMayHaveDensity(vec3 q, float distance){
   return weather.density * weather.fade > 0.0;
 }
 
+//The detail erosion, from takram. The modifier mixes from wispy at the bottom, where
+//the eroded bits are thin strands (detail^6), to billowy at the top, where they are
+//rounded knobs (1 - detail).
+float cloudErodeDetail(float density, float modifier){
+  return clamp(cloudRemap(density * 2.0, modifier * 0.5, 1.0, 0.0, 1.0), 0.0, 1.0);
+}
+
 //Extinction per meter without the detail noise, for shadow and occlusion samples far
-//enough away that the detail cannot matter.
+//enough away that the detail cannot matter: the detail erosion runs on its mean.
 float cloudDensityCheap(vec3 q, float distance){
   CloudWeather weather = cloudSampleWeather(q, distance);
   if(weather.density * weather.fade <= 0.0){
     return 0.0;
   }
-  return cloudErodeShape(weather) * weather.fade * CLOUD_DENSITY_SCALE;
+  float billowy = cloudLinearGradient(0.2, 0.4, weather.heightFraction);
+  float modifier = mix(CLOUD_DETAIL_MEAN_WISPY, CLOUD_DETAIL_MEAN_BILLOWY, billowy) * CLOUD_DETAIL_AMOUNT;
+  return cloudErodeDetail(cloudErodeShape(weather), modifier) * weather.fade * CLOUD_DENSITY_SCALE;
 }
 
 //Full extinction per meter, with the detail erosion. heightFraction is 0 at the base,
@@ -317,14 +334,14 @@ float cloudDensityFull(vec3 q, float distance, out float heightFraction){
     return 0.0;
   }
 
-  float detailAmount = CLOUD_DETAIL_AMOUNT * weather.detailWeight;
-  if(detailAmount > 0.0){
+  //Out where the detail fades, its modifier fades to the mean rather than to nothing.
+  float billowy = cloudLinearGradient(0.2, 0.4, weather.heightFraction);
+  float modifier = mix(CLOUD_DETAIL_MEAN_WISPY, CLOUD_DETAIL_MEAN_BILLOWY, billowy);
+  if(weather.detailWeight > 0.0){
     float detail = texture(cloudDetailNoise, weather.noisePosition / CLOUD_DETAIL_TILE).r;
-    //Wispy at the bottom, where the eroded bits are thin strands (detail^6), and
-    //billowy at the top, where they are rounded knobs (1 - detail).
-    float modifier = mix(pow(detail, 6.0), 1.0 - detail, cloudLinearGradient(0.2, 0.4, weather.heightFraction)) * detailAmount;
-    density = clamp(cloudRemap(density * 2.0, modifier * 0.5, 1.0, 0.0, 1.0), 0.0, 1.0);
+    modifier = mix(modifier, mix(pow(detail, 6.0), 1.0 - detail, billowy), weather.detailWeight);
   }
+  density = cloudErodeDetail(density, modifier * CLOUD_DETAIL_AMOUNT);
   return density * weather.fade * CLOUD_DENSITY_SCALE;
 }
 

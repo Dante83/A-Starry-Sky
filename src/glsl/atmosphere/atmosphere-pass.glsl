@@ -646,14 +646,16 @@ vec3 linearAtmosphericPass(vec3 sourcePosition, vec3 sourceIntensity, vec3 spher
   return intensityFader * intensityFader * sourceIntensity * (miePhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedMieScattering + rayleighPhaseFunction(cosOfAngleBetweenCameraPixelAndSource) * interpolatedRayleighScattering);
 }
 
-//Tonemapper, for A/B comparison. SKY_TONEMAPPER must match the const of the same
-//name in moon-and-sun-output.glsl (the sun and moon passes tonemap there).
-//  0  AES filmic (Narkowicz fit) -- the long standing default. Its shoulder starts
+//Tonemapper. SKY_TONEMAPPER must match the const of the same name in
+//moon-and-sun-output.glsl (the sun and moon passes tonemap there)
+//and FOG_SKY_TONEMAPPER in fog-pars-fragment.glsl (the scene fog).
+//  0  AES filmic (Narkowicz fit) -- the old default. Its shoulder starts
 //     early, so sunlit cloud tops and their shadow sides get squeezed together.
-//  1  Khronos PBR Neutral -- linear up to 0.76, then a soft shoulder that keeps hue.
+//  1  Khronos PBR Neutral (default) -- linear up to 0.76, then a soft shoulder that
+//     keeps hue, so lit cloud tops stay white and their bases stay dark.
 //  2  AgX (Troy Sobotka, minimal fit by bwrensch) -- desaturates the brightest
 //     highlights towards white the way film does, rather than skewing their hue.
-const int SKY_TONEMAPPER = 0;
+const int SKY_TONEMAPPER = 1;
 
 //Including this because someone removed this in a future version of THREE. Why?!
 vec3 MyAESFilmicToneMapping(vec3 color) {
@@ -697,9 +699,16 @@ vec3 AgXToneMapping(vec3 color) {
   return pow(max(v, vec3(0.0)), vec3(2.2));
 }
 
+//PBR Neutral maps mid grey (0.18) to 0.14, where AES gives 0.27 -- the scene came
+//out a stop darker. This exposure matches AES for greys from about 0.05 up to mid
+//grey; above that the highlights come out brighter and keep their hue. It has no
+//toe, though: dark saturated colours (a desert at night) stay up to 3x brighter
+//than under AES, which crushed them.
+const float SKY_NEUTRAL_EXPOSURE = 1.7;
+
 vec3 skyToneMap(vec3 color) {
   if(SKY_TONEMAPPER == 1){
-    return clamp(PBRNeutralToneMapping(color), 0.0, 1.0);
+    return clamp(PBRNeutralToneMapping(SKY_NEUTRAL_EXPOSURE * color), 0.0, 1.0);
   }
   if(SKY_TONEMAPPER == 2){
     return clamp(AgXToneMapping(color), 0.0, 1.0);
