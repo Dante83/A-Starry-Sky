@@ -102,6 +102,15 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     return target;
   };
   const marchTarget = createTarget(MARCH_SIZE);
+  //Sky light for the clouds and the ground under them (cloudMeanSkyRadiance in
+  //cloud-march.glsl): three texels, the mean radiance of the clear sky, of the sky
+  //with the mid deck, and of everything; and the small map of the mid deck alone that
+  //the second is taken from.
+  const ambientTarget = createTarget(1);
+  ambientTarget.setSize(3, 1);
+  ambientTarget.texture.minFilter = THREE.NearestFilter;
+  ambientTarget.texture.magFilter = THREE.NearestFilter;
+  const midSkyTarget = createTarget(32);
   const resolveTargets = [createTarget(RESOLVE_SIZE), createTarget(RESOLVE_SIZE)];
   let writeIndex = 0;
 
@@ -283,7 +292,27 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       renderer.render(scene, camera);
     }
 
+    //Sky light first, from the last frame's maps; then the mid deck alone, for next
+    //frame's sky light; then the march itself. No pass may have its own target bound
+    //as a texture, even unread -- WebGL refuses the draw as a feedback loop.
     quad.material = marchMaterial;
+    marchUniforms.cloudPreviousMap.value = self.cloudMap;
+    marchUniforms.cloudMidSkyMap.value = midSkyTarget.texture;
+    marchUniforms.cloudAmbientMap.value = null;
+    marchUniforms.cloudAmbientPass.value = true;
+    renderer.setRenderTarget(ambientTarget);
+    renderer.render(scene, camera);
+    marchUniforms.cloudAmbientPass.value = false;
+    marchUniforms.cloudAmbientMap.value = ambientTarget.texture;
+
+    if(cloudParams.midCoverage > 0.0){
+      marchUniforms.cloudMidSkyPass.value = true;
+      marchUniforms.cloudMidSkyMap.value = null;
+      renderer.setRenderTarget(midSkyTarget);
+      renderer.render(scene, camera);
+      marchUniforms.cloudMidSkyPass.value = false;
+    }
+
     renderer.setRenderTarget(marchTarget);
     renderer.render(scene, camera);
 
