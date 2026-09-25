@@ -420,10 +420,12 @@ const vec2 MID_CLOUD_DEPTH           = vec2(250.0, 1500.0); //Meters
 //Extinction at full density, per meter. Altocumulus holds 0.1 to 0.3 g/m^3 of water
 //in droplets of 5 to 10 microns, 1.5 LWC / (rho r) = 0.04 to 0.09/m, and the soft
 //threshold leaves a typical core at about half of full density. At 0.05 the cells
-//were cotton wool, lit right through; at 0.12 their thick middles go grey under
-//bright thin rims, as real ones do seen from below. Altostratus is thinner still
-//per meter but deeper: 10 or so through the layer, the ground glass sun.
-const vec2 MID_CLOUD_DENSITY_SCALE   = vec2(0.12, 0.008);
+//were cotton wool, lit right through; at 0.12 their thick middles went grey under
+//bright thin rims, as real ones do seen from below, but low sunlight crossing a cell
+//sideways only lit a thin, harsh orange rim before sunset. 0.08 sits between.
+//Altostratus is thinner still per meter but deeper: 10 or so through the layer, the
+//ground glass sun.
+const vec2 MID_CLOUD_DENSITY_SCALE   = vec2(0.08, 0.008);
 //Full erosion broke each altocumulus cell into cauliflower lumps; real cells are
 //smoother lenses. Altostratus is close to featureless: any real erosion carves it
 //into billows, and it reads as a sky of big stratocumulus instead of a sheet.

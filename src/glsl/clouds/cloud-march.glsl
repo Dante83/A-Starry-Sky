@@ -210,9 +210,11 @@ vec2 midCloudShadow(vec3 p, vec3 light, bool isMoon){
   vec4 interior = textureLod(cloudShadowMap, uv, lodInterior);
   vec4 diffuse = textureLod(cloudShadowMap, uv, lodDiffuse);
 
-  //Past the edge of the map, the deck's mean over the whole map.
+  //Past the edge of the map, the deck's mean over the whole map. The map grows as the
+  //light gets lower (CloudRenderer), so this is only ever for far clouds; over a narrow
+  //band at the edge it cut sunset cumulus into hard orange and grey patches.
   vec4 mean = textureLod(cloudShadowMap, vec2(0.5), 16.0);
-  float outside = smoothstep(0.45, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));
+  float outside = smoothstep(0.3, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));
   sharp = mix(sharp, mean, outside);
   interior = mix(interior, mean, outside);
   diffuse = mix(diffuse, mean, outside);
@@ -470,8 +472,14 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
       depthWeightSum += rayTransmittance * (1.0 - stepTransmittance);
       rayTransmittance *= stepTransmittance;
 
-      //Past 1% nothing further along the ray can show.
+      //Past 1% nothing further along the ray can show -- and whatever the ray still
+      //had left is taken as blocked. Stopping with the 1% still stored let the sun
+      //through the thickest cumulus: the sky pass shows the sun disk at (1 - a), and
+      //1% of a disk thousands of times brighter than the cloud is a bright, crisp
+      //edged disk sitting in the middle of it. Thin cloud still lets it through at
+      //exp(-tau), the watery sun, since it never gets down here.
       if(rayTransmittance < 0.01){
+        rayTransmittance = 0.0;
         break;
       }
     }

@@ -73,6 +73,8 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //cloud-density.glsl.
   const SPECIES_BASE_FRACTIONS = [0.4, 0.8, 1.0, 1.0, 1.0];
   const SPECIES_DEPTHS = [400.0, 700.0, 1500.0, 5000.0, 10000.0];
+  //The mid deck's depths, altocumulus and altostratus: MID_CLOUD_DEPTH in cloud-density.glsl.
+  const MID_CLOUD_DEPTHS = [250.0, 1500.0];
   const cloudSpeciesMidHeight = function(type){
     const s = Math.min(Math.max(type, 0.0), 1.0) * 4.0;
     const i = Math.min(Math.floor(s), 3);
@@ -144,12 +146,31 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   marchUniforms.cloudMarchTexelSize.value.set(1.0 / MARCH_SIZE, 1.0 / MARCH_SIZE);
 
   //The mid deck's shadow on the clouds beneath it (cloud-shadow-map.glsl), baked each
-  //frame into a map of the ground around the observer. 83m texels, finer than the
-  //375m altocumulus cells, and mipmapped so the march can blur it by how far below
-  //the deck each sample is. Past the edge of the map, the march falls back to the
-  //deck's mean.
+  //frame into a map of the ground around the observer, and mipmapped so the march can
+  //blur it by how far below the deck each sample is. Past the edge of the map, the
+  //march falls back to the deck's mean.
+  //
+  //A low cloud looks up its light to where that light crosses the deck, which is its
+  //drop below the deck over the light's elevation away: 40km and more at sunset, off
+  //the edge of a fixed map. So the map spans that reach for the lowest cloud, from
+  //64km (83m texels, finer than the 375m altocumulus cells) with a high light, to
+  //240km at the horizon, where a grazing beam averages over many cells anyway.
   const CLOUD_SHADOW_MAP_SIZE = 768;
-  const CLOUD_SHADOW_MAP_EXTENT = 64000.0;
+  const CLOUD_SHADOW_MAP_MIN_EXTENT = 64000.0;
+  const CLOUD_SHADOW_MAP_MAX_EXTENT = 240000.0;
+  const shadowMapDeckMiddle = cloudParams.midHeight + 0.5 * (MID_CLOUD_DEPTHS[0] + cloudParams.midType * (MID_CLOUD_DEPTHS[1] - MID_CLOUD_DEPTHS[0]));
+  const shadowMapExtent = function(){
+    //The lower of the lights that are up; the map serves both.
+    let lightY = 1.0;
+    if(skyState.sun.position.y > -0.1){
+      lightY = Math.min(lightY, skyState.sun.position.y);
+    }
+    if(skyState.moon.position.y > -0.1){
+      lightY = Math.min(lightY, skyState.moon.position.y);
+    }
+    const reach = 2.2 * shadowMapDeckMiddle / Math.max(lightY, 0.05);
+    return Math.min(Math.max(reach, CLOUD_SHADOW_MAP_MIN_EXTENT), CLOUD_SHADOW_MAP_MAX_EXTENT);
+  };
   const shadowMapTarget = new THREE.WebGLRenderTarget(CLOUD_SHADOW_MAP_SIZE, CLOUD_SHADOW_MAP_SIZE, {
     type: THREE.HalfFloatType,
     format: THREE.RGBAFormat,
@@ -180,9 +201,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   'midCloudCoverage', 'midCloudType', 'midCloudHeight'].forEach(function(name){
     shadowMapUniforms[name] = marchUniforms[name];
   });
-  shadowMapUniforms.cloudShadowMapExtent.value = CLOUD_SHADOW_MAP_EXTENT;
   marchUniforms.cloudShadowMap.value = shadowMapTarget.texture;
-  marchUniforms.cloudShadowMapExtent.value = CLOUD_SHADOW_MAP_EXTENT;
   const bakeShadowMap = cloudParams.midCoverage > 0.0;
 
   const resolveMaterial = new THREE.ShaderMaterial({
@@ -256,6 +275,9 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     );
 
     if(bakeShadowMap){
+      const extent = shadowMapExtent();
+      shadowMapUniforms.cloudShadowMapExtent.value = extent;
+      marchUniforms.cloudShadowMapExtent.value = extent;
       quad.material = shadowMapMaterial;
       renderer.setRenderTarget(shadowMapTarget);
       renderer.render(scene, camera);
