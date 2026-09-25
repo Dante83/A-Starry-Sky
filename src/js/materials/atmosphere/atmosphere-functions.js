@@ -251,8 +251,10 @@ StarrySky.Materials.Atmosphere.atmosphereFunctions = {
     '}',
 
     '//Converts radius (r + R_e) to a y value between 0 and 1',
+    '//Clamped at zero: a radius at ground level can round a hair below the Earth, and the',
+    '//square root of a negative number is a NaN texture coordinate.',
     'float parameterizationOfHeightToY(float r){',
-      'return sqrt((r * r - RADIUS_OF_EARTH_SQUARED) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED);',
+      'return sqrt(max(r * r - RADIUS_OF_EARTH_SQUARED, 0.0) / RADIUS_ATM_SQUARED_MINUS_RADIUS_EARTH_SQUARED);',
     '}',
 
     '//2D-3D texture conversion methods',

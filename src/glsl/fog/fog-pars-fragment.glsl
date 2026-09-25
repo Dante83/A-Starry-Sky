@@ -87,10 +87,11 @@
         return pow(max(v, vec3(0.0)), vec3(2.2));
       }
 
-      //PBR Neutral maps mid grey (0.18) to 0.14, where AES gives 0.27 -- the scene came
-      //out a stop darker. This exposure matches AES for greys from about 0.05 up to mid
-      //grey; above that the highlights come out brighter and keep their hue.
-      const float FOG_SKY_NEUTRAL_EXPOSURE = 1.7;
+      //PBR Neutral maps mid grey (0.18) to 0.14, where AES gives 0.27. This was 1.7 to
+      //match AES at mid grey, but that was set while a black row in the transmittance
+      //table halved every cloud; with it fixed, 1.7 pushed sunlit cloud into the
+      //shoulder. At 1.0 the scene sits a little darker than AES and lit tops keep detail.
+      const float FOG_SKY_NEUTRAL_EXPOSURE = 1.0;
       
       //Neutral has no toe: it only takes the smallest channel down, so a dark saturated
       //colour keeps its dominant channel nearly linear, up to 3x brighter than under

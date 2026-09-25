@@ -7,7 +7,13 @@ $atmosphericFunctions
 
 void main(){
   vec2 uv = gl_FragCoord.xy / resolution.xy;
-  float r = inverseParameterizationOfYToRPlusRe(uv.y);
+  //Held a metre off the ground. The bottom row of texels is less than a millimetre
+  //up, which float32 rounds to exactly the radius of the Earth, and from there
+  //intersectsSphere reports that every ray hits the ground -- the whole row came
+  //out black. Anything looked up at ground level (the observer, in the cloud march)
+  //then blended halfway to zero: clouds lost half their light and the fog in front
+  //of them was only half subtracted, which washed out every distant cloud.
+  float r = max(inverseParameterizationOfYToRPlusRe(uv.y), RADIUS_OF_EARTH + 0.001);
   float h = r - RADIUS_OF_EARTH;
   vec2 pA = vec2(0.0, r);
   vec2 p = pA;

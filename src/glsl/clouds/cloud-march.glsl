@@ -59,6 +59,19 @@ const int CLOUD_EMPTY_RUN_BEFORE_STRIDE = 2;
 //rays out at the horizon where the clouds have already faded into the haze.
 const int MAX_CLOUD_MARCH_STEPS = 192;
 
+//The lit skin of a cloud is only 5 to 20m deep, but out past 12km a step is 160m
+//and more, so the first sample inside a cloud landed anywhere from its sunlit face
+//to well inside it, wherever this frame's jitter put it -- the far clouds shimmered
+//even with the sky stopped. So on entering a cloud the march bisects back to its
+//surface on the cheap density and comes through the skin at this fraction of the
+//base step, at every distance, until the view transmittance falls below
+//CLOUD_SKIN_TRANSMITTANCE. Measured against letting the skin step grow with
+//distance (a quarter of the grown step) and stopping at 0.5: that was about 5% of
+//the frame, this about 20%, for a third less horizon shimmer again.
+const float CLOUD_SKIN_STEP_FRACTION = 0.5;
+const float CLOUD_SKIN_TRANSMITTANCE = 0.2;
+const int CLOUD_SKIN_BISECTIONS = 4;
+
 $atmosphericFunctions
 
 $cloudDensityFunctions
@@ -244,6 +257,12 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
   vec3 groundRadiance = CLOUD_GROUND_ALBEDO * (meanSkyRadiance + (1.0 - cloudCoverage) * sunGroundIrradiance / PI);
 
   int emptyRun = 0;
+  //For the skin (see CLOUD_SKIN_STEP_FRACTION): how far the last step went, whether
+  //the last sample was clear air, and where a bisected surface was found.
+  float lastStep = 0.0;
+  bool wasEmpty = true;
+  float approachEnd = -1.0;
+  float skinStep = CLOUD_SKIN_STEP_FRACTION * baseStep;
   for(int i = 0; i < MAX_CLOUD_MARCH_STEPS; ++i){
     if(t >= tEnd){
       break;
@@ -253,26 +272,56 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
     //of it, so the step can open up as the view transmittance falls -- up to 3x once
     //the ray is mostly occluded.
     float rayDeltaT = max(baseStep, t * CLOUD_STEP_GROWTH) * (3.0 - 2.0 * rayTransmittance);
+    //Coming up to a surface found by bisection, or in the skin just past it, step fine.
+    bool inSkin = t < approachEnd + skinStep || (!wasEmpty && rayTransmittance > CLOUD_SKIN_TRANSMITTANCE);
+    if(inSkin){
+      rayDeltaT = min(rayDeltaT, skinStep);
+    }
 
     //Empty-space skip on the weather alone, which bounds the full density (the noise
     //only ever erodes). A miss means there is nothing to light at this sample. In a
     //long run of clear air, stride further.
     if(!cloudMayHaveDensity(currentPosition, t)){
       ++emptyRun;
-      t += emptyRun > CLOUD_EMPTY_RUN_BEFORE_STRIDE ? CLOUD_EMPTY_STRIDE * rayDeltaT : rayDeltaT;
+      wasEmpty = true;
+      lastStep = (emptyRun > CLOUD_EMPTY_RUN_BEFORE_STRIDE && !inSkin) ? CLOUD_EMPTY_STRIDE * rayDeltaT : rayDeltaT;
+      t += lastStep;
       continue;
     }
-    if(emptyRun > CLOUD_EMPTY_RUN_BEFORE_STRIDE){
+    if(emptyRun > CLOUD_EMPTY_RUN_BEFORE_STRIDE && !inSkin){
       //A long stride may have jumped over the cloud's leading edge; back up to one
       //fine step past the last empty sample and come in at normal pace.
       emptyRun = 0;
       t -= (CLOUD_EMPTY_STRIDE - 1.0) * rayDeltaT;
+      lastStep = rayDeltaT;
       continue;
     }
     emptyRun = 0;
 
     float heightFraction;
     float extinction = cloudDensityFull(currentPosition, t, heightFraction);
+    //Just entered a cloud on a step longer than the skin step: find its surface
+    //between the last clear sample and here, then come back in through the skin
+    //from just outside it, jittered by a skin step rather than a whole step.
+    if(extinction > 0.0 && wasEmpty && lastStep > 1.01 * skinStep){
+      float outside = t - lastStep;
+      float inside = t;
+      for(int k = 0; k < CLOUD_SKIN_BISECTIONS; ++k){
+        float middle = 0.5 * (outside + inside);
+        if(cloudDensityCheap(rayDirection * middle, middle) > 0.0){
+          inside = middle;
+        }
+        else{
+          outside = middle;
+        }
+      }
+      approachEnd = inside;
+      t = outside + cloudBlueNoise * skinStep;
+      lastStep = 0.0;
+      continue;
+    }
+    wasEmpty = extinction <= 0.0;
+    lastStep = rayDeltaT;
     if(extinction > 0.0){
       //Per-sample atmospheric transmittance, looked up at this sample's own
       //altitude and against its own local vertical -- a cloud far out on the
