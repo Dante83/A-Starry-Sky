@@ -1,0 +1,27 @@
+StarrySky.Materials.Clouds.cloudShadowMap = {
+  uniforms: function(){
+    return {
+      sunPosition: {value: new THREE.Vector3()},
+      moonPosition: {value: new THREE.Vector3()},
+      cloudShadowMapExtent: {value: 64000.0}
+
+      //The cloud-density.glsl uniforms are shared with the march material by
+      //CloudRenderer, so the shadows always belong to the clouds being drawn.
+    };
+  },
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+  fragmentShader: function(){
+    let originalGLSL = [
+      {fragment_glsl}
+    ];
+
+    let updatedLines = [];
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      updatedLines.push(originalGLSL[i].replace(/\$cloudDensityFunctions/g, StarrySky.Materials.Clouds.cloudDensity.partialFragmentShader));
+    }
+
+    return updatedLines.join('\n');
+  }
+};

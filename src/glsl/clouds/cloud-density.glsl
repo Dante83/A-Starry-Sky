@@ -490,7 +490,8 @@ CloudWeather midCloudSampleWeather(vec3 q, float distance){
   float clumps = texture(cloudWeatherMap, (weather.noisePosition.xz + MID_CLOUD_PATCH_OFFSET.yx) / MID_CLOUD_CLUMP_TILE).r;
   cells = mix(cells, clumps, MID_CLOUD_CLUMP_WEIGHT);
   float rowPhase = dot(weather.noisePosition.xz, cloudWindDirection) / MID_CLOUD_ROW_WAVELENGTH;
-  float rows = cos(PI_TIMES_TWO * rowPhase + MID_CLOUD_ROW_BEND * (clumps - 0.5));
+  //2 pi spelled out: this chunk is also built into shaders without the atmosphere constants.
+  float rows = cos(6.28318530718 * rowPhase + MID_CLOUD_ROW_BEND * (clumps - 0.5));
   cells += MID_CLOUD_ROW_STRENGTH * smoothstep(0.35, 0.65, patches.a) * rows;
   float sheet = 0.5 + 0.5 * smoothstep(0.2, 0.8, patches.b);
   float footprint = mix(cells, sheet, stratiform);

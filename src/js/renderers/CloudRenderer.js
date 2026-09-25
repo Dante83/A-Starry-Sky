@@ -143,6 +143,48 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   }
   marchUniforms.cloudMarchTexelSize.value.set(1.0 / MARCH_SIZE, 1.0 / MARCH_SIZE);
 
+  //The mid deck's shadow on the clouds beneath it (cloud-shadow-map.glsl), baked each
+  //frame into a map of the ground around the observer. 83m texels, finer than the
+  //375m altocumulus cells, and mipmapped so the march can blur it by how far below
+  //the deck each sample is. Past the edge of the map, the march falls back to the
+  //deck's mean.
+  const CLOUD_SHADOW_MAP_SIZE = 768;
+  const CLOUD_SHADOW_MAP_EXTENT = 64000.0;
+  const shadowMapTarget = new THREE.WebGLRenderTarget(CLOUD_SHADOW_MAP_SIZE, CLOUD_SHADOW_MAP_SIZE, {
+    type: THREE.HalfFloatType,
+    format: THREE.RGBAFormat,
+    minFilter: THREE.LinearMipmapLinearFilter,
+    magFilter: THREE.LinearFilter,
+    wrapS: THREE.ClampToEdgeWrapping,
+    wrapT: THREE.ClampToEdgeWrapping,
+    generateMipmaps: true,
+    depthBuffer: false,
+    stencilBuffer: false
+  });
+  shadowMapTarget.texture.colorSpace = THREE.NoColorSpace;
+  const shadowMapMaterial = new THREE.ShaderMaterial({
+    uniforms: materials.cloudShadowMap.uniforms(),
+    vertexShader: materials.cloudShadowMap.vertexShader,
+    fragmentShader: materials.cloudShadowMap.fragmentShader(),
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.NoBlending,
+    toneMapped: false
+  });
+  const shadowMapUniforms = shadowMapMaterial.uniforms;
+  //The same uniform objects as the march, so the shadows always belong to the clouds
+  //being drawn, wind and all.
+  ['cloudBaseNoise', 'cloudDetailNoise', 'cloudWeatherMap', 'cloudCoverage', 'cloudType',
+  'cloudStartHeight', 'cloudEndHeight', 'cloudFadeInEndPercent', 'cloudFadeOutStartPercent',
+  'cloudCutoffDistance', 'cloudObserverRadius', 'cloudNoiseOffset', 'cloudWindDirection',
+  'midCloudCoverage', 'midCloudType', 'midCloudHeight'].forEach(function(name){
+    shadowMapUniforms[name] = marchUniforms[name];
+  });
+  shadowMapUniforms.cloudShadowMapExtent.value = CLOUD_SHADOW_MAP_EXTENT;
+  marchUniforms.cloudShadowMap.value = shadowMapTarget.texture;
+  marchUniforms.cloudShadowMapExtent.value = CLOUD_SHADOW_MAP_EXTENT;
+  const bakeShadowMap = cloudParams.midCoverage > 0.0;
+
   const resolveMaterial = new THREE.ShaderMaterial({
     uniforms: materials.cloudResolve.uniforms(),
     vertexShader: materials.cloudResolve.vertexShader,
@@ -213,6 +255,12 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       wrapNoiseOffset(cameraSkyZ - cloudParams.velocity.y * windScaleTotal)
     );
 
+    if(bakeShadowMap){
+      quad.material = shadowMapMaterial;
+      renderer.setRenderTarget(shadowMapTarget);
+      renderer.render(scene, camera);
+    }
+
     quad.material = marchMaterial;
     renderer.setRenderTarget(marchTarget);
     renderer.render(scene, camera);
@@ -257,6 +305,8 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     marchUniforms.sunPosition.value = skyState.sun.position;
     marchUniforms.moonPosition.value = skyState.moon.position;
     marchUniforms.moonLightColor.value = skyState.moon.lightingModifier;
+    shadowMapUniforms.sunPosition.value = skyState.sun.position;
+    shadowMapUniforms.moonPosition.value = skyState.moon.position;
 
     //One fixed tile. The march walks it through time with the golden ratio itself,
     //which averages out far more evenly than hopping between random tiles.

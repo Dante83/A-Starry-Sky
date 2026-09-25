@@ -13,6 +13,8 @@ StarrySky.Materials.Clouds.cloudMarch = {
       transmittance: {value: null},
       blueNoiseTexture: {value: null},
       numberOfCloudMarchSteps: {value: 32.0},
+      cloudShadowMap: {value: null},
+      cloudShadowMapExtent: {value: 64000.0},
 
       //cloud-density.glsl
       cloudBaseNoise: {value: null},

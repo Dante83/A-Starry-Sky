@@ -88,6 +88,11 @@ groups:
         template: 'cloud-density-template.txt'
         material: 'cloud-density.js'
       -
+        fragment: 'cloud-shadow-map.glsl'
+        vertex: 'cloud-map-vertex.glsl'
+        template: 'cloud-shadow-map-template.txt'
+        material: 'cloud-shadow-map.js'
+      -
         fragment: 'cloud-march.glsl'
         vertex: 'cloud-map-vertex.glsl'
         template: 'cloud-march-template.txt'

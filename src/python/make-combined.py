@@ -36,6 +36,7 @@ def main():
     'materials/autoexposure/metering-survey.js',\
     'materials/clouds/cloud-noise.js',\
     'materials/clouds/cloud-density.js',\
+    'materials/clouds/cloud-shadow-map.js',\
     'materials/clouds/cloud-march.js',\
     'materials/clouds/cloud-resolve.js',\
     'materials/fog/fog-pars.js',\
