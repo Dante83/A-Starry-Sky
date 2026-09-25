@@ -701,14 +701,21 @@ vec3 AgXToneMapping(vec3 color) {
 
 //PBR Neutral maps mid grey (0.18) to 0.14, where AES gives 0.27 -- the scene came
 //out a stop darker. This exposure matches AES for greys from about 0.05 up to mid
-//grey; above that the highlights come out brighter and keep their hue. It has no
-//toe, though: dark saturated colours (a desert at night) stay up to 3x brighter
-//than under AES, which crushed them.
+//grey; above that the highlights come out brighter and keep their hue.
 const float SKY_NEUTRAL_EXPOSURE = 1.7;
+
+//Neutral has no toe: it only takes the smallest channel down, so a dark saturated
+//colour keeps its dominant channel nearly linear, up to 3x brighter than under
+//AES, whose toe crushed it. At night that lit the whole scene. So in the dark the
+//curve hands back to AES, blending over this range of the brightest channel out.
+const float SKY_NEUTRAL_TOE_START = 0.05;
+const float SKY_NEUTRAL_TOE_END = 0.25;
 
 vec3 skyToneMap(vec3 color) {
   if(SKY_TONEMAPPER == 1){
-    return clamp(PBRNeutralToneMapping(SKY_NEUTRAL_EXPOSURE * color), 0.0, 1.0);
+    vec3 neutral = clamp(PBRNeutralToneMapping(SKY_NEUTRAL_EXPOSURE * color), 0.0, 1.0);
+    float toe = smoothstep(SKY_NEUTRAL_TOE_START, SKY_NEUTRAL_TOE_END, max(neutral.r, max(neutral.g, neutral.b)));
+    return mix(MyAESFilmicToneMapping(color), neutral, toe);
   }
   if(SKY_TONEMAPPER == 2){
     return clamp(AgXToneMapping(color), 0.0, 1.0);
