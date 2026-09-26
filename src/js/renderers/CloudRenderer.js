@@ -33,6 +33,14 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //means the history no longer describes the sky, so it is thrown away.
   const CLOUD_HISTORY_MAX_GAP_MS = 1000.0;
 
+  //The wind carries the clouds by a smoothed frame step, not by the wall clock. A frame
+  //time that straddles the display's refresh lands frames at one and two refreshes at
+  //random, so on the wall clock the clouds lurched by one step or two -- and the history,
+  //lagging behind each lurch, smeared it into a jiggle. Nobody can tell the clouds drift
+  //a few percent slow or fast; everybody can tell when they judder. Weight of the latest
+  //frame in the running mean: about a third of a second to follow a real change of pace.
+  const CLOUD_TIME_SMOOTHING = 0.05;
+
   //Sub texel jitter sequence, Halton bases 2 and 3, centred on zero.
   const HALTON_LENGTH = 16;
   const halton = function(index, base){
@@ -285,6 +293,8 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   resolveUniforms.cloudMarchTexelSize.value.set(1.0 / MARCH_SIZE, 1.0 / MARCH_SIZE);
   resolveUniforms.cloudResolveSize.value.set(RESOLVE_SIZE, RESOLVE_SIZE);
   resolveUniforms.cloudReprojectionHeight.value = cloudSpeciesMidHeight(cloudParams.type);
+  resolveUniforms.cloudMidReprojectionHeight.value = shadowMapDeckMiddle;
+  resolveUniforms.cloudMidSplitHeight.value = cloudParams.midCoverage > 0.0 ? cloudParams.midHeight : 1e9;
   resolveUniforms.cloudEarthRadius.value = observerRadius;
   resolveUniforms.cloudCutoffDistance.value = cloudParams.cutoffDistance;
 
@@ -297,6 +307,9 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
 
   const previousCameraPosition = new THREE.Vector3();
   let previousCloudTime = 0.0;
+  let previousTickTime = 0.0;
+  let smoothedFrameStep = 1000.0 / 60.0;
+  let cloudClock = 0.0;
   let frame = 0;
 
   const self = this;
@@ -316,7 +329,13 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     renderer.shadowMap.autoUpdate = false;
 
     const jitter = jitterSequence[frame % HALTON_LENGTH];
-    const cloudTime = cloudParams.startSeed + t;
+    const frameStep = t - previousTickTime;
+    const frameStepUsable = frame > 0 && frameStep > 0.0 && frameStep < CLOUD_HISTORY_MAX_GAP_MS;
+    if(frameStepUsable){
+      smoothedFrameStep += (frameStep - smoothedFrameStep) * CLOUD_TIME_SMOOTHING;
+      cloudClock += smoothedFrameStep;
+    }
+    const cloudTime = cloudParams.startSeed + cloudClock;
     const deltaTime = cloudTime - previousCloudTime;
 
     //The sky frame is three's world frame with x and z swapped and negated
@@ -382,7 +401,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     //in the world last frame, and the camera itself moved -- so relative to last
     //frame's camera it sat at P + (camera motion) - (wind motion). The wind term
     //mirrors the offset in the density functions, velocity * cloudTime / 500.
-    const historyUsable = frame > 0 && deltaTime > 0.0 && deltaTime < CLOUD_HISTORY_MAX_GAP_MS;
+    const historyUsable = frameStepUsable;
     const windScale = deltaTime / 500.0;
     resolveUniforms.cloudReprojectionShift.value.set(
       (cameraSkyX - previousCameraPosition.x) - cloudParams.velocity.x * windScale,
@@ -403,6 +422,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
 
     previousCameraPosition.set(cameraSkyX, 0.0, cameraSkyZ);
     previousCloudTime = cloudTime;
+    previousTickTime = t;
     ++frame;
 
     renderer.xr.enabled = currentXrEnabled;

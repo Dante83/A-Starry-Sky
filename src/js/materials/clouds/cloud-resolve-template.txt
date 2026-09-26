@@ -8,6 +8,8 @@ StarrySky.Materials.Clouds.cloudResolve = {
       cloudMarchTexelSize: {value: new THREE.Vector2()},
       cloudReprojectionShift: {value: new THREE.Vector3()},
       cloudReprojectionHeight: {value: 1750.0},
+      cloudMidReprojectionHeight: {value: 4500.0},
+      cloudMidSplitHeight: {value: 1e9},
       cloudMarchDepth: {value: null},
       cloudEarthRadius: {value: 6366700.0},
       cloudCutoffDistance: {value: 40000.0},

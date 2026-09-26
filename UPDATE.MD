@@ -17,6 +17,7 @@
 * Added `<sky-cloud-resolution>`, and reproject cloud history by each cloud's own distance rather than one layer height, which steadies moving clouds, especially overhead.
 * Calmed the shimmer on distant clouds: rays refine where they enter a cloud and cross its sunlit skin in fine steps, and the temporal filter keeps a longer history towards the horizon.
 * Clouds now march half their texels each frame in a checkerboard, filling the rest from their neighbours and the history, which nearly halves their cost for a touch more shimmer.
+* Moving clouds now reproject by their deck's height rather than each texel's depth, and the wind follows a smoothed frame time, so cumulus middles bob less and uneven frames no longer lurch.
 
 **Version 1.2.0**
 * Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).

@@ -15,7 +15,9 @@ uniform vec2 cloudJitter;             //This frame's march jitter, in march texe
 uniform vec2 cloudMarchSize;          //March map size in texels
 uniform vec2 cloudMarchTexelSize;     //1 / march map size
 uniform vec3 cloudReprojectionShift;  //Camera motion minus wind motion since last frame, sky frame, meters
-uniform float cloudReprojectionHeight;//Height of the cloud layer we reproject against where there is no cloud, meters above the observer
+uniform float cloudReprojectionHeight;//Middle of the low deck, meters above the observer
+uniform float cloudMidReprojectionHeight; //Middle of the mid deck, meters above the observer
+uniform float cloudMidSplitHeight;    //Cloud found above this is reprojected with the mid deck, meters
 uniform sampler2D cloudMarchDepth;    //The march's second output: distance to the cloud in each texel, km, 0 for none
 uniform float cloudEarthRadius;       //Meters
 uniform float cloudCutoffDistance;    //Meters
@@ -191,23 +193,26 @@ void main(){
   vec4 boxMin = mean - CLOUD_TAA_VARIANCE_GAMMA * sigma;
   vec4 boxMax = mean + CLOUD_TAA_VARIANCE_GAMMA * sigma;
 
-  //Reproject, by the distance the march found to the cloud in this texel. The point
-  //that is here now was at (here + shift) relative to last frame's camera, and how far
-  //that moves it across the sky goes inversely with its distance. This used to take
-  //one sphere, at the middle of the low deck, for every texel: the mid deck, twice as
-  //high, had its history moved more than twice as far as it had gone, and the tops
-  //and bases of the low clouds were 40% off -- every moving cloud dragged a history a
-  //couple of texels out of place, and the clip snapping it back read as a shimmer
-  //over the whole sky. Clear texels, with no depth, keep the sphere.
+  //Reproject. The point that is here now was at (here + shift) relative to last frame's
+  //camera, and how far that moves it across the sky goes inversely with its distance --
+  //taken here as the distance to the middle of its own deck. One sphere for everything
+  //moved the mid deck's history more than twice as far as it had gone, and the clip
+  //snapping it back read as a shimmer over the whole sky. But the march's own depth, per
+  //texel, is worse inside a cloud: it is the mean of a lump and the core behind it, and
+  //jumps between them from one texel to the next, so neighbouring texels of one cloud
+  //had their history moved by different amounts. The history tore a little every frame
+  //and the clip pulled it back: the middles of moving cumulus bobbed. So the march's depth
+  //only says which deck a texel belongs to, and each deck moves as one.
   vec3 direction = cloudUVToDirection(vUv);
   float r = cloudEarthRadius;
-  float h = cloudReprojectionHeight;
   float mu = max(direction.y, 0.0);
-  float depth = -r * mu + sqrt(r * r * mu * mu + 2.0 * r * h + h * h);
+  float h = cloudReprojectionHeight;
   float marchDepth = texelFetch(cloudMarchDepth, nearestTexel, 0).r * 1000.0;
   if(marchDepth > 0.0){
-    depth = marchDepth;
+    float hitHeight = sqrt(r * r + marchDepth * marchDepth + 2.0 * r * marchDepth * mu) - r;
+    h = hitHeight > cloudMidSplitHeight ? cloudMidReprojectionHeight : h;
   }
+  float depth = -r * mu + sqrt(r * r * mu * mu + 2.0 * r * h + h * h);
   depth = min(depth, cloudCutoffDistance);
   vec3 previousDirection = normalize(direction * depth + cloudReprojectionShift);
   vec2 previousUV = cloudDirectionToUV(previousDirection);
