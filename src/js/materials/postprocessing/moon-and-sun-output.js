@@ -49,7 +49,7 @@ StarrySky.Materials.Postprocessing.moonAndSunOutput = {
     '}',
 
     '//https://github.com/KhronosGroup/ToneMapping/tree/main/PBR_Neutral',
-    'vec3 PBRNeutralToneMapping(vec3 color) {',
+    'vec3 skyPBRNeutralToneMapping(vec3 color) {',
       'const float startCompression = 0.8 - 0.04;',
       'const float desaturation = 0.15;',
       'float x = min(color.r, min(color.g, color.b));',
@@ -67,7 +67,7 @@ StarrySky.Materials.Postprocessing.moonAndSunOutput = {
     '}',
 
     '//https://iolite-engine.com/blog_posts/minimal_agx_implementation -- returns linear.',
-    'vec3 AgXToneMapping(vec3 color) {',
+    'vec3 skyAgXToneMapping(vec3 color) {',
       'const mat3 agxInset = mat3(0.842479062253094, 0.0423282422610123, 0.0423756549057051,',
         '0.0784335999999992, 0.878468636469772, 0.0784336,',
         '0.0792237451477643, 0.0791661274605434, 0.879142973793104);',
@@ -100,12 +100,12 @@ StarrySky.Materials.Postprocessing.moonAndSunOutput = {
 
     'vec3 skyToneMap(vec3 color) {',
       'if(SKY_TONEMAPPER == 1){',
-        'vec3 neutral = clamp(PBRNeutralToneMapping(SKY_NEUTRAL_EXPOSURE * color), 0.0, 1.0);',
+        'vec3 neutral = clamp(skyPBRNeutralToneMapping(SKY_NEUTRAL_EXPOSURE * color), 0.0, 1.0);',
         'float toe = smoothstep(SKY_NEUTRAL_TOE_START, SKY_NEUTRAL_TOE_END, max(neutral.r, max(neutral.g, neutral.b)));',
         'return mix(MyAESFilmicToneMapping(color), neutral, toe);',
       '}',
       'if(SKY_TONEMAPPER == 2){',
-        'return clamp(AgXToneMapping(color), 0.0, 1.0);',
+        'return clamp(skyAgXToneMapping(color), 0.0, 1.0);',
       '}',
       'return MyAESFilmicToneMapping(color);',
     '}',

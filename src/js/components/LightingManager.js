@@ -20,7 +20,20 @@ StarrySky.LightingManager = function(skyDirector){
   shadow.camera.right = directLightingCameraSize;
   shadow.camera.bottom = -directLightingCameraSize;
   shadow.camera.top = directLightingCameraSize;
-  this.sourceLight.target = skyDirector.camera;
+  //The light gets a target of its own, not the camera. three.js reads a directional light's
+  //direction as position - target, so the two must move together: each tick the target is
+  //put on the camera's world position and the light 5000 m from it along the light's
+  //direction (placeSourceLight below). The shadow frustum still follows the camera, and
+  //position - target is the exact direction wherever the camera is. Aiming at the camera
+  //from an origin-centred sphere was off by up to asin(|camera| / 5000), about 36 degrees
+  //at 3 km out, and it swung as the camera moved. The camera's own .position is also
+  //local to its rig, so it can't stand in for a world position either.
+  this.sourceLightTarget = new THREE.Object3D();
+  this.sourceLightTarget.name = 'starry-sky-source-light-target';
+  this.sourceLight.target = this.sourceLightTarget;
+  //Unit vector, world space, pointing from the scene toward the dominant light (sun or moon).
+  this.dominantLightDirection = new THREE.Vector3(0.0, 1.0, 0.0);
+  const cameraWorldPosition = new THREE.Vector3();
   this.fogColorVector = new THREE.Color();
   this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
   this.yAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
@@ -38,6 +51,8 @@ StarrySky.LightingManager = function(skyDirector){
 
   const scene = skyDirector.scene;
   scene.add(this.sourceLight);
+  //In the scene graph so its matrixWorld is updated for the shadow camera's lookAt.
+  scene.add(this.sourceLightTarget);
   scene.add(this.xAxisHemisphericalLight);
   scene.add(this.yAxisHemisphericalLight);
   scene.add(this.zAxisHemisphericalLight);
@@ -49,6 +64,12 @@ StarrySky.LightingManager = function(skyDirector){
   StarrySky.Methods.getDominantLightIntensity = function(){
     return self.sourceLight.intensity;
   }
+  //The direction of the directional light, the same one three.js lights the scene with:
+  //a unit world-space vector toward the sun by day and the moon by night. Equal to
+  //normalize(sourceLight.position - sourceLight.target.position). Copies into out when given.
+  StarrySky.Methods.getDominantLightDirection = function(out){
+    return out ? out.copy(self.dominantLightDirection) : self.dominantLightDirection;
+  };
   StarrySky.Methods.getAmbientLights = function(){
     return {
       x: self.xAxisHemisphericalLight,
@@ -374,6 +395,18 @@ StarrySky.LightingManager = function(skyDirector){
   const cameraHeightDefault = skyDirector.assetManager.data.skyAtmosphericParameters.cameraHeight;
   const ONE_OVER_TWO_TWO = 1.0 / 2.2;
 
+  //Sky coordinates to world: world = (-z, y, -x). Puts the target on the camera and the
+  //light RADIUS_OF_SKY from it, so position - target is the light's direction.
+  function placeSourceLight(skyX, skyY, skyZ){
+    const dir = self.dominantLightDirection.set(-skyZ, skyY, -skyX);
+    if(dir.lengthSq() > 0.0) dir.normalize(); else dir.set(0.0, 1.0, 0.0);
+    //skyDirector.camera, not cameraRef: SkyDirector re-grabs the scene camera whenever
+    //A-Frame swaps it, and cameraRef is the one from construction.
+    skyDirector.camera.getWorldPosition(cameraWorldPosition);
+    self.sourceLightTarget.position.copy(cameraWorldPosition);
+    self.sourceLight.position.copy(cameraWorldPosition).addScaledVector(dir, RADIUS_OF_SKY);
+  }
+
   this.tick = function(lightingState){
     const sunRadius = Math.sin(sunRenderer.sunAngularRadiusInRadians * skyState.sun.scale);
     const dominantLightIsSun = skyState.sun.position.y >= -sunRadius;
@@ -521,9 +554,7 @@ StarrySky.LightingManager = function(skyDirector){
 
       // Directional source light: position, color, intensity.
       const dominantPos = dominantLightIsSun ? skyState.sun.position : skyState.moon.position;
-      self.sourceLight.position.x = -RADIUS_OF_SKY * dominantPos.z;
-      self.sourceLight.position.y =  RADIUS_OF_SKY * dominantPos.y;
-      self.sourceLight.position.z = -RADIUS_OF_SKY * dominantPos.x;
+      placeSourceLight(dominantPos.x, dominantPos.y, dominantPos.z);
       // Sun gets physical color (warm sunsets, white noon, etc). Moon gets a fixed
       // cool cinematic tint - the same atmospheric extinction that paints sunsets red
       // would paint a low moon orange, but we perceive moonlight as cool blue-white
@@ -588,9 +619,7 @@ StarrySky.LightingManager = function(skyDirector){
       self.fog.color.copy(self.fogColorVector);
     }
 
-    self.sourceLight.position.x = -RADIUS_OF_SKY * lightingState[27];
-    self.sourceLight.position.y = RADIUS_OF_SKY * lightingState[26];
-    self.sourceLight.position.z = -RADIUS_OF_SKY * lightingState[25];
+    placeSourceLight(lightingState[25], lightingState[26], lightingState[27]);
     // Apply whichever eclipse modifier matches the dominant light source:
     // solar during day (sun-dominant), lunar at night (moon-dominant).
     const fbMod = dominantLightIsSun ? solarEclipseLightingModifier : lunarEclipseLightingModifier;
