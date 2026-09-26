@@ -194,8 +194,11 @@ float cloudLightOpticalDepth(vec3 p, vec3 light, float t, float longReach){
 //through the bodies of the cumulus below.
 //
 //Each part is blurred by its own physics, by reading a coarser mip:
-//  direct   the unscattered beam, blurred only by the size of the light, 0.27
-//           degrees in radius for the sun and moon alike -- 10 to 20m at 2km
+//  direct   the unscattered beam, blurred by the size of the light, 0.27 degrees
+//           in radius for the sun and moon alike -- 10 to 20m at 2km -- but by no
+//           less than CLOUD_DIRECT_SHADOW_MIN_BLUR. At its true sharpness the dappled
+//           sunlight through an altocumulus deck lay on the cumulus below as flat
+//           warm and grey patches with hard edges, which read as a posterized palette.
 //  diffuse  scattered forward through the deck and out of its base in a wide,
 //           nearly Lambertian cone, so a point below sees it averaged over a disk
 //           about as wide as its drop below the deck: half of a Lambertian disk's
@@ -213,6 +216,7 @@ uniform sampler2D cloudShadowMap;
 uniform float cloudShadowMapExtent;     //Meters of ground the map spans, edge to edge
 const float CLOUD_LIGHT_ANGULAR_RADIUS = 0.00465;
 const float CLOUD_INTERIOR_SHADOW_BLUR = 1000.0;
+const float CLOUD_DIRECT_SHADOW_MIN_BLUR = 150.0;
 vec2 midCloudShadow(vec3 p, vec3 light, bool isMoon){
   if(midCloudCoverage <= 0.0){
     return vec2(1.0);
@@ -230,7 +234,7 @@ vec2 midCloudShadow(vec3 p, vec3 light, bool isMoon){
   float texel = cloudShadowMapExtent / float(textureSize(cloudShadowMap, 0).x);
 
   //Mip level for a blur of this radius: a mip texel is its diameter.
-  float directRadius = reach * CLOUD_LIGHT_ANGULAR_RADIUS;
+  float directRadius = max(reach * CLOUD_LIGHT_ANGULAR_RADIUS, CLOUD_DIRECT_SHADOW_MIN_BLUR);
   float lodDirect = log2(max(2.0 * directRadius / texel, 1.0));
   float lodInterior = log2(max(2.0 * max(directRadius, CLOUD_INTERIOR_SHADOW_BLUR) / texel, 1.0));
   float lodDiffuse = log2(max(2.0 * drop / texel, 1.0));
@@ -535,17 +539,23 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
 
       //Sky light: in-scattered isotropically from the upper hemisphere, 2 pi of
       //solid angle at a phase of 1 / (4 pi), so half the mean radiance -- through
-      //whatever cloud lies above this point, 150m and 450m segments on the cheap
-      //density. takram scales by the height fraction instead, which lit the base of
-      //a 5km tower like the base of a small cumulus. Diffuse light arrives from the
-      //whole hemisphere and scatters on through, so it sees a softened extinction,
-      //like the far octaves (CLOUD_SKY_OCCLUSION_SOFTNESS).
-      float skyOpticalDepth = 150.0 * cloudDensityCheap(currentPosition + localUp * 75.0, t) + 450.0 * cloudDensityCheap(currentPosition + localUp * 375.0, t);
+      //whatever cloud lies above this point, 100m, 150m and 350m segments on the
+      //cheap density. takram scales by the height fraction instead, which lit the
+      //base of a 5km tower like the base of a small cumulus. Diffuse light arrives
+      //from the whole hemisphere and scatters on through, so it sees a softened
+      //extinction, like the far octaves (CLOUD_SKY_OCCLUSION_SOFTNESS).
+      //
+      //Three segments here and three below, not two: with two, a point flipped
+      //between lit and occluded as one sample moved in or out of cloud, and shaded
+      //bases broke into flat patches, a posterized palette. Jittering two samples
+      //instead smoothed them for free but nearly doubled the frame to frame flicker;
+      //five and four fixed ones cost 15 to 35% for no more smoothness than these.
+      float skyOpticalDepth = 100.0 * cloudDensityCheap(currentPosition + localUp * 50.0, t) + 150.0 * cloudDensityCheap(currentPosition + localUp * 175.0, t) + 350.0 * cloudDensityCheap(currentPosition + localUp * 425.0, t);
       radiance += 0.5 * (inMidDeck ? clearSkyRadiance : midSkyRadiance) * exp(-CLOUD_SKY_OCCLUSION_SOFTNESS * skyOpticalDepth);
 
       //Ground bounce, from the lower hemisphere the same way, through whatever cloud
       //lies below this point.
-      float groundOpticalDepth = 100.0 * cloudDensityCheap(currentPosition - localUp * 50.0, t) + 200.0 * cloudDensityCheap(currentPosition - localUp * 200.0, t);
+      float groundOpticalDepth = 80.0 * cloudDensityCheap(currentPosition - localUp * 40.0, t) + 100.0 * cloudDensityCheap(currentPosition - localUp * 130.0, t) + 120.0 * cloudDensityCheap(currentPosition - localUp * 240.0, t);
       radiance += 0.5 * groundRadiance * exp(-groundOpticalDepth);
 
       //Powder (Schneider): the thinnest wisps have too little cloud around them to
