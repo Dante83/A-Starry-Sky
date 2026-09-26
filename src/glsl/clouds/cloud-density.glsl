@@ -441,8 +441,8 @@ float midCloudKey(vec2 key){
 //straight up, measured with the density probe over 3 x 60km squares. Borrowing
 //the low deck's tables, 50% on the tag covered 40% of the sky with altocumulus
 //and 57% with altostratus. Re-measure whenever the mid recipe changes.
-const float MID_CLOUD_AC_COVERAGE_TABLE[11] = float[11](0.0, 0.102, 0.117, 0.128, 0.139, 0.149, 0.160, 0.172, 0.187, 0.208, 0.32);
-const float MID_CLOUD_AS_COVERAGE_TABLE[11] = float[11](0.0, 0.032, 0.057, 0.078, 0.097, 0.115, 0.133, 0.151, 0.171, 0.194, 0.232);
+const float MID_CLOUD_AC_COVERAGE_TABLE[11] = float[11](0.0, 0.097, 0.116, 0.131, 0.144, 0.157, 0.170, 0.184, 0.201, 0.226, 0.34);
+const float MID_CLOUD_AS_COVERAGE_TABLE[11] = float[11](0.0, 0.073, 0.094, 0.109, 0.123, 0.136, 0.149, 0.162, 0.177, 0.196, 0.246);
 
 float midCloudRecipeCoverage(float coverage){
   float x = clamp(coverage, 0.0, 1.0) * 10.0;
@@ -495,21 +495,39 @@ CloudWeather midCloudSampleWeather(vec3 q, float distance){
   //2 pi spelled out: this chunk is also built into shaders without the atmosphere constants.
   float rows = cos(6.28318530718 * rowPhase + MID_CLOUD_ROW_BEND * (clumps - 0.5));
   cells += MID_CLOUD_ROW_STRENGTH * smoothstep(0.35, 0.65, patches.a) * rows;
-  float sheet = 0.5 + 0.5 * smoothstep(0.2, 0.8, patches.b);
+  //The sheet's edge follows the kilometres wide patch field over its whole range.
+  float sheet = 0.5 + 0.5 * smoothstep(0.0, 1.0, patches.b);
   float footprint = mix(cells, sheet, stratiform);
 
-  float bias = mix(CLOUD_SHAPE_ALTERING_BIAS, 1.0, stratiform);
-  float x = max(pow(hf, bias) * 2.0 - 1.0, 0.0);
-  float heightScale = 1.0 - x * x;
-  float reach = max(midCloudRecipeCoverage(coverage) * heightScale, 1e-4);
+  //Cells: coverage through a height profile, as for the low deck's heaps, so each
+  //cell is a rounded lens.
+  float recipeCoverage = midCloudRecipeCoverage(coverage);
+  float x = max(pow(hf, CLOUD_SHAPE_ALTERING_BIAS) * 2.0 - 1.0, 0.0);
+  float reach = max(recipeCoverage * (1.0 - x * x), 1e-4);
   float threshold = 1.0 - reach;
   float profile = cloudRemap(mix(footprint, 1.0, CLOUD_COVERAGE_FILTER_WIDTH), threshold, threshold + CLOUD_COVERAGE_FILTER_WIDTH, 0.0, 1.0);
-  weather.density = clamp(profile * CLOUD_COVERAGE_FILTER_WIDTH / reach, 0.0, 1.0);
+  float cellDensity = clamp(profile * CLOUD_COVERAGE_FILTER_WIDTH / reach, 0.0, 1.0);
 
-  //A crisp base and a softened top, as the low deck's default fade tags give it.
+  //A sheet does not end in a wall. Through a height profile its edges were rounded
+  //domes, where the footprint only just cleared the threshold at mid height, and a
+  //sky of altostratus at 70% read as big puffy stratocumulus. Real altostratus thins
+  //out to translucent at its edges, so the sheet keeps its whole depth and the
+  //coverage margin fades its density instead, with soft fades at its base and top.
+  //The fade is squared: a linear one reached opaque within a narrow band, and a deck
+  //1.5km deep then ended in vertical cut-out walls.
+  float sheetReach = max(recipeCoverage, 1e-4);
+  float sheetThreshold = 1.0 - sheetReach;
+  float sheetProfile = cloudRemap(mix(footprint, 1.0, CLOUD_COVERAGE_FILTER_WIDTH), sheetThreshold, sheetThreshold + CLOUD_COVERAGE_FILTER_WIDTH, 0.0, 1.0);
+  float sheetVertical = smoothstep(0.0, 0.2, hf) * (1.0 - smoothstep(0.6, 1.0, hf));
+  float sheetEdge = clamp(sheetProfile * CLOUD_COVERAGE_FILTER_WIDTH / sheetReach, 0.0, 1.0);
+  float sheetDensity = sheetEdge * sheetEdge * sheetVertical;
+  weather.density = mix(cellDensity, sheetDensity, stratiform);
+
+  //Cells: a crisp base and a softened top, as the low deck's default fade tags give
+  //them, and denser towards the top. The sheet has its own fades, and is even through.
   float farFade = 1.0 - smoothstep(CLOUD_FAR_FADE_START_FRACTION * cloudCutoffDistance, cloudCutoffDistance, distance);
-  float layerFade = cloudLinearGradient(1.0, 0.9, hf) * cloudLinearGradient(0.0, 0.025, hf);
-  weather.fade = farFade * layerFade * (0.75 * hf + 0.25);
+  float layerFade = mix(cloudLinearGradient(1.0, 0.9, hf) * cloudLinearGradient(0.0, 0.025, hf) * (0.75 * hf + 0.25), 1.0, stratiform);
+  weather.fade = farFade * layerFade;
   weather.detailWeight = 1.0 - smoothstep(CLOUD_DETAIL_FADE_START, CLOUD_DETAIL_FADE_END, distance);
   return weather;
 }

@@ -10,7 +10,10 @@
 * Replaced the noise-blob clouds with a species recipe after [takram](https://github.com/takram-design-engineering/three-geospatial) and Guerrilla's Nubis: baked noise, a weather map, and a new `<sky-cloud-type>` tag running from stratus to cumulonimbus. `<sky-cloud-coverage>` now means the fraction of sky covered, for every type.
 * Relit the clouds with energy-conserving step integration, eight octaves of multiple scattering over a diffusion floor, and occluded sky and ground bounce, so sunlit tops are white and bases grey. The sky now tonemaps with Khronos PBR Neutral, handing its darks back to AES so nights stay dark.
 * Fixed the transmittance table's ground row, which baked black and halved the light of every cloud while doubling the haze in front of distant ones.
-* Added a mid level cloud deck, altocumulus to altostratus, above the low one, with `<sky-mid-cloud-coverage>`, `<sky-mid-cloud-type>` and `<sky-mid-cloud-height>`. It shades the clouds below and catches the sunset longer.
+* Added a mid level cloud deck, altocumulus to altostratus, above the low one, with `<sky-mid-cloud-coverage>`, `<sky-mid-cloud-type>` and `<sky-mid-cloud-height>`. Altocumulus gathers into rafts and rows across the wind, and catches the sunset longer.
+* Added a cloud shadow map, so the mid deck shades the clouds below it with shadows that blur the further they fall.
+* Clouds are now lit by the sky above them, clouds included, rather than by a clear sky alone.
+* Stopped the sun showing through thick cloud as a crisp disk: the march kept the last 1% of the light behind a cloud, and 1% of the sun is still bright.
 * Calmed the shimmer on distant clouds: rays refine where they enter a cloud and cross its sunlit skin in fine steps, and the temporal filter keeps a longer history towards the horizon.
 
 **Version 1.2.0**

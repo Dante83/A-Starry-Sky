@@ -399,6 +399,12 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
   bool wasEmpty = true;
   float approachEnd = -1.0;
   float skinStep = CLOUD_SKIN_STEP_FRACTION * baseStep;
+  //A sheet has no skin: altostratus at 0.008/m has a mean free path of 125m, and
+  //crossing it in the 23m steps meant for the 5 to 20m lit skin of a cumulus made an
+  //overcast of it cost half as much again as the whole low deck. In the mid deck the
+  //step is kept to at least half a mean free path, as much as the deck is a sheet;
+  //altocumulus is unaffected.
+  float midSheetStep = midCloudType * 0.5 / midCloudKey(MID_CLOUD_DENSITY_SCALE);
   for(int i = 0; i < MAX_CLOUD_MARCH_STEPS; ++i){
     if(t >= tEnd){
       break;
@@ -422,6 +428,9 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
     bool inSkin = t < approachEnd + skinStep || (!wasEmpty && rayTransmittance > CLOUD_SKIN_TRANSMITTANCE);
     if(inSkin){
       rayDeltaT = min(rayDeltaT, skinStep);
+    }
+    if(midSheetStep > 0.0 && t >= midSwitch && cloudHeight(rayDirection * t) >= midCloudBase()){
+      rayDeltaT = max(rayDeltaT, midSheetStep);
     }
 
     //Empty-space skip on the weather alone, which bounds the full density (the noise

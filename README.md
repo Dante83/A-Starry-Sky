@@ -612,12 +612,12 @@ In addition to changing the colors of the sky, you can also change the number of
 `<sky-cloud-raymarch-steps>` | How many ray-march steps cross a 1.5km cumulus. Steps grow with distance, so far clouds cost less. | 32 (steps)
 `<sky-cloud-cutoff-distance>` | The distance, in meters, by which clouds have faded out. Clouds follow the curve of the Earth down to the horizon and thin out over the last 40% of this distance rather than stopping at a wall. | 160000 (meters)
 `<sky-mid-cloud-coverage>` | The fraction of the sky covered by a second, mid level deck above the first. 0 turns it off. | 0 (percent)
-`<sky-mid-cloud-type>` | The kind of mid level cloud, from 0 to 1: 0 altocumulus, 1 altostratus. Values in between blend the two. | 0
+`<sky-mid-cloud-type>` | The kind of mid level cloud, from 0 to 1: 0 altocumulus, small cells gathered into rafts and rows across the wind; 1 altostratus, a soft grey sheet the sun shines through as through ground glass. Values in between blend the two. | 0
 `<sky-mid-cloud-height>` | The base of the mid level deck, in meters. Mid level clouds live 2 to 7km up. | 4000 (meters)
 
 Clouds are still the heaviest part of the sky. If you're hitting frame rate issues, reduce `<sky-cloud-raymarch-steps>` or `<sky-cloud-cutoff-distance>`.
 
-At the same time, clouds are insanely cool and I have wanted to add them into A-Starry-Sky since I first created the library. A ray stops marching once the cloud in front of it is opaque, so an overcast sky is cheaper than a scattered one. Of course, if you don't have any clouds, just turning them off altogether is your best bet.
+At the same time, clouds are insanely cool and I have wanted to add them into A-Starry-Sky since I first created the library. A ray stops marching once the cloud in front of it is opaque, so an overcast sky is cheaper than a scattered one. The mid level deck adds to the bill: altocumulus costs little, an altostratus overcast about a third more. Of course, if you don't have any clouds, just turning them off altogether is your best bet.
 
 Enabling clouds requires you to add the parent tag to `<a-starry-sky>`, `<sky-clouds>`. Once you've added clouds, the most likely thing you will want to change is the cloud coverage, using the `<sky-cloud-coverage>` tag, which roughly correlates to the amount of the sky covered in clouds. You might also wish to control their speed as they zip across the sky.
 
@@ -658,6 +658,25 @@ You might also wish to control some of the visible properties of the cloud, such
 
       <!-- Locks the starting 'seed' of the clouds which is normally based around the current date time. Doing this lets your sky appear the same each time you start for more artistic control. -->
       <sky-cloud-start-seed>400</sky-cloud-start-seed>
+    </sky-clouds>
+  </a-starry-sky>
+</a-scene>
+```
+
+Real skies are often layered, so a second deck of mid level cloud can sit above the first, 2 to 7km up. It is off until you give it some coverage. Altocumulus throws soft shadows onto the clouds below it, blurred the further they fall, and stays lit a few minutes longer after sunset, glowing pink above the darkening cumulus.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-clouds>
+      <!-- Fair weather cumulus... -->
+      <sky-cloud-coverage>30.0</sky-cloud-coverage>
+      <sky-cloud-type>0.5</sky-cloud-type>
+
+      <!-- ...under a mackerel sky of altocumulus, 4km up. Raise the type towards 1 for the grey sheet of an advancing front. -->
+      <sky-mid-cloud-coverage>50.0</sky-mid-cloud-coverage>
+      <sky-mid-cloud-type>0.0</sky-mid-cloud-type>
+      <sky-mid-cloud-height>4000.0</sky-mid-cloud-height>
     </sky-clouds>
   </a-starry-sky>
 </a-scene>
