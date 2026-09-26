@@ -126,16 +126,42 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //zero fills -- no clouds -- until the first frame has been marched.
   this.cloudMap = resolveTargets[1].texture;
 
-  const marchMaterial = new THREE.ShaderMaterial({
-    uniforms: materials.cloudMarch.uniforms(),
-    vertexShader: materials.cloudMarch.vertexShader,
-    fragmentShader: materials.cloudMarch.fragmentShader(atmosphereLUTLibrary.atmosphereFunctionsString),
-    depthTest: false,
-    depthWrite: false,
-    blending: THREE.NoBlending,
-    toneMapped: false
-  });
-  const marchUniforms = marchMaterial.uniforms;
+  //Three builds of the march, sharing one set of uniforms: sun only, moon only, and
+  //both for twilight (CLOUD_SUN_LIGHT / CLOUD_MOON_LIGHT in cloud-march.glsl). Carrying
+  //the moon's lighting through the day cost a quarter of the frame even while it was
+  //skipped. All three are compiled on the first tick, so switching never stalls.
+  const marchUniforms = materials.cloudMarch.uniforms();
+  const marchFragmentShader = materials.cloudMarch.fragmentShader(atmosphereLUTLibrary.atmosphereFunctionsString);
+  const createMarchMaterial = function(defines){
+    return new THREE.ShaderMaterial({
+      uniforms: marchUniforms,
+      defines: defines,
+      vertexShader: materials.cloudMarch.vertexShader,
+      fragmentShader: marchFragmentShader,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.NoBlending,
+      toneMapped: false
+    });
+  };
+  const marchMaterials = {
+    sun: createMarchMaterial({CLOUD_SUN_LIGHT: ''}),
+    moon: createMarchMaterial({CLOUD_MOON_LIGHT: ''}),
+    both: createMarchMaterial({CLOUD_SUN_LIGHT: '', CLOUD_MOON_LIGHT: ''})
+  };
+  let marchMaterial = marchMaterials.both;
+  //A light reaches the clouds while its height plus the horizon dip of the highest deck
+  //is above -0.1 (sunCloudFade and moonCloudFade in cloud-march.glsl); the dip is under 0.06 even for a
+  //deck 7km up.
+  const LIGHT_REACHES_CLOUDS_Y = -0.16;
+  const selectMarchMaterial = function(){
+    const sunLights = skyState.sun.position.y > LIGHT_REACHES_CLOUDS_Y;
+    const moonLights = skyState.moon.position.y > LIGHT_REACHES_CLOUDS_Y;
+    if(sunLights && moonLights){
+      return marchMaterials.both;
+    }
+    return moonLights ? marchMaterials.moon : marchMaterials.sun;
+  };
   marchUniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;
   marchUniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   marchUniforms.transmittance.value = atmosphereLUTLibrary.transmittance;
@@ -309,6 +335,8 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       renderer.render(scene, camera);
     }
 
+    marchMaterial = selectMarchMaterial();
+
     //Sky light first, from the last frame's maps; then the mid deck alone, for next
     //frame's sky light; then the march itself. No pass may have its own target bound
     //as a texture, even unread -- WebGL refuses the draw as a feedback loop.
@@ -379,6 +407,24 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     //One fixed tile. The march walks it through time with the golden ratio itself,
     //which averages out far more evenly than hopping between random tiles.
     marchUniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[0];
+
+    //Compile every build of the march now, on a cheap one texel draw each, so the
+    //switch at dawn and dusk does not stall a frame.
+    const initialRenderTarget = renderer.getRenderTarget();
+    const currentXrEnabled = renderer.xr.enabled;
+    const currentShadowAutoUpdate = renderer.shadowMap.autoUpdate;
+    renderer.xr.enabled = false;
+    renderer.shadowMap.autoUpdate = false;
+    marchUniforms.cloudAmbientPass.value = true;
+    [marchMaterials.sun, marchMaterials.moon, marchMaterials.both].forEach(function(material){
+      quad.material = material;
+      renderer.setRenderTarget(ambientTarget);
+      renderer.render(scene, camera);
+    });
+    marchUniforms.cloudAmbientPass.value = false;
+    renderer.xr.enabled = currentXrEnabled;
+    renderer.shadowMap.autoUpdate = currentShadowAutoUpdate;
+    renderer.setRenderTarget(initialRenderTarget);
 
     assetsNotReadyYet = false;
     self.tick(t);

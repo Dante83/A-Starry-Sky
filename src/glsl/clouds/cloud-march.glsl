@@ -137,18 +137,29 @@ float cloudPhase(float cosTheta, float attenuation){
 const int CLOUD_MS_OCTAVES = 8;
 const float CLOUD_DIFFUSION_K = 0.11;
 const float CLOUD_DIFFUSION_WEIGHT = 0.5;
-vec2 cloudMultipleScattering(float opticalDepth, float cosTheta){
+//
+//The phase of each octave depends only on the angle between the ray and the light,
+//which is the same at every step of a ray, so cloudPhaseOctaves works them out once per
+//ray and light: sixteen Henyey-Greensteins, each with a square root and a divide, had
+//been evaluated again at every lit step.
+void cloudPhaseOctaves(float cosTheta, out float phases[CLOUD_MS_OCTAVES]){
+  float c = 1.0;
+  for(int i = 0; i < CLOUD_MS_OCTAVES; ++i){
+    phases[i] = cloudPhase(cosTheta, c);
+    c *= 0.5;
+  }
+}
+
+vec2 cloudMultipleScattering(float opticalDepth, float phases[CLOUD_MS_OCTAVES]){
   float scattering = 0.0;
   float a = 1.0;
   float b = 1.0;
-  float c = 1.0;
   for(int i = 0; i < CLOUD_MS_OCTAVES; ++i){
-    scattering += a * exp(-opticalDepth * b) * cloudPhase(cosTheta, c);
+    scattering += a * exp(-opticalDepth * b) * phases[i];
     a *= 0.5;
     b *= 0.5;
-    c *= 0.5;
   }
-  float single = exp(-opticalDepth) * cloudPhase(cosTheta, 1.0);
+  float single = exp(-opticalDepth) * phases[0];
   scattering = max(scattering, CLOUD_DIFFUSION_WEIGHT * ONE_OVER_FOUR_PI / (1.0 + CLOUD_DIFFUSION_K * opticalDepth));
   return vec2(single, scattering - single);
 }
@@ -362,6 +373,10 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
   bool computeMoon = dot(moonSourceColor + midMoonSourceColor, vec3(1.0)) > 0.0;
   float cosViewSunLight = dot(rayDirection, sunPosition);
   float cosViewMoonLight = dot(rayDirection, moonPosition);
+  float sunPhases[CLOUD_MS_OCTAVES];
+  float moonPhases[CLOUD_MS_OCTAVES];
+  cloudPhaseOctaves(cosViewSunLight, sunPhases);
+  cloudPhaseOctaves(cosViewMoonLight, moonPhases);
 
   //Jitter starting position using blue noise (before the loop). Full-step
   //jitter is required -- half-step let visible banding rings through. The
@@ -495,19 +510,28 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
 
       //Above the mid deck's base, its own horizon fade (see main).
       bool inMidDeck = t >= midSwitch && cloudHeight(currentPosition) >= midCloudBase();
+      //Each light's block is compiled in only when CloudRenderer asks for it
+      //(CLOUD_SUN_LIGHT, CLOUD_MOON_LIGHT). Skipped at run time, the moon's block
+      //still cost a quarter of the frame by day -- it made the shader bigger, and a
+      //bigger shader keeps fewer pixels in flight -- so there are three builds, and
+      //both lights share one only through twilight.
       vec3 radiance = vec3(0.0);
+      #ifdef CLOUD_SUN_LIGHT
       if(computeSun){
         vec2 uvSun = vec2(parameterizationOfCosOfViewZenithToX(max(dot(sunPosition, localUp), 0.0)), yLightSrc);
         vec3 sunLight = (inMidDeck ? midSunSourceColor : sunSourceColor) * texture(transmittance, uvSun).rgb;
         float sunOpticalDepth = cloudLightOpticalDepth(currentPosition, sunPosition, t, longShadowReach);
-        radiance += sunLight * dot(cloudMultipleScattering(sunOpticalDepth, cosViewSunLight), midCloudShadow(currentPosition, sunPosition, false));
+        radiance += sunLight * dot(cloudMultipleScattering(sunOpticalDepth, sunPhases), midCloudShadow(currentPosition, sunPosition, false));
       }
+      #endif
+      #ifdef CLOUD_MOON_LIGHT
       if(computeMoon){
         vec2 uvMoon = vec2(parameterizationOfCosOfViewZenithToX(max(dot(moonPosition, localUp), 0.0)), yLightSrc);
         vec3 moonLight = (inMidDeck ? midMoonSourceColor : moonSourceColor) * texture(transmittance, uvMoon).rgb;
         float moonOpticalDepth = cloudLightOpticalDepth(currentPosition, moonPosition, t, longShadowReach);
-        radiance += moonLight * dot(cloudMultipleScattering(moonOpticalDepth, cosViewMoonLight), midCloudShadow(currentPosition, moonPosition, true));
+        radiance += moonLight * dot(cloudMultipleScattering(moonOpticalDepth, moonPhases), midCloudShadow(currentPosition, moonPosition, true));
       }
+      #endif
 
       //Sky light: in-scattered isotropically from the upper hemisphere, 2 pi of
       //solid angle at a phase of 1 / (4 pi), so half the mean radiance -- through
