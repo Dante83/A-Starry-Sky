@@ -16,6 +16,7 @@
 * Stopped the sun showing through thick cloud as a crisp disk: the march kept the last 1% of the light behind a cloud, and 1% of the sun is still bright.
 * Added `<sky-cloud-resolution>`, and reproject cloud history by each cloud's own distance rather than one layer height, which steadies moving clouds, especially overhead.
 * Calmed the shimmer on distant clouds: rays refine where they enter a cloud and cross its sunlit skin in fine steps, and the temporal filter keeps a longer history towards the horizon.
+* Clouds now march half their texels each frame in a checkerboard, filling the rest from their neighbours and the history, which nearly halves their cost for a touch more shimmer.
 
 **Version 1.2.0**
 * Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).

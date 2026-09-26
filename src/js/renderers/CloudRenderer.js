@@ -84,6 +84,17 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     return 0.5 * (base + Math.max(top, base));
   };
 
+  //Checkerboard march: each frame marches half of the march map's texels, alternating,
+  //and the resolve fills in the rest from the neighbours and the history. Lighting is
+  //nearly all of the cloud cost, so this about halves it, for an effective history
+  //twice as long. The parity walks against the jitter: plain alternation, with an
+  //even jitter sequence, would pair each jitter offset with the same half forever,
+  //and some sample positions would never be visited.
+  const CLOUD_CHECKERBOARD = true;
+  const checkerboardParity = function(frame){
+    return (frame ^ Math.floor(frame / HALTON_LENGTH)) & 1;
+  };
+
   const RESOLVE_SIZE = skyDirector.cloudMapSize;
   const MARCH_SIZE = RESOLVE_SIZE / 2;
   const createTarget = function(size, count = 1){
@@ -108,6 +119,9 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //to reproject by. Nearest filtering on the depth: blending a cloud's depth with the
   //0 of the clear sky beside it would put its edge anywhere in between.
   const marchTarget = createTarget(MARCH_SIZE, 2);
+  if(CLOUD_CHECKERBOARD){
+    marchTarget.setSize(MARCH_SIZE / 2, MARCH_SIZE);
+  }
   marchTarget.textures[1].minFilter = THREE.NearestFilter;
   marchTarget.textures[1].magFilter = THREE.NearestFilter;
   //Sky light for the clouds and the ground under them (cloudMeanSkyRadiance in
@@ -318,6 +332,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     marchUniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     marchUniforms.cloudJitter.value.copy(jitter);
     marchUniforms.cloudFrame.value = frame % 4096;
+    const parity = CLOUD_CHECKERBOARD ? checkerboardParity(frame) : -1;
     //Where we are over the cloud field: the camera's own position, minus how far the
     //wind has carried the field (velocity * cloudTime / 500 meters, as it always was).
     const windScaleTotal = cloudTime / 500.0;
@@ -358,8 +373,10 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       marchUniforms.cloudMidSkyPass.value = false;
     }
 
+    marchUniforms.cloudCheckerboardParity.value = parity;
     renderer.setRenderTarget(marchTarget);
     renderer.render(scene, camera);
+    marchUniforms.cloudCheckerboardParity.value = -1;
 
     //Resolve. A cloud now at P, relative to the camera, was at P - wind * dt
     //in the world last frame, and the camera itself moved -- so relative to last
@@ -373,6 +390,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       (cameraSkyZ - previousCameraPosition.z) - cloudParams.velocity.y * windScale
     );
     resolveUniforms.cloudJitter.value.copy(jitter);
+    resolveUniforms.cloudCheckerboardParity.value = parity;
     resolveUniforms.cloudHistoryBlend.value = historyUsable ? CLOUD_TAA_BLEND : 1.0;
     resolveUniforms.cloudHistoryMap.value = resolveTargets[1 - writeIndex].texture;
 

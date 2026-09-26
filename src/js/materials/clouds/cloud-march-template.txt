@@ -37,6 +37,7 @@ StarrySky.Materials.Clouds.cloudMarch = {
       cloudJitter: {value: new THREE.Vector2()},
       cloudMarchTexelSize: {value: new THREE.Vector2()},
       cloudFrame: {value: 0.0},
+      cloudCheckerboardParity: {value: -1},
       cloudAmbientPass: {value: false},
       cloudMidSkyPass: {value: false},
       cloudPreviousMap: {value: null},

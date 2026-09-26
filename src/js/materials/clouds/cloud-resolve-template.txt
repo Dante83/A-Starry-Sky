@@ -12,7 +12,8 @@ StarrySky.Materials.Clouds.cloudResolve = {
       cloudEarthRadius: {value: 6366700.0},
       cloudCutoffDistance: {value: 40000.0},
       cloudHistoryBlend: {value: 1.0},
-      cloudResolveSize: {value: new THREE.Vector2()}
+      cloudResolveSize: {value: new THREE.Vector2()},
+      cloudCheckerboardParity: {value: -1}
     };
   },
   vertexShader: [

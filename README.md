@@ -595,7 +595,7 @@ In addition to changing the colors of the sky, you can also change the number of
 
 ## Enabling Clouds
 
-*WARNING: Enabling clouds adds a real cost to your sky: they are volumetric and ray marched. They are marched once per frame into a map of the sky at half resolution and sharpened over time with temporal anti-aliasing, so the sky dome, the sun, the moon and both eyes in VR all share one march.*
+*WARNING: Enabling clouds adds a real cost to your sky: they are volumetric and ray marched. They are marched once per frame, half the texels at a time in a checkerboard, into a map of the sky at half resolution and sharpened over time with temporal anti-aliasing, so the sky dome, the sun, the moon and both eyes in VR all share one march.*
 
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
