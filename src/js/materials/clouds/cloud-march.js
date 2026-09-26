@@ -41,7 +41,8 @@ StarrySky.Materials.Clouds.cloudMarch = {
       cloudMidSkyPass: {value: false},
       cloudPreviousMap: {value: null},
       cloudMidSkyMap: {value: null},
-      cloudAmbientMap: {value: null}
+      cloudAmbientMap: {value: null},
+      cloudGroundAlbedo: {value: new THREE.Vector3(0.05, 0.02, 0.0)}
     };
   },
   vertexShader: [
@@ -104,6 +105,13 @@ StarrySky.Materials.Clouds.cloudMarch = {
     "uniform sampler2D cloudPreviousMap;  //Last frame's resolved map, both decks",
     "uniform sampler2D cloudMidSkyMap;    //Last frame's mid deck alone",
     'uniform sampler2D cloudAmbientMap;   //3 x 1, see cloudMeanSkyRadiance',
+    'uniform vec3 cloudGroundAlbedo;      //<sky-ground-color>, linear',
+
+    '//A second output: how far away the cloud in each texel is, for the temporal resolve',
+    '//to reproject it by (cloud-resolve.glsl). Kilometres, so a half float holds it to a',
+    '//tenth of a percent. Written as 0 where there is no cloud.',
+    'layout(location = 1) out highp vec4 cloudDepthOutput;',
+    'float cloudMarchDepth = 0.0;',
 
     'const float CLOUD_MAP_K = 1.0723687100246826;',
     'const float GOLDEN_RATIO_CONJUGATE = 0.61803398875;',
@@ -437,9 +445,12 @@ StarrySky.Materials.Clouds.cloudMarch = {
       '//Light reflected up off the ground, for the cloud bases: the ground is lit by the',
       '//sun and moon through the atmosphere and by the whole sky (irradiance pi times its',
       "//mean radiance), and the sun's share is thinned by the clouds' own shadow, one",
-      '//minus the coverage (takram). A Lambertian ground of albedo 0.3 sends back',
-      '//albedo * E / pi, evenly over the lower hemisphere.',
-      'const float CLOUD_GROUND_ALBEDO = 0.3;',
+      '//minus the coverage (takram). A Lambertian ground sends back albedo * E / pi, evenly',
+      "//over the lower hemisphere. The albedo is the scene's own <sky-ground-color>, as the",
+      "//scene's lighting uses it. It was a fixed 0.3, pale sand, ten times the default dark",
+      '//soil: bounce was two thirds of what lit the darkest cloud, and lifted every',
+      '//shadowed base until the clouds spanned 3.5x from shade to sunlit top instead of the',
+      '//5 to 8x of real cumulus.',
       'const float CLOUD_SKY_OCCLUSION_SOFTNESS = 0.25;',
       'vec3 sunGroundIrradiance = vec3(0.0);',
       'if(computeSun){',
@@ -448,7 +459,7 @@ StarrySky.Materials.Clouds.cloudMarch = {
       'if(computeMoon){',
         'sunGroundIrradiance += moonSourceColor * max(moonPosition.y, 0.0) * texture(transmittance, vec2(parameterizationOfCosOfViewZenithToX(max(moonPosition.y, 0.0)), yObserver)).rgb;',
       '}',
-      'vec3 groundRadiance = CLOUD_GROUND_ALBEDO * (meanSkyRadiance + (1.0 - cloudCoverage) * (1.0 - midCloudCoverage) * sunGroundIrradiance / PI);',
+      'vec3 groundRadiance = cloudGroundAlbedo * (meanSkyRadiance + (1.0 - cloudCoverage) * (1.0 - midCloudCoverage) * sunGroundIrradiance / PI);',
 
       'int emptyRun = 0;',
       '//For the skin (see CLOUD_SKIN_STEP_FRACTION): how far the last step went, whether',
@@ -613,6 +624,7 @@ StarrySky.Materials.Clouds.cloudMarch = {
         "//which is a degree and a half for a cloud 150km out. Reusing the observer's",
         '//angle at the far end is what made distant clouds sit in the wrong fog.',
         'float meanDepth = weightedDepth / depthWeightSum;',
+        'cloudMarchDepth = meanDepth;',
         'vec3 cloudPoint = rayDirection * meanDepth;',
         'vec3 cloudUp = cloudLocalUp(cloudPoint);',
         'float observerR = cloudObserverRadius * METERS_TO_KM;',
@@ -695,6 +707,7 @@ StarrySky.Materials.Clouds.cloudMarch = {
     'void main(){',
       'if(cloudAmbientPass){',
         'gl_FragColor = vec4(cloudMeanSkyRadiance(int(gl_FragCoord.x)), 1.0);',
+        'cloudDepthOutput = vec4(0.0);',
         'return;',
       '}',
 
@@ -709,6 +722,7 @@ StarrySky.Materials.Clouds.cloudMarch = {
       '//Clouds only exist above the horizon, and the guard band below it stays empty.',
       'if(rayDirection.y <= 0.0){',
         'gl_FragColor = vec4(0.0);',
+        'cloudDepthOutput = vec4(0.0);',
         'return;',
       '}',
 
@@ -759,6 +773,7 @@ StarrySky.Materials.Clouds.cloudMarch = {
       '//the horizontal view direction and quietly stretched the cloud field towards the',
       '//horizon. Where the camera is over the ground rides in cloudNoiseOffset.',
       'vec4 cloud = cloudRayMarcher(rayDirection, sunSourceColor, moonSourceColor, midSunSourceColor, midMoonSourceColor);',
+      'cloudDepthOutput = vec4(cloudMarchDepth * METERS_TO_KM, 0.0, 0.0, 1.0);',
 
       '//Stored premultiplied, (L * a, a), and composited as sky * (1 - a) + rgb. It has',
       '//to be premultiplied BEFORE anything filters the map: the temporal resolve',

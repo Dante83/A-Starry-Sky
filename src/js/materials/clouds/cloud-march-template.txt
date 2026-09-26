@@ -41,7 +41,8 @@ StarrySky.Materials.Clouds.cloudMarch = {
       cloudMidSkyPass: {value: false},
       cloudPreviousMap: {value: null},
       cloudMidSkyMap: {value: null},
-      cloudAmbientMap: {value: null}
+      cloudAmbientMap: {value: null},
+      cloudGroundAlbedo: {value: new THREE.Vector3(0.05, 0.02, 0.0)}
     };
   },
   vertexShader: [

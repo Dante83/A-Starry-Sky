@@ -211,10 +211,14 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //to 1.35x the cost of the old recipe at 1.0) for lobes that stay crisp. The
       //cap is a memory budget: two half float targets at 1536 are ~38MB, and a
       //headset's pixels per radian would otherwise ask for more. Raise both together.
-      const CLOUD_MAP_TEXELS_PER_PIXEL = 1.5;
+      //
+      //<sky-cloud-resolution> multiplies both: past the cap a finer map would be no
+      //finer at all. 4096 is a hard ceiling, ~270MB of targets.
+      const cloudResolution = self.assetManager.data.skyCloud.resolution;
+      const CLOUD_MAP_TEXELS_PER_PIXEL = 1.5 * cloudResolution;
       const CLOUD_MAP_K = Math.tan(0.5 * 94.0 * DEG_2_RAD);
       const CLOUD_MAP_MIN_SIZE = 768;
-      const CLOUD_MAP_MAX_SIZE = 1536;
+      const CLOUD_MAP_MAX_SIZE = Math.min(Math.ceil(1536 * Math.max(cloudResolution, 1.0) / 64.0) * 64, 4096);
       const cloudMapTexels = 2.0 * CLOUD_MAP_K * self.pixelsPerRadian * CLOUD_MAP_TEXELS_PER_PIXEL;
       self.cloudMapSize = Math.min(Math.max(Math.ceil(cloudMapTexels / 64.0) * 64, CLOUD_MAP_MIN_SIZE), CLOUD_MAP_MAX_SIZE);
 

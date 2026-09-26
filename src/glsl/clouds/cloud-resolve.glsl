@@ -15,7 +15,8 @@ uniform vec2 cloudJitter;             //This frame's march jitter, in march texe
 uniform vec2 cloudMarchSize;          //March map size in texels
 uniform vec2 cloudMarchTexelSize;     //1 / march map size
 uniform vec3 cloudReprojectionShift;  //Camera motion minus wind motion since last frame, sky frame, meters
-uniform float cloudReprojectionHeight;//Height of the cloud layer we reproject against, meters above the observer
+uniform float cloudReprojectionHeight;//Height of the cloud layer we reproject against where there is no cloud, meters above the observer
+uniform sampler2D cloudMarchDepth;    //The march's second output: distance to the cloud in each texel, km, 0 for none
 uniform float cloudEarthRadius;       //Meters
 uniform float cloudCutoffDistance;    //Meters
 uniform float cloudHistoryBlend;      //Weight of the new frame where this frame has a sample right here. 1.0 discards the history.
@@ -160,15 +161,23 @@ void main(){
   vec4 boxMin = mean - CLOUD_TAA_VARIANCE_GAMMA * sigma;
   vec4 boxMax = mean + CLOUD_TAA_VARIANCE_GAMMA * sigma;
 
-  //Reproject. We do not store depth, so estimate it as the distance to a sphere at
-  //the height of the cloud layer -- the layer is thin next to its distance, so this
-  //is close everywhere that matters. The point that is here now was at
-  //(here + shift) relative to last frame's camera.
+  //Reproject, by the distance the march found to the cloud in this texel. The point
+  //that is here now was at (here + shift) relative to last frame's camera, and how far
+  //that moves it across the sky goes inversely with its distance. This used to take
+  //one sphere, at the middle of the low deck, for every texel: the mid deck, twice as
+  //high, had its history moved more than twice as far as it had gone, and the tops
+  //and bases of the low clouds were 40% off -- every moving cloud dragged a history a
+  //couple of texels out of place, and the clip snapping it back read as a shimmer
+  //over the whole sky. Clear texels, with no depth, keep the sphere.
   vec3 direction = cloudUVToDirection(vUv);
   float r = cloudEarthRadius;
   float h = cloudReprojectionHeight;
   float mu = max(direction.y, 0.0);
   float depth = -r * mu + sqrt(r * r * mu * mu + 2.0 * r * h + h * h);
+  float marchDepth = texture(cloudMarchDepth, vUv).r * 1000.0;
+  if(marchDepth > 0.0){
+    depth = marchDepth;
+  }
   depth = min(depth, cloudCutoffDistance);
   vec3 previousDirection = normalize(direction * depth + cloudReprojectionShift);
   vec2 previousUV = cloudDirectionToUV(previousDirection);

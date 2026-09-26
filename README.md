@@ -614,8 +614,9 @@ In addition to changing the colors of the sky, you can also change the number of
 `<sky-mid-cloud-coverage>` | The fraction of the sky covered by a second, mid level deck above the first. 0 turns it off. | 0 (percent)
 `<sky-mid-cloud-type>` | The kind of mid level cloud, from 0 to 1: 0 altocumulus, small cells gathered into rafts and rows across the wind; 1 altostratus, a soft grey sheet the sun shines through as through ground glass. Values in between blend the two. | 0
 `<sky-mid-cloud-height>` | The base of the mid level deck, in meters. Mid level clouds live 2 to 7km up. | 4000 (meters)
+`<sky-cloud-resolution>` | A multiplier, from 0.5 to 3, on the resolution the clouds are marched at. Higher is sharper and steadier but costly: the march time goes with its square, so 1.5 is about twice the cost of 1. | 1
 
-Clouds are still the heaviest part of the sky. If you're hitting frame rate issues, reduce `<sky-cloud-raymarch-steps>` or `<sky-cloud-cutoff-distance>`.
+Clouds are still the heaviest part of the sky. If you're hitting frame rate issues, reduce `<sky-cloud-raymarch-steps>`, `<sky-cloud-cutoff-distance>` or `<sky-cloud-resolution>`; if you have GPU to spare, raising `<sky-cloud-resolution>` sharpens them and steadies their edges.
 
 At the same time, clouds are insanely cool and I have wanted to add them into A-Starry-Sky since I first created the library. A ray stops marching once the cloud in front of it is opaque, so an overcast sky is cheaper than a scattered one. The mid level deck adds to the bill: altocumulus costs little, an altostratus overcast about a third more. Of course, if you don't have any clouds, just turning them off altogether is your best bet.
 

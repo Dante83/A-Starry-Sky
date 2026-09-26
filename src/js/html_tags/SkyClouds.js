@@ -13,6 +13,7 @@ window.customElements.define('sky-cloud-cutoff-distance', class extends HTMLElem
 window.customElements.define('sky-mid-cloud-coverage', class extends HTMLElement{});
 window.customElements.define('sky-mid-cloud-type', class extends HTMLElement{});
 window.customElements.define('sky-mid-cloud-height', class extends HTMLElement{});
+window.customElements.define('sky-cloud-resolution', class extends HTMLElement{});
 
 StarrySky.DefaultData.skyCloud = {
   coverage: 70.0,
@@ -34,6 +35,9 @@ StarrySky.DefaultData.skyCloud = {
   //ground is ~110km away for a 1km cloud base. They thin out over the last 40% of
   //this distance rather than stopping dead.
   cutoffDistance: 160000.0,
+  //A multiplier on the resolution of the cloud map (see SkyDirector). The march cost
+  //goes with its square: 2 is about four times the march time of 1.
+  resolution: 1.0,
   //A second deck above the first: 0 altocumulus .. 1 altostratus, off by default.
   midCoverage: 0.0,
   midType: 0.0,
@@ -76,10 +80,11 @@ class SkyClouds extends HTMLElement {
       const midCoverageTags = self.getElementsByTagName('sky-mid-cloud-coverage');
       const midTypeTags = self.getElementsByTagName('sky-mid-cloud-type');
       const midHeightTags = self.getElementsByTagName('sky-mid-cloud-height');
+      const resolutionTags = self.getElementsByTagName('sky-cloud-resolution');
 
       [cloudCoverageTags, cloudTypeTags, startHeightTags, endHeightTags, endHeightTags, fadeOutStartPercentTags,
       fadeInEndPercentTags, cloudVelocityXTags, cloudVelocityYTags, startSeedTags,
-      raymarchStepsTags, cutoffDistanceTags, midCoverageTags, midTypeTags, midHeightTags].forEach(function(tags){
+      raymarchStepsTags, cutoffDistanceTags, midCoverageTags, midTypeTags, midHeightTags, resolutionTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-cloud-parameters> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -97,6 +102,7 @@ class SkyClouds extends HTMLElement {
       dataRef.midCoverage = midCoverageTags.length > 0 ? parseFloat(midCoverageTags[0].innerHTML) : dataRef.midCoverage;
       dataRef.midType = midTypeTags.length > 0 ? parseFloat(midTypeTags[0].innerHTML) : dataRef.midType;
       dataRef.midHeight = midHeightTags.length > 0 ? parseFloat(midHeightTags[0].innerHTML) : dataRef.midHeight;
+      dataRef.resolution = resolutionTags.length > 0 ? parseFloat(resolutionTags[0].innerHTML) : dataRef.resolution;
 
       //Handle the special case of our xy values
       let velocityDataX = cloudVelocityXTags.length > 0 ? parseFloat(cloudVelocityXTags[0].innerHTML) : dataRef.velocity.x;
@@ -118,6 +124,7 @@ class SkyClouds extends HTMLElement {
       dataRef.midCoverage = clampAndWarn(dataRef.midCoverage, 0.0, 100.0, '<sky-mid-cloud-coverage>') / 100.0;
       dataRef.midType = clampAndWarn(dataRef.midType, 0.0, 1.0, '<sky-mid-cloud-type>');
       dataRef.midHeight = clampAndWarn(dataRef.midHeight, 0.0, 100000.0, '<sky-mid-cloud-height>');
+      dataRef.resolution = clampAndWarn(dataRef.resolution, 0.5, 3.0, '<sky-cloud-resolution>');
       velocityDataX = clampAndWarn(velocityDataX, -9999.0, 9999.0, '<sky-cloud-velocity-x>');
       velocityDataY = clampAndWarn(velocityDataY, -9999.0, 9999.0, '<sky-cloud-velocity-y>');
       dataRef.velocity.x = velocityDataX;

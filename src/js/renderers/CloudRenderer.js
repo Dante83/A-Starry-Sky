@@ -27,7 +27,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //cloud edges, and at 0.25 (a ~0.18s window) edges visibly boiled in and out. The
   //variance clip still snaps the history to real lighting changes, so a longer
   //window costs little lag.
-  const CLOUD_TAA_BLEND = 0.15;
+  const CLOUD_TAA_BLEND = 0.30;
 
   //A gap longer than this between frames (a backgrounded tab, a debugger pause)
   //means the history no longer describes the sky, so it is thrown away.
@@ -86,8 +86,9 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
 
   const RESOLVE_SIZE = skyDirector.cloudMapSize;
   const MARCH_SIZE = RESOLVE_SIZE / 2;
-  const createTarget = function(size){
+  const createTarget = function(size, count = 1){
     const target = new THREE.WebGLRenderTarget(size, size, {
+      count: count,
       type: THREE.HalfFloatType,
       format: THREE.RGBAFormat,
       minFilter: THREE.LinearFilter,
@@ -98,10 +99,17 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       depthBuffer: false,
       stencilBuffer: false
     });
-    target.texture.colorSpace = THREE.NoColorSpace;
+    target.textures.forEach(function(texture){
+      texture.colorSpace = THREE.NoColorSpace;
+    });
     return target;
   };
-  const marchTarget = createTarget(MARCH_SIZE);
+  //The march writes two maps: the clouds, and how far away they are, for the resolve
+  //to reproject by. Nearest filtering on the depth: blending a cloud's depth with the
+  //0 of the clear sky beside it would put its edge anywhere in between.
+  const marchTarget = createTarget(MARCH_SIZE, 2);
+  marchTarget.textures[1].minFilter = THREE.NearestFilter;
+  marchTarget.textures[1].magFilter = THREE.NearestFilter;
   //Sky light for the clouds and the ground under them (cloudMeanSkyRadiance in
   //cloud-march.glsl): three texels, the mean radiance of the clear sky, of the sky
   //with the mid deck, and of everything; and the small map of the mid deck alone that
@@ -147,6 +155,14 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   marchUniforms.midCloudCoverage.value = cloudParams.midCoverage;
   marchUniforms.midCloudType.value = cloudParams.midType;
   marchUniforms.midCloudHeight.value = cloudParams.midHeight;
+  //The ground the clouds bounce light off is the ground the scene says it has, in the
+  //same linear form LightingManager lights the scene with.
+  const groundColor = assetManager.data.skyLighting.groundColor;
+  marchUniforms.cloudGroundAlbedo.value.set(
+    Math.pow(groundColor.red / 255.0, 2.2),
+    Math.pow(groundColor.green / 255.0, 2.2),
+    Math.pow(groundColor.blue / 255.0, 2.2)
+  );
   //The wind in the noise frame (see cloudNoiseOffset in tick), for the mid deck's
   //rows, which line up across it. Straight along x when there is no wind.
   if(cloudParams.velocity.lengthSq() > 0.0){
@@ -224,6 +240,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   });
   const resolveUniforms = resolveMaterial.uniforms;
   resolveUniforms.cloudMarchMap.value = marchTarget.texture;
+  resolveUniforms.cloudMarchDepth.value = marchTarget.textures[1];
   resolveUniforms.cloudMarchSize.value.set(MARCH_SIZE, MARCH_SIZE);
   resolveUniforms.cloudMarchTexelSize.value.set(1.0 / MARCH_SIZE, 1.0 / MARCH_SIZE);
   resolveUniforms.cloudResolveSize.value.set(RESOLVE_SIZE, RESOLVE_SIZE);

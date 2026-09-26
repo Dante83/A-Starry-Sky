@@ -14,6 +14,7 @@
 * Added a cloud shadow map, so the mid deck shades the clouds below it with shadows that blur the further they fall.
 * Clouds are now lit by the sky above them, clouds included, rather than by a clear sky alone.
 * Stopped the sun showing through thick cloud as a crisp disk: the march kept the last 1% of the light behind a cloud, and 1% of the sun is still bright.
+* Added `<sky-cloud-resolution>`, and reproject cloud history by each cloud's own distance rather than one layer height, which steadies moving clouds, especially overhead.
 * Calmed the shimmer on distant clouds: rays refine where they enter a cloud and cross its sunlit skin in fine steps, and the temporal filter keeps a longer history towards the horizon.
 
 **Version 1.2.0**
