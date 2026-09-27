@@ -6,6 +6,7 @@ StarrySky = {
   LUTlibraries: {},
   Materials: {
     Atmosphere: {},
+    Aurora: {},
     Autoexposure: {},
     Clouds: {},
     Fog: {},

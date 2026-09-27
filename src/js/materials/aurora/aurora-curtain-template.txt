@@ -1,0 +1,14 @@
+StarrySky.Materials.Aurora.auroraCurtain = {
+  uniforms: function(){
+    return {
+      auroraTime: {value: 0.0},
+      auroraFoldScale: {value: 1.0}
+    };
+  },
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+};

@@ -103,6 +103,20 @@ groups:
         template: 'cloud-resolve-template.txt'
         material: 'cloud-resolve.js'
   -
+    base_glsl_dir: '../glsl/aurora'
+    base_js_dir: '../js/materials/aurora'
+    shaders:
+      -
+        fragment: 'aurora-march.glsl'
+        vertex: '../clouds/cloud-map-vertex.glsl'
+        template: 'aurora-march-template.txt'
+        material: 'aurora-march.js'
+      -
+        fragment: 'aurora-curtain.glsl'
+        vertex: '../clouds/cloud-map-vertex.glsl'
+        template: 'aurora-curtain-template.txt'
+        material: 'aurora-curtain.js'
+  -
     base_glsl_dir: '../glsl/fog'
     base_js_dir: '../js/materials/fog'
     shaders:

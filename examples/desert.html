@@ -16,7 +16,7 @@
     <!--This commented out code is the unfurled stack which I use for debugging-->
 
     <!-- A-Starry-Sky Version 1.2.0 -->
-    <script src="../dist/a-starry-sky.v1.2.0.min.js"></script>
+    <!-- <script src="../dist/a-starry-sky.v1.2.0.min.js"></script> -->
 
     <!-- Sky Interpolator -->
     <script src="../dist/wasm/interpolation-engine.js"></script>
@@ -24,24 +24,24 @@
 
     <!-- The below are used for development purposes, it is advised that you use the files in the dist folder -->
     <!-- Three.js extensions -->
-<!--     <script src="../src/js/three_js_extensions/BufferGeometryUtils.js"></script>
+    <script src="../src/js/three_js_extensions/BufferGeometryUtils.js"></script>
     <script src="../src/js/three_js_extensions/CopyShader.js"></script>
     <script src="../src/js/three_js_extensions/Pass.js"></script>
     <script src="../src/js/three_js_extensions/RenderPass.js"></script>
     <script src="../src/js/three_js_extensions/ShaderPass.js"></script>
     <script src="../src/js/three_js_extensions/EffectComposer.js"></script>
-    <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script> -->
+    <script src="../src/js/three_js_extensions/StarrySkyGPUComputeRenderer.js"></script>
 
     <!-- Post Processing -->
-<!--     <script src="../src/js/three_js_extensions/LuminosityHighPassShader.js"></script>
-    <script src="../src/js/three_js_extensions/UnrealBloom.js"></script> -->
+    <script src="../src/js/three_js_extensions/LuminosityHighPassShader.js"></script>
+    <script src="../src/js/three_js_extensions/UnrealBloom.js"></script>
 
     <!-- Namespace -->
-<!--     <script src="../src/js/StarrySky.js"></script>
-    <script src="../src/js/components/TextureArrayBuilder.js"></script> -->
+    <script src="../src/js/StarrySky.js"></script>
+    <script src="../src/js/components/TextureArrayBuilder.js"></script>
 
     <!-- Materials -->
-<!--     <script src="../src/js/materials/atmosphere/atmosphere-functions.js"></script>
+    <script src="../src/js/materials/atmosphere/atmosphere-functions.js"></script>
     <script src="../src/js/materials/atmosphere/transmittance.js"></script>
     <script src="../src/js/materials/atmosphere/single-scattering.js"></script>
     <script src="../src/js/materials/atmosphere/inscattering-sum.js"></script>
@@ -58,11 +58,13 @@
     <script src="../src/js/materials/clouds/cloud-shadow-map.js"></script>
     <script src="../src/js/materials/clouds/cloud-march.js"></script>
     <script src="../src/js/materials/clouds/cloud-resolve.js"></script>
+    <script src="../src/js/materials/aurora/aurora-march.js"></script>
+    <script src="../src/js/materials/aurora/aurora-curtain.js"></script>
     <script src="../src/js/materials/fog/fog-pars.js"></script>
-    <script src="../src/js/materials/fog/fog.js"></script> -->
+    <script src="../src/js/materials/fog/fog.js"></script>
 
     <!--- Custom HTML Tags -->
-<!--     <script src="../src/js/html_tags/HTMLTagUtils.js"></script>
+    <script src="../src/js/html_tags/HTMLTagUtils.js"></script>
     <script src="../src/js/html_tags/SkyAssetsDir.js"></script>
     <script src="../src/js/html_tags/SkyLighting.js"></script>
     <script src="../src/js/html_tags/SkyAtmosphericParameters.js"></script>
@@ -70,29 +72,30 @@
     <script src="../src/js/html_tags/SkyTime.js"></script>
     <script src="../src/js/html_tags/SkyAurora.js"></script>
     <script src="../src/js/html_tags/SkyClouds.js"></script>
-    <script src="../src/js/html_tags/SkyMilkyWay.js"></script> -->
+    <script src="../src/js/html_tags/SkyMilkyWay.js"></script>
 
     <!-- LUT Libraries -->
-<!--     <script src="../src/js/lut_libraries/AtmosphericLUTLibrary.js"></script>
+    <script src="../src/js/lut_libraries/AtmosphericLUTLibrary.js"></script>
     <script src="../src/js/lut_libraries/StellarLUTLibrary.js"></script>
-    <script src="../src/js/lut_libraries/CloudLUTLibrary.js"></script> -->
+    <script src="../src/js/lut_libraries/CloudLUTLibrary.js"></script>
 
     <!-- Renderers -->
-<!--     <script src="../src/js/renderers/FogRenderer.js"></script>
+    <script src="../src/js/renderers/FogRenderer.js"></script>
     <script src="../src/js/renderers/CloudRenderer.js"></script>
+    <script src="../src/js/renderers/AuroraRenderer.js"></script>
     <script src="../src/js/renderers/AtmosphereRenderer.js"></script>
     <script src="../src/js/renderers/SunRenderer.js"></script>
     <script src="../src/js/renderers/MoonRenderer.js"></script>
-    <script src="../src/js/renderers/MeteringSurveyRenderer.js"></script> -->
+    <script src="../src/js/renderers/MeteringSurveyRenderer.js"></script>
 
     <!--Players -->
-<!--     <script src="../src/js/components/LightingManager.js"></script>
+    <script src="../src/js/components/LightingManager.js"></script>
     <script src="../src/js/components/AssetManager.js"></script>
-    <script src="../src/js/components/SkyDirector.js"></script> -->
+    <script src="../src/js/components/SkyDirector.js"></script>
 
     <!-- A-Frame Hooks -->
-<!--     <script src="../src/js/primitives/a-starry-sky.js"></script>
-    <script src="../src/js/components/starry-sky-wrapper.js"></script> -->
+    <script src="../src/js/primitives/a-starry-sky.js"></script>
+    <script src="../src/js/components/starry-sky-wrapper.js"></script>
 
   <!--Scene Scripts-->
   </head>
@@ -102,15 +105,19 @@
 
       <!-- Sky Setup -->
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
-        <sky-location>
+<!--         <sky-location>
           <sky-latitude>-40.9</sky-latitude>
           <sky-longitude>174.9</sky-longitude>
+        </sky-location> -->
+        <sky-location>
+          <sky-latitude>69.6</sky-latitude>
+          <sky-longitude>18.9</sky-longitude>
         </sky-location>
         <!-- Early afternoon at 60x, so there are about seven minutes of daylight to
              look at the clouds in before the sun sets. -->
         <sky-time >
-          <sky-date>2018-01-28 13:00:00</sky-date>
-          <sky-utc-offset>13</sky-utc-offset>
+          <sky-date>2018-06-15 18:00:00</sky-date>
+          <sky-utc-offset>0</sky-utc-offset>
           <sky-speed>200</sky-speed>
         </sky-time>
         <sky-lighting>
@@ -122,6 +129,12 @@
         <sky-milky-way>
           <sky-milky-way-intensity>0.7</sky-milky-way-intensity>
         </sky-milky-way>
+        <!-- The aurora hangs overhead. <sky-aurora-activity> is the storm, as the Kp
+             index: 0 a quiet arc, 5 a lively night, 9 a great storm with a pink
+             fringe and red tops. -->
+        <sky-aurora>
+          <sky-aurora-activity>4</sky-aurora-activity>
+        </sky-aurora>
         <!-- Clouds. The mere presence of <sky-clouds> enables them.
              <sky-cloud-type> picks the species, 0 to 1:
                0.0  stratus         - a thin, flat sheet low down
@@ -140,16 +153,16 @@
                Stratus sheet:  coverage 60, type 0.0
              Clouds now run all the way to the horizon; <sky-cloud-cutoff-distance>
              (default 160000m) is where they fade out, not a wall. -->
-        <sky-clouds>
-          <sky-cloud-coverage>60</sky-cloud-coverage>
-          <sky-cloud-type>0.7</sky-cloud-type>
-          <sky-cloud-velocity-x>4.0</sky-cloud-velocity-x>
+<!--         <sky-clouds>
+          <sky-cloud-coverage>40</sky-cloud-coverage>
+          <sky-cloud-type>0.3</sky-cloud-type>
+          <sky-cloud-velocity-x>40.0</sky-cloud-velocity-x>
           <sky-cloud-velocity-y>20.0</sky-cloud-velocity-y>
-<!--           <sky-mid-cloud-coverage>10</sky-mid-cloud-coverage>
+          <sky-mid-cloud-coverage>40</sky-mid-cloud-coverage>
           <sky-mid-cloud-type>0.2</sky-mid-cloud-type>
-          <sky-mid-cloud-height>4000</sky-mid-cloud-height> -->
-          <sky-cloud-resolution>2.0</sky-cloud-resolution>
-        </sky-clouds>
+          <sky-mid-cloud-height>4000</sky-mid-cloud-height>
+          <sky-cloud-resolution>4.0</sky-cloud-resolution>
+        </sky-clouds> -->
       </a-starry-sky>
 
       <a-assets>

@@ -25,23 +25,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.cloudMap = {value: null};
     }
 
+    //The aurora is marched by AuroraRenderer into a direction indexed map too.
     if(auroraEnabled){
-      uniforms.auroraSampler = {value: null};
-
-      uniforms.nitrogenColor = {value: new THREE.Vector3()};
-      uniforms.nitrogenCutOff = {value: null};
-      uniforms.nitrogenIntensity = {value: null};
-
-      uniforms.molecularOxygenColor = {value: new THREE.Vector3()};
-      uniforms.molecularOxygenCutOff = {value: null};
-      uniforms.molecularOxygenIntensity = {value: null};
-
-      uniforms.atomicOxygenColor = {value: new THREE.Vector3()};
-      uniforms.atomicOxygenCutOff = {value: null};
-      uniforms.atomicOxygenIntensity = {value: null};
-
-      uniforms.numberOfAuroraRaymarchingSteps = {value: null};
-      uniforms.auroraCutoffDistance = {value: null};
+      uniforms.auroraMap = {value: null};
     }
 
     //Pass our specific uniforms in here.
@@ -190,18 +176,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
     'uniform sampler2D blueNoiseTexture;',
 
     '#if($auroraEnabled)',
-      'uniform float numberOfAuroraRaymarchingSteps;',
-      'uniform vec3 nitrogenColor;',
-      'uniform float nitrogenCutOff;',
-      'uniform float nitrogenIntensity;',
-      'uniform vec3 molecularOxygenColor;',
-      'uniform float molecularOxygenCutOff;',
-      'uniform float molecularOxygenIntensity;',
-      'uniform vec3 atomicOxygenColor;',
-      'uniform float atomicOxygenCutOff;',
-      'uniform float atomicOxygenIntensity;',
-      'uniform float auroraCutoffDistance;',
-      'uniform sampler2D auroraSampler;',
+      'uniform sampler2D auroraMap;',
     '#endif',
 
     '#if(!$isSunPass && !$isMeteringPass)',
@@ -615,144 +590,28 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       '}',
     '#endif',
 
-    'float interceptPlaneSurface(vec3 rayStartPosition, vec3 rayDirection, float height, float maxDistance){',
-      'float tGoal = rayDirection.y <= 0.0 ? -1.0 : (height - rayStartPosition.y) / rayDirection.y;',
-      'float tMax = sqrt(maxDistance * maxDistance / dot(rayDirection, rayDirection));',
-      'return min(tGoal, tMax);',
-    '}',
-
     '#if($auroraEnabled)',
-      "//I'm gonna do something weird. I propose that aurora look an aweful lot",
-      '//like water caustics - slower, with some texture ripples introduced with',
-      '//perlin noise.',
+      '//The aurora is marched once per frame by AuroraRenderer into the same',
+      '//stereographic map of the sky as the clouds (see aurora-march.glsl), so every',
+      '//pass only looks it up. Must match AURORA_MAP_K in aurora-march.glsl and',
+      '//AuroraRenderer.js, and CLOUD_MAP_K.',
+      'const float AURORA_MAP_K = 1.0723687100246826;',
+
+      '//The map is in units of the luminance of a real moonless sky (22 magnitudes per',
+      "//square arcsecond, 1.7e-4 cd/m2), worked out from Rayleighs. This sky's own dark",
+      '//floor, the airglow baseline, is far brighter than a real one, so the aurora is',
+      '//pinned to it by CONTRAST: a 100kR display stands about a hundred times over the',
+      '//night floor, here as it does outside, which is what the eye goes by.',
       '//',
-      "//To create my fake water caustics, I'm going to linearize and combine",
-      '//multiple tileable shader items to create the effect.',
-      '//From https://www.shadertoy.com/view/Msf3WH (MIT License)',
-      'vec2 hash(vec2 p){',
-        'vec2 p2 = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));',
-        'return 2.0 * fract(sin(p2) * 43758.5453123) - 1.0;',
-      '}',
-
-      'float perlinNoise(vec2 p){',
-        'const float K1 = 0.366025404; // (sqrt(3)-1)/2;',
-        'const float K2 = 0.211324865; // (3-sqrt(3))/6;',
-
-        'vec2  i = floor(p + (p.x + p.y) * K1);',
-        'vec2  a = p - i + (i.x + i.y) * K2;',
-        'float m = step(a.y, a.x);',
-        'vec2  o = vec2(m, 1.0 - m);',
-        'vec2  b = a - o + K2;',
-        'vec2  c = a - 1.0 + 2.0 * K2;',
-        'vec3  h = max(0.5 - vec3(dot(a, a), dot(b, b), dot(c, c) ), 0.0);',
-        'vec3  n = h * h * h * h * vec3(dot(a, hash(i + 0.0)), dot(b, hash(i + o)), dot(c, hash(i + 1.0)));',
-
-        'return dot(n, vec3(70.0));',
-      '}',
-
-      'float auroraHeightmap(vec2 uv, float t){',
-        'float halfTime = 0.5 * t;',
-        'float quarterTime = 0.5 * halfTime;',
-
-        '//Offsets from the perlin noise',
-        'float perlinOffset1 = perlinNoise(16.0 * (uv + vec2(0.1, 0.2) * t));',
-        'float perlinOffset2 = perlinNoise(16.0 * (uv - vec2(0.4, 0.3) * halfTime));',
-        'vec2 pSample = 0.07 * vec2(perlinOffset1, perlinOffset2);',
-
-        '//Sample our caustic shader',
-        'vec2 uv1 = uv + vec2(0.8, 0.1) * quarterTime;',
-        'vec2 uv2 = uv - vec2(0.2, 0.7) * quarterTime;',
-        'float aSample1 = texture(auroraSampler, (uv1 + pSample) * 0.25).r;',
-        'float aSample2 = texture(auroraSampler, uv1 * 0.25).r;',
-        'float aSample3 = texture(auroraSampler, uv2 * 0.25).g;',
-        'float aSample4 = texture(auroraSampler, (uv2 + pSample) * 0.25).g;',
-
-        '//Combine our caustic shader results',
-        'float cCombined1 = 1.7 * min(max(aSample1, aSample2), max(aSample3, aSample4));',
-        'return cCombined1 * cCombined1;',
-      '}',
-
-      '//Is this scientifically correct?! No, I doubt it. I just grabbed some relative values',
-      "//and I'm hoping this will give me a nice sense of varying these things.",
-      '//Note that both magenta nitrogen aurora and red aurora are rather rare, so you are',
-      '//unlikely to see them, their values are set as such below, and use electron velocity',
-      "//in combination with the aurora 'height' (which is a rough estimate for quantity)",
-      '//to determine which aurora is visible. At this point, we are just faking it till',
-      '//we can get more accurate values for simulating this.',
-      'vec3 auroraColor(float auroraNoiseValue, float heightOfRay, float avgElectronVelocityScalar,',
-                       'vec3 excitedNitrogenSpectrumEmission, vec3 molecularO2SpectralEmission, vec3 atomicOxygenSpectralEmission){',
-
-        'float h = heightOfRay - RADIUS_OF_EARTH;',
-        'vec3 outputLightIntensity = vec3(0.0);',
-        'float centroidValue;',
-        'float linearIntensityFader;',
-
-        '//Nitrogen contribution',
-        'if(h > 60.0 && h < 120.0){',
-          'centroidValue = (h - 90.0) / 70.0;',
-          'linearIntensityFader = clamp(auroraNoiseValue - nitrogenCutOff, 0.0, 1.0);',
-          'outputLightIntensity += nitrogenIntensity * excitedNitrogenSpectrumEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
+      '//AURORA_ARTISTIC_GAIN is the one knob past the physics, for a scene that wants it',
+      '//louder or quieter.',
+      'const float AURORA_ARTISTIC_GAIN = 1.0;',
+      'vec3 sampleAuroraMap(vec3 direction, float darkSkyLuminance){',
+        'if(direction.y <= 0.0){',
+          'return vec3(0.0);',
         '}',
-
-        '//Molecular oxygen contribution',
-        'if(h > 100.0 && h < 250.0){',
-          'centroidValue = (h - 175.0) / 50.5;',
-          'linearIntensityFader = clamp(auroraNoiseValue - molecularOxygenCutOff, 0.0, 1.0);',
-          'outputLightIntensity += molecularOxygenIntensity * molecularO2SpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
-        '}',
-
-        '//Atomic oxygen contribution',
-        'if(h > 150.0 && h < 600.0){',
-          'centroidValue = (h - 375.0) / 80.5;',
-          'linearIntensityFader = clamp(auroraNoiseValue - atomicOxygenCutOff, 0.0, 1.0);',
-          'outputLightIntensity += atomicOxygenIntensity * atomicOxygenSpectralEmission * linearIntensityFader * exp(-centroidValue * centroidValue);',
-        '}',
-
-        'return max(vec3(outputLightIntensity), 0.0);',
-      '}',
-
-      'vec3 auroraRayMarchPass(vec3 rayStartPosition, vec3 rayDirection, float starAndSkyExposureReduction){',
-        'float uvScaling = 4.0;',
-        'float rayInterceptStartTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, RADIUS_OF_AURORA_BOTTOM + RADIUS_OF_EARTH, auroraCutoffDistance);',
-        'float rayInterceptEndTime = interceptPlaneSurface(rayStartPosition + RADIUS_OF_EARTH, rayDirection, RADIUS_OF_AURORA_TOP + RADIUS_OF_EARTH, auroraCutoffDistance);',
-        'float rayDeltaT = (rayInterceptEndTime - rayInterceptStartTime) / numberOfAuroraRaymarchingSteps;',
-        'float auroraNoiseValue;',
-        'vec3 auroraColorValue0;',
-        'vec3 auroraColorValuef;',
-        'vec3 lastPosition;',
-        'vec3 linearAuroraGlow = vec3(0.0);',
-        'float auroraBrightness = pow(150.0, min(starAndSkyExposureReduction, 2.7) * 0.20);',
-        'if(rayInterceptStartTime > 0.0){',
-          'vec3 nitrogenLinear = sRGBToLinear(vec4(nitrogenColor, 1.0)).rgb;',
-          'vec3 molecularO2Linear = sRGBToLinear(vec4(molecularOxygenColor, 1.0)).rgb;',
-          'vec3 atomicOxygenLinear = sRGBToLinear(vec4(atomicOxygenColor, 1.0)).rgb;',
-          'lastPosition = rayStartPosition + rayInterceptStartTime * rayDirection;',
-          'vec2 auroraNoiseTextureUV = vec2(lastPosition.x, lastPosition.z);',
-          'auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);',
-          'auroraColorValue0 = auroraColor(auroraNoiseValue, lastPosition.y, 0.5, nitrogenLinear, molecularO2Linear, atomicOxygenLinear); //Setting the velocity value to a constant while we test this out.',
-          'for(float i = 1.0; i < numberOfAuroraRaymarchingSteps; i++){',
-            '//Determine the position of our raymarcher in the sky',
-            '//Per-pixel, per-step blue noise lookup using screen coords',
-            'vec2 noiseUV = (gl_FragCoord.xy + vec2(i * 7.0, i * 11.0)) * 0.0078125;',
-            'float blueNoise = texture(blueNoiseTexture, noiseUV).r * 2.0 - 1.0;',
-            'float d = rayDeltaT * (0.75 + 0.5 * blueNoise);',
-            'vec3 currentPosition = lastPosition + rayDirection * d;',
-
-            'auroraNoiseTextureUV = vec2(currentPosition.x, currentPosition.z);',
-            'auroraNoiseValue = auroraHeightmap(auroraNoiseTextureUV / 1600.0, uTime / 16000.0);',
-            'auroraColorValuef = auroraColor(auroraNoiseValue, currentPosition.y, 0.5, nitrogenLinear, molecularO2Linear, atomicOxygenLinear); //Setting the velocity value to a constant while we test this out.',
-
-            '//Integrate using the trapezoidal rule',
-            'linearAuroraGlow += 0.5 * (auroraColorValue0 + auroraColorValuef) * d;//We linearly scale by the longer distances to cancel out the effect of fewer samples',
-
-            '//Save the current position as the last position so we can determine the distance between points the next time',
-            'lastPosition = currentPosition;',
-            'auroraColorValue0 = auroraColorValuef;',
-          '}',
-          'linearAuroraGlow = 0.00028 * linearAuroraGlow;',
-        '}',
-
-        'return linearAuroraGlow * auroraBrightness; //Linear multiplier for artistic control',
+        'vec2 uv = 0.5 + 0.5 * direction.xz / ((1.0 + direction.y) * AURORA_MAP_K);',
+        'return texture(auroraMap, uv).rgb * (darkSkyLuminance * AURORA_ARTISTIC_GAIN);',
       '}',
     '#endif',
 
@@ -1062,7 +921,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'vec3 auroraLighting = vec3(0.0);',
       '#if($auroraEnabled)',
         '//Add aurora lighting if it exists',
-        'auroraLighting = auroraRayMarchPass(vec3(0.0, RADIUS_OF_EARTH, 0.0), sphericalPosition, starAndSkyExposureReduction);',
+        'auroraLighting = sampleAuroraMap(sphericalPosition, darkSkyReferenceLuminance);',
         '//Aurora emits at 100-600 km altitude -- well above the bulk of the',
         '//atmosphere -- so applying the full ground-to-TOA transmittance here is',
         '//technically over-counting Mie attenuation (Mie is low-altitude). In',

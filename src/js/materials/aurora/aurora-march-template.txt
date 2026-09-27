@@ -1,0 +1,42 @@
+StarrySky.Materials.Aurora.auroraMarch = {
+  uniforms: function(){
+    return {
+      blueNoiseTexture: {value: null},
+      numberOfAuroraRaymarchingSteps: {value: 32.0},
+      auroraPromptEmission: {value: new THREE.Vector3()},
+      auroraGreenEmission: {value: new THREE.Vector3()},
+      auroraRedEmission: {value: new THREE.Vector3()},
+      auroraEnergy: {value: 0.4},
+      auroraFoldMap: {value: null},
+      auroraBrightnessMap: {value: null},
+      auroraRayMap: {value: null},
+      auroraPoleward: {value: new THREE.Vector2(1.0, 0.0)},
+      auroraCotDip: {value: 0.23},
+      auroraOvalOffset: {value: 0.0},
+      auroraOvalRadius: {value: 2500.0},
+      auroraOvalWidth: {value: 800.0},
+      auroraColumnScale: {value: 1.0},
+      auroraRedScale: {value: 1.0},
+      auroraHistoryMap: {value: null},
+      auroraHistoryBlend: {value: 1.0},
+      auroraJitter: {value: new THREE.Vector2()},
+      auroraMapTexelSize: {value: new THREE.Vector2()},
+      auroraFrame: {value: 0.0}
+    };
+  },
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+  fragmentShader: function(atmosphereFunctions){
+    let originalGLSL = [
+      {fragment_glsl}
+    ];
+
+    let updatedLines = [];
+    for(let i = 0, numLines = originalGLSL.length; i < numLines; ++i){
+      updatedLines.push(originalGLSL[i].replace(/\$atmosphericFunctions/g, atmosphereFunctions));
+    }
+
+    return updatedLines.join('\n');
+  }
+};

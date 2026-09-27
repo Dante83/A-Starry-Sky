@@ -228,6 +228,9 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       if(self.assetManager.data.skyCloud.cloudsEnabled){
         self.renderers.cloudRenderer = new StarrySky.Renderers.CloudRenderer(self);
       }
+      if(self.assetManager.data.skyAurora.auroraEnabled){
+        self.renderers.auroraRenderer = new StarrySky.Renderers.AuroraRenderer(self);
+      }
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
       self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
@@ -902,10 +905,13 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Run our interpolation engine
       self.tick(time, timeDelta);
 
-      //Update all of our renderers. Clouds go first: every sky pass samples the
-      //cloud map, and the sun and moon targets render inside their own ticks.
+      //Update all of our renderers. Clouds and aurora go first: every sky pass samples
+      //their maps, and the sun and moon targets render inside their own ticks.
       if(self.renderers.cloudRenderer){
         self.renderers.cloudRenderer.tick(time);
+      }
+      if(self.renderers.auroraRenderer){
+        self.renderers.auroraRenderer.tick(time);
       }
       self.renderers.atmosphereRenderer.firstTick(time);
       self.renderers.sunRenderer.firstTick(time);
@@ -930,9 +936,12 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       //Run our interpolation engine
       self.tick(time, timeDelta);
 
-      //Update all of our renderers, clouds first (see start above)
+      //Update all of our renderers, clouds and aurora first (see start above)
       if(self.renderers.cloudRenderer){
         self.renderers.cloudRenderer.tick(time);
+      }
+      if(self.renderers.auroraRenderer){
+        self.renderers.auroraRenderer.tick(time);
       }
       self.renderers.atmosphereRenderer.tick(time);
       self.renderers.sunRenderer.tick(time);

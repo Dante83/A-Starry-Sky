@@ -117,12 +117,11 @@ StarrySky.AssetManager = function(skyDirector){
     const numberOfBlueNoiseTextures = 5;
     const oneSolarEclipseImage = 1;
     const oneEclipseShadowLUT = 1;
-    const numberOfAuroraTextures = 1;
     //Emission + absorption, but only when the band is switched on -- a disabled
     //Milky Way should not cost the user a download.
     const milkyWayEnabled = this.data.skyMilkyWay.milkyWayEnabled;
     const numberOfMilkyWayTextures = milkyWayEnabled ? 2 : 0;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfAuroraTextures + numberOfMilkyWayTextures;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfMilkyWayTextures;
 
     //All five lunar maps are 512x512, share their filtering and wrapping, and are sampled
     //at the same UV, so they are one family and collapse into a single sampler2DArray.
@@ -479,37 +478,6 @@ StarrySky.AssetManager = function(skyDirector){
       });
     })(0);
 
-    //Load aurora textures
-    //Recursive based functional for loop, with asynchronous execution because
-    //Each iteration is not dependent upon the last, but it's just a set of similiar code
-    //that can be run in parallel.
-    (async function createNewAuroraTexturePromise(i){
-      let next = i + 1;
-      if(next < numberOfAuroraTextures){
-        createNewAuroraTexturePromise(next);
-      }
-
-      let texturePromise = new Promise(function(resolve, reject){
-        textureLoader.load(StarrySky.assetPaths['auroraMaps'][i], function(texture){resolve(texture);});
-      });
-      texturePromise.then(function(texture){
-        //Fill in the details of our texture
-        texture.wrapS = THREE.RepeatWrapping;
-        texture.wrapT = THREE.RepeatWrapping;
-        texture.format = THREE.RGBAFormat;
-        texture.magFilter = THREE.LinearFilter;
-        texture.minFilter = THREE.LinearFilter;
-        texture.colorSpace = THREE.LinearSRGBColorSpace;
-        self.images.auroraImages[i] = texture;
-
-        self.numberOfTexturesLoaded += 1;
-        if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
-          self.hasLoadedImages = true;
-        }
-      }, function(err){
-        console.error(err);
-      });
-    })(0);
 
     let solarEclipseTexturePromise = new Promise(function(resolve, reject){
       textureLoader.load(StarrySky.assetPaths.solarEclipseMap, function(texture){resolve(texture);});

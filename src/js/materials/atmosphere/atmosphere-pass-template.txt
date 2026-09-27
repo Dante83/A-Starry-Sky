@@ -25,23 +25,9 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.cloudMap = {value: null};
     }
 
+    //The aurora is marched by AuroraRenderer into a direction indexed map too.
     if(auroraEnabled){
-      uniforms.auroraSampler = {value: null};
-
-      uniforms.nitrogenColor = {value: new THREE.Vector3()};
-      uniforms.nitrogenCutOff = {value: null};
-      uniforms.nitrogenIntensity = {value: null};
-
-      uniforms.molecularOxygenColor = {value: new THREE.Vector3()};
-      uniforms.molecularOxygenCutOff = {value: null};
-      uniforms.molecularOxygenIntensity = {value: null};
-
-      uniforms.atomicOxygenColor = {value: new THREE.Vector3()};
-      uniforms.atomicOxygenCutOff = {value: null};
-      uniforms.atomicOxygenIntensity = {value: null};
-
-      uniforms.numberOfAuroraRaymarchingSteps = {value: null};
-      uniforms.auroraCutoffDistance = {value: null};
+      uniforms.auroraMap = {value: null};
     }
 
     //Pass our specific uniforms in here.

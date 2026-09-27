@@ -9,6 +9,7 @@ window.customElements.define('sky-atomic-oxygen-color', class extends HTMLElemen
 window.customElements.define('sky-atomic-oxygen-cutoff', class extends HTMLElement{});
 window.customElements.define('sky-atomic-oxygen-intensity', class extends HTMLElement{});
 window.customElements.define('sky-aurora-raymarch-steps', class extends HTMLElement{});
+window.customElements.define('sky-aurora-activity', class extends HTMLElement{});
 window.customElements.define('sky-aurora-cutoff-distance', class extends HTMLElement{});
 window.customElements.define('sky-aurora-color-red', class extends HTMLElement{});
 window.customElements.define('sky-aurora-color-green', class extends HTMLElement{});
@@ -36,6 +37,16 @@ StarrySky.DefaultData.skyAurora = {
   molecularOxygenIntensity: 2.0,
   atomicOxygenCutOff: 0.12,
   atomicOxygenIntensity: 0.3,
+  //Set when a page gives its own emitter colour; otherwise AuroraRenderer uses the
+  //colour of the real emission lines.
+  nitrogenColorSet: false,
+  molecularOxygenColorSet: false,
+  atomicOxygenColorSet: false,
+  //Geomagnetic activity, the planetary Kp index: 0 quiet to 9 an extreme storm, and
+  //any value between. It brightens, speeds up, spreads and reddens the display
+  //overhead. AuroraRenderer reads it every frame, so it
+  //can be changed while the sky runs.
+  activity: 5.0,
   raymarchSteps: 32,
   cutoffDistance: 1500,
   auroraEnabled: false
@@ -72,10 +83,11 @@ class SkyAurora extends HTMLElement {
       const atomicOxygenIntensityTags = self.getElementsByTagName('sky-atomic-oxygen-intensity');
       const raymarchStepsTags = self.getElementsByTagName('sky-aurora-raymarch-steps');
       const raymarchCutoffDistanceTags = self.getElementsByTagName('sky-aurora-cutoff-distance');
+      const activityTags = self.getElementsByTagName('sky-aurora-activity');
 
       [nitrogenColorTags, nitrogenCutoffTags, nitrogenIntensityTags, molecularOxygenColorTags, molecularOxygenCutoffTags, molecularOxygenIntensityTags,
       atomicOxygenColorTags, atomicOxygenCutoffTags, atomicOxygenIntensityTags, raymarchStepsTags,
-      raymarchCutoffDistanceTags].forEach(function(tags){
+      raymarchCutoffDistanceTags, activityTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-aurora> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
@@ -105,6 +117,7 @@ class SkyAurora extends HTMLElement {
       dataRef.atomicOxygenIntensity = atomicOxygenIntensityTags.length > 0 ? parseFloat(atomicOxygenIntensityTags[0].innerHTML) : dataRef.atomicOxygenIntensity;
       dataRef.raymarchSteps = raymarchStepsTags.length > 0 ? parseInt(raymarchStepsTags[0].innerHTML) : dataRef.raymarchSteps;
       dataRef.cutoffDistance = raymarchCutoffDistanceTags.length > 0 ? parseInt(raymarchCutoffDistanceTags[0].innerHTML) : dataRef.cutoffDistance;
+      dataRef.activity = activityTags.length > 0 ? parseFloat(activityTags[0].innerHTML) : dataRef.activity;
 
       //Clamp the values in our tags
       const clampAndWarn = StarrySky.HTMLTagUtils.clampAndWarn;
@@ -118,9 +131,11 @@ class SkyAurora extends HTMLElement {
 
       dataRef.raymarchSteps = clampAndWarn(dataRef.raymarchSteps, 4, Infinity, '<sky-aurora-raymarch-steps>');
       dataRef.cutoffDistance = clampAndWarn(dataRef.cutoffDistance, 1, 10000, '<sky-aurora-cutoff-distance>');
+      dataRef.activity = clampAndWarn(dataRef.activity, 0.0, 9.0, '<sky-aurora-activity>');
 
       //Parse our nitrogen color
       if(nitrogenColorTags.length === 1){
+        dataRef.nitrogenColorSet = true;
         const firstNitrogenColorTagGroup = nitrogenColorTags[0];
         const nitrogenColor = dataRef.nitrogenColor;
         if(firstNitrogenColorTagGroup.getElementsByTagName('sky-aurora-color-red').length > 0){
@@ -136,6 +151,7 @@ class SkyAurora extends HTMLElement {
 
       //Parse our molecular oxygen color
       if(molecularOxygenColorTags.length === 1){
+        dataRef.molecularOxygenColorSet = true;
         const firstMolecularOxygenColorTagGroup = molecularOxygenColorTags[0];
         const molecularOxygenColor = dataRef.molecularOxygenColor;
         if(firstMolecularOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-red').length > 0){
@@ -151,6 +167,7 @@ class SkyAurora extends HTMLElement {
 
       //Parse our atomic oxygen color
       if(atomicOxygenColorTags.length === 1){
+        dataRef.atomicOxygenColorSet = true;
         const firstAtomicOxygenColorTagGroup = atomicOxygenColorTags[0];
         const atomicOxygenColor = dataRef.atomicOxygenColor;
         if(firstAtomicOxygenColorTagGroup.getElementsByTagName('sky-aurora-color-red').length > 0){

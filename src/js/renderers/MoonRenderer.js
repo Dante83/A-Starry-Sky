@@ -49,7 +49,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 		return skyState.moon.position;
 	};
 
-  const auroraParameters = assetManager.data.skyAurora;
   const atmosphericParameters = assetManager.data.skyAtmosphericParameters;
   const moonMaterial = new THREE.ShaderMaterial({
     uniforms: JSON.parse(JSON.stringify(StarrySky.Materials.Atmosphere.atmosphereShader.uniforms(
@@ -76,35 +75,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       assetManager.data.skyMilkyWay.milkyWayEnabled  //milky way enabled
     )
   });
-  if(assetManager.data.skyAurora.auroraEnabled){
-    moonMaterial.uniforms.nitrogenColor.value = new THREE.Vector3(
-      auroraParameters.nitrogenColor.red / 255.0,
-      auroraParameters.nitrogenColor.green / 255.0,
-      auroraParameters.nitrogenColor.blue / 255.0,
-    );
-    moonMaterial.uniforms.nitrogenCutOff.value = auroraParameters.nitrogenCutOff;
-    moonMaterial.uniforms.nitrogenIntensity.value = auroraParameters.nitrogenIntensity;
-
-    moonMaterial.uniforms.molecularOxygenColor.value = new THREE.Vector3(
-      auroraParameters.molecularOxygenColor.red / 255.0,
-      auroraParameters.molecularOxygenColor.green / 255.0,
-      auroraParameters.molecularOxygenColor.blue / 255.0,
-    );
-    moonMaterial.uniforms.molecularOxygenCutOff.value = auroraParameters.molecularOxygenCutOff;
-    moonMaterial.uniforms.molecularOxygenIntensity.value = auroraParameters.molecularOxygenIntensity;
-
-    moonMaterial.uniforms.atomicOxygenColor.value = new THREE.Vector3(
-      auroraParameters.atomicOxygenColor.red / 255.0,
-      auroraParameters.atomicOxygenColor.green / 255.0,
-      auroraParameters.atomicOxygenColor.blue / 255.0,
-    );
-    moonMaterial.uniforms.atomicOxygenCutOff.value = auroraParameters.atomicOxygenCutOff;
-    moonMaterial.uniforms.atomicOxygenIntensity.value = auroraParameters.atomicOxygenIntensity;
-
-    //Number of raymarching steps
-    moonMaterial.uniforms.numberOfAuroraRaymarchingSteps.value = auroraParameters.raymarchSteps;
-    moonMaterial.uniforms.auroraCutoffDistance.value = auroraParameters.cutoffDistance;
-  }
 
   if(assetManager.data.skyMilkyWay.milkyWayEnabled){
     moonMaterial.uniforms.milkyWayIntensity.value = assetManager.data.skyMilkyWay.milkyWayIntensity;
@@ -223,6 +193,9 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
     if(assetManager.data.skyCloud.cloudsEnabled){
       moonMaterial.uniforms.cloudMap.value = skyDirector.renderers.cloudRenderer.cloudMap;
     }
+    if(assetManager.data.skyAurora.auroraEnabled){
+      moonMaterial.uniforms.auroraMap.value = skyDirector.renderers.auroraRenderer.auroraMap;
+    }
 
     //Update our bloom threshold so we don't bloom the moon during the day
     if(moonBloomDataRef.bloomEnabled){
@@ -273,10 +246,6 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
       //Update sky parameters
       moonMaterial.uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
-
-      if(assetManager.data.skyAurora.auroraEnabled){
-        moonMaterial.uniforms.auroraSampler.value =  assetManager.images.auroraImages[0];
-      }
 
       assetsNotReadyYet = false;
 
