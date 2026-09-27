@@ -20,6 +20,7 @@
 * Moving clouds now reproject by their deck's height rather than each texel's depth, and the wind follows a smoothed frame time, so cumulus middles bob less and uneven frames no longer lurch.
 * Rebuilt the aurora as curtains hanging along the magnetic field, marched once per frame into a map of the sky like the clouds, with the sharp green lower edge, high red and pink fringe of the real emission lines.
 * Added `<sky-aurora-activity>`, a storm strength from 0 to 9 that brightens, folds, reddens and speeds up the aurora, and can be changed while the sky runs.
+* The aurora now has substorms, arcs breaking up and fading into blinking pulsating patches, casts a green glow on the scene, and turns violet at the top where it rises into twilight sunlight.
 
 **Version 1.2.0**
 * Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).

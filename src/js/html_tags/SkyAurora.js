@@ -47,6 +47,10 @@ StarrySky.DefaultData.skyAurora = {
   //overhead. AuroraRenderer reads it every frame, so it
   //can be changed while the sky runs.
   activity: 5.0,
+  //Substorms: every few minutes an arc brightens, breaks up into racing rays and
+  //fades into pulsating patches (AuroraRenderer). No tag; set this to false from
+  //script to hold the display steady.
+  substorms: true,
   raymarchSteps: 32,
   cutoffDistance: 1500,
   auroraEnabled: false

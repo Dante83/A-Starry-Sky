@@ -60,6 +60,7 @@
     <script src="../src/js/materials/clouds/cloud-resolve.js"></script>
     <script src="../src/js/materials/aurora/aurora-march.js"></script>
     <script src="../src/js/materials/aurora/aurora-curtain.js"></script>
+    <script src="../src/js/materials/aurora/aurora-patch.js"></script>
     <script src="../src/js/materials/fog/fog-pars.js"></script>
     <script src="../src/js/materials/fog/fog.js"></script>
 
@@ -105,19 +106,19 @@
 
       <!-- Sky Setup -->
       <a-starry-sky web-worker-src="../dist/wasm/starry-sky-web-worker.js">
-<!--         <sky-location>
+        <sky-location>
           <sky-latitude>-40.9</sky-latitude>
           <sky-longitude>174.9</sky-longitude>
-        </sky-location> -->
-        <sky-location>
+        </sky-location>
+<!--         <sky-location>
           <sky-latitude>69.6</sky-latitude>
           <sky-longitude>18.9</sky-longitude>
-        </sky-location>
+        </sky-location> -->
         <!-- Early afternoon at 60x, so there are about seven minutes of daylight to
              look at the clouds in before the sun sets. -->
         <sky-time >
           <sky-date>2018-06-15 18:00:00</sky-date>
-          <sky-utc-offset>0</sky-utc-offset>
+          <sky-utc-offset>-13</sky-utc-offset>
           <sky-speed>200</sky-speed>
         </sky-time>
         <sky-lighting>

@@ -1,0 +1,13 @@
+StarrySky.Materials.Aurora.auroraPatch = {
+  uniforms: function(){
+    return {
+      auroraPatchTime: {value: 0.0}
+    };
+  },
+  vertexShader: [
+    {vertex_glsl}
+  ].join('\n'),
+  fragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+};

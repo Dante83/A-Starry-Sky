@@ -1,0 +1,122 @@
+StarrySky.Materials.Aurora.auroraPatch = {
+  uniforms: function(){
+    return {
+      auroraPatchTime: {value: 0.0}
+    };
+  },
+  vertexShader: [
+    'varying vec2 vUv;',
+
+    '//A full target quad. The cloud passes draw with a bare THREE.Camera whose matrices',
+    "//are identity, so the plane's vertices are already in clip space.",
+    'void main(){',
+      'vUv = uv;',
+      'gl_Position = vec4(position, 1.0);',
+    '}',
+  ].join('\n'),
+  fragmentShader: [
+    '//Pulsating aurora: the diffuse patches, tens of kilometres across, that blink on',
+    '//and off every few seconds, most of all as a substorm dies down. Baked once per',
+    '//frame into a map of the ground around the observer, where each patch hangs along',
+    "//the field above; aurora-march.glsl reads it at every step's footprint.",
+    '//',
+    '//Every patch cell carries its own period, phase and duty, so the patches blink out',
+    '//of step with one another the way real ones do. They drift slowly eastward with the',
+    '//plasma they sit in. Real patches are ragged and mottled, a lot like thin cloud,',
+    '//with a flat glow inside and a soft but definite edge, so each one here is a disc',
+    '//whose outline is pushed about by two octaves of noise, cut off by a smoothstep',
+    '//rather than a Gaussian (which read as a round fuzzy lamp), and mottled inside.',
+    '//',
+    '//AURORA_PATCH_EXTENT must match aurora-march.glsl.',
+
+    'varying vec2 vUv;',
+
+    'uniform float auroraPatchTime; //Seconds of wall clock; pulsation does not speed up with the storm',
+
+    'const float AURORA_PATCH_EXTENT = 1200.0; //km from the observer to the edge of the map',
+    'const float AURORA_PATCH_CELL = 80.0;     //km, about one patch per cell',
+    'const float AURORA_PATCH_DRIFT = 0.5;     //km per second, eastward',
+    '//Patches mostly lie equatorward of the arcs: they fade out this far poleward (km).',
+    'const vec2 AURORA_PATCH_POLEWARD_FADE = vec2(250.0, 600.0);',
+    '//Periods run from here to here (seconds), and each patch is on for this fraction of',
+    '//its period, easing on over the first fraction of it and off over the last. Real',
+    '//patches can switch in a fraction of a second, but at that speed they read as a',
+    '//glitch rather than a slow breath of light.',
+    'const vec2 AURORA_PATCH_PERIOD = vec2(5.0, 20.0);',
+    'const float AURORA_PATCH_DUTY = 0.5;',
+    'const float AURORA_PATCH_EASE_ON = 0.15;',
+    'const float AURORA_PATCH_EASE_OFF = 0.2;',
+    '//The fraction of cells that hold a patch at all.',
+    'const float AURORA_PATCH_OCCUPANCY = 0.6;',
+
+    "//How far the noise pushes a patch's outline about, as a fraction of its radius,",
+    '//and how deep the mottling inside it runs.',
+    'const float AURORA_PATCH_RAGGEDNESS = 0.55;',
+    'const float AURORA_PATCH_MOTTLING = 0.45;',
+
+    '//Hash without sine (Dave Hoskins, https://www.shadertoy.com/view/4djSRW, MIT',
+    '//License), four values per cell.',
+    'vec4 hash42(vec2 p){',
+      'vec4 p4 = fract(vec4(p.xyxy) * vec4(0.1031, 0.1030, 0.0973, 0.1099));',
+      'p4 += dot(p4, p4.wzxy + 33.33);',
+      'return fract((p4.xxyz + p4.yzzw) * p4.zywx);',
+    '}',
+
+    '//Value noise, 0 to 1, and two octaves of it.',
+    'float valueNoise(vec2 p){',
+      'vec2 i = floor(p);',
+      'vec2 f = fract(p);',
+      'f = f * f * (3.0 - 2.0 * f);',
+      'float a = hash42(i).x;',
+      'float b = hash42(i + vec2(1.0, 0.0)).x;',
+      'float c = hash42(i + vec2(0.0, 1.0)).x;',
+      'float d = hash42(i + vec2(1.0, 1.0)).x;',
+      'return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);',
+    '}',
+
+    'float twoOctaves(vec2 p){',
+      'return 0.65 * valueNoise(p) + 0.35 * valueNoise(2.3 * p + 7.1);',
+    '}',
+
+    'void main(){',
+      '//u along magnetic east, v poleward, km, as the march measures footprints.',
+      'vec2 foot = (vUv - 0.5) * (2.0 * AURORA_PATCH_EXTENT);',
+      'vec2 cellPosition = (foot - vec2(AURORA_PATCH_DRIFT * auroraPatchTime, 0.0)) / AURORA_PATCH_CELL;',
+      'vec2 cell = floor(cellPosition);',
+
+      'float patchDensity = 0.0;',
+      'for(int j = -1; j <= 1; ++j){',
+        'for(int i = -1; i <= 1; ++i){',
+          'vec2 neighbour = cell + vec2(float(i), float(j));',
+          'vec4 h = hash42(neighbour);',
+          'vec4 g = hash42(neighbour + 71.3);',
+          'if(g.w > AURORA_PATCH_OCCUPANCY){',
+            'continue;',
+          '}',
+
+          '//A ragged, slightly squashed patch somewhere in its cell: the outline is',
+          '//pushed about by noise tied to the patch, so it keeps its shape as it drifts',
+          '//and blinks.',
+          'vec2 centre = neighbour + 0.2 + 0.6 * h.xy;',
+          'float radius = 0.3 + 0.3 * h.z;',
+          'vec2 local = cellPosition - neighbour;',
+          'vec2 warp = vec2(twoOctaves(3.0 * local + 17.0 * g.xy), twoOctaves(3.0 * local + 23.0 * h.zw + 5.2)) - 0.5;',
+          'vec2 offset = cellPosition - centre + (2.0 * AURORA_PATCH_RAGGEDNESS * radius) * warp;',
+          'offset.y *= 1.0 + g.z;',
+          'float shape = 1.0 - smoothstep(0.5 * radius, radius, length(offset));',
+          'shape *= (1.0 - AURORA_PATCH_MOTTLING) + AURORA_PATCH_MOTTLING * twoOctaves(6.0 * local + 31.0 * g.zw);',
+
+          '//On for AURORA_PATCH_DUTY of its period, easing on and a little more slowly off.',
+          'float period = mix(AURORA_PATCH_PERIOD.x, AURORA_PATCH_PERIOD.y, h.w);',
+          'float cycle = fract(auroraPatchTime / period + g.x);',
+          'float pulse = smoothstep(0.0, AURORA_PATCH_EASE_ON, cycle) * (1.0 - smoothstep(AURORA_PATCH_DUTY - AURORA_PATCH_EASE_OFF, AURORA_PATCH_DUTY, cycle));',
+
+          'patchDensity = max(patchDensity, shape * pulse * (0.5 + 0.5 * g.y));',
+        '}',
+      '}',
+
+      'patchDensity *= 1.0 - smoothstep(AURORA_PATCH_POLEWARD_FADE.x, AURORA_PATCH_POLEWARD_FADE.y, foot.y);',
+      'gl_FragColor = vec4(patchDensity, 0.0, 0.0, 1.0);',
+    '}',
+  ].join('\n')
+};

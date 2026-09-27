@@ -116,6 +116,11 @@ groups:
         vertex: '../clouds/cloud-map-vertex.glsl'
         template: 'aurora-curtain-template.txt'
         material: 'aurora-curtain.js'
+      -
+        fragment: 'aurora-patch.glsl'
+        vertex: '../clouds/cloud-map-vertex.glsl'
+        template: 'aurora-patch-template.txt'
+        material: 'aurora-patch.js'
   -
     base_glsl_dir: '../glsl/fog'
     base_js_dir: '../js/materials/fog'

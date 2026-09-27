@@ -53,6 +53,14 @@ uniform float auroraOvalRadius;
 uniform float auroraColumnScale; //Brightness, against AURORA_COLUMN_KR
 uniform float auroraRedScale;    //Extra high red, which great storms carry to low latitudes
 
+//Pulsating patches (aurora-patch.glsl), and how bright they are this frame: they
+//come up as a substorm dies down (AuroraRenderer.js). 0 skips them.
+uniform sampler2D auroraPatchMap;
+uniform float auroraPatchScale;
+
+//Towards the sun, for the sunlit tops of the curtains.
+uniform vec3 auroraSunDirection;
+
 //Map and temporal parameters
 uniform sampler2D auroraHistoryMap; //Last frame, the same size as this target
 uniform float auroraHistoryBlend;   //Weight of this frame, 1 throws the history away
@@ -109,6 +117,30 @@ const float AURORA_RED_PER_PROMPT_HARD = 0.15;
 //The altitude the field line offset is measured from: a curtain hangs straight
 //above its footprint here and leans equatorward above it.
 const float AURORA_FOOT_HEIGHT = 100.0;
+
+//Pulsating patches: the map spans this many km each way from the observer in this
+//many texels (both must match aurora-patch.glsl and AuroraRenderer.js). The
+//electrons behind them are hard, so they glow low and thin: a lower edge like the
+//curtains', around this peak, with a short upper tail.
+const float AURORA_PATCH_EXTENT = 1200.0;
+const float AURORA_PATCH_TEXELS = 256.0;
+const float AURORA_PATCH_PEAK_HEIGHT = 105.0;
+const float AURORA_PATCH_UPPER_SCALE = 12.0;
+
+//Sunlit tops. Where a curtain rises out of the Earth's shadow into sunlight, its
+//N2+ ions scatter the sunlight at 391.4nm and 427.8nm, many times over what the
+//electrons alone excite, and the tops of the rays turn blue violet: sunlit aurora,
+//seen in twilight. The shadow's edge is softened across these heights (km) above
+//the ground, where the lower atmosphere absorbs the grazing sunlight. The glow
+//follows the ions far up the field line.
+const vec2 AURORA_SUNLIT_SCREEN = vec2(60.0, 140.0);
+const float AURORA_SUNLIT_PER_PROMPT = 20.0;
+const float AURORA_SUNLIT_HEIGHT_ABOVE_PEAK = 100.0;
+const float AURORA_SUNLIT_LOWER_SCALE = 40.0;
+const float AURORA_SUNLIT_UPPER_SCALE = 200.0;
+//Linear sRGB per kR of 427.8nm, in dark-sky units, with 3 kR of 391.4nm alongside
+//it: the same CIE 1931 working as the other lines (AuroraRenderer.js).
+const vec3 AURORA_SUNLIT_EMISSION = vec3(0.02137, 0.0, 0.14540);
 
 //Marching steps per <sky-aurora-raymarch-steps>. The steps are cheap now -- three
 //texture reads -- and a grazing ray crosses 2000km of shell.
@@ -182,10 +214,28 @@ vec3 auroraRayMarchPass(vec3 rayStartPosition, vec3 rayDirection){
   //index, where the sharp lower border is: about 4km steps there overhead, where an
   //even spacing gave 9, against a 5km edge.
   vec3 linearAuroraGlow = vec3(0.0);
+  vec3 patchGlow = vec3(0.0);
+  float footJump = length(footPerKm);
+  float patchTexelsPerKm = AURORA_PATCH_TEXELS / (2.0 * AURORA_PATCH_EXTENT);
   for(float i = 0.0; i < numberOfSteps; i++){
     float stepFraction = (i + jitter) / numberOfSteps;
     float dt = 2.0 * stepFraction * span / numberOfSteps;
-    vec3 foot = auroraFootprint(rayStartPosition + (tStart + span * stepFraction * stepFraction) * rayDirection, magneticEast);
+    vec3 position = rayStartPosition + (tStart + span * stepFraction * stepFraction) * rayDirection;
+    vec3 foot = auroraFootprint(position, magneticEast);
+
+    //Pulsating patches, which lie between the curtains as much as under them.
+    if(auroraPatchScale > 0.0){
+      vec2 patchUV = foot.xy / (2.0 * AURORA_PATCH_EXTENT) + 0.5;
+      if(all(greaterThan(patchUV, vec2(0.0))) && all(lessThan(patchUV, vec2(1.0)))){
+        float patchDensity = textureLod(auroraPatchMap, patchUV, log2(max(footJump * dt * patchTexelsPerKm, 1.0))).r;
+        if(patchDensity > 1e-4){
+          float patchPrompt = columnProfile(foot.z, AURORA_PATCH_PEAK_HEIGHT, AURORA_LOWER_SCALE, AURORA_PATCH_UPPER_SCALE);
+          float patchGreen = AURORA_GREEN_PER_PROMPT * patchPrompt * smoothstep(AURORA_GREEN_QUENCHING.x, AURORA_GREEN_QUENCHING.y, foot.z);
+          patchGlow += (dt * patchDensity) * (patchPrompt * auroraPromptEmission + patchGreen * auroraGreenEmission);
+        }
+      }
+    }
+
     float x = foot.x / AURORA_CURTAIN_U_RANGE + 0.5;
     if(x <= 0.0 || x >= 1.0){
       continue;
@@ -213,13 +263,23 @@ vec3 auroraRayMarchPass(vec3 rayStartPosition, vec3 rayDirection){
     float green = AURORA_GREEN_PER_PROMPT * prompt * smoothstep(AURORA_GREEN_QUENCHING.x, AURORA_GREEN_QUENCHING.y, foot.z);
     float red = redPerPrompt * columnProfile(foot.z, AURORA_RED_PEAK_HEIGHT, AURORA_RED_LOWER_SCALE, AURORA_RED_UPPER_SCALE);
 
-    vec3 curtainEmission = (sheet + AURORA_HALO_AMOUNT * halo) * (prompt * auroraPromptEmission + green * auroraGreenEmission);
+    float curtain = sheet + AURORA_HALO_AMOUNT * halo;
+    vec3 curtainEmission = curtain * (prompt * auroraPromptEmission + green * auroraGreenEmission);
     vec3 redEmission = (AURORA_RED_SHEET_AMOUNT * sheet + AURORA_RED_HALO_AMOUNT * halo) * red * auroraRedEmission;
-    linearAuroraGlow += dt * (curtainEmission + redEmission);
+
+    //In sunlight: on the sun's side of the Earth, or far enough off the axis of its
+    //shadow to clear it.
+    float alongSun = dot(position, auroraSunDirection);
+    float fromShadowAxis = length(position - alongSun * auroraSunDirection);
+    float sunlit = alongSun > 0.0 ? 1.0 : smoothstep(RADIUS_OF_EARTH + AURORA_SUNLIT_SCREEN.x, RADIUS_OF_EARTH + AURORA_SUNLIT_SCREEN.y, fromShadowAxis);
+    float resonant = AURORA_SUNLIT_PER_PROMPT * columnProfile(foot.z, peakHeight + AURORA_SUNLIT_HEIGHT_ABOVE_PEAK, AURORA_SUNLIT_LOWER_SCALE, AURORA_SUNLIT_UPPER_SCALE);
+    vec3 sunlitEmission = (curtain * sunlit * resonant) * AURORA_SUNLIT_EMISSION;
+
+    linearAuroraGlow += dt * (curtainEmission + redEmission + sunlitEmission);
   }
 
   //In dark-sky luminance units: 1 is the brightness of a real moonless sky.
-  return (AURORA_COLUMN_KR * auroraColumnScale) * linearAuroraGlow;
+  return AURORA_COLUMN_KR * (auroraColumnScale * linearAuroraGlow + auroraPatchScale * patchGlow);
 }
 
 void main(){

@@ -407,6 +407,15 @@ StarrySky.LightingManager = function(skyDirector){
     self.sourceLight.position.copy(cameraWorldPosition).addScaledVector(dir, RADIUS_OF_SKY);
   }
 
+  //Aurora light (see the end of the LUT path in tick). The colour is the green line
+  //in the same gamma encoded, max normalized form as the hemisphere colours, a little
+  //softened by the red and violet that ride with it. The horizontal hemispheres see
+  //the aurora from the side and take less of its tint than the one facing up.
+  const AURORA_AMBIENT_COLOR = new THREE.Color(0.45, 1.0, 0.35);
+  const AURORA_AMBIENT_SCALE = 0.45;
+  const AURORA_AMBIENT_SATURATION = 3.0;
+  const AURORA_AMBIENT_SIDE_TINT = 0.6;
+
   this.tick = function(lightingState){
     const sunRadius = Math.sin(sunRenderer.sunAngularRadiusInRadians * skyState.sun.scale);
     const dominantLightIsSun = skyState.sun.position.y >= -sunRadius;
@@ -604,7 +613,30 @@ StarrySky.LightingManager = function(skyDirector){
       const moonGate = Math.max(0, skyState.moon.position.y * 1.5 + 0.3) * 0.3 * eclipseMax;
       const lightingMag = Math.max(directMax, sunGate, moonGate);
       const intensityModifier = Math.min(Math.max(lightingMag * 2.0, 0.0), 1.0);
-      const indirectLightIntensity = Math.min(Math.max(lightingData.ambientIntensity * intensityModifier * 0.15, lightingData.minimumAmbientLighting), lightingData.maximumAmbientLighting);
+      let indirectLightIntensity = Math.min(Math.max(lightingData.ambientIntensity * intensityModifier * 0.15, lightingData.minimumAmbientLighting), lightingData.maximumAmbientLighting);
+
+      //The aurora lights the scene too, green from above, on top of whatever else is
+      //lighting it: a steady Kp 5 display nearly triples the moonless night floor,
+      //and a great storm in breakup lights it to near half of daylight's ambient,
+      //cinematic rather than photometric. It only counts in the dark, and the
+      //ambient takes the aurora's colour in proportion to its share of the light,
+      //so a moonlit night hardly turns and a moonless storm turns green.
+      const auroraRenderer = skyDirector.renderers.auroraRenderer;
+      if(auroraRenderer && auroraRenderer.ambientStrength > 0.0){
+        const darkness = 1.0 - intensityModifier;
+        const a = auroraRenderer.ambientStrength;
+        const auroraAmbient = darkness * lightingData.ambientIntensity * 0.15 * AURORA_AMBIENT_SCALE * a / (a + AURORA_AMBIENT_SATURATION);
+        if(auroraAmbient > 0.0){
+          const auroraShare = auroraAmbient / (indirectLightIntensity + auroraAmbient);
+          indirectLightIntensity = Math.min(indirectLightIntensity + auroraAmbient, lightingData.maximumAmbientLighting);
+          self.yAxisHemisphericalLight.color.lerp(AURORA_AMBIENT_COLOR, auroraShare);
+          self.xAxisHemisphericalLight.color.lerp(AURORA_AMBIENT_COLOR, AURORA_AMBIENT_SIDE_TINT * auroraShare);
+          self.xAxisHemisphericalLight.groundColor.lerp(AURORA_AMBIENT_COLOR, AURORA_AMBIENT_SIDE_TINT * auroraShare);
+          self.zAxisHemisphericalLight.color.lerp(AURORA_AMBIENT_COLOR, AURORA_AMBIENT_SIDE_TINT * auroraShare);
+          self.zAxisHemisphericalLight.groundColor.lerp(AURORA_AMBIENT_COLOR, AURORA_AMBIENT_SIDE_TINT * auroraShare);
+        }
+      }
+
       self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
       self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
       self.zAxisHemisphericalLight.intensity = indirectLightIntensity;

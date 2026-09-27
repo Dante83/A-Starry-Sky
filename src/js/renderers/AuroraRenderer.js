@@ -111,6 +111,33 @@ StarrySky.Renderers.AuroraRenderer = function(skyDirector){
   //The aurora's clock is in seconds, wrapped every ~28 hours so the noise inputs
   //stay small. The wrap is a jump, but not one anybody will sit through.
   const AURORA_TIME_WRAP_SECONDS = 100000.0;
+
+  //Pulsating patches (aurora-patch.glsl): a map of the ground around the observer,
+  //mipmapped so a long march step averages the patches it jumps over. Must match
+  //AURORA_PATCH_TEXELS in aurora-march.glsl.
+  const AURORA_PATCH_TEXELS = 256;
+  const patchTarget = new THREE.WebGLRenderTarget(AURORA_PATCH_TEXELS, AURORA_PATCH_TEXELS, {
+    type: THREE.HalfFloatType,
+    format: THREE.RGBAFormat,
+    minFilter: THREE.LinearMipmapLinearFilter,
+    magFilter: THREE.LinearFilter,
+    wrapS: THREE.ClampToEdgeWrapping,
+    wrapT: THREE.ClampToEdgeWrapping,
+    generateMipmaps: true,
+    depthBuffer: false,
+    stencilBuffer: false
+  });
+  patchTarget.texture.colorSpace = THREE.NoColorSpace;
+  const patchMaterial = new THREE.ShaderMaterial({
+    uniforms: materials.auroraPatch.uniforms(),
+    vertexShader: materials.auroraPatch.vertexShader,
+    fragmentShader: materials.auroraPatch.fragmentShader,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.NoBlending,
+    toneMapped: false
+  });
+  const patchUniforms = patchMaterial.uniforms;
   let writeIndex = 0;
 
   //The map every sky pass samples. Starts as an untouched target, which WebGL
@@ -175,6 +202,7 @@ StarrySky.Renderers.AuroraRenderer = function(skyDirector){
   uniforms.auroraFoldMap.value = curtainTarget.textures[0];
   uniforms.auroraBrightnessMap.value = curtainTarget.textures[1];
   uniforms.auroraRayMap.value = curtainTarget.textures[2];
+  uniforms.auroraPatchMap.value = patchTarget.texture;
 
   //Where the curtains hang. <sky-aurora> is a request for an aurora in THIS sky, so
   //the arcs are laid out overhead wherever the sky is, and the storm sets how
@@ -210,11 +238,117 @@ StarrySky.Renderers.AuroraRenderer = function(skyDirector){
   const stormSpread = function(kp){return 0.8 + 0.6 * kp / 9.0;};
   const stormSpeed = function(kp){return 0.5 + kp / 6.0;};
 
+  //Substorms. Every so often an arc brightens slowly (growth), then breaks up: in
+  //half a minute it flares several times brighter, its rays race and its folds
+  //deepen as it surges poleward (expansion), and over the next few minutes it fades
+  //while pulsating patches come up across the sky (recovery). They come every 15
+  //minutes on a quiet night down to every 6 in a great storm, each cycle a little
+  //longer or shorter than the last, and not at all below Kp 1. The cycle runs on the
+  //wall clock, capped per frame like the aurora's own clock. Set
+  //skyAurora.substorms to false to hold the display steady, for a weather system
+  //that would rather drive the storm itself.
+  const SUBSTORM_PERIOD_QUIET = 900.0;
+  const SUBSTORM_PERIOD_STORM = 360.0;
+  const SUBSTORM_PERIOD_SPREAD = 0.5;       //Each cycle is 0.75 to 1.25 of the above
+  const SUBSTORM_GROWTH_BRIGHTENING = 0.3;  //How far the arc brightens before it breaks
+  const SUBSTORM_RISE = 15.0;               //Seconds from onset to peak
+  const SUBSTORM_DECAY = 180.0;             //e-folding seconds of the fade
+  const SUBSTORM_RECOVERY = [60.0, 240.0, 400.0]; //Patches start, peak, then e-fold
+  //Peak brightening, on top of the storm's own. It has to be large: the tonemapper
+  //squeezes a bright display, and at 3 (four times the light) a breakup read as a
+  //mild swell.
+  const SUBSTORM_BRIGHTENING = 6.0;
+  const SUBSTORM_SPEEDUP = 3.0;
+  const SUBSTORM_FOLDING = 1.0;
+  const SUBSTORM_HARDENING = 0.25;          //Extra electron energy, for the pink fringe
+  const SUBSTORM_SPREAD = 0.3;
+  const SUBSTORM_POLEWARD_SURGE = 150.0;    //km the arcs surge poleward at the peak
+  //Pulsating patch brightness against AURORA_COLUMN_KR: a faint background from
+  //Kp 3 up, and most of it in recovery. A full patch is then a few kR of green.
+  const PATCH_BACKGROUND = 0.025;
+  const PATCH_RECOVERY = 0.15;
+  const smoothstep = function(edge0, edge1, x){
+    const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0.0), 1.0);
+    return t * t * (3.0 - 2.0 * t);
+  };
+  const cycleHash = function(n){
+    const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  };
+  const substormPeriod = function(kp, index){
+    const base = SUBSTORM_PERIOD_QUIET + (SUBSTORM_PERIOD_STORM - SUBSTORM_PERIOD_QUIET) * kp / 9.0;
+    return base * (1.0 - 0.5 * SUBSTORM_PERIOD_SPREAD + SUBSTORM_PERIOD_SPREAD * cycleHash(index));
+  };
+  let substormIndex = 0;
+  let substormCyclePeriod = substormPeriod(auroraParameters.activity, 0);
+  //Start most of the way through the first cycle, so the first breakup comes within
+  //a couple of minutes of the page opening rather than a quarter of an hour.
+  let substormTime = 0.8 * substormCyclePeriod;
+  //Where the last cycle left off when this one began. Each cycle fades these out as
+  //its own phases rise, so the turn from one cycle to the next never jumps: not at
+  //the natural end of a cycle, nor when triggerSubstorm cuts one short mid growth,
+  //mid breakup or mid recovery.
+  const substormCarry = {growth: 0.0, expansion: 0.0, recovery: 0.0};
+  const substormPhases = function(c, P, carry, out){
+    const rise = smoothstep(0.0, SUBSTORM_RISE, c);
+    out.growth = SUBSTORM_GROWTH_BRIGHTENING * smoothstep(0.6 * P, P, c) + carry.growth * (1.0 - rise);
+    out.expansion = Math.max(rise * Math.exp(-Math.max(c - SUBSTORM_RISE, 0.0) / SUBSTORM_DECAY), carry.expansion * Math.exp(-c / SUBSTORM_DECAY));
+    out.recovery = smoothstep(SUBSTORM_RECOVERY[0], SUBSTORM_RECOVERY[1], c) * Math.exp(-Math.max(c - SUBSTORM_RECOVERY[1], 0.0) / SUBSTORM_RECOVERY[2]) + carry.recovery * (1.0 - smoothstep(0.0, SUBSTORM_RECOVERY[0], c));
+    return out;
+  };
+  const substormEnd = {growth: 0.0, expansion: 0.0, recovery: 0.0};
+  let substormEndsAt = null; //Set by triggerSubstorm to cut the cycle short
+  const turnSubstormCycle = function(kp){
+    substormPhases(substormEndsAt !== null ? substormEndsAt : substormCyclePeriod, substormCyclePeriod, substormCarry, substormEnd);
+    //Leaving the first, unseen cycle hands over only its growth (see updateSubstorm).
+    const seen = substormIndex > 0 ? 1.0 : 0.0;
+    substormCarry.growth = substormEnd.growth;
+    substormCarry.expansion = seen * substormEnd.expansion;
+    substormCarry.recovery = seen * substormEnd.recovery;
+    substormEndsAt = null;
+    ++substormIndex;
+    substormCyclePeriod = substormPeriod(kp, substormIndex);
+  };
+  const substormNow = {growth: 0.0, expansion: 0.0, recovery: 0.0};
+  const substorm = {growth: 0.0, expansion: 0.0, recovery: 0.0};
+  const updateSubstorm = function(kp, stepSeconds){
+    substormTime += stepSeconds;
+    if(substormEndsAt !== null){
+      substormTime = 0.0;
+      turnSubstormCycle(kp);
+    }
+    while(substormTime >= substormCyclePeriod){
+      substormTime -= substormCyclePeriod;
+      turnSubstormCycle(kp);
+    }
+    substormPhases(substormTime, substormCyclePeriod, substormCarry, substormNow);
+    const strength = auroraParameters.substorms === false ? 0.0 : smoothstep(1.0, 4.0, kp);
+    //The first cycle starts part way through, so its breakup and recovery would
+    //belong to a substorm from before the page opened: only its growth counts, and
+    //the first patches follow the first breakup anybody actually sees.
+    const seen = substormIndex > 0 ? 1.0 : 0.0;
+    substorm.growth = strength * substormNow.growth;
+    substorm.expansion = strength * seen * substormNow.expansion;
+    substorm.recovery = strength * seen * substormNow.recovery;
+  };
+
+  //Break up now: the current cycle ends on the next frame and the expansion begins,
+  //rising from wherever the display was. For a weather system, or for impatience:
+  //StarrySky.skyDirectorRef.renderers.auroraRenderer.triggerSubstorm().
+  this.triggerSubstorm = function(){
+    substormEndsAt = substormTime;
+  };
+
+  //How much the aurora lights the scene, for LightingManager: 1 is a steady Kp 5
+  //display, and it follows the storm and the substorms.
+  this.ambientStrength = 0.0;
+
   //The aurora's own clock runs faster in a stronger storm. It is integrated one
   //frame at a time, so a change of pace never jumps the curtains; a frame step is
   //capped so a paused tab does not lurch them either.
   const AURORA_MAX_CLOCK_STEP_SECONDS = 0.25;
   let auroraClock = 0.0;
+  let wallClock = 0.0;
 
   uniforms.auroraOvalRadius.value = OVAL_RADIUS;
   uniforms.auroraCotDip.value = 1.0 / Math.tan(FIELD_DIP_DEGREES * DEG_2_RAD);
@@ -244,15 +378,22 @@ StarrySky.Renderers.AuroraRenderer = function(skyDirector){
     );
     uniforms.auroraPoleward.value.set(-Math.cos(bearing), -Math.sin(bearing));
 
-    //The band of arcs overhead, widening with the storm about a fixed centre.
-    const bandWidth = ARC_BAND_WIDTH * stormSpread(kp);
+    //The band of arcs overhead, widening with the storm about a fixed centre and
+    //surging poleward in a substorm.
+    const e = substorm.expansion;
+    const bandWidth = ARC_BAND_WIDTH * stormSpread(kp) * (1.0 + SUBSTORM_SPREAD * e);
     uniforms.auroraOvalWidth.value = bandWidth;
-    uniforms.auroraOvalOffset.value = ARC_BAND_CENTRE - ARC_FRACTION_MIDDLE * bandWidth;
+    uniforms.auroraOvalOffset.value = ARC_BAND_CENTRE + SUBSTORM_POLEWARD_SURGE * e - ARC_FRACTION_MIDDLE * bandWidth;
 
-    uniforms.auroraColumnScale.value = stormBrightness(kp);
-    uniforms.auroraEnergy.value = stormEnergy(kp);
+    const brightness = stormBrightness(kp) * (1.0 + substorm.growth + SUBSTORM_BRIGHTENING * e);
+    uniforms.auroraColumnScale.value = brightness;
+    uniforms.auroraEnergy.value = Math.min(stormEnergy(kp) + SUBSTORM_HARDENING * e, 1.0);
     uniforms.auroraRedScale.value = stormRed(kp);
-    curtainUniforms.auroraFoldScale.value = stormFolding(kp);
+    curtainUniforms.auroraFoldScale.value = stormFolding(kp) * (1.0 + SUBSTORM_FOLDING * e);
+    const patchScale = PATCH_BACKGROUND * smoothstep(3.0, 7.0, kp) + PATCH_RECOVERY * substorm.recovery;
+    uniforms.auroraPatchScale.value = patchScale;
+
+    self.ambientStrength = (brightness + patchScale) / stormBrightness(5.0);
     return kp;
   };
 
@@ -284,17 +425,26 @@ StarrySky.Renderers.AuroraRenderer = function(skyDirector){
 
     const frameStep = t - previousTickTime;
     const historyUsable = frame > 0 && frameStep > 0.0 && frameStep < AURORA_HISTORY_MAX_GAP_MS;
-    const kp = updateAuroraPlacement();
-    if(frame > 0 && frameStep > 0.0){
-      auroraClock += Math.min(frameStep * 0.001, AURORA_MAX_CLOCK_STEP_SECONDS) * stormSpeed(kp);
-      auroraClock %= AURORA_TIME_WRAP_SECONDS;
-    }
+    const kp = Math.min(Math.max(auroraParameters.activity, 0.0), 9.0);
+    const stepSeconds = frame > 0 && frameStep > 0.0 ? Math.min(frameStep * 0.001, AURORA_MAX_CLOCK_STEP_SECONDS) : 0.0;
+    updateSubstorm(kp, stepSeconds);
+    updateAuroraPlacement();
+    auroraClock = (auroraClock + stepSeconds * stormSpeed(kp) * (1.0 + SUBSTORM_SPEEDUP * substorm.expansion)) % AURORA_TIME_WRAP_SECONDS;
+    wallClock = (wallClock + stepSeconds) % AURORA_TIME_WRAP_SECONDS;
 
     //Curtains first; the march reads them.
     curtainUniforms.auroraTime.value = auroraClock;
     quad.material = curtainMaterial;
     renderer.setRenderTarget(curtainTarget);
     renderer.render(scene, camera);
+
+    //Patches blink on the wall clock: pulsation does not quicken with the storm.
+    if(uniforms.auroraPatchScale.value > 0.0){
+      patchUniforms.auroraPatchTime.value = wallClock;
+      quad.material = patchMaterial;
+      renderer.setRenderTarget(patchTarget);
+      renderer.render(scene, camera);
+    }
 
     uniforms.auroraJitter.value.copy(jitterSequence[frame % HALTON_LENGTH]);
     uniforms.auroraFrame.value = frame % 4096;
@@ -323,6 +473,8 @@ StarrySky.Renderers.AuroraRenderer = function(skyDirector){
 
     //One fixed tile, walked through time by the golden ratio in the march.
     uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[0];
+    //A live reference into the sky state, for the sunlit tops.
+    uniforms.auroraSunDirection.value = skyDirector.skyState.sun.position;
 
     assetsNotReadyYet = false;
     self.tick(t);
