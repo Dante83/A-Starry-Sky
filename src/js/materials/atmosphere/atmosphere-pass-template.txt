@@ -86,9 +86,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.milkyWayAbsorptionMap = {value: null};
       uniforms.milkyWayIntensity = {value: 0.7};
     }
-    //Halos belong to the sky dome alone: the sun and moon quads sit well inside the
-    //22 degree ring and the metering pass is measuring the sky, not decorating it.
-    if(halosEnabled && !isSunShader && !isMoonShader && !isMeteringShader){
+    //The sky dome and the sun and moon quads all draw halos: the quads re-render the sky
+    //and would paint a halo-less patch over the halo behind them. The metering pass is
+    //measuring the sky, not decorating it.
+    if(halosEnabled && !isMeteringShader){
       uniforms.haloMaps = {value: null};
       uniforms.sunHaloGains = {value: new THREE.Vector3()};
       uniforms.moonHaloGains = {value: new THREE.Vector3()};
@@ -104,8 +105,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   meteringCode = false, auroraEnabled = false, cloudsEnabled = false,
   milkyWayEnabled = false, haloAtlas = false){
     //haloAtlas is the atlas layout from SkyHalos.js when halos are on for this pass, else
-    //false. Only the sky dome ever gets it.
-    const halosEnabled = haloAtlas !== false && sunCode === false && moonCode === false && meteringCode === false;
+    //false. Every pass but the metering one draws them.
+    const halosEnabled = haloAtlas !== false && meteringCode === false;
     let originalGLSL = [
       {fragment_glsl}
     ];

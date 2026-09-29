@@ -59,7 +59,9 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       false, //moon pass
       false, //metering pass
       false,  //aurora enabled
-      assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
+      assetManager.data.skyCloud.cloudsEnabled,  //clouds enabled
+      false,  //milky way enabled
+      assetManager.data.skyHalos.halosEnabled  //halos enabled
     ))),
     vertexShader: StarrySky.Materials.Sun.baseSunPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
@@ -73,9 +75,12 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
       false, //Moon Code
       false, //Metering Code
       false, //aurora enabled
-			assetManager.data.skyCloud.cloudsEnabled  //clouds enabled
+			assetManager.data.skyCloud.cloudsEnabled,  //clouds enabled
+      false, //milky way enabled
+      assetManager.data.skyHalos.halosEnabled ? assetManager.data.skyHalos.atlas : false  //halo atlas layout
     ),
   });
+  this.baseSunMaterial = baseSunMaterial;
   baseSunMaterial.uniforms.radiusOfSunPlane.value = radiusOfSunPlane;
   baseSunMaterial.uniforms.rayleighInscatteringSum.value = atmosphereLUTLibrary.rayleighScatteringSum;
   baseSunMaterial.uniforms.mieInscatteringSum.value = atmosphereLUTLibrary.mieScatteringSum;

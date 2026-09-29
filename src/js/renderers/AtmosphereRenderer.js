@@ -102,6 +102,18 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       const haloScale = haloData.radianceScale * haloData.intensity * haloData.iceCloud;
       uniforms.sunHaloGains.value.set(haloData.randomCrystals, haloData.plateCrystals, haloData.columnCrystals).multiplyScalar(haloScale);
       uniforms.moonHaloGains.value.copy(uniforms.sunHaloGains.value).multiplyScalar(haloData.moonIntensity);
+
+      //The sun and moon quads re-render the sky, so they draw the halos too, or they would
+      //paint a halo-less patch over the one behind them. They share this frame's values.
+      const quadMaterials = [skyDirector.renderers.sunRenderer?.baseSunMaterial, skyDirector.renderers.moonRenderer?.moonMaterial];
+      for(let i = 0; i < quadMaterials.length; ++i){
+        const quadUniforms = quadMaterials[i]?.uniforms;
+        if(quadUniforms?.haloMaps !== undefined){
+          quadUniforms.haloMaps.value = uniforms.haloMaps.value;
+          quadUniforms.sunHaloGains.value = uniforms.sunHaloGains.value;
+          quadUniforms.moonHaloGains.value = uniforms.moonHaloGains.value;
+        }
+      }
     }
 
     //CloudRenderer and AuroraRenderer tick first and ping-pong their targets, so

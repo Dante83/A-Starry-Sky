@@ -57,7 +57,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       false,
       assetManager.data.skyAurora.auroraEnabled,
       assetManager.data.skyCloud.cloudsEnabled,
-      assetManager.data.skyMilkyWay.milkyWayEnabled
+      assetManager.data.skyMilkyWay.milkyWayEnabled,
+      assetManager.data.skyHalos.halosEnabled
     ))),
     vertexShader: StarrySky.Materials.Moon.baseMoonPartial.vertexShader,
     fragmentShader: StarrySky.Materials.Atmosphere.atmosphereShader.fragmentShader(
@@ -72,7 +73,8 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
       false, //Metering Code
       assetManager.data.skyAurora.auroraEnabled, //aurora enabled
       assetManager.data.skyCloud.cloudsEnabled,  //clouds enabled
-      assetManager.data.skyMilkyWay.milkyWayEnabled  //milky way enabled
+      assetManager.data.skyMilkyWay.milkyWayEnabled,  //milky way enabled
+      assetManager.data.skyHalos.halosEnabled ? assetManager.data.skyHalos.atlas : false  //halo atlas layout
     )
   });
 

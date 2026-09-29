@@ -572,14 +572,15 @@ When thin, high ice cloud (cirrostratus) veils the sky, the sun and the moon gro
 **Tag** | **Description** | **Default Value**
 :--- | :--- | :---
 `<sky-halos>` | Parent tag. Required for enabling halos. Contains all child tags related to halos. | N/A
+`<sky-halo-display>` | Which halos to show, since real skies rarely show every halo at once: `ring` for the 22° halo and a faint 46° halo, `sundogs` for sundogs, the parhelic circle and the circumzenithal arc over a faint ring, `arcs` for tangent arcs and the circumscribed halo over a faint ring, or `mixed` for all of them together. The three crystal tags below override their share of the choice. | ring
 `<sky-halo-ice-cloud>` | How much thin, high ice cloud there is, from 0 to 1. Halos are sunlight turned by ice, so this scales every one of them, and 0 is a sky with none. This value is read every frame, so it can be changed while the sky runs: fade it up as a front approaches, which is the classic halo forecast. | 0.6
 `<sky-halo-intensity>` | Scales every halo, sun and moon alike. | 1.0
-`<sky-halo-random-crystals>` | How much of the ice tumbles in random directions. It makes the **22° halo**, sharp and reddish on its inside edge, and the fainter **46° halo**. | 1.0
-`<sky-halo-plate-crystals>` | How much of the ice is flat plates falling face down. They make **sundogs** either side of the sun, the white **parhelic circle** that runs across the sky at the sun's height, and the **circumzenithal arc**, a rainbow smile hanging above a low sun. | 1.0
-`<sky-halo-column-crystals>` | How much of the ice is columns lying on their sides. They make the **upper and lower tangent arcs**, which grow into the **circumscribed halo** when the sun is higher than 30°. | 0.6
-`<sky-halo-moon-intensity>` | Scales the moon's halos on top of `<sky-halo-intensity>`. They are close to colourless, as they are to the human eye, and take their light from the moon, so they follow its phase and vanish in a lunar eclipse. | 1.0
+`<sky-halo-random-crystals>` | How much of the ice tumbles in random directions. It makes the **22° halo**, sharp and reddish on its inside edge, and the fainter **46° halo**. | 1.0 (from `<sky-halo-display>`)
+`<sky-halo-plate-crystals>` | How much of the ice is flat plates falling face down. They make **sundogs** either side of the sun, the white **parhelic circle** that runs across the sky at the sun's height, and the **circumzenithal arc**, a rainbow smile hanging above a low sun. | 0.0 (from `<sky-halo-display>`)
+`<sky-halo-column-crystals>` | How much of the ice is columns lying on their sides. They make the **upper and lower tangent arcs**, which grow into the **circumscribed halo** when the sun is higher than 30°. | 0.0 (from `<sky-halo-display>`)
+`<sky-halo-moon-intensity>` | Scales the moon's halos on top of `<sky-halo-intensity>`. They are close to colourless, as they are to the human eye, and take their light from the moon, so they follow its phase and vanish in a lunar eclipse. | 0.3
 
-Sundogs and arcs depend on how high the sun is: a sundog sits 22° from a sun on the horizon and drifts outward as the sun climbs, dimming until it is gone above 60°. That is baked in, so you do not have to do anything to get it.
+Halos need the body to be lighting the ice, so they fade out as the sun or moon sinks below the horizon, and a low sun makes them red. Sundogs and arcs depend on how high the sun is: a sundog sits 22° from a sun on the horizon and drifts outward as the sun climbs, dimming until it is gone above 60°. That is baked in, so you do not have to do anything to get it.
 
 Clouds in front of a halo hide it, just as they do in the real sky, so halos work well under `<sky-clouds>` with a low coverage and stratus or cumulus type.
 
@@ -588,7 +589,7 @@ Clouds in front of a halo hide it, just as they do in the real sky, so halos wor
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
     <sky-halos>
       <sky-halo-ice-cloud>0.8</sky-halo-ice-cloud>
-      <sky-halo-column-crystals>0.0</sky-halo-column-crystals> <!-- just rings and sundogs -->
+      <sky-halo-display>sundogs</sky-halo-display>
     </sky-halos>
   </a-starry-sky>
 </a-scene>

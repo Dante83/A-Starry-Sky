@@ -86,9 +86,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.milkyWayAbsorptionMap = {value: null};
       uniforms.milkyWayIntensity = {value: 0.7};
     }
-    //Halos belong to the sky dome alone: the sun and moon quads sit well inside the
-    //22 degree ring and the metering pass is measuring the sky, not decorating it.
-    if(halosEnabled && !isSunShader && !isMoonShader && !isMeteringShader){
+    //The sky dome and the sun and moon quads all draw halos: the quads re-render the sky
+    //and would paint a halo-less patch over the halo behind them. The metering pass is
+    //measuring the sky, not decorating it.
+    if(halosEnabled && !isMeteringShader){
       uniforms.haloMaps = {value: null};
       uniforms.sunHaloGains = {value: new THREE.Vector3()};
       uniforms.moonHaloGains = {value: new THREE.Vector3()};
@@ -149,8 +150,8 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   meteringCode = false, auroraEnabled = false, cloudsEnabled = false,
   milkyWayEnabled = false, haloAtlas = false){
     //haloAtlas is the atlas layout from SkyHalos.js when halos are on for this pass, else
-    //false. Only the sky dome ever gets it.
-    const halosEnabled = haloAtlas !== false && sunCode === false && moonCode === false && meteringCode === false;
+    //false. Every pass but the metering one draws them.
+    const halosEnabled = haloAtlas !== false && meteringCode === false;
     let originalGLSL = [
     'precision highp sampler3D;',
     '//Both of our texture arrays carry data rather than color. The star LUT holds decoded',
@@ -189,6 +190,17 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'uniform sampler2D auroraMap;',
     '#endif',
 
+    '//The halos are drawn by the sky dome and by the sun and moon quads, which re-render the',
+    '//sky and would otherwise paint a halo-less patch over the halo behind them.',
+    '#if($halosEnabled)',
+      '//One sampler2DArray for the whole halo family, so 25 layers cost a single texture unit.',
+      'uniform sampler2DArray haloMaps;',
+      '//Strength of the (random, plate, column) crystal populations, with the overall halo',
+      '//intensity, the ice cloud amount and the brightness scale already folded in.',
+      'uniform vec3 sunHaloGains;',
+      'uniform vec3 moonHaloGains;',
+    '#endif',
+
     '#if(!$isSunPass && !$isMeteringPass)',
       'uniform samplerCube starHashCubemap;',
       '//The three star tiers differ only in size, so they ride in one array. Their layers are',
@@ -199,15 +211,6 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'const int MED_STAR_LAYER = 1;',
       'const int BRIGHT_STAR_LAYER = 2;',
       'uniform sampler2D starColorMap;',
-
-      '#if($halosEnabled)',
-        '//One sampler2DArray for the whole halo family, so 25 layers cost a single texture unit.',
-        'uniform sampler2DArray haloMaps;',
-        '//Strength of the (random, plate, column) crystal populations, with the overall halo',
-        '//intensity, the ice cloud amount and the brightness scale already folded in.',
-        'uniform vec3 sunHaloGains;',
-        'uniform vec3 moonHaloGains;',
-      '#endif',
 
       '#if($milkyWayEnabled)',
         'uniform sampler2D milkyWayEmissionMap;',
@@ -565,9 +568,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         '$milkyWayFunctions',
       '#endif',
 
-      '#if($halosEnabled)',
-        '$haloFunctions',
-      '#endif',
+    '#endif',
+
+    '#if($halosEnabled)',
+      '$haloFunctions',
     '#endif',
 
     '#if($isMoonPass)',
@@ -817,6 +821,23 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'float airglowIntensity = 0.25 * (1.0 - 0.5 * moonHorizonFade);',
       'vec3 baseSkyLighting = airglowIntensity * SKY_BASELINE * transmittanceFade;',
 
+      'vec3 haloLighting = vec3(0.0);',
+      '#if($halosEnabled)',
+        '//Halos are sunlight (or moonlight) turned by ice crystals high in the sky, so they need',
+        '//the body to be lighting that ice. High cirrus stays lit a few degrees after the ground',
+        "//has gone dark, so each body's halo fades out between 3 degrees below the horizon and 1",
+        "//above. The light also reddens by the transmittance along the body's own direction, so a",
+        '//low sun makes a red sundog and a sun on the horizon hardly any.',
+        'float haloCosZenithX = parameterizationOfCosOfViewZenithToX(max(sunPosition.y, 0.0));',
+        'vec3 sunHaloLight = texture(transmittance, vec2(haloCosZenithX, uv2OfTransmittance.y)).rgb * smoothstep(-0.05, 0.02, sunPosition.y);',
+        'vec3 sunHalo = haloLookup(sphericalPosition, sunPosition, sunHaloGains) * sunHaloLight * scatteringSunIntensity * sunHorizonFade;',
+        '//Moon halos are close to colourless: the moon is dim enough that the eye is working',
+        '//with rods, which cannot see the colour of a halo.',
+        'vec3 moonHalo = haloLookup(sphericalPosition, moonPosition, moonHaloGains) * smoothstep(-0.05, 0.02, moonPosition.y) * scatteringMoonIntensity * moonLightColor * moonHorizonFade;',
+        'moonHalo = mix(vec3(dot(moonHalo, vec3(0.2126, 0.7152, 0.0722))), moonHalo, 0.25);',
+        'haloLighting = (sunHalo + moonHalo) * transmittanceFade * smoothstep(-0.05, 0.05, sphericalPosition.y);',
+      '#endif',
+
       '#if(!$isSunPass)',
         '//Sky background washes stars out. What governs that is the RATIO of the sky',
         '//to a dark moonless one expressed in MAGNITUDES -- the eye gives up roughly',
@@ -969,7 +990,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '//Sun and Moon layers',
       '#if($isSunPass)',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting + haloLighting;',
 
         '$draw_sun_pass',
 
@@ -982,7 +1003,7 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
         '//Leave in linear HDR for bloom - tonemapping happens in the output shader',
       '#elif($isMoonPass)',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting;',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting + haloLighting;',
         'vec3 earthsShadow = getLunarEcclipseShadow(sphericalPosition);',
 
         '$draw_moon_pass',
@@ -1019,23 +1040,12 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
         'combinedPass = LinearTosRGB(vec4(skyToneMap(combinedPass), 1.0)).rgb;',
       '#else',
         '//Regular atmospheric pass',
-        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting;',
+        '//Halos go in before the clouds, so thick cloud in front of them hides them, as it does',
+        '//in the real sky.',
+        'vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + galacticLighting + baseSkyLighting + haloLighting;',
 
         '#if($auroraEnabled)',
           'combinedPass = combinedPass + auroraLighting;',
-        '#endif',
-
-        '#if($halosEnabled)',
-          '//Halos are sunlight (or moonlight) turned by ice crystals high in the sky, so they',
-          '//take the same intensity, horizon fade and transmittance the scattered light does --',
-          '//which is what turns a sundog red as the sun sinks. They go in before the clouds so',
-          '//that thick cloud in front of them hides them, as it does in the real sky.',
-          'vec3 sunHalo = haloLookup(sphericalPosition, sunPosition, sunHaloGains) * scatteringSunIntensity * sunHorizonFade;',
-          '//Moon halos are close to colourless: the moon is dim enough that the eye is',
-          '//working with rods, which cannot see the colour of a halo.',
-          'vec3 moonHalo = haloLookup(sphericalPosition, moonPosition, moonHaloGains) * scatteringMoonIntensity * moonLightColor * moonHorizonFade;',
-          'moonHalo = mix(vec3(dot(moonHalo, vec3(0.2126, 0.7152, 0.0722))), moonHalo, 0.25);',
-          'combinedPass = combinedPass + (sunHalo + moonHalo) * transmittanceFade * smoothstep(-0.05, 0.05, sphericalPosition.y);',
         '#endif',
 
         '//Combine the cloud lights',

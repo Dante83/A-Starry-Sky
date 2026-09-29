@@ -48,6 +48,9 @@ StarrySky.Materials.Halos.haloFunctions = {
       'if(u >= 1.0){',
         'return vec3(0.0);',
       '}',
+      '//The layers stop at HALO_THETA_MAX with a little diffuse light still in them, which would',
+      '//draw a hard edge across the sky, so let them fade out over the last quarter.',
+      'float edgeFade = 1.0 - smoothstep(0.75, 1.0, u);',
 
       '//Angle round the body from straight up. A body at the zenith has no up to speak of, but',
       '//the plates and columns that care are gone by then and the random layer is symmetric.',
@@ -68,7 +71,7 @@ StarrySky.Materials.Halos.haloFunctions = {
       'vec3 plateHalo = mix(haloSampleLayer(uv, HALO_PLATE_FIRST_LAYER + lower), haloSampleLayer(uv, HALO_PLATE_FIRST_LAYER + upper), blend);',
       'vec3 columnHalo = mix(haloSampleLayer(uv, HALO_COLUMN_FIRST_LAYER + lower), haloSampleLayer(uv, HALO_COLUMN_FIRST_LAYER + upper), blend);',
 
-      'return randomHalo * populationGains.x + plateHalo * populationGains.y + columnHalo * populationGains.z;',
+      'return (randomHalo * populationGains.x + plateHalo * populationGains.y + columnHalo * populationGains.z) * edgeFade;',
     '}',
   ].join('\n')
 }

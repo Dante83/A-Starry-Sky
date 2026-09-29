@@ -1,4 +1,5 @@
 //Child tags
+window.customElements.define('sky-halo-display', class extends HTMLElement{});
 window.customElements.define('sky-halo-ice-cloud', class extends HTMLElement{});
 window.customElements.define('sky-halo-intensity', class extends HTMLElement{});
 window.customElements.define('sky-halo-random-crystals', class extends HTMLElement{});
@@ -14,18 +15,27 @@ StarrySky.DefaultData.skyHalos = {
   iceCloud: 0.6,
   //Overall brightness of every halo, sun and moon alike.
   intensity: 1.0,
+  //Which halos to show. Real skies rarely show every halo at once: which appear depends on
+  //the shape and orientation of the ice that day. This picks how much of each crystal
+  //population there is, and the three tags below override it.
+  //  ring     the 22 degree halo, and the faint 46 degree halo   (default)
+  //  sundogs  sundogs, the parhelic circle and the circumzenithal arc, over a faint ring
+  //  arcs     tangent arcs and the circumscribed halo, over a faint ring
+  //  mixed    all of them at once
+  display: 'ring',
   //How much of the ice is in each crystal population. Each makes different halos.
   //  random   the 22 and 46 degree rings
   //  plate    sundogs, the parhelic circle and the circumzenithal arc
   //  column   the upper and lower tangent arcs and the circumscribed halo
+  //Set from `display` unless a tag gives its own, and read every frame.
   randomCrystals: 1.0,
-  plateCrystals: 1.0,
-  columnCrystals: 0.6,
+  plateCrystals: 0.0,
+  columnCrystals: 0.0,
   //Moon halos, on top of the overall intensity. They are colourless and much fainter.
-  moonIntensity: 1.0,
+  moonIntensity: 0.3,
   //Baked radiance to sky radiance: how bright the peak of a halo is against the sun's own
   //scattered light. Not a tag; it is the calibration of the bake against this sky.
-  radianceScale: 0.12,
+  radianceScale: 0.05,
   //The layout of the baked atlas. This must match src/python/halo-baker/bake.py, which
   //checks it (`./run.sh --check-js`), and the layer order is mirrored by the HALO_*_LAYER
   //constants in halo-functions.glsl: layer 0 is the random population, then one plate
@@ -62,6 +72,7 @@ class SkyHalos extends HTMLElement {
 
       //The mere presence of this tag enables halos
       dataRef.halosEnabled = true;
+      const displayTags = self.getElementsByTagName('sky-halo-display');
       const iceCloudTags = self.getElementsByTagName('sky-halo-ice-cloud');
       const intensityTags = self.getElementsByTagName('sky-halo-intensity');
       const randomTags = self.getElementsByTagName('sky-halo-random-crystals');
@@ -69,11 +80,29 @@ class SkyHalos extends HTMLElement {
       const columnTags = self.getElementsByTagName('sky-halo-column-crystals');
       const moonIntensityTags = self.getElementsByTagName('sky-halo-moon-intensity');
 
-      [iceCloudTags, intensityTags, randomTags, plateTags, columnTags, moonIntensityTags].forEach(function(tags){
+      [displayTags, iceCloudTags, intensityTags, randomTags, plateTags, columnTags, moonIntensityTags].forEach(function(tags){
         if(tags.length > 1){
           console.error(`The <sky-halos> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
         }
       });
+
+      //The display picks the crystal mix; a crystal tag overrides its own share of it.
+      const displays = {
+        ring: [1.0, 0.0, 0.0],
+        sundogs: [0.3, 1.0, 0.0],
+        arcs: [0.3, 0.0, 1.0],
+        mixed: [1.0, 0.6, 0.4]
+      };
+      if(displayTags.length > 0){
+        const display = displayTags[0].innerHTML.trim().toLowerCase();
+        if(display in displays){
+          dataRef.display = display;
+        }
+        else{
+          console.error(`<sky-halo-display> must be one of ${Object.keys(displays).join(', ')}. "${display}" found.`);
+        }
+      }
+      [dataRef.randomCrystals, dataRef.plateCrystals, dataRef.columnCrystals] = displays[dataRef.display];
 
       //Parse the values in our tags
       dataRef.iceCloud = iceCloudTags.length > 0 ? parseFloat(iceCloudTags[0].innerHTML) : dataRef.iceCloud;
