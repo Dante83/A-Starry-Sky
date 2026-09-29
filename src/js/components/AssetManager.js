@@ -714,7 +714,8 @@ StarrySky.AssetManager = function(skyDirector){
       self.data.skyAurora = self.hasAuroraTag ? self.skyAuroraTag.data : defaultValues.skyAurora;
       self.data.skyCloud = self.hasCloudTag ? self.skyCloudTag.data : defaultValues.skyCloud;
       self.data.skyMilkyWay = self.hasMilkyWayTag ? self.skyMilkyWayTag.data : defaultValues.skyMilkyWay;
-      self.data.skyHalos = self.hasHalosTag ? self.skyHalosTag.data : defaultValues.skyHalos;
+      //A page that has not loaded SkyHalos.js has no halo defaults; it just gets no halos.
+      self.data.skyHalos = self.hasHalosTag ? self.skyHalosTag.data : (defaultValues.skyHalos ?? {halosEnabled: false});
       self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
       self.loadImageAssets(self.skyDirector.renderer);
       skyDirector.assetManagerInitialized = true;
