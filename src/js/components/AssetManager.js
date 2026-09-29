@@ -7,6 +7,7 @@ StarrySky.AssetManager = function(skyDirector){
     blueNoiseImages: {},
     auroraImages: {},
     milkyWayImages: {},
+    haloImages: {},
     solarEclipseImage: null,
     eclipseShadowLUTImage: null
   };
@@ -31,6 +32,8 @@ StarrySky.AssetManager = function(skyDirector){
   tagLists.push(skyCloudTags);
   const skyMilkyWayTags = starrySkyComponent.el.getElementsByTagName('sky-milky-way');
   tagLists.push(skyMilkyWayTags);
+  const skyHalosTags = starrySkyComponent.el.getElementsByTagName('sky-halos');
+  tagLists.push(skyHalosTags);
   tagLists.forEach(function(tags){
     if(tags.length > 1){
       console.error(`The <a-starry-sky> tag can only contain 1 tag of type <${tags[0].tagName}>. ${tags.length} found.`);
@@ -103,6 +106,67 @@ StarrySky.AssetManager = function(skyDirector){
     return moonMaps;
   };
 
+  //Unpacks the halo atlas -- one WebP holding every halo layer in a grid of tiles -- into a
+  //sampler2DArray, one tile per layer, in the layer order src/python/halo-baker/bake.py
+  //wrote them (and halo-functions.glsl reads them): the random population, then a plate
+  //layer per sun elevation step, then a column layer per step.
+  //
+  //The whole family is one sampler however many layers it has, which is the point: the sky
+  //dome is already carrying stars, the Milky Way, clouds and aurora against a guaranteed
+  //sixteen texture units. The layers keep bilinear filtering and no mips, because a tile
+  //of an atlas would bleed into its neighbour under both and a layer of an array cannot.
+  //
+  //The atlas is staged with NearestFilter so each layer texel takes exactly one atlas
+  //texel, and disposed once it has been blitted. Its bytes are the baker's gamma 2 encoded
+  //radiance, never colour, so LinearSRGBColorSpace stops three decoding them on the way.
+  this.buildHaloTextureArray = function(renderer, atlasTexture, atlas){
+    const builder = StarrySky.TextureArrayBuilder;
+    const numberOfLayers = 1 + 2 * atlas.elevationLayers;
+    const numberOfRows = Math.ceil(numberOfLayers / atlas.columns);
+    const arrayRenderTarget = builder.build({
+      width: atlas.tileWidth,
+      height: atlas.tileHeight,
+      layers: numberOfLayers,
+      wrapS: THREE.ClampToEdgeWrapping,
+      wrapT: THREE.ClampToEdgeWrapping,
+      magFilter: THREE.LinearFilter,
+      minFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.UnsignedByteType,
+      colorSpace: THREE.LinearSRGBColorSpace,
+      generateMipmaps: false
+    });
+
+    //Layer row 0 is psi = 0, the top row of a tile. A loaded image is flipped so that its top
+    //row sits at v = 1, hence the 1 - .. below. The layer's pixel centres land exactly on the
+    //atlas's, so with Nearest this is a byte for byte copy.
+    const blitMaterial = builder.createMaterial([
+      'precision highp float;',
+      'uniform sampler2D atlasTexture;',
+      'uniform vec2 tile;',
+      'uniform vec2 grid;',
+      'void main(){',
+      '  vec2 layerUV = gl_FragCoord.xy / resolution.xy;',
+      '  gl_FragColor = texture(atlasTexture, vec2((tile.x + layerUV.x) / grid.x, 1.0 - (tile.y + layerUV.y) / grid.y));',
+      '}'
+    ].join('\n'), {
+      atlasTexture: {value: atlasTexture},
+      tile: {value: new THREE.Vector2()},
+      grid: {value: new THREE.Vector2(atlas.columns, numberOfRows)}
+    });
+
+    for(let i = 0; i < numberOfLayers; ++i){
+      blitMaterial.uniforms.tile.value.set(i % atlas.columns, Math.floor(i / atlas.columns));
+      builder.renderLayer(renderer, arrayRenderTarget, i, blitMaterial);
+    }
+    blitMaterial.dispose();
+    atlasTexture.dispose();
+
+    const haloMaps = builder.finalize(renderer, arrayRenderTarget);
+    this.images.haloImages.haloMaps = haloMaps;
+    return haloMaps;
+  };
+
   //Asynchronously load all of our images because, we don't care about when these load
   this.loadImageAssets = async function(renderer){
     //Just use our THREE Texture Loader for now
@@ -121,7 +185,10 @@ StarrySky.AssetManager = function(skyDirector){
     //Milky Way should not cost the user a download.
     const milkyWayEnabled = this.data.skyMilkyWay.milkyWayEnabled;
     const numberOfMilkyWayTextures = milkyWayEnabled ? 2 : 0;
-    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfMilkyWayTextures;
+    //One atlas image, whatever the number of halo layers, and only when halos are switched on.
+    const halosEnabled = this.data.skyHalos.halosEnabled;
+    const numberOfHaloTextures = halosEnabled ? 1 : 0;
+    this.totalNumberOfTextures = numberOfMoonTextures + numberOfStarTextures + numberOfBlueNoiseTextures + oneSolarEclipseImage + oneEclipseShadowLUT + numberOfMilkyWayTextures + numberOfHaloTextures;
 
     //All five lunar maps are 512x512, share their filtering and wrapping, and are sampled
     //at the same UV, so they are one family and collapse into a single sampler2DArray.
@@ -177,6 +244,36 @@ StarrySky.AssetManager = function(skyDirector){
         console.error(err);
       });
     })(0);
+
+    //Load the halo atlas and unpack it into a texture array.
+    if(halosEnabled){
+      const haloTexturePromise = new Promise(function(resolve, reject){
+        textureLoader.load(StarrySky.assetPaths.haloAtlas, function(texture){resolve(texture);}, undefined, reject);
+      });
+      haloTexturePromise.then(function(texture){
+        texture.format = THREE.RGBAFormat;
+        texture.wrapS = THREE.ClampToEdgeWrapping;
+        texture.wrapT = THREE.ClampToEdgeWrapping;
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.generateMipmaps = false;
+        texture.colorSpace = THREE.LinearSRGBColorSpace;
+
+        const haloMaps = self.buildHaloTextureArray(renderer, texture, self.data.skyHalos.atlas);
+
+        //If the renderer already exists, go in and update the uniform
+        if(self.skyDirector?.renderers?.atmosphereRenderer?.atmosphereMaterial?.uniforms?.haloMaps !== undefined){
+          self.skyDirector.renderers.atmosphereRenderer.atmosphereMaterial.uniforms.haloMaps.value = haloMaps;
+        }
+
+        self.numberOfTexturesLoaded += 1;
+        if(self.numberOfTexturesLoaded === self.totalNumberOfTextures){
+          self.hasLoadedImages = true;
+        }
+      }, function(err){
+        console.error(`Could not load the halo atlas from ${StarrySky.assetPaths.haloAtlas}. Run src/python/halo-baker/run.sh to bake it, or point <sky-halo-atlas> somewhere that has it.`, err);
+      });
+    }
 
     //Load our Milky Way maps -- emission (unresolved galactic starlight) and
     //absorption (interstellar dust). Both are equirectangular in galactic
@@ -617,6 +714,7 @@ StarrySky.AssetManager = function(skyDirector){
       self.data.skyAurora = self.hasAuroraTag ? self.skyAuroraTag.data : defaultValues.skyAurora;
       self.data.skyCloud = self.hasCloudTag ? self.skyCloudTag.data : defaultValues.skyCloud;
       self.data.skyMilkyWay = self.hasMilkyWayTag ? self.skyMilkyWayTag.data : defaultValues.skyMilkyWay;
+      self.data.skyHalos = self.hasHalosTag ? self.skyHalosTag.data : defaultValues.skyHalos;
       self.data.skyAssetsData = self.hasSkyAssetsTag ? StarrySky.assetPaths : StarrySky.DefaultData.skyAssets;
       self.loadImageAssets(self.skyDirector.renderer);
       skyDirector.assetManagerInitialized = true;
@@ -695,6 +793,12 @@ StarrySky.AssetManager = function(skyDirector){
     this.skyMilkyWayTag = skyMilkyWayTags[0];
     this.hasMilkyWayTag = true;
     activeTags.push(this.skyMilkyWayTag);
+  }
+  if(skyHalosTags.length === 1){
+    this.skyDataSetsLength += 1;
+    this.skyHalosTag = skyHalosTags[0];
+    this.hasHalosTag = true;
+    activeTags.push(this.skyHalosTag);
   }
   for(let i = 0; i < activeTags.length; ++i){
     checkIfAllHTMLDataLoaded(activeTags[i]);

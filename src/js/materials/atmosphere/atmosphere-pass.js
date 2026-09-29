@@ -1,6 +1,6 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false,
-  auroraEnabled = false, cloudsEnabled = false, milkyWayEnabled = false){
+  auroraEnabled = false, cloudsEnabled = false, milkyWayEnabled = false, halosEnabled = false){
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -86,6 +86,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.milkyWayAbsorptionMap = {value: null};
       uniforms.milkyWayIntensity = {value: 0.7};
     }
+    //Halos belong to the sky dome alone: the sun and moon quads sit well inside the
+    //22 degree ring and the metering pass is measuring the sky, not decorating it.
+    if(halosEnabled && !isSunShader && !isMoonShader && !isMeteringShader){
+      uniforms.haloMaps = {value: null};
+      uniforms.sunHaloGains = {value: new THREE.Vector3()};
+      uniforms.moonHaloGains = {value: new THREE.Vector3()};
+    }
 
     return uniforms;
   },
@@ -140,7 +147,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth,
   packingHeight, atmosphereFunctions, sunCode = false, moonCode = false,
   meteringCode = false, auroraEnabled = false, cloudsEnabled = false,
-  milkyWayEnabled = false){
+  milkyWayEnabled = false, haloAtlas = false){
+    //haloAtlas is the atlas layout from SkyHalos.js when halos are on for this pass, else
+    //false. Only the sky dome ever gets it.
+    const halosEnabled = haloAtlas !== false && sunCode === false && moonCode === false && meteringCode === false;
     let originalGLSL = [
     'precision highp sampler3D;',
     '//Both of our texture arrays carry data rather than color. The star LUT holds decoded',
@@ -189,6 +199,15 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       'const int MED_STAR_LAYER = 1;',
       'const int BRIGHT_STAR_LAYER = 2;',
       'uniform sampler2D starColorMap;',
+
+      '#if($halosEnabled)',
+        '//One sampler2DArray for the whole halo family, so 25 layers cost a single texture unit.',
+        'uniform sampler2DArray haloMaps;',
+        '//Strength of the (random, plate, column) crystal populations, with the overall halo',
+        '//intensity, the ice cloud amount and the brightness scale already folded in.',
+        'uniform vec3 sunHaloGains;',
+        'uniform vec3 moonHaloGains;',
+      '#endif',
 
       '#if($milkyWayEnabled)',
         'uniform sampler2D milkyWayEmissionMap;',
@@ -544,6 +563,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
 
       '#if($milkyWayEnabled)',
         '$milkyWayFunctions',
+      '#endif',
+
+      '#if($halosEnabled)',
+        '$haloFunctions',
       '#endif',
     '#endif',
 
@@ -1002,6 +1025,19 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
           'combinedPass = combinedPass + auroraLighting;',
         '#endif',
 
+        '#if($halosEnabled)',
+          '//Halos are sunlight (or moonlight) turned by ice crystals high in the sky, so they',
+          '//take the same intensity, horizon fade and transmittance the scattered light does --',
+          '//which is what turns a sundog red as the sun sinks. They go in before the clouds so',
+          '//that thick cloud in front of them hides them, as it does in the real sky.',
+          'vec3 sunHalo = haloLookup(sphericalPosition, sunPosition, sunHaloGains) * scatteringSunIntensity * sunHorizonFade;',
+          '//Moon halos are close to colourless: the moon is dim enough that the eye is',
+          '//working with rods, which cannot see the colour of a halo.',
+          'vec3 moonHalo = haloLookup(sphericalPosition, moonPosition, moonHaloGains) * scatteringMoonIntensity * moonLightColor * moonHorizonFade;',
+          'moonHalo = mix(vec3(dot(moonHalo, vec3(0.2126, 0.7152, 0.0722))), moonHalo, 0.25);',
+          'combinedPass = combinedPass + (sunHalo + moonHalo) * transmittanceFade * smoothstep(-0.05, 0.05, sphericalPosition.y);',
+        '#endif',
+
         '//Combine the cloud lights',
         '#if($cloudsEnabled)',
           'combinedPass = combinedPass * (1.0 - cloudLighting.a) + cloudLighting.rgb;',
@@ -1101,6 +1137,20 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       else{
         updatedGLSL = updatedGLSL.replace(/\$milkyWayEnabled/g, '0');
         updatedGLSL = updatedGLSL.replace(/\$milkyWayFunctions/g, '');
+      }
+
+      //Same story for the halos: the chunk and its samplers only exist when they are on.
+      if(halosEnabled){
+        const haloChunk = StarrySky.Materials.Halos.haloFunctions.partialFragmentShader
+          .replace(/\$haloThetaMax/g, (haloAtlas.thetaMaxDegrees * Math.PI / 180.0).toFixed(16))
+          .replace(/\$haloElevationStep/g, (haloAtlas.elevationStepDegrees * Math.PI / 180.0).toFixed(16))
+          .replace(/\$haloElevationLayers/g, haloAtlas.elevationLayers.toFixed(0));
+        updatedGLSL = updatedGLSL.replace(/\$halosEnabled/g, '1');
+        updatedGLSL = updatedGLSL.replace(/\$haloFunctions/g, haloChunk);
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$halosEnabled/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$haloFunctions/g, '');
       }
 
       updatedLines.push(updatedGLSL);

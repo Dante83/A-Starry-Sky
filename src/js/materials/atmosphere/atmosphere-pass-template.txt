@@ -1,6 +1,6 @@
 StarrySky.Materials.Atmosphere.atmosphereShader = {
   uniforms: function(isSunShader = false, isMoonShader = false, isMeteringShader = false,
-  auroraEnabled = false, cloudsEnabled = false, milkyWayEnabled = false){
+  auroraEnabled = false, cloudsEnabled = false, milkyWayEnabled = false, halosEnabled = false){
     let uniforms = {
       uTime: {value: 0.0},
       localSiderealTime: {value: 0.0},
@@ -86,6 +86,13 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       uniforms.milkyWayAbsorptionMap = {value: null};
       uniforms.milkyWayIntensity = {value: 0.7};
     }
+    //Halos belong to the sky dome alone: the sun and moon quads sit well inside the
+    //22 degree ring and the metering pass is measuring the sky, not decorating it.
+    if(halosEnabled && !isSunShader && !isMoonShader && !isMeteringShader){
+      uniforms.haloMaps = {value: null};
+      uniforms.sunHaloGains = {value: new THREE.Vector3()};
+      uniforms.moonHaloGains = {value: new THREE.Vector3()};
+    }
 
     return uniforms;
   },
@@ -95,7 +102,10 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
   fragmentShader: function(mieG, textureWidth, textureHeight, packingWidth,
   packingHeight, atmosphereFunctions, sunCode = false, moonCode = false,
   meteringCode = false, auroraEnabled = false, cloudsEnabled = false,
-  milkyWayEnabled = false){
+  milkyWayEnabled = false, haloAtlas = false){
+    //haloAtlas is the atlas layout from SkyHalos.js when halos are on for this pass, else
+    //false. Only the sky dome ever gets it.
+    const halosEnabled = haloAtlas !== false && sunCode === false && moonCode === false && meteringCode === false;
     let originalGLSL = [
       {fragment_glsl}
     ];
@@ -171,6 +181,20 @@ StarrySky.Materials.Atmosphere.atmosphereShader = {
       else{
         updatedGLSL = updatedGLSL.replace(/\$milkyWayEnabled/g, '0');
         updatedGLSL = updatedGLSL.replace(/\$milkyWayFunctions/g, '');
+      }
+
+      //Same story for the halos: the chunk and its samplers only exist when they are on.
+      if(halosEnabled){
+        const haloChunk = StarrySky.Materials.Halos.haloFunctions.partialFragmentShader
+          .replace(/\$haloThetaMax/g, (haloAtlas.thetaMaxDegrees * Math.PI / 180.0).toFixed(16))
+          .replace(/\$haloElevationStep/g, (haloAtlas.elevationStepDegrees * Math.PI / 180.0).toFixed(16))
+          .replace(/\$haloElevationLayers/g, haloAtlas.elevationLayers.toFixed(0));
+        updatedGLSL = updatedGLSL.replace(/\$halosEnabled/g, '1');
+        updatedGLSL = updatedGLSL.replace(/\$haloFunctions/g, haloChunk);
+      }
+      else{
+        updatedGLSL = updatedGLSL.replace(/\$halosEnabled/g, '0');
+        updatedGLSL = updatedGLSL.replace(/\$haloFunctions/g, '');
       }
 
       updatedLines.push(updatedGLSL);

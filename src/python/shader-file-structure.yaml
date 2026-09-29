@@ -59,6 +59,14 @@ groups:
         template: 'milky-way-template.txt'
         material: 'milky-way.js'
   -
+    base_glsl_dir: '../glsl/halos'
+    base_js_dir: '../js/materials/halos'
+    shaders:
+      -
+        fragment: 'halo-functions.glsl'
+        template: 'halo-functions-template.txt'
+        material: 'halo-functions.js'
+  -
     base_glsl_dir: '../glsl/autoexposure'
     base_js_dir: '../js/materials/autoexposure'
     shaders:

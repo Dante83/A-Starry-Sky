@@ -33,6 +33,7 @@ def main():
     'materials/moon/base-moon-partial.js',\
     'materials/stars/star-data-map.js',\
     'materials/stars/milky-way.js',\
+    'materials/halos/halo-functions.js',\
     'materials/autoexposure/metering-survey.js',\
     'materials/clouds/cloud-noise.js',\
     'materials/clouds/cloud-density.js',\
@@ -53,6 +54,7 @@ def main():
     'html_tags/SkyAurora.js',\
     'html_tags/SkyClouds.js',\
     'html_tags/SkyMilkyWay.js',\
+    'html_tags/SkyHalos.js',\
     'lut_libraries/AtmosphericLUTLibrary.js',\
     'lut_libraries/StellarLUTLibrary.js',\
     'lut_libraries/CloudLUTLibrary.js',\

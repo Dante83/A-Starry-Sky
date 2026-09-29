@@ -13,7 +13,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       false, //metering pass
       assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
       assetManager.data.skyCloud.cloudsEnabled,  //clouds enabled
-      assetManager.data.skyMilkyWay.milkyWayEnabled  //milky way enabled
+      assetManager.data.skyMilkyWay.milkyWayEnabled,  //milky way enabled
+      assetManager.data.skyHalos.halosEnabled  //halos enabled
     ))),
     side: THREE.BackSide,
     blending: THREE.NormalBlending,
@@ -31,7 +32,8 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
       false, //metering pass
       assetManager.data.skyAurora.auroraEnabled,  //aurora enabled
       assetManager.data.skyCloud.cloudsEnabled,  //clouds enabled
-      assetManager.data.skyMilkyWay.milkyWayEnabled  //milky way enabled
+      assetManager.data.skyMilkyWay.milkyWayEnabled,  //milky way enabled
+      assetManager.data.skyHalos.halosEnabled ? assetManager.data.skyHalos.atlas : false  //halo atlas layout
     )
   });
   this.atmosphereMaterial.uniforms.rayleighInscatteringSum.value = skyDirector.atmosphereLUTLibrary.rayleighScatteringSum;
@@ -86,6 +88,15 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     uniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     uniforms.blueNoiseTexture.value = assetManager.images.blueNoiseImages[skyDirector.randomBlueNoiseTexture];
 
+    //The halo tags can be changed while the sky runs, so the gains are rebuilt every frame.
+    //The ice cloud amount scales every halo: no ice in the sky, nothing to turn the light.
+    const haloData = assetManager.data.skyHalos;
+    if(haloData.halosEnabled){
+      const haloScale = haloData.radianceScale * haloData.intensity * haloData.iceCloud;
+      uniforms.sunHaloGains.value.set(haloData.randomCrystals, haloData.plateCrystals, haloData.columnCrystals).multiplyScalar(haloScale);
+      uniforms.moonHaloGains.value.copy(uniforms.sunHaloGains.value).multiplyScalar(haloData.moonIntensity);
+    }
+
     //CloudRenderer and AuroraRenderer tick first and ping-pong their targets, so
     //take this frame's maps.
     if(assetManager.data.skyCloud.cloudsEnabled){
@@ -121,6 +132,9 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     if(assetManager.hasLoadedImages){
       uniforms.starHashCubemap.value = assetManager.images.starImages.starHashCubemap;
       uniforms.starData.value = skyDirector.stellarLUTLibrary.starDataArray;
+      if(assetManager.data.skyHalos.halosEnabled){
+        uniforms.haloMaps.value = assetManager.images.haloImages.haloMaps;
+      }
       uniforms.latitude.value = assetManager.data.skyLocationData.latitude * (Math.PI / 180.0);
       uniforms.cameraHeight.value = assetManager.data.skyAtmosphericParameters.cameraHeight;
 

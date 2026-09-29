@@ -563,6 +563,39 @@ The colors can still be changed, realistic or not. For a cold blue aurora with n
 </a-scene>
 ```
 
+## Enabling Halos, Sundogs and Arcs
+
+When thin, high ice cloud (cirrostratus) veils the sky, the sun and the moon grow rings, bright spots and arcs. This is sunlight turned by hexagonal ice crystals, and A-Starry-Sky draws it from the real optics: `src/python/halo-baker/` ray traces light through thousands of crystals, with the dispersion of ice, and packs the result into `assets/halos/halo-atlas.webp`.
+
+*Halos are cheap. They cost one extra texture unit however many arcs they draw, and one lookup per pixel of the sky dome.*
+
+**Tag** | **Description** | **Default Value**
+:--- | :--- | :---
+`<sky-halos>` | Parent tag. Required for enabling halos. Contains all child tags related to halos. | N/A
+`<sky-halo-ice-cloud>` | How much thin, high ice cloud there is, from 0 to 1. Halos are sunlight turned by ice, so this scales every one of them, and 0 is a sky with none. This value is read every frame, so it can be changed while the sky runs: fade it up as a front approaches, which is the classic halo forecast. | 0.6
+`<sky-halo-intensity>` | Scales every halo, sun and moon alike. | 1.0
+`<sky-halo-random-crystals>` | How much of the ice tumbles in random directions. It makes the **22° halo**, sharp and reddish on its inside edge, and the fainter **46° halo**. | 1.0
+`<sky-halo-plate-crystals>` | How much of the ice is flat plates falling face down. They make **sundogs** either side of the sun, the white **parhelic circle** that runs across the sky at the sun's height, and the **circumzenithal arc**, a rainbow smile hanging above a low sun. | 1.0
+`<sky-halo-column-crystals>` | How much of the ice is columns lying on their sides. They make the **upper and lower tangent arcs**, which grow into the **circumscribed halo** when the sun is higher than 30°. | 0.6
+`<sky-halo-moon-intensity>` | Scales the moon's halos on top of `<sky-halo-intensity>`. They are close to colourless, as they are to the human eye, and take their light from the moon, so they follow its phase and vanish in a lunar eclipse. | 1.0
+
+Sundogs and arcs depend on how high the sun is: a sundog sits 22° from a sun on the horizon and drifts outward as the sun climbs, dimming until it is gone above 60°. That is baked in, so you do not have to do anything to get it.
+
+Clouds in front of a halo hide it, just as they do in the real sky, so halos work well under `<sky-clouds>` with a low coverage and stratus or cumulus type.
+
+```html
+<a-scene>
+  <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
+    <sky-halos>
+      <sky-halo-ice-cloud>0.8</sky-halo-ice-cloud>
+      <sky-halo-column-crystals>0.0</sky-halo-column-crystals> <!-- just rings and sundogs -->
+    </sky-halos>
+  </a-starry-sky>
+</a-scene>
+```
+
+To move the atlas, use `<sky-halo-atlas>` in an asset directory, or the *halo-path* attribute (see below). To rebake it, for more samples or for different crystals, run `src/python/halo-baker/run.sh`. There is a README there, and `./run.sh --selftest` checks the halos land where optics says they should.
+
 ## Enabling Clouds
 
 *WARNING: Enabling clouds adds a real cost to your sky: they are volumetric and ray marched. They are marched once per frame, half the texels at a time in a checkerboard, into a map of the sky at half resolution and sharpened over time with temporal anti-aliasing, so the sky dome, the sun, the moon and both eyes in VR all share one march.*
@@ -711,7 +744,7 @@ Or, for a darker, more washed-out band on a light-polluted-looking sky:
 
 **Tag** | **Description**
 :--- | :---
-`<sky-assets-dir>` | Parent tag. Contains all child tags related to asset locations. Can contain *dir*, *texture-path*, *moon-path*, *star-path*, *blue-noise-path*, *solar-eclipse-path*, *lunar-eclipse-path*, *aurora-map-path*, and *milky-way-path* attributes to guide the system to entire groups of data at a time.
+`<sky-assets-dir>` | Parent tag. Contains all child tags related to asset locations. Can contain *dir*, *texture-path*, *moon-path*, *star-path*, *blue-noise-path*, *solar-eclipse-path*, *lunar-eclipse-path*, *aurora-map-path*, *milky-way-path*, and *halo-path* attributes to guide the system to entire groups of data at a time.
 `<sky-aurora-maps>` | Defines the location of the aurora caustic textures used to create the basic aurora borealis curtains.
 `<sky-moon-diffuse-map>` | Defines a moon diffuse map texture location. Having this in a particular dir structure informs the system that the diffuse map of the moon lives at this location.
 `<sky-moon-normal-map>` | Defines a moon normal map texture location. Having this in a particular dir structure informs the system that the normal map of the moon lives at this location.

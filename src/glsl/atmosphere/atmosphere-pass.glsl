@@ -46,6 +46,15 @@ uniform sampler2D blueNoiseTexture;
   const int BRIGHT_STAR_LAYER = 2;
   uniform sampler2D starColorMap;
 
+  #if($halosEnabled)
+    //One sampler2DArray for the whole halo family, so 25 layers cost a single texture unit.
+    uniform sampler2DArray haloMaps;
+    //Strength of the (random, plate, column) crystal populations, with the overall halo
+    //intensity, the ice cloud amount and the brightness scale already folded in.
+    uniform vec3 sunHaloGains;
+    uniform vec3 moonHaloGains;
+  #endif
+
   #if($milkyWayEnabled)
     uniform sampler2D milkyWayEmissionMap;
     uniform sampler2D milkyWayAbsorptionMap;
@@ -400,6 +409,10 @@ float noise(float x){
 
   #if($milkyWayEnabled)
     $milkyWayFunctions
+  #endif
+
+  #if($halosEnabled)
+    $haloFunctions
   #endif
 #endif
 
@@ -856,6 +869,19 @@ void main(){
 
     #if($auroraEnabled)
       combinedPass = combinedPass + auroraLighting;
+    #endif
+
+    #if($halosEnabled)
+      //Halos are sunlight (or moonlight) turned by ice crystals high in the sky, so they
+      //take the same intensity, horizon fade and transmittance the scattered light does --
+      //which is what turns a sundog red as the sun sinks. They go in before the clouds so
+      //that thick cloud in front of them hides them, as it does in the real sky.
+      vec3 sunHalo = haloLookup(sphericalPosition, sunPosition, sunHaloGains) * scatteringSunIntensity * sunHorizonFade;
+      //Moon halos are close to colourless: the moon is dim enough that the eye is
+      //working with rods, which cannot see the colour of a halo.
+      vec3 moonHalo = haloLookup(sphericalPosition, moonPosition, moonHaloGains) * scatteringMoonIntensity * moonLightColor * moonHorizonFade;
+      moonHalo = mix(vec3(dot(moonHalo, vec3(0.2126, 0.7152, 0.0722))), moonHalo, 0.25);
+      combinedPass = combinedPass + (sunHalo + moonHalo) * transmittanceFade * smoothstep(-0.05, 0.05, sphericalPosition.y);
     #endif
 
     //Combine the cloud lights
