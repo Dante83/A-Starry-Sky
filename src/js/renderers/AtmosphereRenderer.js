@@ -40,6 +40,13 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
   this.atmosphereMaterial.uniforms.mieInscatteringSum.value = skyDirector.atmosphereLUTLibrary.mieScatteringSum;
   this.atmosphereMaterial.uniforms.transmittance.value = skyDirector.atmosphereLUTLibrary.transmittance;
 
+  //The uniforms went through a JSON clone above, which leaves a plain {x, y, z} where a
+  //Vector3 was, so give the halo gains back real vectors to write into every frame.
+  if(assetManager.data.skyHalos.halosEnabled){
+    this.atmosphereMaterial.uniforms.sunHaloGains.value = new THREE.Vector3();
+    this.atmosphereMaterial.uniforms.moonHaloGains.value = new THREE.Vector3();
+  }
+
   if(assetManager.data.skyMilkyWay.milkyWayEnabled){
     this.atmosphereMaterial.uniforms.milkyWayIntensity.value = assetManager.data.skyMilkyWay.milkyWayIntensity;
   }

@@ -25,7 +25,7 @@ StarrySky.DefaultData.skyHalos = {
   moonIntensity: 1.0,
   //Baked radiance to sky radiance: how bright the peak of a halo is against the sun's own
   //scattered light. Not a tag; it is the calibration of the bake against this sky.
-  radianceScale: 0.3,
+  radianceScale: 0.12,
   //The layout of the baked atlas. This must match src/python/halo-baker/bake.py, which
   //checks it (`./run.sh --check-js`), and the layer order is mirrored by the HALO_*_LAYER
   //constants in halo-functions.glsl: layer 0 is the random population, then one plate
