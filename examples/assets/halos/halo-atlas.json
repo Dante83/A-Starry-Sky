@@ -1,0 +1,117 @@
+{
+  "tileWidth": 320,
+  "tileHeight": 128,
+  "columns": 5,
+  "rows": 5,
+  "thetaMaxDegrees": 100.0,
+  "elevationStepDegrees": 6.0,
+  "elevationLayers": 12,
+  "encoding": "value = sqrt(intensity / peak); rgb linear, alpha unused",
+  "peakRadiance": {
+    "random": 6.907237102116639,
+    "plate": 52.64834071830113,
+    "column": 64.24456886244906
+  },
+  "layers": [
+    {
+      "population": "random",
+      "elevation": 0.0
+    },
+    {
+      "population": "plate",
+      "elevation": 0.0
+    },
+    {
+      "population": "plate",
+      "elevation": 6.0
+    },
+    {
+      "population": "plate",
+      "elevation": 12.0
+    },
+    {
+      "population": "plate",
+      "elevation": 18.0
+    },
+    {
+      "population": "plate",
+      "elevation": 24.0
+    },
+    {
+      "population": "plate",
+      "elevation": 30.0
+    },
+    {
+      "population": "plate",
+      "elevation": 36.0
+    },
+    {
+      "population": "plate",
+      "elevation": 42.0
+    },
+    {
+      "population": "plate",
+      "elevation": 48.0
+    },
+    {
+      "population": "plate",
+      "elevation": 54.0
+    },
+    {
+      "population": "plate",
+      "elevation": 60.0
+    },
+    {
+      "population": "plate",
+      "elevation": 66.0
+    },
+    {
+      "population": "column",
+      "elevation": 0.0
+    },
+    {
+      "population": "column",
+      "elevation": 6.0
+    },
+    {
+      "population": "column",
+      "elevation": 12.0
+    },
+    {
+      "population": "column",
+      "elevation": 18.0
+    },
+    {
+      "population": "column",
+      "elevation": 24.0
+    },
+    {
+      "population": "column",
+      "elevation": 30.0
+    },
+    {
+      "population": "column",
+      "elevation": 36.0
+    },
+    {
+      "population": "column",
+      "elevation": 42.0
+    },
+    {
+      "population": "column",
+      "elevation": 48.0
+    },
+    {
+      "population": "column",
+      "elevation": 54.0
+    },
+    {
+      "population": "column",
+      "elevation": 60.0
+    },
+    {
+      "population": "column",
+      "elevation": 66.0
+    }
+  ]
+}
