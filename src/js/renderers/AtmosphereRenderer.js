@@ -100,8 +100,9 @@ StarrySky.Renderers.AtmosphereRenderer = function(skyDirector){
     const haloData = assetManager.data.skyHalos;
     if(haloData.halosEnabled){
       const haloScale = haloData.radianceScale * haloData.intensity * haloData.iceCloud;
-      uniforms.sunHaloGains.value.set(haloData.randomCrystals, haloData.plateCrystals, haloData.columnCrystals).multiplyScalar(haloScale * haloData.sunIntensity);
-      uniforms.moonHaloGains.value.set(haloData.moonRandomCrystals, haloData.moonPlateCrystals, haloData.moonColumnCrystals).multiplyScalar(haloScale * haloData.moonIntensity);
+      const crystals = StarrySky.HaloCrystals.resolve(haloData);
+      uniforms.sunHaloGains.value.set(crystals.sun[0], crystals.sun[1], crystals.sun[2]).multiplyScalar(haloScale * haloData.sunIntensity);
+      uniforms.moonHaloGains.value.set(crystals.moon[0], crystals.moon[1], crystals.moon[2]).multiplyScalar(haloScale * haloData.moonIntensity);
 
       //The sun and moon quads re-render the sky, so they draw the halos too, or they would
       //paint a halo-less patch over the one behind them. They share this frame's values.
