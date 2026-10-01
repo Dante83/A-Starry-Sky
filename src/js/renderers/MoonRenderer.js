@@ -201,6 +201,7 @@ StarrySky.Renderers.MoonRenderer = function(skyDirector){
 
     //Update our bloom threshold so we don't bloom the moon during the day
     if(moonBloomDataRef.bloomEnabled){
+      this.bloomPass.skipRender = skyState.moon.horizonFade <= 0.0;
       this.bloomPass.threshold = 1.5 - 0.65 * Math.max(skyDirector.exposureVariables.starsExposure, 0.0) / 3.4;
     }
 
