@@ -190,7 +190,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //horizon, full threshold at zenith.
     if(sunBloomDataRef.bloomEnabled){
       this.bloomPass.skipRender = skyState.sun.horizonFade <= 0.0;
-      const sunWarmth = 1.0 - THREE.MathUtils.smoothstep(skyState.sun.position.y, 0.05, 0.45);
+      const sunWarmth = 1.0 - THREE.MathUtils.smoothstep(skyState.sun.position.y, 0.05, 1.25);
       for(let i = 0; i < this.warmBloomTints.length; ++i){
         this.bloomPass.bloomTintColors[i].set(1.0, 1.0, 1.0).lerp(this.warmBloomTints[i], sunWarmth);
       }
