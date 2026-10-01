@@ -6,6 +6,9 @@
 //We also fade out our quad towards the edge to reduce the visibility of sharp
 //edges.
 vec3 sunTexel = vec3(0.0);
+//The corona is kept OUT of sunTexel: it is carried in the alpha channel, skips the bloom
+//stage and is added back after it in the output shader.
+float coronaTexel = 0.0;
 if(vLocalPosition.y >= 0.0){
   float pixelDistanceFromSun = distance(offsetUV, vec2(0.5));
 
@@ -39,6 +42,9 @@ if(vLocalPosition.y >= 0.0){
   float coronaVisibility = 1.0 - smoothstep(0.1 * moonRadius, 0.8 * moonRadius, sunMoonSeparation);
   coronaVisibility *= coronaVisibility;
 
-  sunTexel = (3.0 * sundisk * sunDiskIntensity * limbDarkening + 2.0 * coronaVisibility * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;
-  sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);
+  sunTexel = 3.0 * sundisk * sunDiskIntensity * limbDarkening * transmittanceFade;
+  coronaTexel = 2.0 * coronaVisibility * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r * dot(transmittanceFade, intensityVector);
+  float moonOcclusion = smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);
+  sunTexel *= moonOcclusion;
+  coronaTexel *= moonOcclusion;
 }

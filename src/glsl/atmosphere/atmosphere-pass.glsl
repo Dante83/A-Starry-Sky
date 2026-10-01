@@ -851,6 +851,11 @@ void main(){
       combinedPass = combinedPass + sunTexel;
     #endif
 
+    //The corona rides in alpha past the bloom stage; clouds still occlude it
+    float coronaOut = coronaTexel;
+    #if($cloudsEnabled)
+      coronaOut *= (1.0 - cloudLighting.a);
+    #endif
     //Leave in linear HDR for bloom - tonemapping happens in the output shader
   #elif($isMoonPass)
     vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting + haloLighting;
@@ -921,6 +926,10 @@ void main(){
     gl_FragColor = vec4(combinedPass, intensityPass);
   #else
     //Triangular Blue Noise Dithering Pass
+    #if($isSunPass)
+      gl_FragColor = vec4(combinedPass, coronaOut);
+    #else
     gl_FragColor = vec4(combinedPass, 1.0);
+    #endif
   #endif
 }

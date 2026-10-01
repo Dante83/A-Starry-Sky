@@ -125,7 +125,14 @@
 				uniforms: this.copyUniforms,
 				vertexShader: copyShader.vertexShader,
 				fragmentShader: copyShader.fragmentShader,
-				blending: THREE.AdditiveBlending,
+				//Same as additive blending for colour, but leave the destination alpha alone:
+				//the sun pass carries the corona in alpha so it can skip the bloom.
+				blending: THREE.CustomBlending,
+				blendEquation: THREE.AddEquation,
+				blendSrc: THREE.SrcAlphaFactor,
+				blendDst: THREE.OneFactor,
+				blendSrcAlpha: THREE.ZeroFactor,
+				blendDstAlpha: THREE.OneFactor,
 				depthTest: false,
 				depthWrite: false,
 				transparent: true
@@ -272,7 +279,7 @@
 			return new THREE.ShaderMaterial( {
 				defines: {
 					'KERNEL_RADIUS': kernelRadius,
-					'SIGMA': Math.max(1.0, kernelRadius / 3.0)
+					'SIGMA': Math.max(1.0, kernelRadius / 2.0)
 				},
 				uniforms: {
 					'colorTexture': {
@@ -281,12 +288,10 @@
 					'texSize': {
 						value: new THREE.Vector2( 0.5, 0.5 )
 					},
-					//Normalized Gaussian weights (kernel cut at 3 sigma; at 2 sigma the hard
-					//cut-off shows as boxy axis-aligned streaks around very bright sources),
-					//computed once here instead of calling
+					//Normalized Gaussian weights, computed once here instead of calling
 					//exp() per tap per pixel in the shader.
 					'kernelWeights': {
-						value: BloomKernelWeights( kernelRadius, Math.max( 1.0, kernelRadius / 3.0 ) )
+						value: BloomKernelWeights( kernelRadius, Math.max( 1.0, kernelRadius / 2.0 ) )
 					},
 					'direction': {
 						value: new THREE.Vector2( 0.5, 0.5 )
