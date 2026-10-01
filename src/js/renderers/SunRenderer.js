@@ -102,6 +102,15 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     this.bloomPass.threshold = sunBloomDataRef.threshold;
     this.bloomPass.strength = sunBloomDataRef.strength;
     this.bloomPass.radius = sunBloomDataRef.radius;
+    //Chromatic bloom: a white core with progressively warmer (orange) outer halo,
+    //since each wider mip is multiplied by its own tint.
+    this.bloomPass.bloomTintColors = [
+      new THREE.Vector3(1.0, 1.0, 1.0),
+      new THREE.Vector3(1.0, 0.96, 0.88),
+      new THREE.Vector3(1.0, 0.88, 0.70),
+      new THREE.Vector3(1.0, 0.78, 0.52),
+      new THREE.Vector3(1.0, 0.68, 0.38)
+    ];
     composer.addPass(this.bloomPass);
   }
 
