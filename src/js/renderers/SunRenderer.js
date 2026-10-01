@@ -107,13 +107,17 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //saturates fast, going white core -> yellow -> orange -> deep orange. Each
     //wider mip is multiplied by its own tint.
     this.bloomPass.bloomFactors = [1.0, 0.55, 0.3, 0.16, 0.08];
-    this.bloomPass.bloomTintColors = [
+    //These are the sunset (fully warm) tints; the live tints are blended from white
+    //towards them each frame by how low the sun is, so the halo hugging a bright
+    //midday disc doesn't read as an orange ring.
+    this.warmBloomTints = [
       new THREE.Vector3(1.0, 1.0, 1.0),
       new THREE.Vector3(1.0, 0.92, 0.75),
       new THREE.Vector3(1.0, 0.76, 0.48),
       new THREE.Vector3(1.0, 0.58, 0.28),
       new THREE.Vector3(1.0, 0.45, 0.15)
     ];
+    this.bloomPass.bloomTintColors = this.warmBloomTints.map(function(tint){return tint.clone();});
     composer.addPass(this.bloomPass);
   }
 
@@ -179,6 +183,10 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //horizon, full threshold at zenith.
     if(sunBloomDataRef.bloomEnabled){
       this.bloomPass.skipRender = skyState.sun.horizonFade <= 0.0;
+      const sunWarmth = 1.0 - THREE.MathUtils.smoothstep(skyState.sun.position.y, 0.05, 0.45);
+      for(let i = 0; i < this.warmBloomTints.length; ++i){
+        this.bloomPass.bloomTintColors[i].set(1.0, 1.0, 1.0).lerp(this.warmBloomTints[i], sunWarmth);
+      }
       this.bloomPass.threshold = sunBloomDataRef.threshold * (0.5 + 0.5 * skyState.sun.horizonFade);
     }
 

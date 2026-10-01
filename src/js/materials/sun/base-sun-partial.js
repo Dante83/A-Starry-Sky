@@ -31,7 +31,8 @@ StarrySky.Materials.Sun.baseSunPartial = {
       '//center while the limb stays orange, which shows up as a ring. Fade the',
       '//colour difference in with atmospheric reddening (blue/red transmittance),',
       '//keeping only the achromatic (green) darkening at midday.',
-      'float sunsetAmount = 1.0 - smoothstep(0.6, 0.95, transmittanceFade.b / max(transmittanceFade.r, 0.0001));',
+      'float sunsetAmount = 1.0 - smoothstep(0.35, 0.85, transmittanceFade.b / max(transmittanceFade.r, 0.0001));',
+      'sunsetAmount *= sunsetAmount; //keep the chromatic limb off until the sun is properly reddened',
       'limbDarkening = mix(vec3(limbDarkening.g), limbDarkening, sunsetAmount);',
 
       '//Apply transmittance to our sun disk direct lighting',
