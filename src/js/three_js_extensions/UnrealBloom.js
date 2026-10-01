@@ -86,8 +86,8 @@
 			this.compositeMaterial.uniforms[ 'bloomStrength' ].value = strength;
 			this.compositeMaterial.uniforms[ 'bloomRadius' ].value = 0.1;
 			this.compositeMaterial.needsUpdate = true;
-			const bloomFactors = [ 1.0, 0.8, 0.6, 0.4, 0.2 ];
-			this.compositeMaterial.uniforms[ 'bloomFactors' ].value = bloomFactors;
+			this.bloomFactors = [ 1.0, 0.8, 0.6, 0.4, 0.2 ];
+			this.compositeMaterial.uniforms[ 'bloomFactors' ].value = this.bloomFactors;
 			this.bloomTintColors = [ new THREE.Vector3( 1, 1, 1 ), new THREE.Vector3( 1.0, 0.98, 0.94 ), new THREE.Vector3( 1.0, 0.95, 0.88 ), new THREE.Vector3( 1.0, 0.92, 0.82 ), new THREE.Vector3( 1.0, 0.88, 0.75 ) ];
 			this.compositeMaterial.uniforms[ 'bloomTintColors' ].value = this.bloomTintColors; // copy material
 
@@ -215,6 +215,7 @@
 			this.compositeMaterial.uniforms[ 'bloomStrength' ].value = this.strength;
 			this.compositeMaterial.uniforms[ 'bloomRadius' ].value = this.radius;
 			this.compositeMaterial.uniforms[ 'bloomTintColors' ].value = this.bloomTintColors;
+			this.compositeMaterial.uniforms[ 'bloomFactors' ].value = this.bloomFactors;
 			renderer.setRenderTarget( this.renderTargetsHorizontal[ 0 ] );
 			renderer.clear();
 			this.fsQuad.render( renderer ); // Blend it additively over the input texture

@@ -102,14 +102,17 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     this.bloomPass.threshold = sunBloomDataRef.threshold;
     this.bloomPass.strength = sunBloomDataRef.strength;
     this.bloomPass.radius = sunBloomDataRef.radius;
-    //Chromatic bloom: a white core with progressively warmer (orange) outer halo,
-    //since each wider mip is multiplied by its own tint.
+    //Hot-edged bloom: mip weights fall off roughly geometrically (a tight, bright
+    //glow with a quickly fading halo rather than a flat haze), and the tint
+    //saturates fast, going white core -> yellow -> orange -> deep orange. Each
+    //wider mip is multiplied by its own tint.
+    this.bloomPass.bloomFactors = [1.0, 0.55, 0.3, 0.16, 0.08];
     this.bloomPass.bloomTintColors = [
       new THREE.Vector3(1.0, 1.0, 1.0),
-      new THREE.Vector3(1.0, 0.96, 0.88),
-      new THREE.Vector3(1.0, 0.88, 0.70),
-      new THREE.Vector3(1.0, 0.78, 0.52),
-      new THREE.Vector3(1.0, 0.68, 0.38)
+      new THREE.Vector3(1.0, 0.92, 0.75),
+      new THREE.Vector3(1.0, 0.76, 0.48),
+      new THREE.Vector3(1.0, 0.58, 0.28),
+      new THREE.Vector3(1.0, 0.45, 0.15)
     ];
     composer.addPass(this.bloomPass);
   }
