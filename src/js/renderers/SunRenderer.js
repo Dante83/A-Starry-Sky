@@ -125,6 +125,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   });
 	outputMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
 	outputMaterial.defines.HDR_INPUT = '';
+	outputMaterial.defines.SUN_INTENSITY_ALPHA = '';
   this.sunMesh = new THREE.Mesh(this.geometry, outputMaterial);
   outputMaterial.castShadow = false;
   outputMaterial.fog = false;

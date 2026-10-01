@@ -114,5 +114,14 @@ void main(){
   #ifdef HDR_INPUT
     combinedPass = LinearTosRGB(skyToneMap(combinedPass));
   #endif
+  #ifdef SUN_INTENSITY_ALPHA
+    //The sun quad is tonemapped on its own and then alpha blended over an already
+    //finished sky. With a flat alpha the bloom halo becomes an opaque pale plate
+    //that replaces the sky, which is most obvious when the sky is bright (sun
+    //30-10 degrees up). Let the halo's alpha follow its own intensity instead, so
+    //the faint tail lets the sky through and only the disc and hot inner glow are
+    //fully opaque.
+    falloffDisk *= smoothstep(0.0, 0.7, max(combinedPass.r, max(combinedPass.g, combinedPass.b)));
+  #endif
   gl_FragColor = vec4(combinedPass, falloffDisk);
 }
