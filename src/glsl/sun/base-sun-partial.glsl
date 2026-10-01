@@ -32,6 +32,12 @@ if(vLocalPosition.y >= 0.0){
   vec3 normalizedWorldPosition = normalize(vLocalPosition);
   vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;
   float distanceBetweenPixelAndMoon = length(vectorBetweenMoonAndPixel);
-  sunTexel = (3.0 * sundisk * sunDiskIntensity * limbDarkening + 2.0 * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;
+  //The corona/flare texture should only show when the moon is (nearly) covering
+  //the sun, not behind the sun disc at midday. Gate it by sun-moon separation.
+  float sunMoonSeparation = distance(sunPosition, moonPosition);
+  float coronaVisibility = 1.0 - smoothstep(0.1 * moonRadius, 0.8 * moonRadius, sunMoonSeparation);
+  coronaVisibility *= coronaVisibility;
+
+  sunTexel = (3.0 * sundisk * sunDiskIntensity * limbDarkening + 2.0 * coronaVisibility * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r) * transmittanceFade;
   sunTexel *= smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);
 }

@@ -27,17 +27,20 @@
 			this.nMips = 5;
 			let resx = Math.round( this.resolution.x / 2 );
 			let resy = Math.round( this.resolution.y / 2 );
-			this.renderTargetBright = new THREE.WebGLRenderTarget( resx, resy );
+			//Half float targets: the default 8-bit targets clamp our HDR sun/corona to 1.0
+			//before it is blurred, throwing away the energy that makes eclipse bloom.
+			const hdrTargetOptions = { type: THREE.HalfFloatType };
+			this.renderTargetBright = new THREE.WebGLRenderTarget( resx, resy, hdrTargetOptions );
 			this.renderTargetBright.texture.name = 'UnrealBloomPass.bright';
 			this.renderTargetBright.texture.generateMipmaps = false;
 
 			for ( let i = 0; i < this.nMips; i ++ ) {
 
-				const renderTargetHorizonal = new THREE.WebGLRenderTarget( resx, resy );
+				const renderTargetHorizonal = new THREE.WebGLRenderTarget( resx, resy, hdrTargetOptions );
 				renderTargetHorizonal.texture.name = 'UnrealBloomPass.h' + i;
 				renderTargetHorizonal.texture.generateMipmaps = false;
 				this.renderTargetsHorizontal.push( renderTargetHorizonal );
-				const renderTargetVertical = new THREE.WebGLRenderTarget( resx, resy );
+				const renderTargetVertical = new THREE.WebGLRenderTarget( resx, resy, hdrTargetOptions );
 				renderTargetVertical.texture.name = 'UnrealBloomPass.v' + i;
 				renderTargetVertical.texture.generateMipmaps = false;
 				this.renderTargetsVertical.push( renderTargetVertical );
@@ -180,6 +183,9 @@
 
 			this.highPassUniforms[ 'tDiffuse' ].value = readBuffer.texture;
 			this.highPassUniforms[ 'luminosityThreshold' ].value = this.threshold;
+			//Soft knee that scales with the threshold, so bloom fades in smoothly as the
+			//sun/moon crosses it instead of popping on.
+			this.highPassUniforms[ 'smoothWidth' ].value = Math.max( 0.02, 0.5 * this.threshold );
 			this.fsQuad.material = this.materialHighPassFilter;
 			renderer.setRenderTarget( this.renderTargetBright );
 			renderer.clear();
@@ -348,7 +354,14 @@
 				}
 
 				void main() {
-					gl_FragColor = bloomStrength * ( lerpBloomFactor(bloomFactors[0]) * vec4(bloomTintColors[0], 1.0) * texture2D(blurTexture1, vUv) +
+					//Normalize the mip weights so radius reshapes the bloom without changing
+						//its total energy. 3.0 matches the unnormalized sum at the default radius (0.4).
+						float weightSum = 0.0;
+						for(int i = 0; i < NUM_MIPS; ++i){
+							weightSum += lerpBloomFactor(bloomFactors[i]);
+						}
+						float energyNormalization = 3.0 / weightSum;
+						gl_FragColor = energyNormalization * bloomStrength * ( lerpBloomFactor(bloomFactors[0]) * vec4(bloomTintColors[0], 1.0) * texture2D(blurTexture1, vUv) +
 						lerpBloomFactor(bloomFactors[1]) * vec4(bloomTintColors[1], 1.0) * texture2D(blurTexture2, vUv) +
 						lerpBloomFactor(bloomFactors[2]) * vec4(bloomTintColors[2], 1.0) * texture2D(blurTexture3, vUv) +
 						lerpBloomFactor(bloomFactors[3]) * vec4(bloomTintColors[3], 1.0) * texture2D(blurTexture4, vUv) +
