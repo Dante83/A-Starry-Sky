@@ -107,6 +107,7 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
     //saturates fast, going white core -> yellow -> orange -> deep orange. Each
     //wider mip is multiplied by its own tint.
     this.bloomPass.bloomFactors = [1.0, 0.55, 0.3, 0.16, 0.08];
+    this.bloomPass.maxEnergy = 6.0; //see UnrealBloom: keeps eclipse crescent from blowing out the corona
     //These are the sunset (fully warm) tints; the live tints are blended from white
     //towards them each frame by how low the sun is, so the halo hugging a bright
     //midday disc doesn't read as an orange ring.

@@ -55,10 +55,31 @@
 			this.highPassUniforms = THREE.UniformsUtils.clone( highPassShader.uniforms );
 			this.highPassUniforms[ 'luminosityThreshold' ].value = threshold;
 			this.highPassUniforms[ 'smoothWidth' ].value = 0.02;
+			//Cap on the energy that can enter the blur. A near-total eclipse leaves a sliver of
+			//disc at ~90x the corona; blurring that with truncated separable kernels leaves a
+			//hazy axis-aligned cross and drowns the corona. Capping the brightest channel
+			//(hue preserved) keeps the disc bright but lets the corona read against it.
+			this.maxEnergy = 1.0e4;
+			this.highPassUniforms[ 'maxEnergy' ] = { value: this.maxEnergy };
 			this.materialHighPassFilter = new THREE.ShaderMaterial( {
 				uniforms: this.highPassUniforms,
 				vertexShader: highPassShader.vertexShader,
-				fragmentShader: highPassShader.fragmentShader,
+				fragmentShader: `uniform sampler2D tDiffuse;
+				uniform vec3 defaultColor;
+				uniform float defaultOpacity;
+				uniform float luminosityThreshold;
+				uniform float smoothWidth;
+				uniform float maxEnergy;
+				varying vec2 vUv;
+				void main() {
+					vec4 texel = texture2D( tDiffuse, vUv );
+					float v = dot( texel.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );
+					vec4 outputColor = vec4( defaultColor.rgb, defaultOpacity );
+					float alpha = smoothstep( luminosityThreshold, luminosityThreshold + smoothWidth, v );
+					float peak = max( texel.r, max( texel.g, texel.b ) );
+					texel.rgb *= min( 1.0, maxEnergy / max( peak, 1.0e-4 ) );
+					gl_FragColor = mix( outputColor, texel, alpha );
+				}`,
 				defines: {}
 			} ); // Gaussian Blur Materials
 
@@ -186,6 +207,7 @@
 
 			this.highPassUniforms[ 'tDiffuse' ].value = readBuffer.texture;
 			this.highPassUniforms[ 'luminosityThreshold' ].value = this.threshold;
+			this.highPassUniforms[ 'maxEnergy' ].value = this.maxEnergy;
 			//Soft knee that scales with the threshold, so bloom fades in smoothly as the
 			//sun/moon crosses it instead of popping on.
 			this.highPassUniforms[ 'smoothWidth' ].value = Math.max( 0.02, 0.5 * this.threshold );
@@ -250,7 +272,7 @@
 			return new THREE.ShaderMaterial( {
 				defines: {
 					'KERNEL_RADIUS': kernelRadius,
-					'SIGMA': Math.max(1.0, kernelRadius / 2.0)
+					'SIGMA': Math.max(1.0, kernelRadius / 3.0)
 				},
 				uniforms: {
 					'colorTexture': {
@@ -259,10 +281,12 @@
 					'texSize': {
 						value: new THREE.Vector2( 0.5, 0.5 )
 					},
-					//Normalized Gaussian weights, computed once here instead of calling
+					//Normalized Gaussian weights (kernel cut at 3 sigma; at 2 sigma the hard
+					//cut-off shows as boxy axis-aligned streaks around very bright sources),
+					//computed once here instead of calling
 					//exp() per tap per pixel in the shader.
 					'kernelWeights': {
-						value: BloomKernelWeights( kernelRadius, Math.max( 1.0, kernelRadius / 2.0 ) )
+						value: BloomKernelWeights( kernelRadius, Math.max( 1.0, kernelRadius / 3.0 ) )
 					},
 					'direction': {
 						value: new THREE.Vector2( 0.5, 0.5 )
