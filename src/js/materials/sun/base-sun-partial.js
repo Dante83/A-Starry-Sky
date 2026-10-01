@@ -26,6 +26,14 @@ StarrySky.Materials.Sun.baseSunPartial = {
       'float mu = sqrt(clamp(1.0 - rOverR * rOverR, 0.0, 1.0));',
       'vec3 limbDarkening = ac1 + ac2 * mu + 2.0 * ac3 * mu * mu;',
 
+      '//The chromatic part of limb darkening is only visible when the sun is',
+      '//reddened by the atmosphere. At midday the HDR disc clips to white in the',
+      '//center while the limb stays orange, which shows up as a ring. Fade the',
+      '//colour difference in with atmospheric reddening (blue/red transmittance),',
+      '//keeping only the achromatic (green) darkening at midday.',
+      'float sunsetAmount = 1.0 - smoothstep(0.6, 0.95, transmittanceFade.b / max(transmittanceFade.r, 0.0001));',
+      'limbDarkening = mix(vec3(limbDarkening.g), limbDarkening, sunsetAmount);',
+
       '//Apply transmittance to our sun disk direct lighting',
       'vec3 normalizedWorldPosition = normalize(vLocalPosition);',
       'vec3 vectorBetweenMoonAndPixel = normalizedWorldPosition - moonPosition;',
