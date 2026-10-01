@@ -49,7 +49,7 @@ StarrySky.Materials.Sun.baseSunPartial = {
       'coronaVisibility *= coronaVisibility;',
 
       'sunTexel = 3.0 * sundisk * sunDiskIntensity * limbDarkening * transmittanceFade;',
-      'coronaTexel = 2.0 * coronaVisibility * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r * dot(transmittanceFade, intensityVector);',
+      'coronaTexel = 0.2 * coronaVisibility * texture2D(solarEclipseMap, vUv * 1.9 - vec2(0.45)).r * dot(transmittanceFade, intensityVector);',
       'float moonOcclusion = smoothstep(0.97 * moonRadius, moonRadius, distanceBetweenPixelAndMoon);',
       'sunTexel *= moonOcclusion;',
       'coronaTexel *= moonOcclusion;',
