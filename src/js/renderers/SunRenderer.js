@@ -129,7 +129,14 @@ StarrySky.Renderers.SunRenderer = function(skyDirector){
   });
 	outputMaterial.defines.resolution = 'vec2( ' + RENDER_TARGET_SIZE + ', ' + RENDER_TARGET_SIZE + " )";
 	outputMaterial.defines.HDR_INPUT = '';
-	outputMaterial.defines.SUN_INTENSITY_ALPHA = '';
+	outputMaterial.defines.SUN_ADDITIVE = '';
+	//Add the sun's light to the sky: out = sky + src.rgb (premultiplied)
+	outputMaterial.blending = THREE.CustomBlending;
+	outputMaterial.blendEquation = THREE.AddEquation;
+	outputMaterial.blendSrc = THREE.OneFactor;
+	outputMaterial.blendDst = THREE.OneFactor;
+	outputMaterial.blendSrcAlpha = THREE.OneFactor;
+	outputMaterial.blendDstAlpha = THREE.OneFactor;
   this.sunMesh = new THREE.Mesh(this.geometry, outputMaterial);
   outputMaterial.castShadow = false;
   outputMaterial.fog = false;

@@ -835,13 +835,18 @@ void main(){
 
   //Sun and Moon layers
   #if($isSunPass)
-    vec3 combinedPass = lunarAtmosphericPass + solarAtmosphericPass + baseSkyLighting + haloLighting;
+    //The sun quad carries ONLY the sun's own light (disc + bloom). The sky, its
+    //inscattering, halos and the moon are already drawn by the main sky pass, and the
+    //quad is added on top of that, so re-rendering them here would double-count the
+    //sky and plate it over the real one.
+    vec3 combinedPass = vec3(0.0);
 
     $draw_sun_pass
 
     //Combine the cloud lights
     #if($cloudsEnabled)
-      combinedPass = (combinedPass + sunTexel) * (1.0 - cloudLighting.a) + cloudLighting.rgb;
+      //Clouds occlude the sun but add no light of their own here (the main pass draws them)
+      combinedPass = (combinedPass + sunTexel) * (1.0 - cloudLighting.a);
     #else
       combinedPass = combinedPass + sunTexel;
     #endif
