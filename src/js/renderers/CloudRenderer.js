@@ -417,8 +417,24 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   let previousSunOn = -1.0;
   let previousMoonOn = -1.0;
 
+  //Where the plane stops describing the air above it: from the real base of the low
+  //deck's species (or the mid deck's base) to the top of the highest deck. Between the
+  //plane and that base a point is still under the clouds, and reads the plane through
+  //its own ray to the light.
+  const baseFraction = (function(){
+    const s = Math.min(Math.max(cloudParams.type, 0.0), 1.0) * 4.0;
+    const i = Math.min(Math.floor(s), 3);
+    return SPECIES_BASE_FRACTIONS[i] + (s - i) * (SPECIES_BASE_FRACTIONS[i + 1] - SPECIES_BASE_FRACTIONS[i]);
+  })();
+  const groundShadowFade = new THREE.Vector2(
+    cloudParams.coverage > 0.0 ? cloudParams.startHeight * baseFraction : cloudParams.midHeight,
+    cloudParams.midCoverage > 0.0 ? cloudParams.midHeight + MID_CLOUD_DEPTHS[1] : cloudParams.endHeight
+  );
+  groundShadowFade.y = Math.max(groundShadowFade.y, groundShadowFade.x + 1.0);
+
   //What WorldLightingRenderer publishes. The vec4s are live, updated every frame.
   this.groundShadow = {
+    fade: groundShadowFade,
     enabled: bakeGroundShadowMap,
     ready: false,
     texture: groundShadowTarget.texture,

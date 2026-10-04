@@ -52,6 +52,7 @@ StarrySky.Renderers.WorldLightingRenderer = function(skyDirector){
     starryCloudShadowCascades: {value: [new THREE.Vector4(0.0, 0.0, 1.0, 1.0), new THREE.Vector4(0.0, 0.0, 1.0, 1.0)]},
     starryCloudShadowCentre: {value: new THREE.Vector2()},
     starryCloudShadowPlaneHeight: {value: 0.0},
+    starryCloudShadowFade: {value: new THREE.Vector2(0.0, 1.0)},
     starryCloudShadowOn: {value: 0.0},
     starryCloudObserverRadius: {value: (atmosphericParameters.radiusOfEarth + atmosphericParameters.cameraHeight) * 1000.0},
     starrySkyCameraPosition: {value: new THREE.Vector3()},
@@ -205,6 +206,7 @@ StarrySky.Renderers.WorldLightingRenderer = function(skyDirector){
       uniforms.starryCloudShadowCascades.value[1].copy(groundShadow.cascades[1]);
       uniforms.starryCloudShadowCentre.value.copy(groundShadow.centre);
       uniforms.starryCloudShadowPlaneHeight.value = groundShadow.planeHeight;
+      uniforms.starryCloudShadowFade.value.copy(groundShadow.fade);
       uniforms.starryCloudObserverRadius.value = groundShadow.observerRadius;
     }
     uniforms.starryCloudShadowOn.value = shadowsLive ? 1.0 : 0.0;
