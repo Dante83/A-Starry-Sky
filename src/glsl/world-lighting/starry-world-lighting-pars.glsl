@@ -1,0 +1,237 @@
+//The sky's lighting of the world beneath it, for any shader that draws that world:
+//a-faraway-land's terrain and objects, a-water's ocean, and three's own lit
+//materials (WorldLightingRenderer patches those). One copy, so the shadows on the
+//land, on the sea and on everything standing on them always belong to the clouds
+//in the sky, and always agree with each other.
+//
+//Everything here is in three's world frame, in meters. The sky works in its own
+//frame (x south, y up, z west, observer at the origin); starryWorldToSky carries a
+//world position into it. The uniforms are shared BY REFERENCE from
+//StarrySky.worldLighting.uniforms -- splice them in, never clone them, or they
+//freeze on the frame they were copied.
+//
+//Guarded, so a shader that pulls this in twice (say through lights_pars_begin and
+//directly) still compiles.
+#ifndef STARRY_WORLD_LIGHTING_PARS
+#define STARRY_WORLD_LIGHTING_PARS
+
+precision highp sampler2DArray;
+
+uniform sampler2DArray starryCloudShadowMap;  //Two cascades, see cloud-ground-shadow-map.glsl
+uniform vec4 starryCloudShadowCascades[2];    //xy the observer in the cloud field, meters; z extent meters; w texel meters
+uniform vec2 starryCloudShadowCentre;         //Centre of both windows, sky frame meters from the observer
+uniform float starryCloudShadowPlaneHeight;   //Meters above the observer
+uniform float starryCloudShadowOn;            //0 when there are no clouds to cast anything
+uniform float starryCloudObserverRadius;      //Meters from the planet centre to the observer
+uniform vec3 starrySkyCameraPosition;         //World position of the observer the sky was drawn for
+uniform vec3 starrySunDirection;              //Unit, sky frame
+uniform vec3 starryMoonDirection;             //Unit, sky frame
+uniform vec3 starryLightDirectionWorld;       //Unit, world frame, towards the sky's directional light
+uniform float starryDominantLightIsMoon;      //1 while the sky's directional light is the moon
+uniform sampler2D starryCloudSkyMap;          //The clouds from the observer, see cloud-march.glsl
+uniform float starryCloudSkyOn;               //0 when there is no cloud map
+uniform float starryCloudSkyLightTinted;      //1 while the hemisphere lights carry the clouds' tint
+
+//The light's own blur on a shadow: the half angle of the sun's disk. The moon's is
+//within a few percent of it.
+const float STARRY_LIGHT_ANGULAR_RADIUS = 0.00465;
+//How much the ambient sky light drops in the shade of an overcast deck, against the
+//direct beam. Cloud bases are lit from above and scatter much of it back down, so
+//shade from the sky is always softer than shade from the sun.
+const float STARRY_CLOUD_SKY_OCCLUSION = 0.5;
+//Bounds on the sky light under one patch of cloud against the mean of the whole
+//deck, for sky light that already carries the clouds on average (a captured dome).
+const vec2 STARRY_CLOUD_SKY_CONTRAST_RANGE = vec2(0.5, 1.5);
+//Where the fine cascade hands over to the wide one, as a fraction of its half width.
+const float STARRY_CASCADE_BLEND_START = 0.8;
+//Must match CLOUD_MAP_K in cloud-march.glsl.
+const float STARRY_CLOUD_MAP_K = 1.0723687100246826;
+
+vec3 starryWorldToSky(vec3 worldPosition){
+  vec3 d = worldPosition - starrySkyCameraPosition;
+  return vec3(-d.z, d.y, -d.x);
+}
+
+//Height above the observer, written so the planet radius cancels exactly (see
+//cloudHeight in cloud-density.glsl).
+float starryCloudHeight(vec3 q){
+  float s = 2.0 * starryCloudObserverRadius * q.y + dot(q, q);
+  return s / (sqrt(starryCloudObserverRadius * starryCloudObserverRadius + s) + starryCloudObserverRadius);
+}
+
+vec3 starryCloudLocalUp(vec3 q){
+  return normalize(vec3(q.x, q.y + starryCloudObserverRadius, q.z));
+}
+
+//One cascade, along one light: x the beam (direct plus what the clouds scatter
+//forward along it, blurred by the light's own penumbra), y the same averaged over
+//the deck overhead, for the sky light.
+vec2 starryCloudShadowCascade(int cascade, vec2 xz, float reach, float drop, bool isMoon){
+  //Toroidal in the cloud field (see cloud-ground-shadow-map.glsl); the texture
+  //repeats, so the mips filter straight across the wrap.
+  vec4 c = starryCloudShadowCascades[cascade];
+  vec3 uvw = vec3(fract((xz + c.xy) / c.z), float(cascade));
+  float lodDirect = log2(max(2.0 * reach * STARRY_LIGHT_ANGULAR_RADIUS / c.w, 1.0));
+  float lodDiffuse = log2(max(2.0 * drop / c.w, 1.0));
+  vec4 sharp = textureLod(starryCloudShadowMap, uvw, lodDirect);
+  vec4 diffuse = textureLod(starryCloudShadowMap, uvw, lodDiffuse);
+  vec4 wide = textureLod(starryCloudShadowMap, uvw, lodDiffuse + 3.0);
+  return isMoon ? vec2(sharp.b + diffuse.a, wide.b + wide.a) : vec2(sharp.r + diffuse.g, wide.r + wide.g);
+}
+
+//Cloud transmittance at a world position along one light (sky frame, unit): x the
+//beam, y the sky light, z the sky light averaged over the whole wide cascade. 1
+//where nothing shades it.
+vec3 starryCloudShadowAlong(vec3 worldPosition, vec3 light, bool isMoon){
+  if(starryCloudShadowOn < 0.5){
+    return vec3(1.0);
+  }
+  vec3 q = starryWorldToSky(worldPosition);
+  float h = starryCloudHeight(q);
+  float drop = max(starryCloudShadowPlaneHeight - h, 0.0);
+  float cosLight = max(dot(light, starryCloudLocalUp(q)), 0.02);
+  float reach = drop / cosLight;
+  //Along the light to the plane. Above the plane (a mountain top in the cloud
+  //base) the point reads its own column, which is close enough there.
+  vec2 xz = q.xz + light.xz * reach;
+
+  //The wide cascade everywhere, faded to its own mean past its edge...
+  vec4 wideCascade = starryCloudShadowCascades[1];
+  vec2 wideEdge = abs(xz - starryCloudShadowCentre) / (0.5 * wideCascade.z);
+  vec2 result = starryCloudShadowCascade(1, xz, reach, drop, isMoon);
+  vec4 farMean = textureLod(starryCloudShadowMap, vec3(0.5, 0.5, 1.0), 16.0);
+  float meanLight = isMoon ? farMean.b + farMean.a : farMean.r + farMean.g;
+  result = mix(result, vec2(meanLight), smoothstep(0.6, 1.0, max(wideEdge.x, wideEdge.y)));
+
+  //...and the fine one wherever it reaches, blended across the seam.
+  vec4 fineCascade = starryCloudShadowCascades[0];
+  vec2 fineEdge = abs(xz - starryCloudShadowCentre) / (0.5 * fineCascade.z);
+  float fine = 1.0 - smoothstep(STARRY_CASCADE_BLEND_START, 1.0, max(fineEdge.x, fineEdge.y));
+  if(fine > 0.0){
+    result = mix(result, starryCloudShadowCascade(0, xz, reach, drop, isMoon), fine);
+  }
+
+  //Inside or above the decks the plane no longer says anything about this point.
+  float aboveBase = smoothstep(starryCloudShadowPlaneHeight, starryCloudShadowPlaneHeight + 500.0, h);
+  return mix(clamp(vec3(result, meanLight), 0.0, 1.0), vec3(1.0), aboveBase);
+}
+
+//Both lights at once: x sun beam, y moon beam, z sun sky light, w moon sky light.
+vec4 starryCloudShadow(vec3 worldPosition){
+  vec3 sun = starryCloudShadowAlong(worldPosition, starrySunDirection, false);
+  vec3 moon = starryCloudShadowAlong(worldPosition, starryMoonDirection, true);
+  return vec4(sun.x, moon.x, sun.y, moon.y);
+}
+
+//The sky's one directional light, which is the sun by day and the moon by night:
+//x the beam, y the sky light, z the deck's mean sky light. Call this once and hand
+//it to the helpers below, where a shader wants more than one of them.
+vec3 starryCloudDominantShadow(vec3 worldPosition){
+  bool isMoon = starryDominantLightIsMoon > 0.5;
+  return starryCloudShadowAlong(worldPosition, isMoon ? starryMoonDirection : starrySunDirection, isMoon);
+}
+
+float starryCloudLightVisibility(vec3 worldPosition){
+  return starryCloudDominantShadow(worldPosition).x;
+}
+
+//For three's hemisphere and ambient lights. The sky fills them from its clear sky
+//tables and then tints them with the clouds' mean (LightingManager), so they need
+//only this spot against the deck as a whole. Untinted, they take the dimming whole:
+//the sky dims under a deck, but never as deeply as the beam does.
+float starryCloudSkyContrastFrom(vec3 dominantShadow);
+float starryCloudSkyVisibilityFrom(vec3 dominantShadow){
+  if(starryCloudSkyLightTinted > 0.5){
+    return starryCloudSkyContrastFrom(dominantShadow);
+  }
+  return mix(1.0, dominantShadow.y, STARRY_CLOUD_SKY_OCCLUSION);
+}
+
+float starryCloudSkyVisibility(vec3 worldPosition){
+  return starryCloudSkyVisibilityFrom(starryCloudDominantShadow(worldPosition));
+}
+
+//For sky light that already carries the clouds on average, like an environment map
+//captured from the dome: only this spot against the deck as a whole, darker under
+//a cloud and brighter in a gap, so an even overcast is not counted twice.
+float starryCloudSkyContrastFrom(vec3 dominantShadow){
+  float ratio = dominantShadow.y / max(dominantShadow.z, 0.02);
+  return clamp(mix(1.0, ratio, STARRY_CLOUD_SKY_OCCLUSION), STARRY_CLOUD_SKY_CONTRAST_RANGE.x, STARRY_CLOUD_SKY_CONTRAST_RANGE.y);
+}
+
+//The clouds along a world direction as the observer sees them, premultiplied: rgb
+//their light, a their opacity, in the sky's own radiance units (the units of its
+//atmosphere tables). A direction below the horizon reads the horizon, which is what
+//a reflection off a wave tilted toward the viewer would see. No clouds, vec4(0).
+vec4 starryCloudSkyAt(vec3 worldDirection){
+  if(starryCloudSkyOn < 0.5){
+    return vec4(0.0);
+  }
+  vec3 d = vec3(-worldDirection.z, max(worldDirection.y, 0.0), -worldDirection.x);
+  float len = length(d);
+  if(len < 1e-6){
+    return vec4(0.0);
+  }
+  d /= len;
+  vec2 uv = 0.5 + 0.5 * d.xz / ((1.0 + d.y) * STARRY_CLOUD_MAP_K);
+  return textureLod(starryCloudSkyMap, uv, 0.0);
+}
+
+//The same, averaged over a cone of directions angularRadius (radians) across: the
+//clouds in a glossy reflection, where the facets under one pixel each mirror a
+//different patch of sky. The map has no mips, so a small disk of taps; the
+//stereographic map is conformal, so a cone of directions is a circle on it, its
+//radius scaled by how the projection stretches toward the horizon.
+const int STARRY_CLOUD_BLUR_TAPS = 8;
+vec4 starryCloudSkyAtBlurred(vec3 worldDirection, float angularRadius){
+  if(starryCloudSkyOn < 0.5){
+    return vec4(0.0);
+  }
+  vec3 d = vec3(-worldDirection.z, max(worldDirection.y, 0.0), -worldDirection.x);
+  float len = length(d);
+  if(len < 1e-6){
+    return vec4(0.0);
+  }
+  d /= len;
+  vec2 p = d.xz / (1.0 + d.y);
+  vec2 uv = 0.5 + 0.5 * p / STARRY_CLOUD_MAP_K;
+  float uvRadius = angularRadius * 0.25 * (1.0 + dot(p, p)) / STARRY_CLOUD_MAP_K;
+  float texel = 1.0 / float(textureSize(starryCloudSkyMap, 0).x);
+  if(uvRadius < texel){
+    return textureLod(starryCloudSkyMap, uv, 0.0);
+  }
+  //A Vogel disk: even coverage for any tap count.
+  vec4 sum = vec4(0.0);
+  for(int i = 0; i < STARRY_CLOUD_BLUR_TAPS; ++i){
+    float r = sqrt((float(i) + 0.5) / float(STARRY_CLOUD_BLUR_TAPS));
+    float phi = float(i) * 2.39996323;
+    sum += textureLod(starryCloudSkyMap, uv + uvRadius * r * vec2(cos(phi), sin(phi)), 0.0);
+  }
+  return sum / float(STARRY_CLOUD_BLUR_TAPS);
+}
+
+//A clear sky radiance along a world direction, with the clouds composited over it
+//exactly as the dome does it. clearSky must be in the sky's own units, as from the
+//atmosphere tables -- not a tonemapped or sRGB sky. The blurred one takes the clouds
+//over a cone angularRadius across (starryCloudSkyAtBlurred).
+vec3 starryCloudySkyRadiance(vec3 worldDirection, vec3 clearSky){
+  vec4 cloud = starryCloudSkyAt(worldDirection);
+  return clearSky * (1.0 - cloud.a) + cloud.rgb;
+}
+
+vec3 starryCloudySkyRadianceBlurred(vec3 worldDirection, vec3 clearSky, float angularRadius){
+  vec4 cloud = starryCloudSkyAtBlurred(worldDirection, angularRadius);
+  return clearSky * (1.0 - cloud.a) + cloud.rgb;
+}
+
+//For a shader that only has view space light directions, like three's own lighting
+//loop: 1 for any light that is not the sky's.
+float starryCloudVisibilityForViewLight(vec3 lightDirectionView, vec3 worldPosition){
+  vec3 skyLightView = normalize((viewMatrix * vec4(starryLightDirectionWorld, 0.0)).xyz);
+  if(dot(lightDirectionView, skyLightView) < 0.9999){
+    return 1.0;
+  }
+  return starryCloudLightVisibility(worldPosition);
+}
+
+#endif

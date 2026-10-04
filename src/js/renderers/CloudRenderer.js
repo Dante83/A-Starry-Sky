@@ -136,10 +136,64 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //cloud-march.glsl): three texels, the mean radiance of the clear sky, of the sky
   //with the mid deck, and of everything; and the small map of the mid deck alone that
   //the second is taken from.
+  //Full float where the GPU can render to it, so the CPU can read it back (skyLightTint
+  //below): half float is only readable where the driver happens to say so.
+  const ambientReadable = renderer.extensions.has('EXT_color_buffer_float');
   const ambientTarget = createTarget(1);
   ambientTarget.setSize(3, 1);
+  if(ambientReadable){
+    ambientTarget.texture.type = THREE.FloatType;
+  }
   ambientTarget.texture.minFilter = THREE.NearestFilter;
   ambientTarget.texture.magFilter = THREE.NearestFilter;
+
+  //The colour the clouds give the sky light under them, for whatever lights the world
+  //from the CLEAR sky tables (the hemisphere lights in LightingManager, a-faraway-land's
+  //photometry): the mean of everything (texel 2) over the mean of the clear sky (texel 0),
+  //per channel. Grey under an overcast, near 1 under fair weather cumulus, brighter than 1
+  //beside sunlit cloud. Read back a few times a second without stalling where three
+  //can (readRenderTargetPixelsAsync), and eased in, since the readback lags a frame or two.
+  const SKY_LIGHT_TINT_INTERVAL = 8;
+  const SKY_LIGHT_TINT_EASING = 0.5;
+  const SKY_LIGHT_TINT_RANGE = [0.02, 4.0];
+  //Keeps the ratio at 1 in a truly dark sky, where both means are noise.
+  const SKY_LIGHT_TINT_FLOOR = 1e-6;
+  this.skyLightTint = new THREE.Vector3(1.0, 1.0, 1.0);
+  this.skyLightTintLive = false;
+  const ambientReadback = new Float32Array(12);
+  let ambientReadPending = false;
+  const applyAmbientReadback = function(){
+    const tint = [0.0, 0.0, 0.0];
+    for(let c = 0; c < 3; ++c){
+      const clear = ambientReadback[c];
+      const cloudy = ambientReadback[8 + c];
+      if(!isFinite(clear) || !isFinite(cloudy)){
+        return;
+      }
+      const ratio = (Math.max(cloudy, 0.0) + SKY_LIGHT_TINT_FLOOR) / (Math.max(clear, 0.0) + SKY_LIGHT_TINT_FLOOR);
+      tint[c] = Math.min(Math.max(ratio, SKY_LIGHT_TINT_RANGE[0]), SKY_LIGHT_TINT_RANGE[1]);
+    }
+    const easing = self.skyLightTintLive ? SKY_LIGHT_TINT_EASING : 1.0;
+    self.skyLightTint.x += (tint[0] - self.skyLightTint.x) * easing;
+    self.skyLightTint.y += (tint[1] - self.skyLightTint.y) * easing;
+    self.skyLightTint.z += (tint[2] - self.skyLightTint.z) * easing;
+    self.skyLightTintLive = true;
+  };
+  const readSkyLightTint = function(){
+    if(!ambientReadable || ambientReadPending){
+      return;
+    }
+    if(renderer.readRenderTargetPixelsAsync){
+      ambientReadPending = true;
+      renderer.readRenderTargetPixelsAsync(ambientTarget, 0, 0, 3, 1, ambientReadback).then(applyAmbientReadback, function(){}).then(function(){
+        ambientReadPending = false;
+      });
+    }
+    else{
+      renderer.readRenderTargetPixels(ambientTarget, 0, 0, 3, 1, ambientReadback);
+      applyAmbientReadback();
+    }
+  };
   const midSkyTarget = createTarget(32);
   const resolveTargets = [createTarget(RESOLVE_SIZE), createTarget(RESOLVE_SIZE)];
   let writeIndex = 0;
@@ -277,6 +331,155 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   marchUniforms.cloudShadowMap.value = shadowMapTarget.texture;
   const bakeShadowMap = cloudParams.midCoverage > 0.0;
 
+  //Both decks' shadow on the world beneath them (cloud-ground-shadow-map.glsl), for
+  //WorldLightingRenderer to hand to the land, the sea and everything on them. Two
+  //cascades in the layers of one array, so a reader spends one texture unit on it:
+  //  0  fine, 8km across, ~10m texels: a cumulus shadow's edge is the sun's half
+  //     degree over the kilometre or two to the cloud base, 10 to 20m.
+  //  1  wide, 90km across, for the far ground and the long shadows of a low sun.
+  //Both extents divide CLOUD_NOISE_WRAP, so the field wrapping back to zero lands
+  //every texel on the same place in the clouds.
+  //
+  //The clouds never change shape, only slide with the wind, so each cascade is
+  //toroidal in the cloud field and a texel stays right wherever the observer goes
+  //(see the shader). That leaves only the light to follow, which moves slowly, so
+  //each frame bakes one strip of rows of each: the whole of the fine cascade every
+  //GROUND_SHADOW_FINE_STRIPS frames, the wide one every GROUND_SHADOW_WIDE_STRIPS.
+  //Baking all of both every frame cost about as much as the cloud march itself.
+  const GROUND_SHADOW_MAP_SIZE = 768;
+  const GROUND_SHADOW_FINE_EXTENT = 8000.0;
+  const GROUND_SHADOW_WIDE_EXTENT = 90000.0;
+  const GROUND_SHADOW_FINE_STRIPS = 8;
+  const GROUND_SHADOW_WIDE_STRIPS = 16;
+  //A jump further than this in one frame (a teleport) re-bakes everything at once.
+  const GROUND_SHADOW_JUMP_FRACTION = 0.125;
+  //The plane the map lives on: the lowest base any low cloud can have (stratus, at
+  //SPECIES_BASE_FRACTIONS[0] of the start height), else the mid deck's base.
+  const groundShadowPlaneHeight = cloudParams.coverage > 0.0 ?
+    cloudParams.startHeight * SPECIES_BASE_FRACTIONS[0] : cloudParams.midHeight;
+  const bakeGroundShadowMap = cloudParams.coverage > 0.0 || cloudParams.midCoverage > 0.0;
+  const groundShadowTarget = new THREE.WebGLArrayRenderTarget(GROUND_SHADOW_MAP_SIZE, GROUND_SHADOW_MAP_SIZE, 2, {
+    type: THREE.HalfFloatType,
+    format: THREE.RGBAFormat,
+    minFilter: THREE.LinearMipmapLinearFilter,
+    magFilter: THREE.LinearFilter,
+    //Toroidal: the mips and the bilinear taps run straight across the wrap.
+    wrapS: THREE.RepeatWrapping,
+    wrapT: THREE.RepeatWrapping,
+    generateMipmaps: true,
+    depthBuffer: false,
+    stencilBuffer: false
+  });
+  groundShadowTarget.texture.colorSpace = THREE.NoColorSpace;
+  const groundShadowMaterial = new THREE.ShaderMaterial({
+    uniforms: materials.cloudGroundShadowMap.uniforms(),
+    vertexShader: materials.cloudGroundShadowMap.vertexShader,
+    fragmentShader: materials.cloudGroundShadowMap.fragmentShader(),
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.NoBlending,
+    toneMapped: false
+  });
+  const groundShadowUniforms = groundShadowMaterial.uniforms;
+  ['cloudBaseNoise', 'cloudDetailNoise', 'cloudWeatherMap', 'cloudCoverage', 'cloudType',
+  'cloudStartHeight', 'cloudEndHeight', 'cloudFadeInEndPercent', 'cloudFadeOutStartPercent',
+  'cloudCutoffDistance', 'cloudObserverRadius', 'cloudNoiseOffset', 'cloudWindDirection',
+  'midCloudCoverage', 'midCloudType', 'midCloudHeight'].forEach(function(name){
+    groundShadowUniforms[name] = marchUniforms[name];
+  });
+  groundShadowUniforms.groundShadowPlaneHeight.value = groundShadowPlaneHeight;
+
+  const groundShadowCascades = [
+    {extent: GROUND_SHADOW_FINE_EXTENT, strips: GROUND_SHADOW_FINE_STRIPS},
+    {extent: GROUND_SHADOW_WIDE_EXTENT, strips: GROUND_SHADOW_WIDE_STRIPS}
+  ];
+  const groundShadowLightsOn = function(position){
+    return position.y > LIGHT_REACHES_CLOUDS_Y ? 1.0 : 0.0;
+  };
+  //Both windows centre where the observer's own ray to the light crosses the plane --
+  //kilometres towards a low sun, and the ground around them looks its shadows up
+  //there. Centred on the observer instead, a low sun sent every lookup off the fine
+  //cascade into the wide one's 100m texels, and the shadows came out as squares.
+  //Capped, so a grazing light still keeps the observer inside the wide window.
+  const GROUND_SHADOW_MAX_CENTRE_SHIFT = 0.4 * GROUND_SHADOW_WIDE_EXTENT;
+  const groundShadowCentre = new THREE.Vector2();
+  const updateGroundShadowCentre = function(){
+    const light = skyState.sun.position.y > LIGHT_REACHES_CLOUDS_Y ? skyState.sun.position : skyState.moon.position;
+    const reach = groundShadowPlaneHeight / Math.max(light.y, 0.05);
+    groundShadowCentre.set(light.x * reach, light.z * reach);
+    const shift = groundShadowCentre.length();
+    if(shift > GROUND_SHADOW_MAX_CENTRE_SHIFT){
+      groundShadowCentre.multiplyScalar(GROUND_SHADOW_MAX_CENTRE_SHIFT / shift);
+    }
+  };
+  let groundShadowNeedsFullBake = true;
+  const previousGroundShadowOffset = new THREE.Vector2();
+  let previousSunOn = -1.0;
+  let previousMoonOn = -1.0;
+
+  //What WorldLightingRenderer publishes. The vec4s are live, updated every frame.
+  this.groundShadow = {
+    enabled: bakeGroundShadowMap,
+    ready: false,
+    texture: groundShadowTarget.texture,
+    planeHeight: groundShadowPlaneHeight,
+    observerRadius: observerRadius,
+    cascades: [new THREE.Vector4(), new THREE.Vector4()],
+    centre: groundShadowCentre
+  };
+  //One cascade, all of it or only this frame's strip of rows.
+  const bakeGroundShadowCascade = function(index, whole){
+    const cascade = groundShadowCascades[index];
+    const offset = marchUniforms.cloudNoiseOffset.value;
+    groundShadowUniforms.groundShadowCascade.value.set(offset.x, offset.y, cascade.extent, 0.0);
+    if(whole){
+      groundShadowTarget.scissorTest = false;
+    }
+    else{
+      const rows = Math.ceil(GROUND_SHADOW_MAP_SIZE / cascade.strips);
+      const strip = frame % cascade.strips;
+      groundShadowTarget.scissor.set(0, strip * rows, GROUND_SHADOW_MAP_SIZE, rows);
+      groundShadowTarget.scissorTest = true;
+    }
+    quad.material = groundShadowMaterial;
+    renderer.setRenderTarget(groundShadowTarget, index);
+    renderer.render(scene, camera);
+    groundShadowTarget.scissorTest = false;
+  };
+  const tickGroundShadow = function(){
+    if(!bakeGroundShadowMap){
+      return;
+    }
+    const offset = marchUniforms.cloudNoiseOffset.value;
+    const sunOn = groundShadowLightsOn(skyState.sun.position);
+    const moonOn = groundShadowLightsOn(skyState.moon.position);
+    updateGroundShadowCentre();
+    groundShadowUniforms.groundShadowCentre.value.copy(groundShadowCentre);
+    groundShadowUniforms.groundShadowSunOn.value = sunOn;
+    groundShadowUniforms.groundShadowMoonOn.value = moonOn;
+    //A light coming up or going down changes every texel at once, and so does a jump.
+    let jump = offset.x - previousGroundShadowOffset.x;
+    jump -= CLOUD_NOISE_WRAP * Math.round(jump / CLOUD_NOISE_WRAP);
+    let jumpY = offset.y - previousGroundShadowOffset.y;
+    jumpY -= CLOUD_NOISE_WRAP * Math.round(jumpY / CLOUD_NOISE_WRAP);
+    if(Math.max(Math.abs(jump), Math.abs(jumpY)) > GROUND_SHADOW_JUMP_FRACTION * GROUND_SHADOW_FINE_EXTENT ||
+      sunOn !== previousSunOn || moonOn !== previousMoonOn){
+      groundShadowNeedsFullBake = true;
+    }
+    bakeGroundShadowCascade(0, groundShadowNeedsFullBake);
+    bakeGroundShadowCascade(1, groundShadowNeedsFullBake);
+    groundShadowNeedsFullBake = false;
+    previousGroundShadowOffset.copy(offset);
+    previousSunOn = sunOn;
+    previousMoonOn = moonOn;
+
+    for(let i = 0; i < 2; ++i){
+      const cascade = groundShadowCascades[i];
+      self.groundShadow.cascades[i].set(offset.x, offset.y, cascade.extent, cascade.extent / GROUND_SHADOW_MAP_SIZE);
+    }
+    self.groundShadow.ready = true;
+  };
+
   const resolveMaterial = new THREE.ShaderMaterial({
     uniforms: materials.cloudResolve.uniforms(),
     vertexShader: materials.cloudResolve.vertexShader,
@@ -368,6 +571,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       renderer.setRenderTarget(shadowMapTarget);
       renderer.render(scene, camera);
     }
+    tickGroundShadow();
 
     marchMaterial = selectMarchMaterial();
 
@@ -383,6 +587,9 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     renderer.render(scene, camera);
     marchUniforms.cloudAmbientPass.value = false;
     marchUniforms.cloudAmbientMap.value = ambientTarget.texture;
+    if(frame % SKY_LIGHT_TINT_INTERVAL === 0){
+      readSkyLightTint();
+    }
 
     if(cloudParams.midCoverage > 0.0){
       marchUniforms.cloudMidSkyPass.value = true;
@@ -441,6 +648,8 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     marchUniforms.moonLightColor.value = skyState.moon.lightingModifier;
     shadowMapUniforms.sunPosition.value = skyState.sun.position;
     shadowMapUniforms.moonPosition.value = skyState.moon.position;
+    groundShadowUniforms.sunPosition.value = skyState.sun.position;
+    groundShadowUniforms.moonPosition.value = skyState.moon.position;
 
     //One fixed tile. The march walks it through time with the golden ratio itself,
     //which averages out far more evenly than hopping between random tiles.

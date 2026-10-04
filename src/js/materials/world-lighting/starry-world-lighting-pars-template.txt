@@ -1,0 +1,8 @@
+//The sky's lighting of the world beneath it (see starry-world-lighting-pars.glsl).
+//WorldLightingRenderer installs it as THREE.ShaderChunk.starry_world_lighting_pars,
+//so any shader can #include it once the sky is up.
+StarrySky.Materials.WorldLighting.worldLightingPars = {
+  partialFragmentShader: [
+    {fragment_glsl}
+  ].join('\n')
+};

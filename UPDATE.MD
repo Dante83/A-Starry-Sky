@@ -12,6 +12,8 @@
 * Fixed the transmittance table's ground row, which baked black and halved the light of every cloud while doubling the haze in front of distant ones.
 * Added a mid level cloud deck, altocumulus to altostratus, above the low one, with `<sky-mid-cloud-coverage>`, `<sky-mid-cloud-type>` and `<sky-mid-cloud-height>`. Altocumulus gathers into rafts and rows across the wind, and catches the sunset longer.
 * Added a cloud shadow map, so the mid deck shades the clouds below it with shadows that blur the further they fall.
+* Clouds now cast shadows on the ground, the sea and everything on them. Both decks bake into a two-cascade map that three's lit materials pick up automatically, and that siblings like a-faraway-land and a-water read through `StarrySky.worldLighting`.
+* The ambient light now takes the clouds' colour, grey under an overcast instead of clear-sky blue, and reflections can composite the clouds over the sky through `StarrySky.worldLighting`.
 * Clouds are now lit by the sky above them, clouds included, rather than by a clear sky alone.
 * Stopped the sun showing through thick cloud as a crisp disk: the march kept the last 1% of the light behind a cloud, and 1% of the sun is still bright.
 * Added `<sky-cloud-resolution>`, and reproject cloud history by each cloud's own distance rather than one layer height, which steadies moving clouds, especially overhead.

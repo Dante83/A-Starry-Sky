@@ -38,6 +38,7 @@ def main():
     'materials/clouds/cloud-noise.js',\
     'materials/clouds/cloud-density.js',\
     'materials/clouds/cloud-shadow-map.js',\
+    'materials/clouds/cloud-ground-shadow-map.js',\
     'materials/clouds/cloud-march.js',\
     'materials/clouds/cloud-resolve.js',\
     'materials/aurora/aurora-march.js',\
@@ -45,6 +46,7 @@ def main():
     'materials/aurora/aurora-patch.js',\
     'materials/fog/fog-pars.js',\
     'materials/fog/fog.js',\
+    'materials/world-lighting/starry-world-lighting-pars.js',\
     'html_tags/HTMLTagUtils.js',\
     'html_tags/SkyAssetsDir.js',\
     'html_tags/SkyLighting.js',\
@@ -65,6 +67,7 @@ def main():
     'renderers/SunRenderer.js',\
     'renderers/MoonRenderer.js',\
     'renderers/MeteringSurveyRenderer.js',\
+    'renderers/WorldLightingRenderer.js',\
     'components/LightingManager.js',\
     'components/AssetManager.js',\
     'components/SkyDirector.js',\

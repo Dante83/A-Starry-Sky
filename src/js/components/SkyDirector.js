@@ -231,6 +231,8 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       if(self.assetManager.data.skyAurora.auroraEnabled){
         self.renderers.auroraRenderer = new StarrySky.Renderers.AuroraRenderer(self);
       }
+      //After the clouds, whose ground shadow it publishes to the rest of the scene.
+      self.renderers.worldLightingRenderer = new StarrySky.Renderers.WorldLightingRenderer(self);
       self.renderers.atmosphereRenderer = new StarrySky.Renderers.AtmosphereRenderer(self);
       self.renderers.sunRenderer = new StarrySky.Renderers.SunRenderer(self);
       self.renderers.moonRenderer = new StarrySky.Renderers.MoonRenderer(self);
@@ -338,6 +340,14 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       atmosphericParameters: self.assetManager.data.skyAtmosphericParameters,
       blueNoiseTexture: self.assetManager.images.blueNoiseImages[self.randomBlueNoiseTexture]
     };
+  };
+
+  //Public API for the world beneath the sky (a-faraway-land, a-water): the clouds'
+  //shadow on the ground, as shared uniforms and a GLSL chunk. See
+  //WorldLightingRenderer.js for the contract.
+  this.getWorldLighting = function(){
+    const worldLightingRenderer = self.renderers.worldLightingRenderer;
+    return worldLightingRenderer ? worldLightingRenderer.worldLighting : null;
   };
 
   this.i = 0;
@@ -910,6 +920,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       if(self.renderers.cloudRenderer){
         self.renderers.cloudRenderer.tick(time);
       }
+      self.renderers.worldLightingRenderer.tick();
       if(self.renderers.auroraRenderer){
         self.renderers.auroraRenderer.tick(time);
       }
@@ -940,6 +951,7 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
       if(self.renderers.cloudRenderer){
         self.renderers.cloudRenderer.tick(time);
       }
+      self.renderers.worldLightingRenderer.tick();
       if(self.renderers.auroraRenderer){
         self.renderers.auroraRenderer.tick(time);
       }

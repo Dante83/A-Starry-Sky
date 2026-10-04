@@ -14,7 +14,8 @@ StarrySky = {
     Moon: {},
     Postprocessing: {},
     Stars: {},
-    Sun: {}
+    Sun: {},
+    WorldLighting: {}
   },
   Renderers: {},
   Methods: {

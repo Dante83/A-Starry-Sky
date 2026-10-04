@@ -101,6 +101,11 @@ groups:
         template: 'cloud-shadow-map-template.txt'
         material: 'cloud-shadow-map.js'
       -
+        fragment: 'cloud-ground-shadow-map.glsl'
+        vertex: 'cloud-map-vertex.glsl'
+        template: 'cloud-ground-shadow-map-template.txt'
+        material: 'cloud-ground-shadow-map.js'
+      -
         fragment: 'cloud-march.glsl'
         vertex: 'cloud-map-vertex.glsl'
         template: 'cloud-march-template.txt'
@@ -143,3 +148,11 @@ groups:
         vertex: 'fog-vertex.glsl'
         template: 'fog-template.txt'
         material: 'fog.js'
+  -
+    base_glsl_dir: '../glsl/world-lighting'
+    base_js_dir: '../js/materials/world-lighting'
+    shaders:
+      -
+        fragment: 'starry-world-lighting-pars.glsl'
+        template: 'starry-world-lighting-pars-template.txt'
+        material: 'starry-world-lighting-pars.js'

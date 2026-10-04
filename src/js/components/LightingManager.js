@@ -33,6 +33,9 @@ StarrySky.LightingManager = function(skyDirector){
   this.sourceLight.target = this.sourceLightTarget;
   //Unit vector, world space, pointing from the scene toward the dominant light (sun or moon).
   this.dominantLightDirection = new THREE.Vector3(0.0, 1.0, 0.0);
+  //Whether that light is the sun, for WorldLightingRenderer to pick the matching
+  //cloud shadow.
+  this.dominantLightIsSun = true;
   const cameraWorldPosition = new THREE.Vector3();
   this.fogColorVector = new THREE.Color();
   this.xAxisHemisphericalLight = new THREE.HemisphereLight( 0x000000, 0x000000, 1.0);
@@ -416,9 +419,36 @@ StarrySky.LightingManager = function(skyDirector){
   const AURORA_AMBIENT_SATURATION = 3.0;
   const AURORA_AMBIENT_SIDE_TINT = 0.6;
 
+  //The hemisphere lights above come from the CLEAR sky's tables. Under clouds the sky
+  //light is another colour and level altogether -- grey and dim under an overcast --
+  //so every one of them takes the clouds' tint (CloudRenderer.skyLightTint: the mean
+  //sky light with the clouds over the mean without). The ground colours too: what the
+  //ground bounces up under a deck is the deck's light. Applied to the colours, not the
+  //intensity, so the ambient floor and ceiling still clamp the clear sky's level. Shaders
+  //reading these lights then only shade one spot against the deck as a whole
+  //(starryCloudSkyVisibilityFrom in starry-world-lighting-pars.glsl).
+  this.cloudSkyLightTinted = false;
+  const applyCloudSkyTint = function(){
+    const cloudRenderer = skyDirector.renderers.cloudRenderer;
+    self.cloudSkyLightTinted = !!(cloudRenderer && cloudRenderer.skyLightTintLive);
+    if(!self.cloudSkyLightTinted){
+      return;
+    }
+    const tint = cloudRenderer.skyLightTint;
+    [self.xAxisHemisphericalLight, self.yAxisHemisphericalLight, self.zAxisHemisphericalLight].forEach(function(light){
+      light.color.r *= tint.x;
+      light.color.g *= tint.y;
+      light.color.b *= tint.z;
+      light.groundColor.r *= tint.x;
+      light.groundColor.g *= tint.y;
+      light.groundColor.b *= tint.z;
+    });
+  };
+
   this.tick = function(lightingState){
     const sunRadius = Math.sin(sunRenderer.sunAngularRadiusInRadians * skyState.sun.scale);
     const dominantLightIsSun = skyState.sun.position.y >= -sunRadius;
+    self.dominantLightIsSun = dominantLightIsSun;
 
     if(self.useAmbientLUT){
       // -------- LUT-driven path --------
@@ -640,6 +670,7 @@ StarrySky.LightingManager = function(skyDirector){
       self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
       self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
       self.zAxisHemisphericalLight.intensity = indirectLightIntensity;
+      applyCloudSkyTint();
       return;
     }
 
@@ -698,5 +729,6 @@ StarrySky.LightingManager = function(skyDirector){
     self.xAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.yAxisHemisphericalLight.intensity = indirectLightIntensity;
     self.zAxisHemisphericalLight.intensity = indirectLightIntensity;
+    applyCloudSkyTint();
   }
 };
