@@ -20,6 +20,7 @@
 * Calmed the shimmer on distant clouds: rays refine where they enter a cloud and cross its sunlit skin in fine steps, and the temporal filter keeps a longer history towards the horizon.
 * Clouds now march half their texels each frame in a checkerboard, filling the rest from their neighbours and the history, which nearly halves their cost for a touch more shimmer.
 * Moving clouds now reproject by their deck's height rather than each texel's depth, and the wind follows a smoothed frame time, so cumulus middles bob less and uneven frames no longer lurch.
+* Cloud shadows on the ground no longer twitch forward and back under a fast `<sky-speed>`: their map re-bakes as many rows a frame as the moving sun or moon needs, rather than a fixed strip. Added `<sky-cloud-shadow-resolution>` to trade that bake's cost against shadow detail.
 * Rebuilt the aurora as curtains hanging along the magnetic field, marched once per frame into a map of the sky like the clouds, with the sharp green lower edge, high red and pink fringe of the real emission lines.
 * Added `<sky-aurora-activity>`, a storm strength from 0 to 9 that brightens, folds, reddens and speeds up the aurora, and can be changed while the sky runs.
 * The aurora now has substorms, arcs breaking up and fading into blinking pulsating patches, casts a green glow on the scene, and turns violet at the top where it rises into twilight sunlight.

@@ -346,13 +346,27 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //each frame bakes one strip of rows of each: the whole of the fine cascade every
   //GROUND_SHADOW_FINE_STRIPS frames, the wide one every GROUND_SHADOW_WIDE_STRIPS.
   //Baking all of both every frame cost about as much as the cloud march itself.
-  const GROUND_SHADOW_MAP_SIZE = 768;
+  //
+  //...UNLESS THE LIGHT IS MOVING FAST. A texel holds the shadow along the light as it was when
+  //its strip was baked, so between bakes it goes stale by however far the light has moved; a
+  //strip then slides off and snaps back when its turn comes, and neighbouring strips sit at
+  //different points of that cycle. At sky-speed 1 the sun moves ~1e-6 rad a frame and nobody
+  //can see it; at sky-speed 40 it was a shadow edge twitching forward and back every 8 frames
+  //(measured on peaceful-island, 2026-10-06: 0.32 -> 0.47 -> snap 0.42 -> 0.58 -> snap 0.51 at
+  //one fixed spot). So the number of strips baked a frame follows the light: see tickGroundShadow.
+  //
+  //The map's size is 768 texels times <sky-cloud-shadow-resolution> (a multiplier, default 1,
+  //like <sky-cloud-resolution>). Halving it quarters the bake.
+  const GROUND_SHADOW_MAP_SIZE = Math.max(64, Math.round(768 * (cloudParams.shadowResolution || 1.0)));
   const GROUND_SHADOW_FINE_EXTENT = 8000.0;
   const GROUND_SHADOW_WIDE_EXTENT = 90000.0;
   const GROUND_SHADOW_FINE_STRIPS = 8;
   const GROUND_SHADOW_WIDE_STRIPS = 16;
   //A jump further than this in one frame (a teleport) re-bakes everything at once.
   const GROUND_SHADOW_JUMP_FRACTION = 0.125;
+  //How stale a texel may get from the light moving before its strip is re-baked: this fraction
+  //of a texel of sideways drift, for the highest cloud the map can see.
+  const GROUND_SHADOW_MAX_DRIFT_TEXELS = 0.05;
   //The plane the map lives on: the lowest base any low cloud can have (stratus, at
   //SPECIES_BASE_FRACTIONS[0] of the start height), else the mid deck's base.
   const groundShadowPlaneHeight = cloudParams.coverage > 0.0 ?
@@ -441,26 +455,66 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     planeHeight: groundShadowPlaneHeight,
     observerRadius: observerRadius,
     cascades: [new THREE.Vector4(), new THREE.Vector4()],
-    centre: groundShadowCentre
+    centre: groundShadowCentre,
+    //Diagnostics: how many strips of each cascade the last frame re-baked (1 = the idle rate).
+    stripsPerFrame: [1, 1],
+    resolution: GROUND_SHADOW_MAP_SIZE
   };
-  //One cascade, all of it or only this frame's strip of rows.
-  const bakeGroundShadowCascade = function(index, whole){
+  //One cascade: all of it, or `count` strips from strip `first` on (wrapping round).
+  const renderGroundShadowRows = function(index, y, rows){
+    if(rows <= 0){
+      return;
+    }
+    groundShadowTarget.scissor.set(0, y, GROUND_SHADOW_MAP_SIZE, rows);
+    groundShadowTarget.scissorTest = true;
+    renderer.setRenderTarget(groundShadowTarget, index);
+    renderer.render(scene, camera);
+  };
+  const bakeGroundShadowCascade = function(index, whole, first, count){
     const cascade = groundShadowCascades[index];
     const offset = marchUniforms.cloudNoiseOffset.value;
     groundShadowUniforms.groundShadowCascade.value.set(offset.x, offset.y, cascade.extent, 0.0);
-    if(whole){
+    quad.material = groundShadowMaterial;
+    if(whole || count >= cascade.strips){
       groundShadowTarget.scissorTest = false;
+      renderer.setRenderTarget(groundShadowTarget, index);
+      renderer.render(scene, camera);
     }
     else{
+      //Consecutive strips are one scissored render (two across the wrap), not one apiece:
+      //every render into this target regenerates its mips.
       const rows = Math.ceil(GROUND_SHADOW_MAP_SIZE / cascade.strips);
-      const strip = frame % cascade.strips;
-      groundShadowTarget.scissor.set(0, strip * rows, GROUND_SHADOW_MAP_SIZE, rows);
-      groundShadowTarget.scissorTest = true;
+      const head = Math.min(count, cascade.strips - first);
+      renderGroundShadowRows(index, first * rows, Math.min(head * rows, GROUND_SHADOW_MAP_SIZE - first * rows));
+      renderGroundShadowRows(index, 0, (count - head) * rows);
     }
-    quad.material = groundShadowMaterial;
-    renderer.setRenderTarget(groundShadowTarget, index);
-    renderer.render(scene, camera);
     groundShadowTarget.scissorTest = false;
+  };
+  //How fast the shadows are sliding because the LIGHT moves: a cloud h meters above the
+  //plane lands h * (light.xz / light.y) away from where it stands, so the change of that ratio
+  //is the drift per meter of height. Fast attack, slow release, so a burst of motion is met at
+  //once and the bake rate does not flicker frame to frame.
+  const previousSunLight = new THREE.Vector3();
+  const previousMoonLight = new THREE.Vector3();
+  let groundShadowLightKnown = false;
+  let groundShadowDriftRate = 0.0;
+  const groundShadowStripCursor = [0, 0];
+  const lightDrift = function(current, previous){
+    const cy = Math.max(current.y, 0.05);
+    const py = Math.max(previous.y, 0.05);
+    return Math.hypot(current.x / cy - previous.x / py, current.z / cy - previous.z / py);
+  };
+  //The highest cloud above the plane: its shadow is the one that slides furthest.
+  const groundShadowLever = Math.max(groundShadowFade.y - groundShadowPlaneHeight, 1.0);
+  //Strips this cascade needs this frame so no texel drifts more than the allowance before its
+  //strip comes round again: a full cycle of strips/k frames must stay under it.
+  const groundShadowStripsNeeded = function(cascade){
+    const allowance = GROUND_SHADOW_MAX_DRIFT_TEXELS * cascade.extent / GROUND_SHADOW_MAP_SIZE;
+    const perFrame = groundShadowDriftRate * groundShadowLever;
+    if(!(perFrame > 0.0)){
+      return 1;
+    }
+    return Math.min(cascade.strips, Math.max(1, Math.ceil(cascade.strips * perFrame / allowance)));
   };
   const tickGroundShadow = function(){
     if(!bakeGroundShadowMap){
@@ -482,8 +536,26 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       sunOn !== previousSunOn || moonOn !== previousMoonOn){
       groundShadowNeedsFullBake = true;
     }
-    bakeGroundShadowCascade(0, groundShadowNeedsFullBake);
-    bakeGroundShadowCascade(1, groundShadowNeedsFullBake);
+    let drift = 0.0;
+    if(groundShadowLightKnown){
+      if(sunOn > 0.5){
+        drift = Math.max(drift, lightDrift(skyState.sun.position, previousSunLight));
+      }
+      if(moonOn > 0.5){
+        drift = Math.max(drift, lightDrift(skyState.moon.position, previousMoonLight));
+      }
+    }
+    groundShadowDriftRate = Math.max(drift, groundShadowDriftRate * 0.9);
+    previousSunLight.copy(skyState.sun.position);
+    previousMoonLight.copy(skyState.moon.position);
+    groundShadowLightKnown = true;
+    for(let i = 0; i < 2; ++i){
+      const cascade = groundShadowCascades[i];
+      const count = groundShadowNeedsFullBake ? cascade.strips : groundShadowStripsNeeded(cascade);
+      bakeGroundShadowCascade(i, groundShadowNeedsFullBake, groundShadowStripCursor[i], count);
+      groundShadowStripCursor[i] = (groundShadowStripCursor[i] + count) % cascade.strips;
+      self.groundShadow.stripsPerFrame[i] = count;
+    }
     groundShadowNeedsFullBake = false;
     previousGroundShadowOffset.copy(offset);
     previousSunOn = sunOn;
