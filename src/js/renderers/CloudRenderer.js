@@ -162,6 +162,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   this.skyLightTintLive = false;
   const ambientReadback = new Float32Array(12);
   let ambientReadPending = false;
+  let ambientPBO = null;
   const applyAmbientReadback = function(){
     const tint = [0.0, 0.0, 0.0];
     for(let c = 0; c < 3; ++c){
@@ -183,7 +184,45 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     if(!ambientReadable || ambientReadPending){
       return;
     }
-    if(renderer.readRenderTargetPixelsAsync){
+    //Raw PBO + fence first. three's readRenderTargetPixelsAsync is only async AFTER it has
+    //asked gl.getParameter(IMPLEMENTATION_COLOR_READ_TYPE) about a float target, and that
+    //query is a synchronous round trip to the GPU process that waits out every queued pass:
+    //measured at 21% of the main thread, a 100-250 ms frame every 8th frame at 4K.
+    const gl = renderer.getContext();
+    if(gl.fenceSync){
+      ambientReadPending = true;
+      if(!ambientPBO){
+        ambientPBO = gl.createBuffer();
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, ambientPBO);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, ambientReadback.byteLength, gl.STREAM_READ);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      }
+      const prevTarget = renderer.getRenderTarget();
+      renderer.setRenderTarget(ambientTarget);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, ambientPBO);
+      gl.readPixels(0, 0, 3, 1, gl.RGBA, gl.FLOAT, 0);
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      renderer.setRenderTarget(prevTarget);
+      const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();
+      const poll = function(){
+        const status = gl.clientWaitSync(sync, 0, 0);
+        if(status === gl.TIMEOUT_EXPIRED){
+          setTimeout(poll, 4);
+          return;
+        }
+        gl.deleteSync(sync);
+        if(status !== gl.WAIT_FAILED){
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, ambientPBO);
+          gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, ambientReadback);
+          gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+          applyAmbientReadback();
+        }
+        ambientReadPending = false;
+      };
+      poll();
+    }
+    else if(renderer.readRenderTargetPixelsAsync){
       ambientReadPending = true;
       renderer.readRenderTargetPixelsAsync(ambientTarget, 0, 0, 3, 1, ambientReadback).then(applyAmbientReadback, function(){}).then(function(){
         ambientReadPending = false;
