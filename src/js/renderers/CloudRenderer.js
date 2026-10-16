@@ -269,9 +269,16 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //is above -0.1 (sunCloudFade and moonCloudFade in cloud-march.glsl); the dip is under 0.06 even for a
   //deck 7km up.
   const LIGHT_REACHES_CLOUDS_Y = -0.16;
+  //With the sun above the horizon a cloud gets thousands of lux from it at the very least,
+  //and a full moon gives a third of one: a millionth, invisible under any exposure that
+  //shows the day. Marching the moon's light anyway was half the cloud pass on an afternoon
+  //with the moon up -- measured 17 ms of 35 at 4K, since every lit step runs a light march
+  //per light. Twilight keeps both, the only time the moon can matter beside the sun.
+  const SUN_OUTSHINES_MOON_Y = 0.0;
   const selectMarchMaterial = function(){
     const sunLights = skyState.sun.position.y > LIGHT_REACHES_CLOUDS_Y;
-    const moonLights = skyState.moon.position.y > LIGHT_REACHES_CLOUDS_Y;
+    const moonLights = skyState.moon.position.y > LIGHT_REACHES_CLOUDS_Y &&
+                       skyState.sun.position.y <= SUN_OUTSHINES_MOON_Y;
     if(sunLights && moonLights){
       return marchMaterials.both;
     }
