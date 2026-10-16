@@ -46,6 +46,39 @@ uniform int cloudCheckerboardParity;
 //before the march: into a 32^2 map of the mid deck alone (cloudMidSkyPass: the low deck
 //switched off, no jitter), and into three texels holding the mean radiance of three
 //skies (cloudAmbientPass). The march reads those texels back.
+//Amortized march (cloudAmortizeSide > 0, in place of the checkerboard). The march map is
+//kept from frame to frame: each frame marches one texel in every side x side block, in
+//Bayer order so the fresh texels of consecutive frames sit far apart, and carries every
+//other texel over from last frame's map, moved along with the wind and the camera exactly
+//as the resolve moves its history.
+//
+//IN TWO PASSES, AND THAT IS NOT OPTIONAL. Marching one texel in sixteen in place leaves
+//nearly every warp holding one marching fragment, so nearly every warp pays for the whole
+//march: measured at 4K, 1/16 of the rays cost 84% of the time. So the march draws into a
+//PACKED target, one fragment per block, every fragment working; then the merge pass (same
+//material, cloudAmortizeMerge) writes the full map, taking the packed sample where this
+//frame marched and the carried history everywhere else. Off screen blocks skip whole
+//cycles in coarse tiles, so the skipping is coherent across a warp too. Every texel is marched again within side^2 frames,
+//which bounds how stale it can get. Directions off screen -- needed only by reflections,
+//the environment capture and the ground, which all see the map blurred -- use the wider
+//offscreen side and are refreshed that much less often. Lighting is three quarters of the
+//march, and none of it changes faster than the clouds drift.
+uniform int cloudAmortizeSide;            //0: off
+uniform int cloudAmortizeOffscreenSide;
+uniform int cloudAmortizeFrame;
+uniform ivec2 cloudAmortizeOffset;        //This frame's texel within each block (the Bayer position of frame % side^2)
+uniform bool cloudAmortizeMerge;          //The merge pass, see main()
+uniform sampler2D cloudAmortizePacked;    //This frame's packed march, one texel per block
+uniform sampler2D cloudAmortizePackedDepth;
+uniform sampler2D cloudAmortizeHistory;      //Last frame's march map
+uniform sampler2D cloudAmortizeHistoryDepth; //...and its depths, km
+uniform vec3 cloudAmortizeShift;          //Camera motion minus wind motion since last frame, sky frame, meters
+uniform float cloudAmortizeHeight;        //Middle of the low deck, meters above the observer
+uniform float cloudAmortizeMidHeight;     //Middle of the mid deck
+uniform float cloudAmortizeMidSplit;      //Cloud above this moves with the mid deck
+uniform vec3 cloudViewForward;            //Camera forward, sky frame
+uniform float cloudViewCosHalfAngle;      //cos of the half angle of the cone counted as on screen
+
 uniform bool cloudAmbientPass;
 uniform bool cloudMidSkyPass;
 uniform sampler2D cloudPreviousMap;  //Last frame's resolved map, both decks
@@ -686,6 +719,85 @@ vec4 cloudRayMarcher(vec3 rayDirection, vec3 sunSourceColor, vec3 moonSourceColo
   return vec4(luminance, 1.0 - rayTransmittance);
 }
 
+vec3 cloudMapDirection(vec2 uv){
+  vec2 p = (2.0 * uv - 1.0) * CLOUD_MAP_K;
+  float pSquared = dot(p, p);
+  return vec3(2.0 * p.x, 1.0 - pSquared, 2.0 * p.y) / (1.0 + pSquared);
+}
+
+//Catmull-Rom in nine bilinear taps (Jimenez, Filmic SMAA), as the resolve fetches its
+//history. A carried texel is resampled at a fractional offset every frame until it is
+//marched again, up to side^2 frames later; bilinear softened it on each of those, and
+//sixteen of them wiped out the cauliflower detail that makes cumulus read as cumulus.
+vec4 cloudAmortizeHistoryFetch(vec2 uv){
+  vec2 size = 1.0 / cloudMarchTexelSize;
+  vec2 samplePosition = uv * size;
+  vec2 texPos1 = floor(samplePosition - 0.5) + 0.5;
+  vec2 f = samplePosition - texPos1;
+  vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+  vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+  vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+  vec2 w3 = f * f * (-0.5 + 0.5 * f);
+  vec2 w12 = w1 + w2;
+  vec2 offset12 = w2 / w12;
+  vec2 texPos0 = (texPos1 - 1.0) / size;
+  vec2 texPos3 = (texPos1 + 2.0) / size;
+  vec2 texPos12 = (texPos1 + offset12) / size;
+  vec4 result = textureLod(cloudAmortizeHistory, vec2(texPos0.x, texPos0.y), 0.0) * w0.x * w0.y
+    + textureLod(cloudAmortizeHistory, vec2(texPos12.x, texPos0.y), 0.0) * w12.x * w0.y
+    + textureLod(cloudAmortizeHistory, vec2(texPos3.x, texPos0.y), 0.0) * w3.x * w0.y
+    + textureLod(cloudAmortizeHistory, vec2(texPos0.x, texPos12.y), 0.0) * w0.x * w12.y
+    + textureLod(cloudAmortizeHistory, vec2(texPos12.x, texPos12.y), 0.0) * w12.x * w12.y
+    + textureLod(cloudAmortizeHistory, vec2(texPos3.x, texPos12.y), 0.0) * w3.x * w12.y
+    + textureLod(cloudAmortizeHistory, vec2(texPos0.x, texPos3.y), 0.0) * w0.x * w3.y
+    + textureLod(cloudAmortizeHistory, vec2(texPos12.x, texPos3.y), 0.0) * w12.x * w3.y
+    + textureLod(cloudAmortizeHistory, vec2(texPos3.x, texPos3.y), 0.0) * w3.x * w3.y;
+  //Negative lobes must not push radiance or opacity below zero, nor opacity past one.
+  result = max(result, vec4(0.0));
+  result.a = min(result.a, 1.0);
+  return result;
+}
+
+//The merge pass of the amortized march, one fragment per texel of the full map: this
+//frame's packed sample where there is one, otherwise last frame's map carried along by the
+//wind and the camera -- the resolve's reprojection, one deck height per texel.
+void cloudAmortizeMergeTexel(){
+  ivec2 texel = ivec2(gl_FragCoord.xy);
+  ivec2 block = texel / cloudAmortizeSide;
+  vec4 packedDepth = texelFetch(cloudAmortizePackedDepth, block, 0);
+  if(texel - block * cloudAmortizeSide == cloudAmortizeOffset && packedDepth.b > 0.5){
+    gl_FragColor = texelFetch(cloudAmortizePacked, block, 0);
+    cloudDepthOutput = packedDepth;
+    return;
+  }
+  vec3 direction = cloudMapDirection((vec2(texel) + 0.5) * cloudMarchTexelSize);
+  if(direction.y <= 0.0){
+    gl_FragColor = vec4(0.0);
+    cloudDepthOutput = vec4(0.0);
+    return;
+  }
+  float r = cloudObserverRadius;
+  float mu = max(direction.y, 0.0);
+  float h = cloudAmortizeHeight;
+  float lastDepth = texelFetch(cloudAmortizeHistoryDepth, texel, 0).r * 1000.0;
+  if(lastDepth > 0.0){
+    float hitHeight = sqrt(r * r + lastDepth * lastDepth + 2.0 * r * lastDepth * mu) - r;
+    h = hitHeight > cloudAmortizeMidSplit ? cloudAmortizeMidHeight : h;
+  }
+  float depth = min(-r * mu + sqrt(r * r * mu * mu + 2.0 * r * h + h * h), cloudCutoffDistance);
+  vec3 previousDirection = normalize(direction * depth + cloudAmortizeShift);
+  vec2 previousUV = 0.5 + 0.5 * previousDirection.xz / ((1.0 + previousDirection.y) * CLOUD_MAP_K);
+  vec2 previousP = 2.0 * previousUV - 1.0;
+  if(previousDirection.y > 0.0 && dot(previousP, previousP) <= 1.0){
+    gl_FragColor = cloudAmortizeHistoryFetch(previousUV);
+    cloudDepthOutput = texelFetch(cloudAmortizeHistoryDepth, ivec2(previousUV / cloudMarchTexelSize), 0);
+    return;
+  }
+  //Came in over the edge of the map: the nearest thing marched is this block's own sample.
+  gl_FragColor = texelFetch(cloudAmortizePacked, block, 0);
+  cloudDepthOutput = packedDepth;
+}
+
 void main(){
   if(cloudAmbientPass){
     gl_FragColor = vec4(cloudMeanSkyRadiance(int(gl_FragCoord.x)), 1.0);
@@ -696,9 +808,34 @@ void main(){
   //Direction for this texel, nudged by this frame's sub texel jitter so that the
   //resolve pass accumulates genuinely new sample positions over time. The mid deck's
   //own little map is not resolved, so it goes without.
+  if(cloudAmortizeMerge){
+    cloudAmortizeMergeTexel();
+    return;
+  }
+
   cloudMarchTexel = ivec2(gl_FragCoord.xy);
   vec2 uv = vUv;
-  if(!cloudMidSkyPass){
+  if(cloudAmortizeSide > 0 && !cloudMidSkyPass){
+    //Packed: this fragment is one block, and marches that block's texel for this frame.
+    ivec2 block = cloudMarchTexel;
+    cloudMarchTexel = block * cloudAmortizeSide + cloudAmortizeOffset;
+    int k = cloudAmortizeOffscreenSide / cloudAmortizeSide;
+    if(k > 1){
+      vec3 centreDirection = cloudMapDirection((vec2(cloudMarchTexel) + 0.5) * cloudMarchTexelSize);
+      if(dot(centreDirection, cloudViewForward) <= cloudViewCosHalfAngle){
+        //Off screen: march only one cycle in k * k, the tiles of 8 x 8 blocks taking turns.
+        int cycle = cloudAmortizeFrame / (cloudAmortizeSide * cloudAmortizeSide);
+        int tilePhase = ((block.x >> 3) + 3 * (block.y >> 3)) % (k * k);
+        if(cycle % (k * k) != tilePhase){
+          gl_FragColor = vec4(0.0);
+          cloudDepthOutput = vec4(0.0);   //.b = 0: no sample, the merge carries the history
+          return;
+        }
+      }
+    }
+    uv = (vec2(cloudMarchTexel) + 0.5 + cloudJitter) * cloudMarchTexelSize;
+  }
+  else if(!cloudMidSkyPass){
     if(cloudCheckerboardParity >= 0){
       cloudMarchTexel.x = 2 * cloudMarchTexel.x + ((cloudMarchTexel.y + cloudCheckerboardParity) & 1);
     }
@@ -714,6 +851,7 @@ void main(){
     cloudDepthOutput = vec4(0.0);
     return;
   }
+
 
   //Cloud-illumination strength uses CLOUD-LOCAL horizon, not world horizon.
   //A cloud at altitude h has its horizon dipped below the world horizon by
@@ -762,7 +900,7 @@ void main(){
   //the horizontal view direction and quietly stretched the cloud field towards the
   //horizon. Where the camera is over the ground rides in cloudNoiseOffset.
   vec4 cloud = cloudRayMarcher(rayDirection, sunSourceColor, moonSourceColor, midSunSourceColor, midMoonSourceColor);
-  cloudDepthOutput = vec4(cloudMarchDepth * METERS_TO_KM, 0.0, 0.0, 1.0);
+  cloudDepthOutput = vec4(cloudMarchDepth * METERS_TO_KM, 0.0, 1.0, 1.0);   //.b = 1: a real sample
 
   //Stored premultiplied, (L * a, a), and composited as sky * (1 - a) + rgb. It has
   //to be premultiplied BEFORE anything filters the map: the temporal resolve

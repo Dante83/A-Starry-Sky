@@ -132,6 +132,62 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   }
   marchTarget.textures[1].minFilter = THREE.NearestFilter;
   marchTarget.textures[1].magFilter = THREE.NearestFilter;
+
+  //Amortized march (cloudAmortizeSide in cloud-march.glsl): the march map persists, so it is
+  //full size and ping-pongs between two targets, the one being written never bound as a
+  //texture. `side` is the on-screen block (1 / side^2 of those texels marched a frame) and
+  //`offscreenSide` the block for directions out of view; set `cloudRenderer.amortize = null`
+  //for the plain checkerboard. Live: the targets are made the first time they are used.
+  //Changing what the clouds ARE (coverage, species) or jumping the clock should call
+  //invalidateHistory(), which marches every texel on the next frame.
+  this.amortize = {side: 4, offscreenSide: 8, marginDegrees: 15.0};
+  let amortizeTargets = null;
+  let amortizeIndex = 0;
+  let amortizeReset = true;
+  this.invalidateHistory = function(){ amortizeReset = true; };
+  const getAmortizeTargets = function(){
+    if(!amortizeTargets){
+      amortizeTargets = [createTarget(MARCH_SIZE, 2), createTarget(MARCH_SIZE, 2)];
+      amortizeTargets.forEach(function(target){
+        target.textures[1].minFilter = THREE.NearestFilter;
+        target.textures[1].magFilter = THREE.NearestFilter;
+      });
+    }
+    return amortizeTargets;
+  };
+  let packedTarget = null;
+  const getPackedTarget = function(side){
+    const size = MARCH_SIZE / side;
+    if(!packedTarget || packedTarget.width !== size){
+      if(packedTarget){
+        packedTarget.dispose();
+      }
+      packedTarget = createTarget(size, 2);
+      packedTarget.textures[1].minFilter = THREE.NearestFilter;
+      packedTarget.textures[1].magFilter = THREE.NearestFilter;
+    }
+    return packedTarget;
+  };
+  //Where in its block the texel of rank r sits, the inverse of an ordered dither (Bayer)
+  //matrix: the rank's most significant base 4 digit is the position's lowest bit, so
+  //consecutive frames march texels as far apart in the block as they can be.
+  const bayerOffset = function(rank, side, out){
+    const bits = Math.round(Math.log2(side));
+    let x = 0;
+    let y = 0;
+    for(let i = 0; i < bits; ++i){
+      const digit = (rank >> (2 * (bits - 1 - i))) & 3;
+      const yb = digit & 1;
+      const xb = ((digit >> 1) ^ yb) & 1;
+      x |= xb << i;
+      y |= yb << i;
+    }
+    out[0] = x;
+    out[1] = y;
+    return out;
+  };
+  const viewForward = new THREE.Vector3();
+  const noJitter = new THREE.Vector2(0.0, 0.0);
   //Sky light for the clouds and the ground under them (cloudMeanSkyRadiance in
   //cloud-march.glsl): three texels, the mean radiance of the clear sky, of the sky
   //with the mid deck, and of everything; and the small map of the mid deck alone that
@@ -665,7 +721,13 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     renderer.xr.enabled = false;
     renderer.shadowMap.autoUpdate = false;
 
-    const jitter = jitterSequence[frame % HALTON_LENGTH];
+    const amortize = (self.amortize && self.amortize.side > 1) ? self.amortize : null;
+    const amortizeCycle = amortize ? amortize.side * amortize.side : 1;
+    //A texel is marched every amortizeCycle frames, so step the jitter one further each
+    //cycle -- otherwise, with the cycle a multiple of the sequence, it lands on the same
+    //sub texel offset every time and the resolve never builds detail between texels.
+    const jitter = (amortize && amortize.jitter === false) ? noJitter :
+      jitterSequence[(frame + Math.floor(frame / amortizeCycle)) % HALTON_LENGTH];
     const frameStep = t - previousTickTime;
     const frameStepUsable = frame > 0 && frameStep > 0.0 && frameStep < CLOUD_HISTORY_MAX_GAP_MS;
     if(frameStepUsable){
@@ -688,7 +750,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     marchUniforms.scatteringMoonIntensity.value = skyState.moon.intensity * atmosphericParameters.lunarMaxIntensity / 29.0;
     marchUniforms.cloudJitter.value.copy(jitter);
     marchUniforms.cloudFrame.value = frame % 4096;
-    const parity = CLOUD_CHECKERBOARD ? checkerboardParity(frame) : -1;
+    const parity = (CLOUD_CHECKERBOARD && !amortize) ? checkerboardParity(frame) : -1;
     //Where we are over the cloud field: the camera's own position, minus how far the
     //wind has carried the field (velocity * cloudTime / 500 meters, as it always was).
     const windScaleTotal = cloudTime / 500.0;
@@ -733,15 +795,11 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       marchUniforms.cloudMidSkyPass.value = false;
     }
 
-    marchUniforms.cloudCheckerboardParity.value = parity;
-    renderer.setRenderTarget(marchTarget);
-    renderer.render(scene, camera);
-    marchUniforms.cloudCheckerboardParity.value = -1;
-
-    //Resolve. A cloud now at P, relative to the camera, was at P - wind * dt
-    //in the world last frame, and the camera itself moved -- so relative to last
-    //frame's camera it sat at P + (camera motion) - (wind motion). The wind term
-    //mirrors the offset in the density functions, velocity * cloudTime / 500.
+    //A cloud now at P, relative to the camera, was at P - wind * dt in the world last
+    //frame, and the camera itself moved -- so relative to last frame's camera it sat at
+    //P + (camera motion) - (wind motion). The wind term mirrors the offset in the density
+    //functions, velocity * cloudTime / 500. The resolve's history and the amortized
+    //march's carried texels both move by it.
     const historyUsable = frameStepUsable;
     const windScale = deltaTime / 500.0;
     resolveUniforms.cloudReprojectionShift.value.set(
@@ -749,6 +807,70 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       0.0,
       (cameraSkyZ - previousCameraPosition.z) - cloudParams.velocity.y * windScale
     );
+
+    let marchMap = marchTarget;
+    let amortizePacked = false;
+    if(amortize){
+      const targets = getAmortizeTargets();
+      marchMap = targets[amortizeIndex];
+      const full = amortizeReset || !historyUsable;
+      amortizePacked = !full;
+      marchUniforms.cloudAmortizeSide.value = full ? 0 : amortize.side;
+      bayerOffset(frame % amortizeCycle, amortize.side, marchUniforms.cloudAmortizeOffset.value);
+      marchUniforms.cloudAmortizeOffscreenSide.value = amortize.offscreenSide || amortize.side;
+      marchUniforms.cloudAmortizeFrame.value = frame;
+      marchUniforms.cloudAmortizeHistory.value = targets[1 - amortizeIndex].textures[0];
+      marchUniforms.cloudAmortizeHistoryDepth.value = targets[1 - amortizeIndex].textures[1];
+      marchUniforms.cloudAmortizeShift.value.copy(resolveUniforms.cloudReprojectionShift.value);
+      marchUniforms.cloudAmortizeHeight.value = resolveUniforms.cloudReprojectionHeight.value;
+      marchUniforms.cloudAmortizeMidHeight.value = resolveUniforms.cloudMidReprojectionHeight.value;
+      marchUniforms.cloudAmortizeMidSplit.value = resolveUniforms.cloudMidSplitHeight.value;
+      //On screen: the view cone's half diagonal plus a margin, for a turning head. The sky
+      //frame is three's world frame with x and z swapped and negated.
+      const viewCamera = skyDirector.camera;
+      if(viewCamera && viewCamera.isPerspectiveCamera){
+        viewCamera.getWorldDirection(viewForward);
+        marchUniforms.cloudViewForward.value.set(-viewForward.z, viewForward.y, -viewForward.x);
+        const tanHalfV = Math.tan(0.5 * viewCamera.fov * Math.PI / 180.0);
+        const tanHalfH = tanHalfV * viewCamera.aspect;
+        const halfDiagonal = Math.atan(Math.sqrt(tanHalfV * tanHalfV + tanHalfH * tanHalfH));
+        const halfAngle = halfDiagonal + (amortize.marginDegrees || 0.0) * Math.PI / 180.0;
+        marchUniforms.cloudViewCosHalfAngle.value = halfAngle >= Math.PI ? -2.0 : Math.cos(halfAngle);
+      }
+      else{
+        marchUniforms.cloudViewCosHalfAngle.value = -2.0;   //no camera: everything is on screen
+      }
+      amortizeReset = false;
+    }
+    marchUniforms.cloudCheckerboardParity.value = parity;
+    if(amortizePacked){
+      //The march proper, one texel per block into the packed target; then the merge,
+      //the same material in its cheap mode, writes the whole persistent map.
+      const packed = getPackedTarget(amortize.side);
+      renderer.setRenderTarget(packed);
+      renderer.render(scene, camera);
+      marchUniforms.cloudAmortizePacked.value = packed.textures[0];
+      marchUniforms.cloudAmortizePackedDepth.value = packed.textures[1];
+      marchUniforms.cloudAmortizeMerge.value = true;
+      renderer.setRenderTarget(marchMap);
+      renderer.render(scene, camera);
+      marchUniforms.cloudAmortizeMerge.value = false;
+      marchUniforms.cloudAmortizePacked.value = null;
+      marchUniforms.cloudAmortizePackedDepth.value = null;
+    }
+    else{
+      renderer.setRenderTarget(marchMap);
+      renderer.render(scene, camera);
+    }
+    marchUniforms.cloudCheckerboardParity.value = -1;
+    marchUniforms.cloudAmortizeSide.value = 0;
+    marchUniforms.cloudAmortizeHistory.value = null;
+    marchUniforms.cloudAmortizeHistoryDepth.value = null;
+    if(amortize){
+      amortizeIndex = 1 - amortizeIndex;
+    }
+    resolveUniforms.cloudMarchMap.value = marchMap.textures[0];
+    resolveUniforms.cloudMarchDepth.value = marchMap.textures[1];
     resolveUniforms.cloudJitter.value.copy(jitter);
     resolveUniforms.cloudCheckerboardParity.value = parity;
     resolveUniforms.cloudHistoryBlend.value = historyUsable ? CLOUD_TAA_BLEND : 1.0;
