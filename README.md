@@ -20,20 +20,20 @@ A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It a
 | [Medium Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=clouds-medium) | ⚠️ GPU intensive |
 | [Heavy Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=clouds-heavy) | ⚠️ GPU intensive |
 
-> **Better together:** A-Starry-Sky 1.3.0 is released alongside **a-water** and **a-faraway-land**, and a few features are built for them. Everything in the sky works on its own, but the **cloud shadows on the ground and sea, cloud reflections, cloud-tinted sky light and the sky's world lighting** (see [Lighting The World Beneath](#lighting-the-world-beneath-the-sky)) mainly pay off when your terrain and water come from those two. Plain three.js lit materials and A-Frame primitives pick up the cloud shadows too, but only a-water and a-faraway-land read the cloud reflections and the rest.
+> **Better together:** A-Starry-Sky 1.3.0 is released alongside **a-water** and **a-faraway-land**, and a few features are built for them. Their shadows, reflections and sky light read from the sky when all three are on the page. Everything in the sky works on its own, but the **cloud shadows on the ground and sea, cloud reflections, cloud-tinted sky light and the sky's world lighting** (see [Lighting The World Beneath](#lighting-the-world-beneath-the-sky)) mainly pay off when your terrain and water come from those two. Plain three.js lit materials and A-Frame primitives pick up the cloud shadows too, but only a-water and a-faraway-land read the cloud reflections and the rest.
 
 ## Prerequisites
 
-This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.8.0+. It also requires a Web XR compatible web browser.
+This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.7.0+. It also requires a Web XR compatible web browser.
 
-`https://aframe.io/releases/1.8.0/aframe.min.js`
+`https://aframe.io/releases/1.7.0/aframe.min.js`
 
 ## Installing
 
 Copy *a-starry-sky.v1.3.0.min.js* and the *assets* and *wasm* folders into your project. Add the following scripts to your HTML — note that `starry-sky-web-worker.js` is **not** included here; it is referenced directly on the `<a-starry-sky>` tag instead.
 
 ```html
-<script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
 <script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.3.0.min.js"></script>
 <script src="{PATH_TO_JS_FOLDER}/wasm/interpolation-engine.js"></script>
 ```

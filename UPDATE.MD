@@ -4,6 +4,8 @@
 * Removed a lunar occlusion mask in the sun pass that was computed from a texture that was never bound, and never read afterwards.
 * Fixed a blurry sun and moon at large angular diameters. Their off-screen textures were a fixed size, so a bigger body just got a softer one; they now follow angular diameter, field of view and canvas resolution.
 * Added the **Milky Way**, drawn from two equirectangular galactic-coordinate maps: emission from galpy's `MWPotential2014` stellar density integrated along each line of sight, and dust extinction from [Schlegel, Finkbeiner & Davis (1998)](https://doi.org/10.1086/305772) applied per channel, so the lanes warm rather than merely darken. On by default via a new `<sky-milky-way>` tag; both maps regenerate from `src/python/milky-way-mapper/`.
+* The star data array is held back until every tier is baked, so there is no flash of impossibly bright stars while loading.
+* The aurora is left out of the eye's night metering, so a growing storm brightens the sky instead of turning the exposure down to cancel it.
 * Fixed stellar scintillation, which summed non-negative noise and so could only ever *brighten* a star — averaging 1.2 to 5 times its true value and never once dimming. The centred version is driven by real relative airmass and is near magnitude-independent, as the physics requires.
 * Reworked star brightness. A star's point spread is no longer folded into the same square root as its magnitude compression, tightening each halo by 5 to 15 times without touching its peak. Sky washout is now logarithmic in sky brightness instead of linear in an sRGB-encoded radiance, so moonlight properly thins the faint field, and stars fade out entirely once the sun clears the horizon.
 * Rebuilt the clouds around a map of the sky, marched once per frame at half resolution and sharpened with temporal anti-aliasing. The sky dome, sun, moon and both VR eyes share it, and clouds now follow the curve of the Earth to the horizon instead of stopping at a wall.
@@ -19,6 +21,11 @@
 * Added `<sky-cloud-resolution>`, and reproject cloud history by each cloud's own distance rather than one layer height, which steadies moving clouds, especially overhead.
 * Calmed the shimmer on distant clouds: rays refine where they enter a cloud and cross its sunlit skin in fine steps, and the temporal filter keeps a longer history towards the horizon.
 * Clouds now march half their texels each frame in a checkerboard, filling the rest from their neighbours and the history, which nearly halves their cost for a touch more shimmer.
+* Cut the cloud cost again by amortizing the march: one texel in sixteen a frame, packed, with the rest carried along by the history, so temporal anti-aliasing does the smoothing that more steps and more noise used to.
+* The cloud march is built three ways, sun only, moon only and both, so whichever light is down no longer costs the other, and the scattering phases are worked out once per ray instead of every step.
+* Tamed the blue noise artifacts in the clouds: the ray start jitter is blue noise in space plus a golden ratio walk in time, so the temporal filter averages it away and the soft edges stay smooth with fewer steps.
+* Clouds now cast their shadows on **a-faraway-land** and **a-water** when those libraries are present. a-faraway-land brings its own baked in cascaded shadow maps, so it takes the sky's lighting through `StarrySky.worldLighting` and layers the cloud shadows into its own lighting rather than relying on the sky's internal lighting.
+* The cloud sky tint is read back through a pixel buffer and a fence, so it no longer stalls the frame.
 * Moving clouds now reproject by their deck's height rather than each texel's depth, and the wind follows a smoothed frame time, so cumulus middles bob less and uneven frames no longer lurch.
 * Cloud shadows on the ground no longer twitch forward and back under a fast `<sky-speed>`: their map re-bakes as many rows a frame as the moving sun or moon needs, rather than a fixed strip. Added `<sky-cloud-shadow-resolution>` to trade that bake's cost against shadow detail.
 * Rebuilt the aurora as curtains hanging along the magnetic field, marched once per frame into a map of the sky like the clouds, with the sharp green lower edge, high red and pink fringe of the real emission lines.
@@ -35,7 +42,7 @@
 * Distance fog now tonemaps with the same Khronos PBR Neutral operator as the sky, so fogged ground and the sky above it agree.
 * Fixed the sizes of the sun and moon textures to follow the canvas, not the monitor, so a windowed page no longer renders them as though it filled a 4K display, and supersampled them for a cleaner limb.
 * Rebuilt the asset manager around a texture array builder, which loads the lunar maps, star data, Milky Way and halo atlas, with new `<sky-milky-way-emission-map>`, `<sky-milky-way-absorption-map>` and `<sky-halo-atlas>` asset tags.
-* Moved the examples to A-Frame 1.8.0 and reworked the desert scene to show the new clouds, aurora, halos and Milky Way.
+* Reworked the desert example to show off the new clouds, aurora, halos and Milky Way.
 
 **Version 1.2.0**
 * Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).
