@@ -914,6 +914,7 @@ Hello! This is Dante83. Apologies about the long wait since version v1.1.0, ther
 * Sébastien Hillaire's *Physically Based Sky, Atmosphere and Cloud Rendering in Frostbite* (SIGGRAPH 2016), which informed the cloud illumination structure, SH9 ambient LUT design, and the Elek/Chalmers fog subtraction approach.
 * Andrew Schneider and Nathan Vos's *The Real-time Volumetric Cloudscapes of Horizon Zero Dawn* (SIGGRAPH 2015), which informed the dual-lobe Henyey-Greenstein phase function, cloud shape noise approach, and the reduced-extinction multiple scattering approximation.
 * D. Hestroffer and C. Magnan's *Centre to limb darkening of the Sun with HIPPARCOS* (1998), which provided the wavelength-dependent limb darkening coefficients for the B, V, and R bands used to give the sun's limb a physically correct reddish tint.
+* [three-geospatial](https://github.com/takram-design-engineering/three-geospatial) by takram design engineering (MIT), whose `three-clouds` noise recipe and constants our clouds follow, and Andrew Schneider's Nubis cloud work. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the full list of code, data and ideas we build on.
 * All the amazing work that has gone into [THREE.JS](https://threejs.org/), [A-Frame](https://aframe.io/) and [Emscripten](https://emscripten.org/).
 * *And so so many other websites and individuals. Thank you for giving us the opportunity to stand on your giant-like shoulders.*
 
