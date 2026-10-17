@@ -40,7 +40,6 @@
 * Distance fog now tonemaps with the same Khronos PBR Neutral operator as the sky, so fogged ground and the sky above it agree.
 * Fixed the sizes of the sun and moon textures to follow the canvas, not the monitor, so a windowed page no longer renders them as though it filled a 4K display, and supersampled them for a cleaner limb.
 * Rebuilt the asset manager around a texture array builder, which loads the lunar maps, star data, Milky Way and halo atlas, with new `<sky-milky-way-emission-map>`, `<sky-milky-way-absorption-map>` and `<sky-halo-atlas>` asset tags.
-* Reworked the desert example to show off the new clouds, aurora, halos and Milky Way.
 
 **Version 1.2.0**
 * Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).
