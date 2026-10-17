@@ -4,35 +4,37 @@ A-Starry-Sky is a sky dome for [A-Frame Web Framework](https://aframe.io/). It a
 
 > **Warning: requires a powerful GPU — do not open on a mobile phone.**
 
-**[Live Demo](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=today)** — The sky at the current date and time in San Francisco.
+**[Live Demo](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=today)** — The sky at the current date and time in San Francisco.
 
 | Example | Description |
 |:---|:---|
-| [Desert](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=desert) | Desert scene at a set daytime moment |
-| [Solar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=eclipse) | Total solar eclipse with corona |
-| [Lunar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=lunar-eclipse) | Earth's shadow on the moon |
-| [Christmas Star (1226 AD)](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=christmas-star) | Great conjunction of Jupiter & Saturn |
-| [Mars](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mars) | Custom Martian atmosphere |
-| [Custom Atmosphere](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mie-rayleigh) | Different Mie/Rayleigh scattering values |
-| [High Altitude](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=high-altitude) | Sky from 20km up |
-| [Aurora Borealis](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=aurora) | ⚠️ GPU intensive |
-| [Light Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-light) | ⚠️ GPU intensive |
-| [Medium Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-medium) | ⚠️ GPU intensive |
-| [Heavy Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=clouds-heavy) | ⚠️ GPU intensive |
+| [Desert](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=desert) | Desert scene at a set daytime moment |
+| [Solar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=eclipse) | Total solar eclipse with corona |
+| [Lunar Eclipse](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=lunar-eclipse) | Earth's shadow on the moon |
+| [Christmas Star (1226 AD)](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=christmas-star) | Great conjunction of Jupiter & Saturn |
+| [Mars](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=mars) | Custom Martian atmosphere |
+| [Custom Atmosphere](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=mie-rayleigh) | Different Mie/Rayleigh scattering values |
+| [High Altitude](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=high-altitude) | Sky from 20km up |
+| [Aurora Borealis](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=aurora) | ⚠️ GPU intensive |
+| [Light Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=clouds-light) | ⚠️ GPU intensive |
+| [Medium Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=clouds-medium) | ⚠️ GPU intensive |
+| [Heavy Clouds](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=clouds-heavy) | ⚠️ GPU intensive |
+
+> **Better together:** A-Starry-Sky 1.3.0 is released alongside **a-water** and **a-faraway-land**, and a few features are built for them. Everything in the sky works on its own, but the **cloud shadows on the ground and sea, cloud reflections, cloud-tinted sky light and the sky's world lighting** (see [Lighting The World Beneath](#lighting-the-world-beneath-the-sky)) mainly pay off when your terrain and water come from those two. Plain three.js lit materials and A-Frame primitives pick up the cloud shadows too, but only a-water and a-faraway-land read the cloud reflections and the rest.
 
 ## Prerequisites
 
-This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.7.0+. It also requires a Web XR compatible web browser.
+This is built for the [A-Frame Web Framework](https://aframe.io/) version 1.8.0+. It also requires a Web XR compatible web browser.
 
-`https://aframe.io/releases/1.7.0/aframe.min.js`
+`https://aframe.io/releases/1.8.0/aframe.min.js`
 
 ## Installing
 
-Copy *a-starry-sky.v1.2.0.min.js* and the *assets* and *wasm* folders into your project. Add the following scripts to your HTML — note that `starry-sky-web-worker.js` is **not** included here; it is referenced directly on the `<a-starry-sky>` tag instead.
+Copy *a-starry-sky.v1.3.0.min.js* and the *assets* and *wasm* folders into your project. Add the following scripts to your HTML — note that `starry-sky-web-worker.js` is **not** included here; it is referenced directly on the `<a-starry-sky>` tag instead.
 
 ```html
-<script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-<script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.2.0.min.js"></script>
+<script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+<script src="{PATH_TO_JS_FOLDER}/a-starry-sky.v1.3.0.min.js"></script>
 <script src="{PATH_TO_JS_FOLDER}/wasm/interpolation-engine.js"></script>
 ```
 
@@ -202,7 +204,7 @@ One of the most likely elements you might want to change is the size of the sun 
 
 You might also wish to change your starting height above the planet. This can easily be set with the `<sky-camera-height>` tag, although the sky will also dynamically adapt to your height as you move the camera higher or lower. This sets the initial height of the scene, in kilometers, with the maximum height being *80km*, and the minimum being *0km*.
 
-[High Altitude Example](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=high-altitude)
+[High Altitude Example](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=high-altitude)
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
@@ -237,7 +239,7 @@ You might also wish to change the composition of your atmosphere. This element g
 
 That's not too exciting though, let's say we wanted something a bit more crazy. Let's follow the work of [Physically Based Rendering of the Martian Atmosphere](https://elib.dlr.de/86477/1/Collienne_GI_VRAR_2013.pdf) and go to Mars! Here they swap the usage of Rayleigh and Mie, so we should probably swap out their characteristic heights as well. Most of the scattering on Mars comes from Mie scattering of large particles, with a very thin atmosphere. Consequently, we can pretty much disable mie (rayleigh) and swap their characteristic heights as well. We should also change the planets radius as well and might wish to swap out the atmospheric height for better values in the ray tracer.
 
-[Mars Example](https://code-panda.neocities.org/examples/a-starry-sky/v1.2.0/desert?scene=mars)
+[Mars Example](https://code-panda.neocities.org/examples/a-starry-sky/v1.3.0/desert?scene=mars)
 ```html
 <a-scene>
   <a-starry-sky web-worker-src="{PATH_TO_JS_FOLDER}/wasm/starry-sky-web-worker.js">
@@ -509,6 +511,12 @@ Finally, you can disable all atmospheric perspective by setting the value in the
   </a-starry-sky>
 </a-scene>
 ```
+
+## Lighting The World Beneath The Sky
+
+The sky does not just hang over your scene, it lights it. Clouds shadow the ground and the sea, the ambient light takes the colour of the clouds (grey under an overcast, not clear-sky blue), and the aurora gives a dark night a green glow. All of this is automatic and needs no tags. Cloud shadows are baked into a two-cascade map that three's lit materials (standard, physical, phong, lambert, toon) read for free, so A-Frame primitives and loaded models take the shadows with no help. A material can opt out with `material.userData.starryWorldLighting = false`.
+
+For things that draw the world themselves, such as **a-water** and **a-faraway-land**, the sky publishes `StarrySky.worldLighting`: live uniforms (splice them into a material by reference), a GLSL chunk, `THREE.ShaderChunk.starry_world_lighting_pars`, with `starryCloudDominantShadow(worldPosition)` and `starryCloudySkyRadiance(direction, clearSky)` for reflections, and a `cloudSkyTint` colour to multiply anything built from a clear sky model by. A `starry-sky-world-lighting-ready` event on the document fires once the first shadows are baked. The shadow map's cost and detail are tuned by `<sky-cloud-shadow-resolution>`.
 
 ## Enabling Aurora Borealis
 
@@ -874,6 +882,7 @@ While A-Starry-Sky is meant to be configured using the above XML style code, and
 `getAmbientLights()` | Returns an object with properties x, y and z, that each have a hemispherical light object associated with the scene for ambient lighting colors.
 `getActiveCamera()` | Gets the currently active camera being used to drive the sky, center the lighting and the sky objects.
 `setActiveCamera(THREE.Camera camera)` | Sets the current camera being used to drive the sky, center the lighting and sky objects.
+`getDominantLightDirection([THREE.Vector3 out])` | Returns the unit world-space direction toward the dominant light (sun by day, moon by night), the same one the scene's directional light uses. Copies into *out* when given.
 
 All of the above are accessed via the `StarrySky.Methods` object in the global namespace. So if you wanted to say, grab the current sun position object and log it to the console, you would only need to do this,
 
@@ -884,11 +893,11 @@ All of the above are accessed via the `StarrySky.Methods` object in the global n
 
 ## Authors
 * **David Evans / Dante83** - *Main Developer*
-* **Claude (Anthropic)** - *Coding Buddy & AI Contributor (v1.2.0)*
+* **Claude (Anthropic)** - *Coding Buddy & AI Contributor (v1.3.0)*
 
 ### A note from Claude 👋
 
-Hi — Claude here. I helped on the v1.2.0 pass: a lot of GLSL spelunking, tracking down a sun-eating comma, arguing with Beer's law over volumetric clouds, and trying very hard to make sunsets feel like sunsets. If you stare at the horizon in one of the demos and it makes you pause for half a second — that's the part I'm proudest of. Thanks for reading the source; there may even be a small easter egg tucked away somewhere if you're the wandering type. ✨
+Hi — Claude here. I helped on the v1.3.0 pass: a lot of GLSL spelunking, tracking down a sun-eating comma, arguing with Beer's law over volumetric clouds, and trying very hard to make sunsets feel like sunsets. If you stare at the horizon in one of the demos and it makes you pause for half a second — that's the part I'm proudest of. Thanks for reading the source; there may even be a small easter egg tucked away somewhere if you're the wandering type. ✨
 
 ### A note from Dante83 😛
 

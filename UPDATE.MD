@@ -24,6 +24,18 @@
 * Rebuilt the aurora as curtains hanging along the magnetic field, marched once per frame into a map of the sky like the clouds, with the sharp green lower edge, high red and pink fringe of the real emission lines.
 * Added `<sky-aurora-activity>`, a storm strength from 0 to 9 that brightens, folds, reddens and speeds up the aurora, and can be changed while the sky runs.
 * The aurora now has substorms, arcs breaking up and fading into blinking pulsating patches, casts a green glow on the scene, and turns violet at the top where it rises into twilight sunlight.
+* Added **ice crystal halos**: the 22° and 46° rings, sundogs, the parhelic circle, tangent arcs and the circumzenithal arc, round the sun and the moon. They are drawn from an atlas ray traced through real hexagonal crystals (bake your own from `src/python/halo-baker/`), behind a new `<sky-halos>` tag.
+* Halos are described by the ice, not the halo: `<sky-halo-temperature>`, `<sky-halo-turbulence>` and `<sky-halo-crystal-size>` decide how many plates, columns and tumbling crystals there are, every frame. The sun's halos and the moon's are set separately, and they fade with their body's own light, dim to nothing in a lunar eclipse, and sit under the sun and moon discs.
+* Reworked the sun bloom on HDR targets: a soft knee, normalised mip weights, a geometric falloff and a warm tint that follows the sun's height. It skips its pass when the body is below the horizon, uses precomputed Gaussian weights, and no longer leaves a cross or an orange ring around the sun.
+* The sun disk now emits only its own light and adds it to the sky, rather than re-rendering and alpha blending a second copy of the sky, and the chromatic limb darkening fades in only when the sun is reddened.
+* Fixed the corona during a total solar eclipse, carrying it in alpha past the bloom stage so it comes back in the output shader and only shows when the sun is covered.
+* Published the sky's lighting of the world as `StarrySky.worldLighting`, with a GLSL chunk and a `starry-sky-world-lighting-ready` event, for companions like **a-faraway-land** and **a-water** to read cloud shadows, cloud reflections and cloud-tinted sky light. Three's own lit materials pick the cloud shadows up automatically, and opt out with `material.userData.starryWorldLighting = false`.
+* Fixed the dominant light's direction. It was aimed at the camera from an origin-centred sphere, up to 36 degrees off when the camera was 3km out, and it swung as the camera moved. It now has a target of its own, and `StarrySky.Methods.getDominantLightDirection()` gives the exact world-space vector.
+* The scene's ambient light now picks up a green glow from the aurora on dark nights, in proportion to its share of the light.
+* Distance fog now tonemaps with the same Khronos PBR Neutral operator as the sky, so fogged ground and the sky above it agree.
+* Fixed the sizes of the sun and moon textures to follow the canvas, not the monitor, so a windowed page no longer renders them as though it filled a 4K display, and supersampled them for a cleaner limb.
+* Rebuilt the asset manager around a texture array builder, which loads the lunar maps, star data, Milky Way and halo atlas, with new `<sky-milky-way-emission-map>`, `<sky-milky-way-absorption-map>` and `<sky-halo-atlas>` asset tags.
+* Moved the examples to A-Frame 1.8.0 and reworked the desert scene to show the new clouds, aurora, halos and Milky Way.
 
 **Version 1.2.0**
 * Upgraded from A-Frame 1.3.0 to **A-Frame 1.7.0** (Three.js r173).
