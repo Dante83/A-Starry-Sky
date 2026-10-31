@@ -296,6 +296,15 @@ StarrySky.SkyDirector = function(parentComponent, webWorkerURI){
   };
 
   this.updateFinalSkyState = function(lsrt_0, lsrt_f){
+    //The final state buffer is TRANSFERRED to the worker below and only comes back with its answer
+    //(EVENT_RETURN_LATEST_SKY_STATE). Until then it is detached (byteLength 0). A long frame (a page
+    //compiling shaders, a tab coming back) moves interpolationT by timeDelta * speed, which can pass the
+    //next deadline before the worker has replied: reading the detached buffer then threw
+    //"attempting to access detached ArrayBuffer" on every tick. Hold the current state instead; the
+    //tick asks again next frame and the update lands as soon as the buffer is home.
+    if(!self.transferableFinalStateBuffer || self.transferableFinalStateBuffer.byteLength === 0){
+      return;
+    }
     //Update the Module Heap and final LSRT
     const intitialLSRT = self.finalLSRT;
 
