@@ -13,13 +13,37 @@ Under three.js's `WebGPURenderer`, materials are node graphs (TSL). `ShaderMater
 
 So this is a rewrite of the rendering layer. The astronomy (C++ and WASM), the asset bakers (Python), the tag parsing and the design of each effect all survive.
 
-**Verify before planning dates.** I checked these on 2026-11-09 by web search only, and the results were thin:
+## Where A-Frame and three.js stand (checked 2026-11-09)
 
-- A-Frame merged `WebGPURenderer` and TSL support in early 2025 ([PR 5655](https://github.com/aframevr/aframe/pull/5655)), for the module build only. I could not confirm how complete it is in the current release.
-- three.js release notes for r185 list "Add support for WebXR with WebGPU". Earlier forum threads saying it is impossible predate that.
-- TSL compute is reported not to run on the WebGL2 fallback backend.
+Read from the A-Frame release notes, PR threads and `master` source on GitHub, and from three.js release notes by web search. aframe.io itself was unreachable from this session, so the 1.7.0 blog post and the hosted docs were not read.
 
-Check all three against the A-Frame and three.js release notes directly. VR is a core use of A-Frame; if WebXR on WebGPU is not solid on the headsets users have, WebGL2 has to stay a first-class path for longer.
+**A-Frame**
+
+- Latest release is 1.8.0 (June 23, 2026), bundling three.js r184. Its notes say nothing about WebGPU or post-processing.
+- `a-scene.js` picks its renderer with `['WebGLRenderer', 'WebGPURenderer'].find(x => THREE[x])`. There is no option: WebGPU is used only when `three` is aliased to `three.webgpu.js` by an import map or bundler, so `WebGLRenderer` is absent. The UMD build cannot do it ([PR 5655](https://github.com/aframevr/aframe/pull/5655)).
+- Known breakage under WebGPU from that PR: `ShaderMaterial` is rejected ("not compatible"), and the SDF and MSDF text components were broken at the time of merge.
+- **There is no render-pass API.** The scene's loop is `renderer.render(this.object3D, this.camera)` followed by `tock()` on components. The "experimental post-processing" in the 1.7.0 notes is an example component ([PR 5648](https://github.com/aframevr/aframe/pull/5648), a bloom under `examples/showcase/post-processing/`), which takes over the scene's render itself; for VR it relied on a patch in the supermedium three.js fork. The `renderer` component documents no HDR or half-float framebuffer and no WebGPU setting.
+- A-Frame is on r184. WebXR on `WebGPURenderer` is listed in three.js **r185**. So on a stock A-Frame today, WebGPU means no VR.
+
+**three.js**
+
+- r185 lists WebXR support for `WebGPURenderer`, with a fallback where native WebGPU XR is not available. r186 appears to be current.
+- `EffectComposer` and its passes do not work on `WebGPURenderer`. The replacement is node based: `PostProcessing`, renamed `RenderPipeline` in r183.
+- TSL compute is reported not to run on the WebGL2 fallback backend. I found this in secondary sources only.
+
+**What this means for the plan**
+
+- **Do not design anything that needs a scene-level pass.** Today the sky never touches the scene's frame: it draws into its own targets (clouds, sun, moon, aurora) with its own composers, and reaches other objects by patching their materials. That is the right shape for A-Frame and should stay. Compute passes are fine, since they run before the scene draws and do not need the scene's colour or depth.
+- Features that would normally be full-screen passes need another route:
+  - **Aerial perspective**: per material, sampling the froxel volume in the fragment stage (a node in TSL, the patched chunk today). No depth-buffer pass needed.
+  - **Exposure**: metered from the sky's own tables and the ambient integration, not from the rendered frame. Applied by pre-exposing lights and sky radiance (`02`), so no final pass is needed either.
+  - **Bloom on the sun**: keep it in the sun's own target, as now. Bloom on scene highlights (sun glints on water) is out of reach without a pass.
+  - **Tonemapping**: the sky must use the renderer's own `toneMapping` and `exposure` settings so it agrees with the scene. Today the sky tonemaps itself with a different curve from whatever the user chose.
+  - **Precipitation**: particles as scene geometry, depth-tested normally. Screen-space rain effects (lens drops, refraction) are out.
+  - **HDR canvas output**: blocked until A-Frame exposes the canvas configuration.
+- **Offer an optional pass component, clearly marked.** A `starry-sky-postprocessing` component that takes over rendering the way A-Frame's bloom example does, for users who accept the trade (it conflicts with any other component doing the same, and VR support depends on the three.js build). Scene bloom, depth-based aerial perspective and auto-exposure from the frame can live there. Nothing in the core may depend on it.
+- **Worth raising upstream.** A small hook in `a-scene`'s render (a replaceable render function, or first-class `RenderPipeline` support on the WebGPU path) would remove this limit for every A-Frame library. The plain three.js entry point in `09` sidesteps it for non-A-Frame users.
+- **WebGL2 stays the default backend** until A-Frame ships a three.js with WebXR on WebGPU and its own components work there. The WebGPU path is opt-in, module-build only, and desktop-first for now.
 
 ## Shape of the port
 
@@ -69,7 +93,7 @@ Draw the catalogue as instanced quads instead: positions, magnitudes and tempera
 
 ### 5. Auto-exposure on the GPU
 
-A luminance histogram of the unexposed frame, built in compute, reduced to an EV on the GPU and read back as one value (or not read back at all: keep exposure in a 1 x 1 texture). Replaces the metering survey, its worker round trip and the `LightingAnalyzer` C++.
+A-Frame gives no access to the finished frame, so meter what the sky owns: a compute pass that integrates the sky-view table and the cloud map into an average luminance and an irradiance on the ground, reduced to an EV kept in a 1 x 1 texture with no readback. Replaces the metering survey, its worker round trip and the `LightingAnalyzer` C++. A true frame histogram belongs to the optional pass component.
 
 ### 6. Precipitation particles
 
@@ -91,8 +115,8 @@ Path tracing the sky per pixel per frame is out of reach on the GPUs the web run
 
 ## Other WebGPU features worth using
 
-- **HDR canvas output.** Configure the canvas as `rgba16float` with `toneMapping: { mode: 'extended' }` and the sun, its glints on water and the moon can exceed SDR white on capable displays. A sky is close to the best case for HDR output. Needs a display-capability check and a tonemapper with an adjustable peak.
-- **Read-only depth attachments** let the aerial-perspective and precipitation passes sample scene depth while depth-testing against it.
+- **HDR canvas output** (blocked on A-Frame for now, see above). Configure the canvas as `rgba16float` with `toneMapping: { mode: 'extended' }` and the sun, its glints on water and the moon can exceed SDR white on capable displays. A sky is close to the best case for HDR output. Needs a display-capability check and a tonemapper with an adjustable peak.
+- **Read-only depth attachments** let a pass sample scene depth while depth-testing against it. Only useful inside the optional pass component.
 - **Indirect draws** for particle counts decided on the GPU.
 - **Texture views and per-layer render attachments** simplify the texture-array building in `TextureArrayBuilder`.
 
@@ -114,6 +138,6 @@ Path tracing the sky per pixel per frame is out of reach on the GPUs the web run
 5. **Clouds**: first a straight TSL port of the fragment march, then the compute work list, then the lighting volume.
 6. **The reference path tracer**, then cached path-traced lighting.
 7. **Compute particles** for precipitation.
-8. **HDR output.**
+8. **The optional pass component**, and HDR output when A-Frame allows it.
 
 Steps 1 and 2 are the bulk of the risk reduction and deliver value with no WebGPU at all.
