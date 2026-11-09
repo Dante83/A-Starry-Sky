@@ -52,6 +52,10 @@ const int CLOUD_GROUND_SHADOW_SAMPLES = 24;
 //A grazing light crosses the decks over tens of kilometres; past this the far fade
 //has taken the clouds anyway.
 const float CLOUD_GROUND_SHADOW_MAX_PATH = 60000.0;
+//The lowest a light is taken to stand, as the cosine of its zenith angle: a little
+//over a degree. Must match the floor on cosLight in starryCloudShadowAlong
+//(starry-world-lighting-pars.glsl), which finds its texel along the same ray.
+const float CLOUD_GROUND_SHADOW_MIN_COS_LIGHT = 0.02;
 
 $cloudDensityFunctions
 
@@ -78,7 +82,27 @@ vec2 cloudGroundShadowBake(vec3 c, vec3 light){
     return vec2(1.0, 0.0);
   }
   vec3 up = cloudLocalUp(c);
-  float cosLight = max(dot(light, up), 0.02);
+  float cosLight = dot(light, up);
+  //A light lower than the floor is marched as if it stood AT the floor, direction and
+  //all. Flooring the cosine alone left the samples running along the real light, over
+  //a path measured for the floored one: a setting sun's samples never climbed as far
+  //as the cloud base, found clear air, and the ground went from deep shadow to fully
+  //lit over the last degree of every sunset -- at <sky-speed> 800 a flash of red
+  //sunlight eight frames long (measured 2026-11-09: the mean beam over 3km of ground
+  //0.03 with the sun 2 degrees up, 0.21 at 0.14 degrees, 1.0 at 0.06). And "up" is
+  //the vertical at this texel, tens of kilometres from the observer, where the sun is
+  //up to half a degree higher or lower than it is for them: the far texels of the wide
+  //cascade let go first, which showed as the deck's mean climbing a second earlier.
+  if(cosLight < CLOUD_GROUND_SHADOW_MIN_COS_LIGHT){
+    vec3 level = light - cosLight * up;
+    float levelLength = length(level);
+    if(levelLength < 1e-4){
+      //Straight below: nothing of this light arrives, and nothing reads it.
+      return vec2(1.0, 0.0);
+    }
+    cosLight = CLOUD_GROUND_SHADOW_MIN_COS_LIGHT;
+    light = (level / levelLength) * sqrt(1.0 - cosLight * cosLight) + cosLight * up;
+  }
   float h = cloudHeight(c);
   float start = max(span.x - h, 0.0) / cosLight;
   float end = min(max(span.y - h, 0.0) / cosLight, CLOUD_GROUND_SHADOW_MAX_PATH);

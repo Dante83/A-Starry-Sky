@@ -209,13 +209,21 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //per channel. Grey under an overcast, near 1 under fair weather cumulus, brighter than 1
   //beside sunlit cloud. Read back a few times a second without stalling where three
   //can (readRenderTargetPixelsAsync), and eased in, since the readback lags a frame or two.
+  //
+  //Eased EVERY FRAME towards the last readback, not once per readback. Through a fast
+  //sunset the ratio moves several percent between readbacks, and stepping it there made
+  //a staircase at 7.5 Hz in every light that carries the tint -- which a reader sampling
+  //at its own rate (a-faraway-land rescales its captured sky at 4 Hz) saw as an uneven
+  //pulse. The weight is per frame: about two thirds of the way in the eight frames
+  //between readbacks.
   const SKY_LIGHT_TINT_INTERVAL = 8;
-  const SKY_LIGHT_TINT_EASING = 0.5;
+  const SKY_LIGHT_TINT_EASING = 0.12;
   const SKY_LIGHT_TINT_RANGE = [0.02, 4.0];
   //Keeps the ratio at 1 in a truly dark sky, where both means are noise.
   const SKY_LIGHT_TINT_FLOOR = 1e-6;
   this.skyLightTint = new THREE.Vector3(1.0, 1.0, 1.0);
   this.skyLightTintLive = false;
+  const skyLightTintTarget = new THREE.Vector3(1.0, 1.0, 1.0);
   const ambientReadback = new Float32Array(12);
   let ambientReadPending = false;
   let ambientPBO = null;
@@ -230,11 +238,11 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       const ratio = (Math.max(cloudy, 0.0) + SKY_LIGHT_TINT_FLOOR) / (Math.max(clear, 0.0) + SKY_LIGHT_TINT_FLOOR);
       tint[c] = Math.min(Math.max(ratio, SKY_LIGHT_TINT_RANGE[0]), SKY_LIGHT_TINT_RANGE[1]);
     }
-    const easing = self.skyLightTintLive ? SKY_LIGHT_TINT_EASING : 1.0;
-    self.skyLightTint.x += (tint[0] - self.skyLightTint.x) * easing;
-    self.skyLightTint.y += (tint[1] - self.skyLightTint.y) * easing;
-    self.skyLightTint.z += (tint[2] - self.skyLightTint.z) * easing;
-    self.skyLightTintLive = true;
+    skyLightTintTarget.set(tint[0], tint[1], tint[2]);
+    if(!self.skyLightTintLive){
+      self.skyLightTint.copy(skyLightTintTarget);
+      self.skyLightTintLive = true;
+    }
   };
   const readSkyLightTint = function(){
     if(!ambientReadable || ambientReadPending){
@@ -785,6 +793,9 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     marchUniforms.cloudAmbientMap.value = ambientTarget.texture;
     if(frame % SKY_LIGHT_TINT_INTERVAL === 0){
       readSkyLightTint();
+    }
+    if(self.skyLightTintLive){
+      self.skyLightTint.lerp(skyLightTintTarget, SKY_LIGHT_TINT_EASING);
     }
 
     if(cloudParams.midCoverage > 0.0){

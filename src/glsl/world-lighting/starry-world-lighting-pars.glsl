@@ -43,6 +43,25 @@ const float STARRY_CLOUD_SKY_OCCLUSION = 0.5;
 //Bounds on the sky light under one patch of cloud against the mean of the whole
 //deck, for sky light that already carries the clouds on average (a captured dome).
 const vec2 STARRY_CLOUD_SKY_CONTRAST_RANGE = vec2(0.5, 1.5);
+//The sky term is the beam's own transmittance averaged over the deck, which stands in
+//for the cloud overhead only while the light is high. Low down it is a slant path
+//through every cloud for tens of kilometres, and where it is read slides away along
+//the light at kilometres a second under a fast clock: at <sky-speed> 800, sun 6
+//degrees up, the sky light on the whole terrain went from 1.09 to 0.69 of the deck's
+//mean in one second, then 1.27, then back (measured 2026-11-09). So the term fades to
+//the deck's mean between these cosines of the light's zenith angle, 26 and 9 degrees
+//up: a cloud's depth over its spacing, where a ray stops crossing one cloud and starts
+//crossing several.
+const vec2 STARRY_CLOUD_SKY_LIGHT_HEIGHTS = vec2(0.15, 0.45);
+//And under the moon it only comes in as twilight ends. Until then the sky's light is
+//still the sun's afterglow, which the moon's shadows have no say over, and the sky
+//term jumped the frame the directional light changed hands. Sun heights, 10 and 3
+//degrees down.
+const vec2 STARRY_CLOUD_MOON_SKY_LIGHT_SUN_HEIGHTS = vec2(-0.17, -0.05);
+//The lowest a light is taken to stand, as the cosine of its zenith angle. Must match
+//CLOUD_GROUND_SHADOW_MIN_COS_LIGHT in cloud-ground-shadow-map.glsl, which marches the
+//ray this looks up.
+const float STARRY_CLOUD_SHADOW_MIN_COS_LIGHT = 0.02;
 //Where the fine cascade hands over to the wide one, as a fraction of its half width.
 const float STARRY_CASCADE_BLEND_START = 0.8;
 //Must match CLOUD_MAP_K in cloud-march.glsl.
@@ -90,7 +109,8 @@ vec3 starryCloudShadowAlong(vec3 worldPosition, vec3 light, bool isMoon){
   vec3 q = starryWorldToSky(worldPosition);
   float h = starryCloudHeight(q);
   float drop = max(starryCloudShadowPlaneHeight - h, 0.0);
-  float cosLight = max(dot(light, starryCloudLocalUp(q)), 0.02);
+  float lightHeight = dot(light, starryCloudLocalUp(q));
+  float cosLight = max(lightHeight, STARRY_CLOUD_SHADOW_MIN_COS_LIGHT);
   //Along the light to the plane: up to it from below, and back DOWN to it from above,
   //so the ray from that point of the plane to the light passes through this one. The
   //plane is the lowest base any cloud CAN have (stratus); the real bases mostly sit far
@@ -115,6 +135,13 @@ vec3 starryCloudShadowAlong(vec3 worldPosition, vec3 light, bool isMoon){
   if(fine > 0.0){
     result = mix(result, starryCloudShadowCascade(0, xz, reach, drop, isMoon), fine);
   }
+
+  //The sky term, only as far as this light can speak for the sky overhead.
+  float skyLightWeight = smoothstep(STARRY_CLOUD_SKY_LIGHT_HEIGHTS.x, STARRY_CLOUD_SKY_LIGHT_HEIGHTS.y, lightHeight);
+  if(isMoon){
+    skyLightWeight *= 1.0 - smoothstep(STARRY_CLOUD_MOON_SKY_LIGHT_SUN_HEIGHTS.x, STARRY_CLOUD_MOON_SKY_LIGHT_SUN_HEIGHTS.y, starrySunDirection.y);
+  }
+  result.y = mix(meanLight, result.y, skyLightWeight);
 
   //Inside the decks the plane says less and less about this point, and above them
   //nothing: it is fully lit by the top.
