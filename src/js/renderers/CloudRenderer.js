@@ -61,7 +61,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
 
   //Every cloud texture repeats, so the offset into them can wrap without a seam as
   //long as the wrap is a whole number of every tile. Must be a common multiple of
-  //CLOUD_SHAPE_TILE (3km) and CLOUD_WEATHER_TILE (60km), each times any value the
+  //CLOUD_SHAPE_TILE (5km) and CLOUD_WEATHER_TILE (60km), each times any value the
   //quantized cloudShapeScale can take (6 / n), and CLOUD_DETAIL_TILE (200m), in
   //cloud-density.glsl. 360km in single precision still resolves to a few centimetres. Wrapping here, in doubles,
   //keeps the float offset on the GPU small -- the wind alone runs to thousands of

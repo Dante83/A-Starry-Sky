@@ -5339,9 +5339,16 @@ StarrySky.Materials.Clouds.cloudDensity = {
     '//Tile sizes, meters. CLOUD_NOISE_WRAP in CloudRenderer.js (360km) must be a whole',
     '//multiple of every one of them -- the shape and weather tiles times any value',
     '//cloudShapeScale can take -- or the wind offset wrapping back to zero would jump',
-    '//the clouds. takram uses 3.3km and 167m for the shape and detail tiles; these are',
-    '//the nearest sizes that divide the wrap.',
-    'const float CLOUD_SHAPE_TILE = 3000.0;',
+    '//the clouds. takram uses 3.3km and 167m for the shape and detail tiles; the detail',
+    '//tile is the nearest size that divides the wrap.',
+    '//',
+    "//The shape tile is larger than takram's. The shape noise's coarsest cells are an",
+    '//eighth of its tile, so at 3km the billows were 375m knobs on clouds 2 to 5km across:',
+    '//eight or ten of them over every cloud, all one size, and a cumulus read as a head of',
+    '//cauliflower. A real one carries a few turrets a third or a quarter of its width,',
+    '//with the knobs riding on those. At 5km the coarsest billows are 625m, and the finer',
+    "//octaves (156m, 90m) meet the detail noise's 100m where they used to sit under it.",
+    'const float CLOUD_SHAPE_TILE = 5000.0;',
     'const float CLOUD_DETAIL_TILE = 200.0;',
     'const float CLOUD_WEATHER_TILE = 60000.0;',
 
@@ -5366,6 +5373,20 @@ StarrySky.Materials.Clouds.cloudDensity = {
     'const float CLOUD_SHAPE_AMOUNT = 1.0;',
     'const float CLOUD_DETAIL_AMOUNT = 1.0;',
 
+    '//How far into a heap its density takes to reach full, as a fraction of the way from',
+    '//its edge to its heart. At 1 the whole cloud was a ramp: nowhere but the very middle',
+    "//of the biggest was out of the shape erosion's reach, and the erosion keeps whatever",
+    '//stands above one minus the noise, so all round every cloud, where the ramp is low,',
+    "//it kept only the noise's peaks -- crumbs. Looking down on 40km of 40% cumulus there",
+    '//were 718 separate clouds, 567 of them under 150m across and holding a four',
+    '//hundredth of the cloud (measured with the density probe, 2026-11-09). At 0.6 the',
+    '//outer part of a cloud is still soft and billowed and its middle is solid: 259',
+    '//clouds, 136 under 150m, at the same coverage and with the 33 big ones untouched.',
+    "//Much lower and the edge is so crisp that the footprints' own Worley bubbles show in",
+    "//the outline (0.4: 74 crumbs, and clouds like soap suds). Heaps only: a sheet's edge",
+    '//is its own business (see the stratiform table, and the mid deck).',
+    'const float CLOUD_EDGE_WIDTH = 0.6;',
+
     '//The tag coverage is the fraction of the sky the clouds cover. The coverage the',
     '//recipe thresholds with is not: the footprints, the soft edges and the height',
     '//profile bunch it, so 0.2 already covered 70% of the sky. These are the',
@@ -5373,13 +5394,19 @@ StarrySky.Materials.Clouds.cloudDensity = {
     '//cumulus, measured with the density probe. Towering species fill more sky at the',
     '//same value, since their tops overhang, so they sit a little lower',
     '//(CLOUD_TOWERING_COVERAGE_OFFSET). Re-measure whenever the recipe changes.',
-    'const float CLOUD_COVERAGE_TABLE[11] = float[11](0.0, 0.082, 0.097, 0.112, 0.126, 0.139, 0.154, 0.171, 0.191, 0.223, 0.45);',
+    '//',
+    '//Last measured 2026-11-09, for CLOUD_EDGE_WIDTH 0.6 and the 5km shape tile: a cloud',
+    '//that is solid sooner covers more sky at the same value (51% where the table meant',
+    '//40%), so every entry came down by about 6%, to the value that covers what the old',
+    '//one did. The towering offset came down with them, from 0.008. The stratiform table',
+    '//did not move (to within 0.2% of the sky): the edge width is for heaps alone.',
+    'const float CLOUD_COVERAGE_TABLE[11] = float[11](0.0, 0.077, 0.091, 0.105, 0.119, 0.131, 0.145, 0.161, 0.180, 0.210, 0.42);',
     '//The same for stratiform decks. Their footprint never falls below half (so that',
     '//the coverage can close them into an overcast), which bunched the heap table',
     '//further still: 10% on the tag covered 28% of the sky and 90% only 87%. Measured',
     '//on stratus the same way; blended in with the stratiform weight.',
     'const float CLOUD_STRATIFORM_COVERAGE_TABLE[11] = float[11](0.0, 0.036, 0.066, 0.090, 0.111, 0.131, 0.151, 0.172, 0.194, 0.221, 0.35);',
-    'const float CLOUD_TOWERING_COVERAGE_OFFSET = 0.008;',
+    'const float CLOUD_TOWERING_COVERAGE_OFFSET = 0.006;',
 
     "//Extinction at full density, per meter. takram's 0.2 -- the dense end of real",
     '//cumulus (0.05 to 0.2/m) -- but since the soft threshold and the erosion leave most',
@@ -5573,7 +5600,7 @@ StarrySky.Materials.Clouds.cloudDensity = {
       'float reach = max(cloudRecipeCoverage(coverage, type) * heightScale, 1e-4);',
       'float threshold = 1.0 - reach;',
       'float profile = cloudRemap(mix(footprint, 1.0, CLOUD_COVERAGE_FILTER_WIDTH), threshold, threshold + CLOUD_COVERAGE_FILTER_WIDTH, 0.0, 1.0);',
-      'weather.density = clamp(profile * CLOUD_COVERAGE_FILTER_WIDTH / reach, 0.0, 1.0);',
+      'weather.density = clamp(profile * CLOUD_COVERAGE_FILTER_WIDTH / (reach * mix(CLOUD_EDGE_WIDTH, 1.0, stratiform)), 0.0, 1.0);',
 
       '//The fade tags: the top goes out over the fade-out fraction, and the fade-in',
       '//softens the base over a quarter of its fraction (about 40m for cumulus at the',
@@ -6048,6 +6075,10 @@ StarrySky.Materials.Clouds.cloudGroundShadowMap = {
     '//A grazing light crosses the decks over tens of kilometres; past this the far fade',
     '//has taken the clouds anyway.',
     'const float CLOUD_GROUND_SHADOW_MAX_PATH = 60000.0;',
+    '//The lowest a light is taken to stand, as the cosine of its zenith angle: a little',
+    '//over a degree. Must match the floor on cosLight in starryCloudShadowAlong',
+    '//(starry-world-lighting-pars.glsl), which finds its texel along the same ray.',
+    'const float CLOUD_GROUND_SHADOW_MIN_COS_LIGHT = 0.02;',
 
     '$cloudDensityFunctions',
 
@@ -6074,7 +6105,27 @@ StarrySky.Materials.Clouds.cloudGroundShadowMap = {
         'return vec2(1.0, 0.0);',
       '}',
       'vec3 up = cloudLocalUp(c);',
-      'float cosLight = max(dot(light, up), 0.02);',
+      'float cosLight = dot(light, up);',
+      '//A light lower than the floor is marched as if it stood AT the floor, direction and',
+      '//all. Flooring the cosine alone left the samples running along the real light, over',
+      "//a path measured for the floored one: a setting sun's samples never climbed as far",
+      '//as the cloud base, found clear air, and the ground went from deep shadow to fully',
+      '//lit over the last degree of every sunset -- at <sky-speed> 800 a flash of red',
+      '//sunlight eight frames long (measured 2026-11-09: the mean beam over 3km of ground',
+      '//0.03 with the sun 2 degrees up, 0.21 at 0.14 degrees, 1.0 at 0.06). And "up" is',
+      '//the vertical at this texel, tens of kilometres from the observer, where the sun is',
+      '//up to half a degree higher or lower than it is for them: the far texels of the wide',
+      "//cascade let go first, which showed as the deck's mean climbing a second earlier.",
+      'if(cosLight < CLOUD_GROUND_SHADOW_MIN_COS_LIGHT){',
+        'vec3 level = light - cosLight * up;',
+        'float levelLength = length(level);',
+        'if(levelLength < 1e-4){',
+          '//Straight below: nothing of this light arrives, and nothing reads it.',
+          'return vec2(1.0, 0.0);',
+        '}',
+        'cosLight = CLOUD_GROUND_SHADOW_MIN_COS_LIGHT;',
+        'light = (level / levelLength) * sqrt(1.0 - cosLight * cosLight) + cosLight * up;',
+      '}',
       'float h = cloudHeight(c);',
       'float start = max(span.x - h, 0.0) / cosLight;',
       'float end = min(max(span.y - h, 0.0) / cosLight, CLOUD_GROUND_SHADOW_MAX_PATH);',
@@ -8510,6 +8561,25 @@ StarrySky.Materials.WorldLighting.worldLightingPars = {
     '//Bounds on the sky light under one patch of cloud against the mean of the whole',
     '//deck, for sky light that already carries the clouds on average (a captured dome).',
     'const vec2 STARRY_CLOUD_SKY_CONTRAST_RANGE = vec2(0.5, 1.5);',
+    "//The sky term is the beam's own transmittance averaged over the deck, which stands in",
+    '//for the cloud overhead only while the light is high. Low down it is a slant path',
+    '//through every cloud for tens of kilometres, and where it is read slides away along',
+    '//the light at kilometres a second under a fast clock: at <sky-speed> 800, sun 6',
+    "//degrees up, the sky light on the whole terrain went from 1.09 to 0.69 of the deck's",
+    '//mean in one second, then 1.27, then back (measured 2026-11-09). So the term fades to',
+    "//the deck's mean between these cosines of the light's zenith angle, 26 and 9 degrees",
+    "//up: a cloud's depth over its spacing, where a ray stops crossing one cloud and starts",
+    '//crossing several.',
+    'const vec2 STARRY_CLOUD_SKY_LIGHT_HEIGHTS = vec2(0.15, 0.45);',
+    "//And under the moon it only comes in as twilight ends. Until then the sky's light is",
+    "//still the sun's afterglow, which the moon's shadows have no say over, and the sky",
+    '//term jumped the frame the directional light changed hands. Sun heights, 10 and 3',
+    '//degrees down.',
+    'const vec2 STARRY_CLOUD_MOON_SKY_LIGHT_SUN_HEIGHTS = vec2(-0.17, -0.05);',
+    '//The lowest a light is taken to stand, as the cosine of its zenith angle. Must match',
+    '//CLOUD_GROUND_SHADOW_MIN_COS_LIGHT in cloud-ground-shadow-map.glsl, which marches the',
+    '//ray this looks up.',
+    'const float STARRY_CLOUD_SHADOW_MIN_COS_LIGHT = 0.02;',
     '//Where the fine cascade hands over to the wide one, as a fraction of its half width.',
     'const float STARRY_CASCADE_BLEND_START = 0.8;',
     '//Must match CLOUD_MAP_K in cloud-march.glsl.',
@@ -8557,7 +8627,8 @@ StarrySky.Materials.WorldLighting.worldLightingPars = {
       'vec3 q = starryWorldToSky(worldPosition);',
       'float h = starryCloudHeight(q);',
       'float drop = max(starryCloudShadowPlaneHeight - h, 0.0);',
-      'float cosLight = max(dot(light, starryCloudLocalUp(q)), 0.02);',
+      'float lightHeight = dot(light, starryCloudLocalUp(q));',
+      'float cosLight = max(lightHeight, STARRY_CLOUD_SHADOW_MIN_COS_LIGHT);',
       '//Along the light to the plane: up to it from below, and back DOWN to it from above,',
       '//so the ray from that point of the plane to the light passes through this one. The',
       '//plane is the lowest base any cloud CAN have (stratus); the real bases mostly sit far',
@@ -8582,6 +8653,13 @@ StarrySky.Materials.WorldLighting.worldLightingPars = {
       'if(fine > 0.0){',
         'result = mix(result, starryCloudShadowCascade(0, xz, reach, drop, isMoon), fine);',
       '}',
+
+      '//The sky term, only as far as this light can speak for the sky overhead.',
+      'float skyLightWeight = smoothstep(STARRY_CLOUD_SKY_LIGHT_HEIGHTS.x, STARRY_CLOUD_SKY_LIGHT_HEIGHTS.y, lightHeight);',
+      'if(isMoon){',
+        'skyLightWeight *= 1.0 - smoothstep(STARRY_CLOUD_MOON_SKY_LIGHT_SUN_HEIGHTS.x, STARRY_CLOUD_MOON_SKY_LIGHT_SUN_HEIGHTS.y, starrySunDirection.y);',
+      '}',
+      'result.y = mix(meanLight, result.y, skyLightWeight);',
 
       '//Inside the decks the plane says less and less about this point, and above them',
       '//nothing: it is fully lit by the top.',
@@ -10962,7 +11040,7 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
 
   //Every cloud texture repeats, so the offset into them can wrap without a seam as
   //long as the wrap is a whole number of every tile. Must be a common multiple of
-  //CLOUD_SHAPE_TILE (3km) and CLOUD_WEATHER_TILE (60km), each times any value the
+  //CLOUD_SHAPE_TILE (5km) and CLOUD_WEATHER_TILE (60km), each times any value the
   //quantized cloudShapeScale can take (6 / n), and CLOUD_DETAIL_TILE (200m), in
   //cloud-density.glsl. 360km in single precision still resolves to a few centimetres. Wrapping here, in doubles,
   //keeps the float offset on the GPU small -- the wind alone runs to thousands of
@@ -11110,13 +11188,21 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
   //per channel. Grey under an overcast, near 1 under fair weather cumulus, brighter than 1
   //beside sunlit cloud. Read back a few times a second without stalling where three
   //can (readRenderTargetPixelsAsync), and eased in, since the readback lags a frame or two.
+  //
+  //Eased EVERY FRAME towards the last readback, not once per readback. Through a fast
+  //sunset the ratio moves several percent between readbacks, and stepping it there made
+  //a staircase at 7.5 Hz in every light that carries the tint -- which a reader sampling
+  //at its own rate (a-faraway-land rescales its captured sky at 4 Hz) saw as an uneven
+  //pulse. The weight is per frame: about two thirds of the way in the eight frames
+  //between readbacks.
   const SKY_LIGHT_TINT_INTERVAL = 8;
-  const SKY_LIGHT_TINT_EASING = 0.5;
+  const SKY_LIGHT_TINT_EASING = 0.12;
   const SKY_LIGHT_TINT_RANGE = [0.02, 4.0];
   //Keeps the ratio at 1 in a truly dark sky, where both means are noise.
   const SKY_LIGHT_TINT_FLOOR = 1e-6;
   this.skyLightTint = new THREE.Vector3(1.0, 1.0, 1.0);
   this.skyLightTintLive = false;
+  const skyLightTintTarget = new THREE.Vector3(1.0, 1.0, 1.0);
   const ambientReadback = new Float32Array(12);
   let ambientReadPending = false;
   let ambientPBO = null;
@@ -11131,11 +11217,11 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
       const ratio = (Math.max(cloudy, 0.0) + SKY_LIGHT_TINT_FLOOR) / (Math.max(clear, 0.0) + SKY_LIGHT_TINT_FLOOR);
       tint[c] = Math.min(Math.max(ratio, SKY_LIGHT_TINT_RANGE[0]), SKY_LIGHT_TINT_RANGE[1]);
     }
-    const easing = self.skyLightTintLive ? SKY_LIGHT_TINT_EASING : 1.0;
-    self.skyLightTint.x += (tint[0] - self.skyLightTint.x) * easing;
-    self.skyLightTint.y += (tint[1] - self.skyLightTint.y) * easing;
-    self.skyLightTint.z += (tint[2] - self.skyLightTint.z) * easing;
-    self.skyLightTintLive = true;
+    skyLightTintTarget.set(tint[0], tint[1], tint[2]);
+    if(!self.skyLightTintLive){
+      self.skyLightTint.copy(skyLightTintTarget);
+      self.skyLightTintLive = true;
+    }
   };
   const readSkyLightTint = function(){
     if(!ambientReadable || ambientReadPending){
@@ -11686,6 +11772,9 @@ StarrySky.Renderers.CloudRenderer = function(skyDirector){
     marchUniforms.cloudAmbientMap.value = ambientTarget.texture;
     if(frame % SKY_LIGHT_TINT_INTERVAL === 0){
       readSkyLightTint();
+    }
+    if(self.skyLightTintLive){
+      self.skyLightTint.lerp(skyLightTintTarget, SKY_LIGHT_TINT_EASING);
     }
 
     if(cloudParams.midCoverage > 0.0){
