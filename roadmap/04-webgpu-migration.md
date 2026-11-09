@@ -23,7 +23,8 @@ Read from the A-Frame release notes, PR threads and `master` source on GitHub, a
 - `a-scene.js` picks its renderer with `['WebGLRenderer', 'WebGPURenderer'].find(x => THREE[x])`. There is no option: WebGPU is used only when `three` is aliased to `three.webgpu.js` by an import map or bundler, so `WebGLRenderer` is absent. The UMD build cannot do it ([PR 5655](https://github.com/aframevr/aframe/pull/5655)).
 - Known breakage under WebGPU from that PR: `ShaderMaterial` is rejected ("not compatible"), and the SDF and MSDF text components were broken at the time of merge.
 - **There is no render-pass API.** The scene's loop is `renderer.render(this.object3D, this.camera)` followed by `tock()` on components. The "experimental post-processing" in the 1.7.0 notes is an example component ([PR 5648](https://github.com/aframevr/aframe/pull/5648), a bloom under `examples/showcase/post-processing/`), which takes over the scene's render itself; for VR it relied on a patch in the supermedium three.js fork. The `renderer` component documents no HDR or half-float framebuffer and no WebGPU setting.
-- A-Frame is on r184. WebXR on `WebGPURenderer` is listed in three.js **r185**. So on a stock A-Frame today, WebGPU means no VR.
+- **VR on WebGPU is one release away.** 1.8.0 bundles r184, and WebXR on `WebGPURenderer` is listed in three.js **r185**. But A-Frame `master` moved to r185 on July 8, 2026 (`"three": "npm:super-three@0.185.0"`), so the master build already has it and the next tagged release should. Not tested here: this is the changelog line and `package.json`, not a headset.
+- A-Frame depends on `super-three`, supermedium's fork of three.js. Its README does not list the patches it carries, so tracking A-Frame master is far easier than bumping three.js inside a fork of A-Frame.
 
 **three.js**
 
@@ -43,7 +44,9 @@ Read from the A-Frame release notes, PR threads and `master` source on GitHub, a
   - **HDR canvas output**: blocked until A-Frame exposes the canvas configuration.
 - **Offer an optional pass component, clearly marked.** A `starry-sky-postprocessing` component that takes over rendering the way A-Frame's bloom example does, for users who accept the trade (it conflicts with any other component doing the same, and VR support depends on the three.js build). Scene bloom, depth-based aerial perspective and auto-exposure from the frame can live there. Nothing in the core may depend on it.
 - **Worth raising upstream.** A small hook in `a-scene`'s render (a replaceable render function, or first-class `RenderPipeline` support on the WebGPU path) would remove this limit for every A-Frame library. The plain three.js entry point in `09` sidesteps it for non-A-Frame users.
-- **WebGL2 stays the default backend** until A-Frame ships a three.js with WebXR on WebGPU and its own components work there. The WebGPU path is opt-in, module-build only, and desktop-first for now.
+- **Develop the WebGPU path against A-Frame master now**, module build, with `three` aliased to the WebGPU bundle. Ship it as opt-in when the next A-Frame release lands. WebGL2 stays the default until WebXR on WebGPU has been seen working on real headsets and A-Frame's own components (text was broken at merge) are sound there.
+- **If a fork of A-Frame is wanted, keep it to the render hook** and nothing else: one small diff, easy to rebase, and the same change offered upstream. Do not fork to chase three.js versions.
+- **Keep the core free of A-Frame.** The eventual move to plain three.js (`09`, "Plain three.js entry point") is the real exit from these limits. Every step of the port should leave the A-Frame layer thinner: the component wrapper and the tag parsing, and nothing else. Under plain three.js the sky can own a `RenderPipeline`, and the optional pass component's features become ordinary ones.
 
 ## Shape of the port
 
